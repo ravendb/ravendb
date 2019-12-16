@@ -4,7 +4,6 @@ namespace Sparrow.LowMemory
 {
     public class LowMemoryException : Exception
     {
-
         public LowMemoryException()
         {
         }

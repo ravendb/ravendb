@@ -9,6 +9,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
@@ -100,7 +101,7 @@ namespace Sparrow.LowMemory
             public Size TotalDirty;
         }
 
-        public static ConcurrentSet<StrongReference<Func<long>>> DirtyMemoryObjects = new ConcurrentSet<StrongReference<Func<long>>>();
+        internal static ConcurrentSet<StrongReference<Func<long>>> DirtyMemoryObjects = new ConcurrentSet<StrongReference<Func<long>>>();
 
         public static void SetFreeCommittedMemory(float minimumFreeCommittedMemoryPercentage, Size maxFreeCommittedMemoryToKeep, Size lowMemoryCommitLimitInMb)
         {
@@ -325,7 +326,8 @@ namespace Sparrow.LowMemory
                         result = GetMemoryInfoWindows(process, extended);
                     else if (PlatformDetails.RunningOnMacOsx)
                         result = GetMemoryInfoMacOs(process, extended);
-                    else result = GetMemoryInfoLinux(smapsReader, extended);
+                    else
+                        result = GetMemoryInfoLinux(smapsReader, extended);
                 }
 
                 var totalScratchAllocated = GetTotalScratchAllocatedMemory();
@@ -348,7 +350,7 @@ namespace Sparrow.LowMemory
             long totalScratchAllocated = 0;
             foreach (var scratchGetAllocated in DirtyMemoryObjects)
             {
-                    totalScratchAllocated += scratchGetAllocated.Value?.Invoke() ?? 0;
+                totalScratchAllocated += scratchGetAllocated.Value?.Invoke() ?? 0;
             }
 
             return totalScratchAllocated;

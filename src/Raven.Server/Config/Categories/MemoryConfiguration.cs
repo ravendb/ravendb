@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Handlers.Debugging;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -35,7 +34,6 @@ namespace Raven.Server.Config.Categories
 
         [Description("EXPERT: The minimum amount of committed memory percentage that RavenDB will attempt to ensure remains available. Reducing this value too much may cause RavenDB to fail if there is not enough memory available for the operation system to handle operations.")]
         [DefaultValue(0.05f)]
-        [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Memory.MinimumFreeCommittedMemoryPercentage", ConfigurationEntryScope.ServerWideOnly)]
         public float MinimumFreeCommittedMemoryPercentage { get; set; }
 
@@ -56,14 +54,14 @@ namespace Raven.Server.Config.Categories
         public bool EnableHighTemporaryDirtyMemoryUse { get; set; }
 
         [Description("Threshold percentage of memory for activating 'High Dirty Memory' mechanism (server will return 'Service Unavailable' for writes when scratch files dirty memory exeeds this threshold). Default: 25%")]
-        [DefaultValue(0.25d)]
+        [DefaultValue(0.25f)]
         [ConfigurationEntry("Memory.TemporaryDirtyMemoryAllowedPercentage", ConfigurationEntryScope.ServerWideOnly)]
-        public double TemporaryDirtyMemoryAllowedPercentage { get; set; }
+        public float TemporaryDirtyMemoryAllowedPercentage { get; set; }
 
-        [Description("Period in seconds between 'High Dirty Memory' checks. Default: 30 Seconds")]
+        [Description("Period in seconds between 'High Dirty Memory' checks. Default: 30 seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Memory.TemporaryDirtyMemoryChecksPeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting TemporaryDirtyMemoryChecksPeriodInSec { get; set; }
+        public TimeSetting TemporaryDirtyMemoryChecksPeriod { get; set; }
     }
 }
