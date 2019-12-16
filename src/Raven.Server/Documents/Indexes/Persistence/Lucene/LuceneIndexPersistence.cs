@@ -91,12 +91,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     break;
                 case IndexType.Map:
                     _converter = _index.SourceType == IndexSourceType.Documents
-                        ? new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries)
+                        ? (LuceneDocumentConverterBase)new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries)
                         : new TimeSeriesAnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
                     break;
                 case IndexType.JavaScriptMap:
                     _converter = _index.SourceType == IndexSourceType.Documents
-                        ? new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries)
+                        ? (LuceneDocumentConverterBase)new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries)
                         : new TimeSeriesJintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
                     break;
                 case IndexType.JavaScriptMapReduce:

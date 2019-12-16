@@ -13,7 +13,6 @@ using Jint.Runtime;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
@@ -21,9 +20,6 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Indexes;
-using Sparrow;
-using Sparrow.Extensions;
-using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
 namespace Raven.Server.Documents.Queries.Results
 {

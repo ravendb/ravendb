@@ -8,12 +8,20 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
-    public class AnonymousLuceneDocumentConverter : LuceneDocumentConverterBase
+    public sealed class AnonymousLuceneDocumentConverter : AnonymousLuceneDocumentConverterBase
+    {
+        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false)
+            : base(fields, isMultiMap, indexImplicitNull, indexEmptyEntries, storeValue: storeValue)
+        {
+        }
+    }
+
+    public abstract class AnonymousLuceneDocumentConverterBase : LuceneDocumentConverterBase
     {
         private readonly bool _isMultiMap;
         private IPropertyAccessor _propertyAccessor;
 
-        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+        protected AnonymousLuceneDocumentConverterBase(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
             : base(fields, indexImplicitNull, indexEmptyEntries, keyFieldName, storeValue, storeValueFieldName)
         {
             _isMultiMap = isMultiMap;
