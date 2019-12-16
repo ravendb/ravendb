@@ -457,11 +457,11 @@ namespace Raven.Server.Documents.TimeSeries
                 switch (order)
                 {
                     case ParsingOrder.Id:
-                        docId = new LazyStringValue(null, ptr, i, context); // TODO arek - RavenDB-14322
-                        break;
+                       docId = context.GetLazyString(ptr, i);
+                       break;
 
                     case ParsingOrder.Name:
-                        name = new LazyStringValue(null, ptr + next, i - next, context); // TODO arek - RavenDB-14322
+                        name = context.GetLazyString(ptr + next, i - next);
                         break;
 
                     default:
