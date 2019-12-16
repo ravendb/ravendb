@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -395,7 +396,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "select new { " +
                     "   HeartBeat = entry.Value, " +
                     "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
-                    "   User = ts.DocumentId.ToString(), " + // TODO arek RavenDB-14322
+                    "   User = ts.DocumentId, " + 
                     "   Count = 1" +
                     "}" },
                     Reduce = "from r in results " +
@@ -728,6 +729,68 @@ namespace FastTests.Client.Indexing.TimeSeries
                         Assert.Equal(0, counts.ReferenceTableCount);
                         Assert.Equal(0, counts.CollectionTableCount);
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task TimeSeriesForDocumentIdWithEscapePositions()
+        {
+            var str = "Oren\r\nEini";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var entity = new User { Name = str };
+                    await session.StoreAsync(entity, str);
+
+                    session.TimeSeriesFor(entity).Append("HeartRate", DateTime.Now, "tag", new double[] { 7 });
+
+                    await session.SaveChangesAsync();
+                }
+
+                string indexName = "AverageHeartRateDaily/ByDateAndUser";
+
+                var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = indexName,
+                    Maps = {
+                        "from ts in timeSeries.Users.HeartRate " +
+                        "from entry in ts.Entries " +
+                        "select new { " +
+                        "   HeartBeat = entry.Value, " +
+                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   User = ts.DocumentId, " +
+                        "   Count = 1" +
+                        "}" },
+                    Reduce = "from r in results " +
+                             "group r by new { r.Date, r.User } into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumHeartBeat / sumCount, " +
+                             "  Date = g.Key.Date," +
+                             "  User = g.Key.User, " +
+                             "  Count = sumCount" +
+                             "}"
+                }));
+
+                WaitForIndexing(store);
+
+                WaitForUserToContinueTheTest(store);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains(str.ToLower(), terms);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>(str);
+                    var id = session.Advanced.GetDocumentId(u);
+
+                    Assert.Equal(str, u.Name);
+                    Assert.Equal(str, id);
                 }
             }
         }
