@@ -40,6 +40,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DatabaseSource _source;
         private BlittableJsonTextWriter _writer;
         private static DatabaseSmugglerOptionsServerSide _options;
+        private static Func<string, bool> _filterMetadataProperty;
 
         public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source)
         {
@@ -53,6 +54,23 @@ namespace Raven.Server.Smuggler.Documents
             _gzipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
             _writer = new BlittableJsonTextWriter(_context, _gzipStream);
             _options = options;
+
+            var skipCountersMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false;
+            var skipAttachmentsMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false;
+
+            _filterMetadataProperty = metadataProperty =>
+            {
+                switch (metadataProperty)
+                {
+                    case Constants.Documents.Metadata.Counters:
+                        return skipCountersMetadata;
+                    case Constants.Documents.Metadata.Attachments:
+                        return skipAttachmentsMetadata;
+
+                    default:
+                        return false;
+                }
+            };
 
             _writer.WriteStartObject();
 
@@ -682,21 +700,12 @@ namespace Raven.Server.Smuggler.Documents
                     First = false;
 
                     Writer.WriteStartObject();
-                    Writer.WriteDocumentPropertiesWithoutMetadata(_context, document, out BlittableJsonReaderObject metadata);
+                    Writer.WriteDocumentPropertiesWithoutMetadata(_context, document, out BlittableJsonReaderObject metadata, out bool firstProperty);
 
-                    if (metadata != null)
-                    {
+                    if (firstProperty == false)
                         Writer.WriteComma();
-                        Writer.WriteMetadata(document, metadata, s =>
-                        {
-                            if ((s == Constants.Documents.Metadata.Counters && _options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false) ||
-                                (s == Constants.Documents.Metadata.Attachments && _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false))
-                                return true;
 
-                            return false;
-                        });
-                    }
-
+                    Writer.WriteMetadata(document, metadata, _filterMetadataProperty);
                     Writer.WriteEndObject();
                 }
             }
