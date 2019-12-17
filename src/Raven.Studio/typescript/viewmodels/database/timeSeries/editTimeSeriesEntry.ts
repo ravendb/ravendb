@@ -37,7 +37,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         
         const dto = this.model().toDto();
         
-        new saveTimeSeriesCommand(this.documentId, dto, this.db)
+        new saveTimeSeriesCommand(this.documentId, dto, this.db, !!this.editDto)
             .execute()
             .done(() => {
                 dialog.close(this, this.model().name());

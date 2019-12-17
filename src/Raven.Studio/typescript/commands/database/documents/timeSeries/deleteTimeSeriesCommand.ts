@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 import database = require("models/resources/database");
 
 class deleteTimeSeriesCommand extends commandBase {
-    constructor(private documentId: string, private dto: Raven.Client.Documents.Operations.TimeSeries.RemoveTimeSeriesOperation, private db: database) {
+    constructor(private documentId: string, private dtos: Raven.Client.Documents.Operations.TimeSeries.RemoveTimeSeriesOperation[], private db: database) {
         super();
     }
     
@@ -12,7 +12,7 @@ class deleteTimeSeriesCommand extends commandBase {
 
         const payload = {
             Id: this.documentId,
-            Removals: [this.dto]
+            Removals: this.dtos
         } as Raven.Client.Documents.Operations.TimeSeries.DocumentTimeSeriesOperation;
 
         return this.post(url, JSON.stringify(payload), this.db, { dataType: undefined })
