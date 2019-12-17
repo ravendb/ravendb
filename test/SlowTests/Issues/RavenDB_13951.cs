@@ -64,13 +64,6 @@ namespace SlowTests.Issues
             var reasonableTime = Debugger.IsAttached ? 5000 : 3000;
             var leader = await CreateRaftClusterAndGetLeader(3);
 
-            var serverNodes = Servers.Select(s => new ServerNode
-            {
-                ClusterTag = s.ServerStore.NodeTag,
-                Database = null,
-                Url = s.WebUrl
-            }).ToList();
-
             using var store = GetDocumentStore(new Options
             {
                 CreateDatabase = true,
@@ -78,10 +71,10 @@ namespace SlowTests.Issues
                 Server = leader
             });
 
-            var tags = serverNodes.FindAll(x => x.ClusterTag != leader.ServerStore.NodeTag).Select(x => x.ClusterTag).ToList();
+            var tags = Servers.Where(x=> x.ServerStore.NodeTag != leader.ServerStore.NodeTag).Select(x => x.ServerStore.NodeTag).ToList();
             foreach (var tag in tags)
             {
-                await leader.ServerStore.LicenseManager.ChangeLicenseLimits(tag, 1, Guid.NewGuid().ToString());
+                await ActionWithLeader(l => l.ServerStore.LicenseManager.ChangeLicenseLimits(tag, 1, Guid.NewGuid().ToString()));
                 var license = leader.ServerStore.LoadLicenseLimits();
                 Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode), "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
                 Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
