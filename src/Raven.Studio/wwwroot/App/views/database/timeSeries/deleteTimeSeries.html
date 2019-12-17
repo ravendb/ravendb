@@ -22,7 +22,7 @@
                             Please specify date range to delete:
                         </div>
 
-                        <div class="form-group" data-bind="validationElement: startDate">
+                        <div class="form-group" >
                             <label for="startDate" class="control-label">Start Date</label>
                             <div class="flex-grow">
                                 <div class="checkbox margin-bottom margin-bottom-sm">
@@ -31,15 +31,16 @@
                                         Use minimum
                                     </label>
                                 </div>
-                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMinStartDate()">
+                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMinStartDate(), validationElement: startDate">
                                     <input type="text" class="form-control" id="startDate" placeholder="Start date"
                                            data-bind="datePicker: startDate, datepickerOptions: $root.datePickerOptions" />
                                     <div class="input-group-addon">(local)</div>
+                                    <span class="help-block" data-bind="validationMessage: startDate"></span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="form-group" data-bind="validationElement: endDate">
+                        <div class="form-group">
                             <label for="endDate" class="control-label">End Date</label>
                             <div class="flex-grow">
                                 <div class="checkbox">
@@ -48,10 +49,11 @@
                                         Use maximum
                                     </label>
                                 </div>
-                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMaxEndDate()">
+                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMaxEndDate(), validationElement: endDate">
                                     <input type="text" class="form-control" id="endDate" placeholder="End date"
                                            data-bind="datePicker: endDate, datepickerOptions: $root.datePickerOptions" />
                                     <div class="input-group-addon">(local)</div>
+                                    <span class="help-block" data-bind="validationMessage: endDate"></span>
                                 </div>
                             </div>
                         </div>
@@ -62,7 +64,8 @@
                     <div class="flex-horizontal text-warning">
                         <i class="icon-warning"></i>
                         <span>
-                            Entries matching time range: <strong data-bind="text: startDateToUse"></strong> - <strong data-bind="text: endDateToUse"></strong> will be deleted.            
+                            You're deleting all time series entries matching time range:<br />
+                            <strong data-bind="text: startDateToUse"></strong> - <strong data-bind="text: endDateToUse"></strong>            
                         </span>
                     </div>
                 </div>

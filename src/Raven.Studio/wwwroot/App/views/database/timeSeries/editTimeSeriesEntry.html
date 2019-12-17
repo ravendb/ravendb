@@ -35,6 +35,7 @@
                                         <input type="text" class="form-control" id="timestamp" placeholder="Timestamp"
                                                data-bind="datePicker: timestamp, datepickerOptions: $root.datePickerOptions" />
                                         <div class="input-group-addon">(local)</div>
+                                        <span class="help-block" data-bind="validationMessage: timestamp"></span>
                                     </div>
 
                                     <p class="form-control-static" data-bind="text: $root.dateFormattedAsLocal, visible: $root.lockTimeStamp"></p>        
@@ -43,7 +44,6 @@
                                     <p class="form-control-static" data-bind="text: $root.dateFormattedAsUtc"></p>
                                 </div>
                             </div>
-                            
                         </div>
                     </div>
 
