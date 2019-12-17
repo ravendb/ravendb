@@ -40,7 +40,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DatabaseSource _source;
         private BlittableJsonTextWriter _writer;
         private static DatabaseSmugglerOptionsServerSide _options;
-        private static Func<string, bool> _filterMetadataProperty;
+        private static Func<LazyStringValue, bool> _filterMetadataProperty;
 
         public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source)
         {
@@ -55,22 +55,7 @@ namespace Raven.Server.Smuggler.Documents
             _writer = new BlittableJsonTextWriter(_context, _gzipStream);
             _options = options;
 
-            var skipCountersMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false;
-            var skipAttachmentsMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false;
-
-            _filterMetadataProperty = metadataProperty =>
-            {
-                switch (metadataProperty)
-                {
-                    case Constants.Documents.Metadata.Counters:
-                        return skipCountersMetadata;
-                    case Constants.Documents.Metadata.Attachments:
-                        return skipAttachmentsMetadata;
-
-                    default:
-                        return false;
-                }
-            };
+            SetupMetadataFilterMethod();
 
             _writer.WriteStartObject();
 
@@ -83,6 +68,61 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.Dispose();
                 _gzipStream.Dispose();
             });
+        }
+
+        private static void SetupMetadataFilterMethod()
+        {
+            var skipCountersMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false;
+            var skipAttachmentsMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false;
+
+            if (skipCountersMetadata == false && skipAttachmentsMetadata == false)
+            {
+                _filterMetadataProperty = null;
+            }
+            else if (skipCountersMetadata == false)
+            {
+                _filterMetadataProperty = metadataProperty =>
+                {
+                    switch (metadataProperty)
+                    {
+                        case Constants.Documents.Metadata.Attachments:
+                            return true;
+
+                        default:
+                            return false;
+                    }
+                };
+            }
+            else if (skipAttachmentsMetadata == false)
+            {
+                _filterMetadataProperty = metadataProperty =>
+                {
+                    switch (metadataProperty)
+                    {
+                        case Constants.Documents.Metadata.Counters:
+                            return true;
+
+                        default:
+                            return false;
+                    }
+                };
+            }
+            else
+            {
+                _filterMetadataProperty = metadataProperty =>
+                {
+                    switch (metadataProperty)
+                    {
+                        case Constants.Documents.Metadata.Attachments:
+                            return true;
+                        case Constants.Documents.Metadata.Counters:
+                            return true;
+
+                        default:
+                            return false;
+                    }
+                };
+            }
         }
 
         public IDatabaseRecordActions DatabaseRecord()
