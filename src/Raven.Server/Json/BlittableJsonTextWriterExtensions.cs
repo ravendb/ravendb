@@ -1270,7 +1270,7 @@ namespace Raven.Server.Json
             return numberOfResults;
         }
 
-        public static void WriteDocument(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
+        public static void WriteDocument(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
             if (document == null)
             {
@@ -1290,9 +1290,9 @@ namespace Raven.Server.Json
             //using (document.Data)
             {
                 if (metadataOnly == false)
-                    writer.WriteDocumentInternal(context, document);
+                    writer.WriteDocumentInternal(context, document, filterMetadataProperty);
                 else
-                    writer.WriteDocumentMetadata(context, document);
+                    writer.WriteDocumentMetadata(context, document, filterMetadataProperty);
             }
         }
 
@@ -1488,11 +1488,11 @@ namespace Raven.Server.Json
 
 
         public static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,
-            Document document)
+            Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
             writer.WriteStartObject();
             document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-            WriteMetadata(writer, document, metadata);
+            WriteMetadata(writer, document, metadata, filterMetadataProperty);
 
             writer.WriteEndObject();
         }
@@ -1577,14 +1577,14 @@ namespace Raven.Server.Json
 
         private static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
 
-        private static void WriteDocumentInternal(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        private static void WriteDocumentInternal(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
             writer.WriteStartObject();
-            WriteDocumentProperties(writer, context, document);
+            WriteDocumentProperties(writer, context, document, filterMetadataProperty);
             writer.WriteEndObject();
         }
 
-        private static void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        private static void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
        
             var first = true;
@@ -1614,14 +1614,13 @@ namespace Raven.Server.Json
 
             if (first == false)
                 writer.WriteComma();
-            WriteMetadata(writer, document, metadata);
+            WriteMetadata(writer, document, metadata, filterMetadataProperty);
         }
 
-        public static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, out BlittableJsonReaderObject metadata, out bool first)
+        public static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
-            metadata = null;
-            first = true;
-            var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
+            var first = true;
+
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             using (var buffers = document.Data.GetPropertiesByInsertionOrder())
@@ -1629,13 +1628,6 @@ namespace Raven.Server.Json
                 for (var i = 0; i < buffers.Properties.Count; i++)
                 {
                     document.Data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
-
-                    if (metadataField.Equals(prop.Name))
-                    {
-                        metadata = (BlittableJsonReaderObject)prop.Value;
-                        continue;
-                    }
-
                     if (first == false)
                     {
                         writer.WriteComma();

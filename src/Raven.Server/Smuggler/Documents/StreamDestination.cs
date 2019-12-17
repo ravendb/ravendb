@@ -55,7 +55,7 @@ namespace Raven.Server.Smuggler.Documents
             _writer = new BlittableJsonTextWriter(_context, _gzipStream);
             _options = options;
 
-            SetupMetadataFilterMethod();
+            SetupMetadataFilterMethod(_context);
 
             _writer.WriteStartObject();
 
@@ -70,7 +70,7 @@ namespace Raven.Server.Smuggler.Documents
             });
         }
 
-        private static void SetupMetadataFilterMethod()
+        private static void SetupMetadataFilterMethod(JsonOperationContext context)
         {
             var skipCountersMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false;
             var skipAttachmentsMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false;
@@ -81,47 +81,22 @@ namespace Raven.Server.Smuggler.Documents
             }
             else if (skipCountersMetadata == false)
             {
-                _filterMetadataProperty = metadataProperty =>
-                {
-                    switch (metadataProperty)
-                    {
-                        case Constants.Documents.Metadata.Attachments:
-                            return true;
+                var attachments = context.GetLazyString(Constants.Documents.Metadata.Attachments);
 
-                        default:
-                            return false;
-                    }
-                };
+                _filterMetadataProperty = metadataProperty => metadataProperty.Equals(attachments);
             }
             else if (skipAttachmentsMetadata == false)
             {
-                _filterMetadataProperty = metadataProperty =>
-                {
-                    switch (metadataProperty)
-                    {
-                        case Constants.Documents.Metadata.Counters:
-                            return true;
+                var counters = context.GetLazyString(Constants.Documents.Metadata.Counters);
 
-                        default:
-                            return false;
-                    }
-                };
+                _filterMetadataProperty = metadataProperty => metadataProperty.Equals(counters);
             }
             else
             {
-                _filterMetadataProperty = metadataProperty =>
-                {
-                    switch (metadataProperty)
-                    {
-                        case Constants.Documents.Metadata.Attachments:
-                            return true;
-                        case Constants.Documents.Metadata.Counters:
-                            return true;
+                var attachments = context.GetLazyString(Constants.Documents.Metadata.Attachments);
+                var counters = context.GetLazyString(Constants.Documents.Metadata.Counters);
 
-                        default:
-                            return false;
-                    }
-                };
+                _filterMetadataProperty = metadataProperty => metadataProperty.Equals(attachments) || metadataProperty.Equals(counters);
             }
         }
 
@@ -739,14 +714,7 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteComma();
                     First = false;
 
-                    Writer.WriteStartObject();
-                    Writer.WriteDocumentPropertiesWithoutMetadata(_context, document, out BlittableJsonReaderObject metadata, out bool firstProperty);
-
-                    if (firstProperty == false)
-                        Writer.WriteComma();
-
-                    Writer.WriteMetadata(document, metadata, _filterMetadataProperty);
-                    Writer.WriteEndObject();
+                    Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
                 }
             }
 
