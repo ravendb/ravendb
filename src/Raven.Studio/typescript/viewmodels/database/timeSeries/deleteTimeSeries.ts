@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import dialog = require("plugins/dialog");
 import deleteTimeSeriesCommand = require("commands/database/documents/timeSeries/deleteTimeSeriesCommand");
 import messagePublisher = require("common/messagePublisher");
+import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 
 class deleteTimeSeries extends dialogViewModelBase {
 
@@ -12,12 +13,21 @@ class deleteTimeSeries extends dialogViewModelBase {
     spinners = {
         delete: ko.observable<boolean>(false)
     };
+
+    datePickerOptions = {
+        format: "YYYY-MM-DD HH:mm:ss.SSS",
+        sideBySide: true
+    };
     
-    useStartDate = ko.observable<boolean>(false);
-    startDate = ko.observable<string>();
+    useMinStartDate = ko.observable<boolean>(false);
+    startDate = ko.observable<moment.Moment>();
     
-    useEndDate = ko.observable<boolean>(false);
-    endDate = ko.observable<string>();
+    useMaxEndDate = ko.observable<boolean>(false);
+    endDate = ko.observable<moment.Moment>();
+    
+    startDateToUse: KnockoutComputed<string>;
+    endDateToUse: KnockoutComputed<string>;
+    showWarning: KnockoutComputed<boolean>;
     
     validationGroup: KnockoutValidationGroup;
     
@@ -25,19 +35,35 @@ class deleteTimeSeries extends dialogViewModelBase {
         super();
         criteria.selection = criteria.selection || [];
         
+        this.startDateToUse = ko.pureComputed(() => {
+            return this.useMinStartDate() ? deleteTimeSeries.minDate : this.startDate().utc().format();
+        });
+        
+        this.endDateToUse = ko.pureComputed(() => {
+            return this.useMaxEndDate() ? deleteTimeSeries.maxDate : this.endDate().utc().format();
+        });
+        
+        this.showWarning = ko.pureComputed(() => {
+            const startDefined = this.useMinStartDate() || this.startDate();
+            const endDefined = this.useMaxEndDate() || this.endDate();
+            
+            return !!startDefined && !!endDefined;
+        });
+        
         this.initValidation();
+        datePickerBindingHandler.install();
     }
     
     private initValidation() {
         this.startDate.extend({
             required: {
-                onlyIf: () => this.useStartDate()
+                onlyIf: () => !this.useMinStartDate()
             }
         });
         
         this.endDate.extend({
             required: {
-                onlyIf: () => this.useEndDate()
+                onlyIf: () => !this.useMaxEndDate()
             }
         });
         
@@ -65,8 +91,8 @@ class deleteTimeSeries extends dialogViewModelBase {
                 }));
             case "range":
                 return [{
-                    From: this.startDate(),
-                    To: this.endDate(),
+                    From: this.startDateToUse(),
+                    To: this.endDateToUse(),
                     Name: this.timeSeriesName
                 }];
         }

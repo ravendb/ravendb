@@ -6,11 +6,22 @@ import saveTimeSeriesCommand = require("commands/database/documents/timeSeries/s
 
 class editTimeSeriesEntry extends dialogViewModelBase {
 
+    static utcTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    static localTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    
     spinners = {
         save: ko.observable<boolean>(false)
     };
     
+    datePickerOptions = {
+        format: "YYYY-MM-DD HH:mm:ss.SSS",
+        sideBySide: true
+    };
+    
     model = ko.observable<timeSeriesModel>();
+    
+    dateFormattedAsUtc: KnockoutComputed<string>;
+    dateFormattedAsLocal: KnockoutComputed<string>;
     
     lockSeriesName: boolean;
     lockTimeStamp: boolean;
@@ -26,6 +37,20 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             : timeSeriesModel.empty(timeSeriesName || undefined);
         
         this.model(model);
+        
+        this.dateFormattedAsUtc = ko.pureComputed(() => {
+            if (model.timestamp()) {
+                const date = moment(model.timestamp());
+                return date.utc().format(editTimeSeriesEntry.utcTimeFormat) + "Z (UTC)";    
+            } else {
+                return "";
+            }
+        });
+        
+        this.dateFormattedAsLocal = ko.pureComputed(() => {
+            const date = moment(model.timestamp());
+            return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (local)"
+        });
     }
     
     save() {

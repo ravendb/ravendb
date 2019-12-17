@@ -5,7 +5,7 @@ class timeSeriesModel {
     constructor(name: string, dto: Raven.Client.Documents.Session.TimeSeriesValue) {
         this.name(name);
         this.tag(dto.Tag);
-        this.timestamp(dto.Timestamp);
+        this.timestamp(dto.Timestamp ? moment.utc(dto.Timestamp) : null);
         this.values(dto.Values.map(x => new timeSeriesValue(x)));
         
         this.initValidation();
@@ -13,7 +13,7 @@ class timeSeriesModel {
     
     name = ko.observable<string>();
     tag = ko.observable<string>();
-    timestamp = ko.observable<string>();
+    timestamp = ko.observable<moment.Moment>();
     values = ko.observableArray<timeSeriesValue>([]);
     
     validationGroup: KnockoutValidationGroup;
@@ -57,7 +57,7 @@ class timeSeriesModel {
         return {
             Name: this.name(),
             Tag: this.tag(),
-            Timestamp: this.timestamp(),
+            Timestamp: this.timestamp().utc().format(),
             Values: this.values().map(x => x.value())
         }
     }

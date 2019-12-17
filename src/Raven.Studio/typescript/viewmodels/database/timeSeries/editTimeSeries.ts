@@ -13,6 +13,7 @@ import generalUtils = require("common/generalUtils");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import deleteTimeSeries = require("viewmodels/database/timeSeries/deleteTimeSeries");
+import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 
 class editTimeSeries extends viewModelBase {
     static timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
@@ -35,6 +36,7 @@ class editTimeSeries extends viewModelBase {
         this.bindToCurrentInstance("changeCurrentSeries", "createTimeSeries", "deleteTimeSeries");
         
         this.initObservables();
+        datePickerBindingHandler.install();
     }
     
     canActivate(args: any): JQueryPromise<canActivateResultDto> {
