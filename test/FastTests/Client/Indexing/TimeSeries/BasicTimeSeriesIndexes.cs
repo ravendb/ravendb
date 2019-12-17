@@ -794,5 +794,59 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
             }
         }
+
+        [Fact]
+        public void MapIndexWithCaseInsensitiveTimeSeriesNames()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var now = DateTime.Now;
+
+                string heartRateTimeSeriesName = "HeartRate";
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+                    session.TimeSeriesFor(company).Append(heartRateTimeSeriesName, now, "tag", new double[] { 13 });
+
+                    session.SaveChanges();
+                }
+
+                var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MyTsIndex",
+                    Maps = {
+                    "from ts in timeSeries.Companies.HeartRate " +
+                    "from entry in ts.Entries " +
+                    "select new { " +
+                    "   HeartBeat = entry.Values[0], " +
+                    "   Date = entry.TimeStamp.Date, " +
+                    "   User = ts.DocumentId " +
+                    "}" }
+                }));
+
+                WaitForIndexing(store);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("13", terms);
+
+                // delete time series
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.TimeSeriesFor(company).Remove("hearTraTe", now); // <--- note casing hearTraTe
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
+                Assert.Equal(0, terms.Length);
+            }
+        }
     }
 }
