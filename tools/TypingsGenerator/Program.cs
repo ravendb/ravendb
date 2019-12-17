@@ -466,6 +466,7 @@ namespace TypingsGenerator
             // time series
             scripter.AddType(typeof(TimeSeriesStats));
             scripter.AddType(typeof(TimeSeriesDetails));
+            scripter.AddType(typeof(DocumentTimeSeriesOperation));
             
             // studio configuration
             scripter.AddType(typeof(ServerWideStudioConfiguration));
