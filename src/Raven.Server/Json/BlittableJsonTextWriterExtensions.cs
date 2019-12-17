@@ -1497,7 +1497,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata, Func<string, bool> filterMetadataProperty = null)
+        public static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
             writer.WritePropertyName(Constants.Documents.Metadata.Key);
             writer.WriteStartObject();
