@@ -25,18 +25,45 @@
                         <div class="form-group" data-bind="validationElement: startDate">
                             <label for="startDate" class="control-label">Start Date</label>
                             <div class="flex-grow">
-                                <input type="text" class="form-control" id="startDate" placeholder="Start date"
-                                       data-bind="textInput: startDate" />
+                                <div class="checkbox margin-bottom margin-bottom-sm">
+                                    <input id="useMinStartDate" class="styled" type="checkbox" data-bind="checked: $root.useMinStartDate">
+                                    <label for="useMinStartDate">
+                                        Use minimum
+                                    </label>
+                                </div>
+                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMinStartDate()">
+                                    <input type="text" class="form-control" id="startDate" placeholder="Start date"
+                                           data-bind="datePicker: startDate, datepickerOptions: $root.datePickerOptions" />
+                                    <div class="input-group-addon">(local)</div>
+                                </div>
                             </div>
                         </div>
 
                         <div class="form-group" data-bind="validationElement: endDate">
                             <label for="endDate" class="control-label">End Date</label>
                             <div class="flex-grow">
-                                <input type="text" class="form-control" id="endDate" placeholder="End date"
-                                       data-bind="textInput: endDate">
+                                <div class="checkbox">
+                                    <input id="useMinEndDate" class="styled" type="checkbox" data-bind="checked: $root.useMaxEndDate">
+                                    <label for="useMinEndDate">
+                                        Use maximum
+                                    </label>
+                                </div>
+                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMaxEndDate()">
+                                    <input type="text" class="form-control" id="endDate" placeholder="End date"
+                                           data-bind="datePicker: endDate, datepickerOptions: $root.datePickerOptions" />
+                                    <div class="input-group-addon">(local)</div>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="padding bg-warning" data-bind="if: showWarning, visible: showWarning">
+                    <div class="flex-horizontal text-warning">
+                        <i class="icon-warning"></i>
+                        <span>
+                            Entries matching time range: <strong data-bind="text: startDateToUse"></strong> - <strong data-bind="text: endDateToUse"></strong> will be deleted.            
+                        </span>
                     </div>
                 </div>
             </div>

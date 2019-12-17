@@ -29,10 +29,21 @@
                     <div class="form-group" data-bind="validationElement: timestamp">
                         <label for="timestamp" class="control-label">Timestamp</label>
                         <div class="flex-grow">
-                            <input type="text" class="form-control" id="timestamp" placeholder="Timestamp" 
-                                   data-bind="textInput: timestamp, visible: !$root.lockTimeStamp" >
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="input-group" data-bind="visible: !$root.lockTimeStamp">
+                                        <input type="text" class="form-control" id="timestamp" placeholder="Timestamp"
+                                               data-bind="datePicker: timestamp, datepickerOptions: $root.datePickerOptions" />
+                                        <div class="input-group-addon">(local)</div>
+                                    </div>
 
-                            <p class="form-control-static" data-bind="text: timestamp, visible: $root.lockTimeStamp"></p>
+                                    <p class="form-control-static" data-bind="text: $root.dateFormattedAsLocal, visible: $root.lockTimeStamp"></p>        
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="form-control-static" data-bind="text: $root.dateFormattedAsUtc"></p>
+                                </div>
+                            </div>
+                            
                         </div>
                     </div>
 
