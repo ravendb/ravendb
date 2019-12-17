@@ -237,7 +237,7 @@ namespace Raven.Server.Documents.Indexes
                 stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
                 stats.MapAttempts = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
                 stats.MapErrors = statsTree.Read(IndexSchema.MapErrorsSlice).Reader.ReadLittleEndianInt32();
-                stats.MapSuccesses = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapSuccesses = statsTree.Read(IndexSchema.MapSuccessesSlice).Reader.ReadLittleEndianInt32();
                 stats.MaxNumberOfOutputsPerDocument =
                     statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument).Reader.ReadLittleEndianInt32();
 
