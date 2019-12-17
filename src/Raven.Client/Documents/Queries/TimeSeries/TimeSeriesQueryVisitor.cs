@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     internal class TimeSeriesQueryVisitor<T>
     {
         private readonly MethodCallExpression _expression;
-        private readonly RavenQueryProviderProcessor<T> _processor;
+        private readonly RavenQueryProviderProcessor<T> _providerProcessor;
         private TimeSeriesWhereClauseModifier<T> _modifier;
         private StringBuilder _selectFields;
         private string _name, _between, _where, _groupBy, _loadTag;
@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         public TimeSeriesQueryVisitor(MethodCallExpression expression, RavenQueryProviderProcessor<T> processor)
         {
             _expression = expression;
-            _processor = processor;
+            _providerProcessor = processor;
         }
 
         private void VisitMethod(MethodCallExpression mce)
@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                   unary.Operand is LambdaExpression lambda))
                 throw new InvalidOperationException("Cannot understand how to translate " + _expression);
 
-            _modifier = new TimeSeriesWhereClauseModifier<T>(lambda.Parameters[0].Name, _processor.DocumentQuery);
+            _modifier = new TimeSeriesWhereClauseModifier<T>(lambda.Parameters[0].Name, _providerProcessor.DocumentQuery);
 
             if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
                 LoadTag(lambda.Parameters[1].Name);
@@ -100,27 +100,22 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void WhereMethod(MethodCallExpression call)
         {
-            if (call.Method.DeclaringType == typeof(RavenQueryableExtensions))
-            {
-                switch (call.Method.Name)
-                {
-                    case nameof(RavenQueryableExtensions.In):
-                        WhereIn(call);
-                        break;
-                    case nameof(RavenQueryableExtensions.ContainsAny):
-                        // todo aviv
-                        break;
-                    case nameof(RavenQueryableExtensions.ContainsAll):
-                        break;
-                    default:
-                        throw new NotSupportedException("Method not supported: " + call.Method.Name);
-                }
-            }
-
-            else
-            {
+            if (call.Method.DeclaringType != typeof(RavenQueryableExtensions))
                 throw new NotSupportedException("Method not supported: " + call.Method.Name);
+            
+            switch (call.Method.Name)
+            {
+                case nameof(RavenQueryableExtensions.In):
+                    WhereIn(call);
+                    break;
+                case nameof(RavenQueryableExtensions.ContainsAny):
+                case nameof(RavenQueryableExtensions.ContainsAll):
+                    // todo aviv : support this?
+                    throw new NotSupportedException("Method not supported: " + call.Method.Name);
+                default:
+                    throw new NotSupportedException("Method not supported: " + call.Method.Name);
             }
+            
         }
 
         private void Select(Expression expression)
@@ -172,8 +167,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             {
                 var srcAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
 
-                if (_processor.FromAlias == null)
-                    _processor.AddFromAlias(srcAlias);
+                if (_providerProcessor.FromAlias == null)
+                    _providerProcessor.AddFromAlias(srcAlias);
                 
                 _name = $"{srcAlias}.{constantExpression.Value}";
             }
@@ -184,7 +179,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             var from = GetDateValue(mce.Arguments[2]);
             var to = GetDateValue(mce.Arguments[3]);
 
-            _between = $" between '{from}' and '{to}'";
+            var p1 = _providerProcessor.DocumentQuery.ProjectionParameter(from);
+            var p2 = _providerProcessor.DocumentQuery.ProjectionParameter(to);
+
+            _between = $" between {p1} and {p2}";
         }
 
         private void WhereBinary(BinaryExpression expression)
@@ -204,6 +202,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 var left = ModifyExpression(be.Left);
                 var right = ModifyExpression(be.Right);
                 var op = expression.NodeType == ExpressionType.OrElse ? "or" : "and";
+
                 return $"{left} {op} {right}";
             }
 
@@ -216,41 +215,13 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             var exp = _modifier.Modify(mce.Arguments[0]);
 
-            string path;
-            Type type;
+            string path = exp is ParameterExpression p 
+                ? p.Name 
+                : exp.ToString();
 
-            if (exp is ParameterExpression p)
-            {
-                path = p.Name;
-                type = p.Type;
-            }
-            else
-            {
-                var result = _processor.LinqPathProvider.GetPath(_modifier.Modify(mce.Arguments[0]));
-                path = result.Path;
-                type = result.MemberType;
-            }
+            var objects = (IEnumerable)_providerProcessor.LinqPathProvider.GetValueFromExpression(mce.Arguments[1], typeof(IEnumerable));
 
-            var objects = (IEnumerable)_processor.LinqPathProvider.GetValueFromExpression(_modifier.Modify(mce.Arguments[1]), type);
-
-            var parameter = _processor.DocumentQuery.ProjectionParameter(objects);
-
-/*
-            StringBuilder values = new StringBuilder();
-            bool first = true;
-            foreach (var v in objects)
-            {
-                if (first == false)
-                    values.Append(",");
-
-                first = false;
-
-                if (v is string s)
-                    values.Append('\'').Append(v).Append('\'');
-                else
-                    values.Append(v);
-            }
-*/
+            var parameter = _providerProcessor.DocumentQuery.ProjectionParameter(objects);
 
             _where = $" where {path} in ({parameter})";
         }
@@ -299,10 +270,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 queryBuilder.Append(" select ").Append(_selectFields);
 
             return queryBuilder.ToString();
-
-/*            return _srcAlias != null 
-                ? new[] {_srcAlias, queryString} 
-                : new[] {queryString};*/
         }
 
         private void AddSelectField(string name)
