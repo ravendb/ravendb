@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.TimeSeries
             to = EnsureMillisecondsPrecision(to);
             
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
-            using (Slice.From(context.Allocator, name, out Slice timeSeriesName))
+            using (DocumentIdWorker.GetLower(context.Allocator, name, out Slice timeSeriesName))
             using (context.Allocator.Allocate(documentKeyPrefix.Size + timeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */,
                 out ByteString timeSeriesKeyBuffer))
             using (CreateTimeSeriesKeyPrefixSlice(context, timeSeriesKeyBuffer, documentKeyPrefix, timeSeriesName, out Slice timeSeriesPrefixSlice))
@@ -138,7 +138,8 @@ namespace Raven.Server.Documents.TimeSeries
                         Name = name,
                         Type = TimeSeriesChangeTypes.Delete,
                         From = from,
-                        To = to
+                        To = to,
+                        CollectionName = collectionName.Name
                     });
                 }
 
@@ -322,7 +323,7 @@ namespace Raven.Server.Documents.TimeSeries
             internal bool Init()
             {
                 using (DocumentIdWorker.GetSliceFromId(_context, _documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
-                using (Slice.From(_context.Allocator, _name, out Slice timeSeriesName))
+                using (DocumentIdWorker.GetLower(_context.Allocator, _name, out Slice timeSeriesName))
                 using (_context.Allocator.Allocate(documentKeyPrefix.Size + timeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */,
                     out ByteString timeSeriesKeyBuffer))
                 using (CreateTimeSeriesKeyPrefixSlice(_context, timeSeriesKeyBuffer, documentKeyPrefix, timeSeriesName, out Slice timeSeriesPrefixSlice))
@@ -712,7 +713,7 @@ namespace Raven.Server.Documents.TimeSeries
             public TimeSeriesSlicer(DocumentsOperationContext context, string documentId, string name, DateTime timestamp, LazyStringValue tag = null)
             {
                 _internalScopesToDispose.Add(DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator));
-                _internalScopesToDispose.Add(Slice.From(context.Allocator, name, out TimeSeriesName));
+                _internalScopesToDispose.Add(DocumentIdWorker.GetLower(context.Allocator, name, out TimeSeriesName));
                 _internalScopesToDispose.Add(context.Allocator.Allocate(documentKeyPrefix.Size + TimeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */,
                     out TimeSeriesKeyBuffer));
                 _externalScopesToDispose.Add(CreateTimeSeriesKeyPrefixSlice(context, TimeSeriesKeyBuffer, documentKeyPrefix, TimeSeriesName, out TimeSeriesPrefixSlice));
