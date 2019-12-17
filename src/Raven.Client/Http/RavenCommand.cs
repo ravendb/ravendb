@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 using Sparrow;
 using Sparrow.Json;
@@ -20,6 +21,11 @@ namespace Raven.Client.Http
             ResponseType = RavenCommandResponseType.Empty;
         }
 
+        protected RavenCommand(RavenCommand copy) : base(copy)
+        {
+            IsReadRequest = copy.IsReadRequest;
+        }
+
         public override bool IsReadRequest { get; } = false;
     }
 
@@ -29,6 +35,10 @@ namespace Raven.Client.Http
         Automatic
     }
 
+    public interface IBroadcast
+    {
+        IBroadcast PrepareToBroadcast(JsonOperationContext context, DocumentConventions conventions);
+    }
     public interface IRaftCommand
     {
         string RaftUniqueRequestId { get; }
@@ -51,7 +61,17 @@ namespace Raven.Client.Http
         public bool CanCacheAggressively { get; protected set; }
         public string SelectedNodeTag { get; protected set; }
 
-        internal long FailoverTopologyEtag = -2;                       
+        internal long FailoverTopologyEtag = -2;
+
+        protected RavenCommand(RavenCommand<TResult> copy)
+        {
+            CancellationToken = copy.CancellationToken;
+            Timeout = copy.Timeout;
+            CanCache = copy.CanCache;
+            CanCacheAggressively = copy.CanCacheAggressively;
+            SelectedNodeTag = copy.SelectedNodeTag;
+            ResponseType = copy.ResponseType;
+        }
 
         protected RavenCommand()
         {
@@ -172,6 +192,10 @@ namespace Raven.Client.Http
         public virtual void OnResponseFailure(HttpResponseMessage response)
         {
             
+        }
+        internal void SetTimeout(TimeSpan timeout)
+        {
+            Timeout = timeout;
         }
     }
 

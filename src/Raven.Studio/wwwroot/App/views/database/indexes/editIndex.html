@@ -95,6 +95,7 @@
                     <div class="checkbox checkbox-inline flex-start on-base-background" title="Output the reduce results to documents in the specified collection">
                         <input id="outputToCollection" class="styled" type="checkbox" data-bind="checked: editedIndex().outputReduceToCollection">
                         <label for="outputToCollection">
+                            <i class="icon-output-collection margin-right margin-right-sm"></i>
                             Output Reduce Results to Collection
                         </label>
                     </div>
@@ -106,6 +107,7 @@
                     <div class="checkbox checkbox-inline flex-start on-base-background" title="Pattern for documents referencing documents from OutputReduceToCollection documents">
                         <input id="patternForOutputReduceToCollectionReferences" class="styled" type="checkbox" data-bind="checked: editedIndex().patternForOutput">
                         <label for="patternForOutputReduceToCollectionReferences">
+                            <i class="icon-reference-pattern margin-right margin-right-sm"></i>
                             Pattern For Output Reduce to Collection References
                         </label>
                     </div>
@@ -161,7 +163,7 @@
                                     <div class="form-group">
                                         <!--<label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>-->
                                         <div class="col-xs-12 col-sm-7 col-lg-8" data-bind="css: {  }, validationElement: key">
-                                            <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }">
+                                            <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" autocomplete="off">
                                             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
                                                 <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
                                                     <a role="menuitem" tabindex="-1" href="#">

@@ -867,6 +867,15 @@ namespace Raven.Server.Documents
             }
         }
 
+        public (long Etag, string ChangeVector) ReadLastEtagAndChangeVector()
+        {
+            using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+            using (var tx = documentsContext.OpenReadTransaction())
+            {
+                return (DocumentsStorage.ReadLastEtag(tx.InnerTransaction), DocumentsStorage.GetDatabaseChangeVector(tx.InnerTransaction));
+            }
+        }
+
         public void RunIdleOperations()
         {
             if (Monitor.TryEnter(_idleLocker) == false)

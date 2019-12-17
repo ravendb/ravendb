@@ -241,9 +241,8 @@ namespace Raven.Server.Commercial
                         var cores = Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
                         SetAffinity(process, cores, addPerformanceHint);
 
-                        var ratio = (int)Math.Ceiling(_licenseStatus.MaxMemory / (double)_licenseStatus.MaxCores);
                         var clusterSize = GetClusterSize();
-                        var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, cores * ratio);
+                        var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, cores * _licenseStatus.Ratio);
                         SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
                     }
                     else
@@ -1184,7 +1183,7 @@ namespace Raven.Server.Commercial
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                foreach (var databaseRecord in _serverStore.Cluster.ReadAllDatabases(context))
+                foreach (var databaseRecord in _serverStore.Cluster.GetAllDatabases(context))
                 {
                     if (databaseRecord.Encrypted)
                         encryptedDatabasesCount++;

@@ -165,6 +165,9 @@ namespace Raven.Client.Documents.Conventions
 
             AddIdFieldToDynamicObjects = true;
             AggressiveCache = new AggressiveCacheConventions(this);
+
+            _firstBroadcastAttemptTimeout = TimeSpan.FromSeconds(5);
+            _secondBroadcastAttemptTimeout = TimeSpan.FromSeconds(30);
         }
 
         private bool _frozen;
@@ -194,6 +197,8 @@ namespace Raven.Client.Documents.Conventions
         private Action<JsonSerializer> _customizeJsonSerializer;
         private Action<JsonSerializer> _customizeJsonDeserializer;
         private TimeSpan? _requestTimeout;
+        private TimeSpan _secondBroadcastAttemptTimeout;
+        private TimeSpan _firstBroadcastAttemptTimeout;
 
         private ReadBalanceBehavior _readBalanceBehavior;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;        
@@ -221,6 +226,38 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _requestTimeout = value;
+            }
+        }
+
+        /// <summary>
+        /// Set the timeout for the second broadcast attempt.
+        /// Default: 30 Seconds.
+        ///
+        /// Upon failure of the first attempt the request executor will resend the command to all nodes simultaneously. 
+        /// </summary>
+        public TimeSpan SecondBroadcastAttemptTimeout
+        {
+            get => _secondBroadcastAttemptTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _secondBroadcastAttemptTimeout = value;
+            }
+        }
+
+        /// <summary>
+        /// Set the timeout for the first broadcast attempt.
+        /// Default: 5 Seconds.
+        ///
+        /// First attempt will send a single request to a selected node.
+        /// </summary>
+        public TimeSpan FirstBroadcastAttemptTimeout
+        {
+            get => _firstBroadcastAttemptTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _firstBroadcastAttemptTimeout = value;
             }
         }
 

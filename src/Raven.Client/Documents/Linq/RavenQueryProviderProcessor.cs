@@ -1569,6 +1569,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         if (expression.Arguments[0].Type.GetTypeInfo().IsGenericType &&
                             (expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IQueryable<>) ||
+                            expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IOrderedQueryable<>) ||
                             expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IRavenQueryable<>)) &&
                             expression.Arguments[0].Type != expression.Arguments[1].Type)
                         {
