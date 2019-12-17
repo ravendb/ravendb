@@ -392,7 +392,7 @@ namespace Raven.Server.Utils
             if (value is DynamicNullObject)
                 return value;
 
-            if (value is DynamicObject)
+            if (value is IDynamicMetaObjectProvider)
                 return value;
 
             if (value is int || value is long || value is double || value is decimal || value is float || value is short || value is byte)
