@@ -43,7 +43,6 @@ import getDocumentRevisionsCountCommand = require("commands/database/documents/g
 import documentWarningsConfirm = require("viewmodels/database/documents/documentWarningsConfirm");
 import forceRevisionCreationCommand = require("commands/database/documents/forceRevisionCreationCommand");
 import getTimeSeriesStatsCommand = require("commands/database/documents/timeSeries/getTimeSeriesStatsCommand");
-import createTimeSeries = require("viewmodels/database/timeSeries/createTimeSeries");
 
 interface revisionToCompare {
     date: string;
@@ -1476,12 +1475,20 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
             totalResultCount: counters.length
         });
     }
+    
+    fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>> {
+        //TODO:
+        return null;
+    }
 
     fetchRevisionsCount(docId: string, db: database): void {
         // Not needed for clone view.
     }
     
     saveRelatedItems(targetDocumentId: string): JQueryPromise<void> {
+        
+        //TODO: !
+        
         const hasAttachments = this.attachmentsCount() > 0;
         const hasCounters = this.countersCount() > 0;
         if (hasAttachments || hasCounters) {

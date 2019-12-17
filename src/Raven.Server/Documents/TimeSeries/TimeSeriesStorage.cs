@@ -410,7 +410,7 @@ namespace Raven.Server.Documents.TimeSeries
                         }
                     }
 
-                    result.Count += _currentSegment.SegmentValues.Span[0].Count; //TODO or currentSegment.NumberOfEntries ??
+                    result.Count += _currentSegment.SegmentValues.Span[0].Count;
 
                 } while (NextSegment(out _));
 

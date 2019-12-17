@@ -224,6 +224,7 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     await Database.TxMerger.Enqueue(cmd);
+                    NoContentStatus();
                 }
                 catch (DocumentDoesNotExistException)
                 {
