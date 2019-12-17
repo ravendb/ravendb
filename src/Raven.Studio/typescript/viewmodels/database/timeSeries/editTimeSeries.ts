@@ -176,12 +176,31 @@ class editTimeSeries extends viewModelBase {
     changeCurrentSeries(name: string) {
         this.timeSeriesName(name);
         
+        router.navigate(appUrl.forEditTimeSeries(name, this.documentId(), this.activeDatabase()), false);
+        
         this.refresh();
     }
     
     deleteTimeSeries() {
         const deleteDialog = new deleteTimeSeries(this.timeSeriesName(), this.documentId(), this.activeDatabase(), this.deleteCriteria());
-        app.showBootstrapDialog(deleteDialog);
+        app.showBootstrapDialog(deleteDialog)
+            .done((postDeleteAction: postTimeSeriesDeleteAction) => {
+                switch (postDeleteAction) {
+                    case "changeTimeSeries":
+                        this.loadTimeSeries(this.documentId())
+                            .then((stats) => {
+                                const seriesToUse = stats.TimeSeries[0] && stats.TimeSeries[0].Name;
+                                if (seriesToUse) {
+                                    this.changeCurrentSeries(seriesToUse);
+                                } else {
+                                    router.navigate(this.urlForDocument());
+                                }
+                            });
+                        break;
+                    case "reloadCurrent":
+                        this.refresh();
+                }
+            })
     }
     
     createTimeSeries(createNew: boolean) {
@@ -195,7 +214,7 @@ class editTimeSeries extends viewModelBase {
                     // user didn't create new entry, but we requested creation 
                     // redirect back to document
                  
-                    router.navigate(this.urlForDocument());   
+                    router.navigate(this.urlForDocument());
                 }
             });
     }
@@ -208,7 +227,6 @@ class editTimeSeries extends viewModelBase {
             this.loadTimeSeries(this.documentId())
                 .done(() => {
                     this.changeCurrentSeries(seriesName);
-                    this.refresh();
                 });
         }
     }

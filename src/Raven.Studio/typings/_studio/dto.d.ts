@@ -133,6 +133,8 @@ interface timeSeriesDeleteCriteria {
     selection?: Raven.Client.Documents.Session.TimeSeriesValue[];
 }
 
+type postTimeSeriesDeleteAction = "reloadCurrent" | "changeTimeSeries" | "doNothing";
+
 interface documentAttachmentDto {
     ContentType: string;
     Hash: string;

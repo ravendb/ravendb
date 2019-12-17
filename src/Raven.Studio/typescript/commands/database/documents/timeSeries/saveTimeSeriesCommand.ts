@@ -3,7 +3,8 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 class saveTimeSeriesCommand extends commandBase {
-    constructor(private documentId: string, private dto: Raven.Client.Documents.Operations.TimeSeries.AppendTimeSeriesOperation, private db: database) {
+    constructor(private documentId: string, private dto: Raven.Client.Documents.Operations.TimeSeries.AppendTimeSeriesOperation, 
+                private db: database, private forceOverride: boolean = false) {
         super();
     }
     
@@ -12,6 +13,13 @@ class saveTimeSeriesCommand extends commandBase {
         
         const payload = {
             Id: this.documentId,
+            Removals: this.forceOverride ? [
+                    {
+                        From: this.dto.Timestamp,
+                        To: this.dto.Timestamp,
+                        Name: this.dto.Name
+                    }
+                ] : [],
             Appends: [
                 this.dto
             ]
