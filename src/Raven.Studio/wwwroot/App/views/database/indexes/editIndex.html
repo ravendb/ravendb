@@ -98,20 +98,20 @@
                             Output Reduce Results to Collection
                         </label>
                     </div>
-                    <div data-bind="validationElement: editedIndex().reduceToCollectionName">
-                        <input type="text" class="form-control flex-grow has-error" placeholder="Enter collection name" data-bind="textInput: editedIndex().reduceToCollectionName, visible: editedIndex().outputReduceToCollection">
+                    <div data-bind="validationElement: editedIndex().reduceOutputCollectionName">
+                        <input type="text" class="form-control flex-grow has-error" placeholder="Enter collection name" data-bind="textInput: editedIndex().reduceOutputCollectionName, visible: editedIndex().outputReduceToCollection">
                     </div>
                 </div>
                 <div class="flex-horizontal margin-bottom" data-bind="visible: editedIndex().outputReduceToCollection">
                     <div class="checkbox checkbox-inline flex-start on-base-background" title="Pattern for documents referencing documents from OutputReduceToCollection documents">
-                        <input id="patternForOutputReduceToCollectionReferences" class="styled" type="checkbox" data-bind="checked: editedIndex().patternForOutput">
-                        <label for="patternForOutputReduceToCollectionReferences">
+                        <input id="patternForReferences" class="styled" type="checkbox" data-bind="checked: editedIndex().hasPatternForReduceOutputCollection">
+                        <label for="patternForReferences">
                             <i class="icon-reference-pattern margin-right margin-right-sm"></i>
                             Pattern For Output Reduce to Collection References
                         </label>
                     </div>
-                    <div data-bind="validationElement: editedIndex().patternForOutputReduceToCollectionReferences">
-                        <input type="text" class="form-control flex-grow has-error" placeholder="Enter pattern" data-bind="textInput: editedIndex().patternForOutputReduceToCollectionReferences, visible: editedIndex().patternForOutput">
+                    <div data-bind="validationElement: editedIndex().patternForReferencesToReduceOutputCollection">
+                        <input type="text" class="form-control flex-grow has-error" placeholder="Enter pattern" data-bind="textInput: editedIndex().patternForReferencesToReduceOutputCollection, visible: editedIndex().hasPatternForReduceOutputCollection">
                     </div>
                 </div>
             </div>

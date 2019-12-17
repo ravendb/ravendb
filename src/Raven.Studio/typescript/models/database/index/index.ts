@@ -32,8 +32,8 @@ class index {
     reduceAttempts = ko.observable<number>();
     reduceErrors = ko.observable<number>();
     reduceSuccesses = ko.observable<number>();
-    reduceOutputCollection = ko.observable<string>();
-    reduceOutputReferencePattern = ko.observable<string>();
+    reduceOutputCollectionName = ko.observable<string>();
+    hasPatternForReduceOutputCollection = ko.observable<boolean>(); 
     
     type = ko.observable<Raven.Client.Documents.Indexes.IndexType>();
     typeForUI: KnockoutComputed<string>;
@@ -88,8 +88,8 @@ class index {
         this.reduceAttempts(dto.ReduceAttempts);
         this.reduceErrors(dto.ReduceErrors);
         this.reduceSuccesses(dto.ReduceSuccesses);
-        this.reduceOutputCollection(dto.ReduceOutputCollection);
-        this.reduceOutputReferencePattern(dto.ReduceOutputReferencePattern);
+        this.reduceOutputCollectionName(dto.ReduceOutputCollection);
+        this.hasPatternForReduceOutputCollection(!!dto.ReduceOutputReferencePattern);
         this.type(dto.Type);
         this.state(dto.State);
         this.globalIndexingStatus = globalIndexingStatus;
