@@ -126,6 +126,13 @@ interface timeSeriesItem {
     numberOfEntries: number;
 }
 
+type timeSeriesDeleteMode =  "all" | "range" | "selection";
+
+interface timeSeriesDeleteCriteria {
+    mode: timeSeriesDeleteMode;
+    selection?: Raven.Client.Documents.Session.TimeSeriesValue[];
+}
+
 interface documentAttachmentDto {
     ContentType: string;
     Hash: string;

@@ -2,7 +2,7 @@ import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
 import timeSeriesModel = require("models/database/timeSeries/timeSeriesModel");
-import saveTimeSeriesCommand = require("../../../commands/database/documents/timeSeries/saveTimeSeriesCommand");
+import saveTimeSeriesCommand = require("commands/database/documents/timeSeries/saveTimeSeriesCommand");
 
 class editTimeSeriesEntry extends dialogViewModelBase {
 

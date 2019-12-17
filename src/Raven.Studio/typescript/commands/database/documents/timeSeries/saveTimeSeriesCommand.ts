@@ -1,5 +1,5 @@
 import database = require("models/resources/database");
-import commandBase = require("../../../commandBase");
+import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 class saveTimeSeriesCommand extends commandBase {
