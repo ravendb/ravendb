@@ -4,7 +4,7 @@
             <a class="obj-name on-base-background"  data-bind="text: documentId, attr: { title: 'Go to document: ' + documentId(), href: urlForDocument }"></a>
         </div>
         <i class="icon-arrow-right margin-left margin-right"></i>
-        <div class="btn-group-label" data-label="Current Time Series">
+        <div class="btn-group-label" data-label="Time Series">
             <div class="dropdown dropdown-right">
                 <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
                     <span data-bind="text: timeSeriesName() || '<creating new>'"></span>
@@ -36,9 +36,9 @@
                 </ul>
             </div>
             
-            <button class="btn btn-danger" type="button">
+            <button class="btn btn-danger" type="button" data-bind="click: deleteTimeSeries, enable: canDeleteSelected">
                 <i class="icon-trash"></i>
-                <span>Delete</span>
+                <span data-bind="text: deleteButtonText"></span>
             </button>
         </div>
     </div>

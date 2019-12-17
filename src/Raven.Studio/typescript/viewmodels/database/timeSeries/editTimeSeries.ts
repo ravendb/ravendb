@@ -12,6 +12,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
+import deleteTimeSeries = require("viewmodels/database/timeSeries/deleteTimeSeries");
 
 class editTimeSeries extends viewModelBase {
     static timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
@@ -21,6 +22,9 @@ class editTimeSeries extends viewModelBase {
     timeSeriesNames = ko.observableArray<string>([]);
     
     urlForDocument: KnockoutComputed<string>;
+    canDeleteSelected: KnockoutComputed<boolean>;
+    deleteCriteria: KnockoutComputed<timeSeriesDeleteCriteria>;
+    deleteButtonText: KnockoutComputed<string>;
 
     private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Session.TimeSeriesValue>>();
     private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Session.TimeSeriesValue>();
@@ -28,7 +32,7 @@ class editTimeSeries extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("changeCurrentSeries", "createTimeSeries");
+        this.bindToCurrentInstance("changeCurrentSeries", "createTimeSeries", "deleteTimeSeries");
         
         this.initObservables();
     }
@@ -70,7 +74,7 @@ class editTimeSeries extends viewModelBase {
                 new checkedColumn(true),
                 editColumn,
                 new textColumn<Raven.Client.Documents.Session.TimeSeriesValue>(grid, x => formatTimeSeriesDate(x.Timestamp), "Date", "20%"),
-                new textColumn<Raven.Client.Documents.Session.TimeSeriesValue>(grid, x => x.Tag || 'N/A', "Tag", "20%"),
+                new textColumn<Raven.Client.Documents.Session.TimeSeriesValue>(grid, x => x.Tag, "Tag", "20%"),
                 new textColumn<Raven.Client.Documents.Session.TimeSeriesValue>(grid, x => x.Values.join(", "), "Values", "40%")
             ]
         );
@@ -94,7 +98,7 @@ class editTimeSeries extends viewModelBase {
         app.showBootstrapDialog(editTimeSeriesDialog)
             .done((seriesName) => {
                 if (seriesName) {
-                    this.refresh();    
+                    this.refresh();
                 }
             });
     }
@@ -175,6 +179,11 @@ class editTimeSeries extends viewModelBase {
         this.refresh();
     }
     
+    deleteTimeSeries() {
+        const deleteDialog = new deleteTimeSeries(this.timeSeriesName(), this.documentId(), this.activeDatabase(), this.deleteCriteria());
+        app.showBootstrapDialog(deleteDialog);
+    }
+    
     createTimeSeries(createNew: boolean) {
         const tsNameToUse = createNew ? null : this.timeSeriesName();
         const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(), this.activeDatabase(), tsNameToUse);
@@ -207,7 +216,74 @@ class editTimeSeries extends viewModelBase {
     private initObservables() {
         this.urlForDocument = ko.pureComputed(() => {
             return appUrl.forEditDoc(this.documentId(), this.activeDatabase());
-        })
+        });
+        
+        this.canDeleteSelected = ko.pureComputed(() => {
+            const controller = this.gridController();
+            if (controller) {
+                const selection = controller.selection();
+
+                if (selection.mode === "exclusive" && selection.excluded.length > 0) {
+                    try {
+                        controller.getSelectedItems();
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                }
+
+                return true;
+            } else {
+                return false;
+            }
+        });
+        
+        this.deleteCriteria = ko.pureComputed(() => {
+            const controller = this.gridController();
+            if (!controller) {
+                return {
+                    mode: "all"
+                } as timeSeriesDeleteCriteria;
+            }
+            const selection = controller.selection();
+            
+            if (selection.mode === "exclusive") {
+                if (selection.excluded.length === 0) {
+                    return {
+                        mode: "all",
+                    } as timeSeriesDeleteCriteria;
+                } else {
+                    return {
+                        mode: "selection",
+                        selection: controller.getSelectedItems()
+                    } as timeSeriesDeleteCriteria;
+                }
+            } else {
+                if (selection.included.length === 0) {
+                    return {
+                        mode: "range"
+                    } as timeSeriesDeleteCriteria;
+                } else {
+                    return {
+                        mode: "selection",
+                        selection: selection.included
+                    } as timeSeriesDeleteCriteria;
+                }
+            }
+        });
+        
+        this.deleteButtonText = ko.pureComputed(() => {
+            const criteria = this.deleteCriteria();
+            
+            switch (criteria.mode) {
+                case "all":
+                    return "Delete all";
+                case "range":
+                    return "Delete range";
+                case "selection":
+                    return "Delete selection";
+            }
+        });
     }
 }
 

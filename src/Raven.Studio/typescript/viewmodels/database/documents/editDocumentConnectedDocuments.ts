@@ -196,7 +196,7 @@ class connectedDocuments {
             new actionColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>,
                 x => this.goToTimeSeriesEdit(x),
                 "Details",
-                `<i class="icon-edit"></i>`,
+                `<i class="icon-preview"></i>`,
                 "70px",
                 { title: () => 'Go to time series details' })
         ]
