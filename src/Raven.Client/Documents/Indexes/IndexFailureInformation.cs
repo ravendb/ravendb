@@ -25,19 +25,31 @@ namespace Raven.Client.Documents.Indexes
         /// <value><c>true</c> if this is invalid index; otherwise, <c>false</c>.</value>
         public bool IsInvalidIndex(Func<bool> isStale)
         {
-            return CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors, isStale);
+            return CheckIndexInvalid(MapAttempts, MapErrors,
+                MapReferenceAttempts, MapReferenceErrors,
+                ReduceAttempts, ReduceErrors, isStale);
         }
 
-        public static bool CheckIndexInvalid(long attempts, long errors, long? reduceAttempts, long? reduceErrors, Func<bool> isStale)
+        public static bool CheckIndexInvalid(
+            long mapAttempts, long mapErrors,
+            long? mapReferenceAttempts, long? mapReferenceErrors,
+            long? reduceAttempts, long? reduceErrors,
+            Func<bool> isStale)
         {
-            if ((attempts == 0 || errors == 0) && (reduceAttempts == null || reduceAttempts == 0))
-                return false;
-
+            var attempts = mapAttempts;
+            if (mapReferenceAttempts != null)
+                attempts += mapReferenceAttempts.Value;
             if (reduceAttempts != null)
                 attempts += reduceAttempts.Value;
 
+            var errors = mapErrors;
+            if (mapReferenceErrors != null)
+                errors += mapReferenceErrors.Value;
             if (reduceErrors != null)
                 errors += reduceErrors.Value;
+
+            if (attempts == 0 || errors == 0)
+                return false;
 
             if (attempts > SufficientNumberOfAttemptsToCheckFailureRate)
                 return (errors / (float)attempts) > FailureThreshold;
@@ -57,21 +69,6 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Number of reduce attempts.
-        /// </summary>
-        public long? ReduceAttempts { get; set; }
-
-        /// <summary>
-        /// Number of reduce errors.
-        /// </summary>
-        public long? ReduceErrors { get; set; }
-
-        /// <summary>
-        /// Number of reduce successes.
-        /// </summary>
-        public long? ReduceSuccesses { get; set; }
-
-        /// <summary>
         /// Index name
         /// </summary>
         public string Name { get; set; }
@@ -82,14 +79,44 @@ namespace Raven.Client.Documents.Indexes
         public long MapAttempts { get; set; }
 
         /// <summary>
+        /// Number of indexing successes.
+        /// </summary>
+        public long MapSuccesses { get; set; }
+
+        /// <summary>
         /// Number of indexing errors.
         /// </summary>
         public long MapErrors { get; set; }
 
         /// <summary>
-        /// Number of indexing successes.
+        /// Number of reference indexing attempts.
         /// </summary>
-        public long MapSuccesses { get; set; }
+        public long? MapReferenceAttempts { get; set; }
+
+        /// <summary>
+        /// Number of references indexing successes.
+        /// </summary>
+        public long? MapReferenceSuccesses { get; set; }
+
+        /// <summary>
+        /// Number of reference indexing errors.
+        /// </summary>
+        public long? MapReferenceErrors { get; set; }
+
+        /// <summary>
+        /// Number of reduce attempts.
+        /// </summary>
+        public long? ReduceAttempts { get; set; }
+
+        /// <summary>
+        /// Number of reduce successes.
+        /// </summary>
+        public long? ReduceSuccesses { get; set; }
+
+        /// <summary>
+        /// Number of reduce errors.
+        /// </summary>
+        public long? ReduceErrors { get; set; }
 
         /// <summary>
         /// Failure rate.
@@ -99,6 +126,8 @@ namespace Raven.Client.Documents.Indexes
             get
             {
                 var attempts = MapAttempts;
+                if (MapReferenceAttempts.HasValue)
+                    attempts += MapReferenceAttempts.Value;
                 if (ReduceAttempts.HasValue)
                     attempts += ReduceAttempts.Value;
 
@@ -106,6 +135,8 @@ namespace Raven.Client.Documents.Indexes
                     return 0;
 
                 var errors = MapErrors;
+                if (MapReferenceErrors.HasValue)
+                    errors += MapReferenceErrors.Value;
                 if (ReduceErrors.HasValue)
                     errors += ReduceErrors.Value;
 
