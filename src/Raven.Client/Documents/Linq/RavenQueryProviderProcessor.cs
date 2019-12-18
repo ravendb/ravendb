@@ -2120,12 +2120,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case ExpressionType.MemberAccess:
                     var memberExpression = ((MemberExpression)body);
 
-                    if (_declareBuilder != null)
-                    {
-                        AddReturnStatementToOutputFunction(memberExpression);
-                        break;
-                    }
-
                     var selectPath = GetSelectPath(memberExpression);
                     AddToFieldsToFetch(selectPath, selectPath);
 
@@ -2353,8 +2347,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void HandleSelectTimeSeries(MethodCallExpression callExpression, string alias = null)
         {
-            var visitor = new TimeSeriesQueryVisitor<T>(callExpression, this);
-            var tsQueryText = visitor.VisitExpression();
+            var visitor = new TimeSeriesQueryVisitor<T>(this);
+            var tsQueryText = visitor.Visit(callExpression);
 
             var path = $"{Constants.TimeSeries.SelectFieldName}({tsQueryText})";
             alias ??= Constants.TimeSeries.QueryFunction + FieldsToFetch.Count;
@@ -2679,12 +2673,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     var name = GetSelectPath(field.Member);
                     AddJsProjection(name, field.Expression, sb, index != 0);
                 }
-            }
-
-            if (expression is MemberExpression me)
-            {
-                var name = GetSelectPath(me.Member);
-                AddJsProjection(name, me, sb, false);
             }
 
             sb.Append(" }");
