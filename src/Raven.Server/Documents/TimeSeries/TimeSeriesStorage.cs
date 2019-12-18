@@ -1315,7 +1315,7 @@ namespace Raven.Server.Documents.TimeSeries
                     tsNamesList.Add(val);
                 }
 
-                var location = tsNames.BinarySearch(tsName, StringComparison.Ordinal);
+                var location = tsNames.BinarySearch(tsName, StringComparison.OrdinalIgnoreCase);
                 if (location >= 0)
                     return;
 
@@ -1527,7 +1527,7 @@ namespace Raven.Server.Documents.TimeSeries
             return tx.OpenTable(TimeSeriesSchema, tableName);
         }
 
-        public DynamicJsonArray GetTimeSeriesNamesForDocument(DocumentsOperationContext context, string docId)
+        public DynamicJsonArray GetTimeSeriesLowerNamesForDocument(DocumentsOperationContext context, string docId)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
             var list = new DynamicJsonArray();
@@ -1563,15 +1563,15 @@ namespace Raven.Server.Documents.TimeSeries
                 bool excludeValueFromSeek;
                 do
                 {
-                    var name = GetNameAndUpdateSlice(ref reader, size, ref slice);
-                    if (name == null)
+                    var lowerName = GetLowerCasedNameAndUpdateSlice(ref reader, size, ref slice);
+                    if (lowerName == null)
                     {
                         excludeValueFromSeek = true;
                         continue;
                     }
 
                     excludeValueFromSeek = false;
-                    list.Add(name);
+                    list.Add(lowerName);
                 } while (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, slice, out reader, excludeValueFromSeek));
 
                 list.Items.Reverse();
@@ -1579,7 +1579,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static string GetNameAndUpdateSlice(ref TableValueReader reader, int prefixSize, ref Slice slice)
+        private static string GetLowerCasedNameAndUpdateSlice(ref TableValueReader reader, int prefixSize, ref Slice slice)
         {
             var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out var size);
             var segment = new TimeSeriesValuesSegment(segmentPtr, size);
