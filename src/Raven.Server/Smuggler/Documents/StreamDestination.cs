@@ -39,8 +39,8 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentsOperationContext _context;
         private readonly DatabaseSource _source;
         private BlittableJsonTextWriter _writer;
-        private static DatabaseSmugglerOptionsServerSide _options;
-        private static Func<LazyStringValue, bool> _filterMetadataProperty;
+        private DatabaseSmugglerOptionsServerSide _options;
+        private Func<LazyStringValue, bool> _filterMetadataProperty;
 
         public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source)
         {
@@ -70,7 +70,7 @@ namespace Raven.Server.Smuggler.Documents
             });
         }
 
-        private static void SetupMetadataFilterMethod(JsonOperationContext context)
+        private void SetupMetadataFilterMethod(JsonOperationContext context)
         {
             var skipCountersMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false;
             var skipAttachmentsMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false;
@@ -107,22 +107,22 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions Documents()
         {
-            return new StreamDocumentActions(_writer, _context, _source, "Docs");
+            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, "Docs");
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.RevisionDocuments));
+            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.RevisionDocuments));
         }
 
         public IDocumentActions Tombstones()
         {
-            return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.Tombstones));
+            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Tombstones));
         }
 
         public IDocumentActions Conflicts()
         {
-            return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.Conflicts));
+            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Conflicts));
         }
 
         public IKeyValueActions<long> Identities()
@@ -690,13 +690,17 @@ namespace Raven.Server.Smuggler.Documents
         {
             private readonly DocumentsOperationContext _context;
             private readonly DatabaseSource _source;
+            private readonly DatabaseSmugglerOptionsServerSide _options;
+            private readonly Func<LazyStringValue, bool> _filterMetadataProperty;
             private HashSet<string> _attachmentStreamsAlreadyExported;
 
-            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName)
+            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, DatabaseSmugglerOptionsServerSide options, Func<LazyStringValue, bool> filterMetadataProperty, string propertyName)
                 : base(writer, propertyName)
             {
                 _context = context;
                 _source = source;
+                _options = options;
+                _filterMetadataProperty = filterMetadataProperty;
             }
 
             public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
