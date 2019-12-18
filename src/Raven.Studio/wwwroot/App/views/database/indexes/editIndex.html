@@ -63,12 +63,12 @@
                 <h2 id="reduce-title" class="margin-bottom margin-bottom-xs on-base-background">Reduce</h2>
                 <a href="#" data-bind="click: mapReduceIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
             </div>
-            <div class="col-sm-10">
-                <div data-bind="if: editedIndex().hasReduce">
+            <div class="col-sm-10" data-bind="with: editedIndex()">
+                <div data-bind="if: hasReduce">
                     <div class="clearfix">
                         <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                            <button type="button" class="btn btn-default" data-bind="click: formatReduce"><i class="icon-indent"></i><span>Format</span></button>
-                            <button type="button" class="btn btn-danger" data-bind="click: removeReduce" title="Remove the Reduce function from the index">
+                            <button type="button" class="btn btn-default" data-bind="click: $root.formatReduce.bind($root)"><i class="icon-indent"></i><span>Format</span></button>
+                            <button type="button" class="btn btn-danger" data-bind="click: $root.removeReduce.bind($root)" title="Remove the Reduce function from the index">
                                 <i class="icon-trash"></i> <span>Delete</span>
                             </button>
                         </div>
@@ -78,40 +78,44 @@
                     -->
                     <div class="margin-bottom">
                         <pre class="form-control map"
-                             data-bind="aceEditor: { code: editedIndex().reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: editedIndex().reduce"></pre>
+                             data-bind="aceEditor: { code: reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: reduce"></pre>
 
-                        <div data-bind="validationElement: editedIndex().reduce">
-                            <div class="help-block" data-bind="validationMessage: editedIndex().reduce"></div>
+                        <div data-bind="validationElement: reduce">
+                            <div class="help-block" data-bind="validationMessage: reduce"></div>
                         </div>
                     </div>
                 </div>
-                <div class="margin-bottom" data-bind="visible: !editedIndex().hasReduce()">
-                    <button class="btn btn-info" data-bind="click: addReduce">
+                <div class="margin-bottom" data-bind="visible: !hasReduce()">
+                    <button class="btn btn-info" data-bind="click: $root.addReduce.bind($root)">
                         <i class="icon-plus"></i><span>Add Reduction</span>
                     </button>
                 </div>
-                <div class="flex-horizontal margin-bottom" data-bind="visible: editedIndex().hasReduce">
-                    <div class="checkbox checkbox-inline flex-start on-base-background" title="Output the reduce results to documents in the specified collection">
-                        <input id="outputToCollection" class="styled" type="checkbox" data-bind="checked: editedIndex().outputReduceToCollection">
-                        <label for="outputToCollection">
-                            <i class="icon-output-collection margin-right margin-right-sm"></i>
-                            Output Reduce Results to Collection
-                        </label>
+                <div class="row" data-bind="visible: hasReduce()">
+                    <div class="col-md-4 no-padding-right margin-left margin-left-sm">
+                        <div class="toggle">
+                            <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection">
+                            <Label for="toggleOutputToCollection">Output the Reduce Results to a Collection <small><i id="reduce-output-info" class="icon-info text-info"></i></small></Label>
+                        </div>
                     </div>
-                    <div data-bind="validationElement: editedIndex().reduceOutputCollectionName">
-                        <input type="text" class="form-control flex-grow has-error" placeholder="Enter collection name" data-bind="textInput: editedIndex().reduceOutputCollectionName, visible: editedIndex().outputReduceToCollection">
+                    <div class="col-md-6 no-padding-left">
+                        <div data-bind="visible: outputReduceToCollection, validationElement: reduceOutputCollectionName">
+                            <input id="test" type="text" class="form-control" placeholder="Enter the Collection Name"
+                                   data-bind="textInput: reduceOutputCollectionName">
+                        </div>
                     </div>
                 </div>
-                <div class="flex-horizontal margin-bottom" data-bind="visible: editedIndex().outputReduceToCollection">
-                    <div class="checkbox checkbox-inline flex-start on-base-background" title="Pattern for documents referencing documents from OutputReduceToCollection documents">
-                        <input id="patternForReferences" class="styled" type="checkbox" data-bind="checked: editedIndex().hasPatternForReduceOutputCollection">
-                        <label for="patternForReferences">
-                            <i class="icon-reference-pattern margin-right margin-right-sm"></i>
-                            Pattern For Output Reduce to Collection References
-                        </label>
+                <div class="row margin-top" data-bind="visible: hasReduce() && outputReduceToCollection()">
+                    <div class="col-md-4 no-padding-right margin-left margin-left-lg">
+                        <div class="toggle">
+                            <input id="togglePatternForReferences" type="checkbox" data-bind="checked: hasPatternForReduceOutputCollection">
+                            <label for="togglePatternForReferences">Create References to the Results Collection <small><i id="reference-docs-info" class="icon-info text-info"></i></small></label>
+                        </div>
                     </div>
-                    <div data-bind="validationElement: editedIndex().patternForReferencesToReduceOutputCollection">
-                        <input type="text" class="form-control flex-grow has-error" placeholder="Enter pattern" data-bind="textInput: editedIndex().patternForReferencesToReduceOutputCollection, visible: editedIndex().hasPatternForReduceOutputCollection">
+                    <div class="col-md-6 no-padding-left margin-left margin-left-sm">
+                        <div data-bind="visible: hasPatternForReduceOutputCollection, validationElement: patternForReferencesToReduceOutputCollection">
+                            <input type="text" class="form-control" placeholder="Enter Pattern for the Reference Documents ID"
+                                   data-bind="textInput: patternForReferencesToReduceOutputCollection">
+                        </div>
                     </div>
                 </div>
             </div>
