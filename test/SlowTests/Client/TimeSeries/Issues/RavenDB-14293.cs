@@ -4,7 +4,7 @@ using FastTests;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Client.TimeSeries
+namespace SlowTests.Client.TimeSeries.Issues
 {
     public class RavenDB_14293 : RavenTestBase
     {

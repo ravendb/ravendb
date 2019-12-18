@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasCmpXchgSelect { get; internal set; }
 
-        public bool HasTimeSeries { get; private set; }
+        public bool HasTimeSeriesSelect { get; private set; }
 
         public bool IsCollectionQuery { get; private set; } = true;
 
@@ -361,13 +361,19 @@ namespace Raven.Server.Documents.Queries
         {
             foreach (var function in Query.DeclaredFunctions)
             {
-                if (function.Value.JavaScript == null)
+                if (function.Value.Type == DeclaredFunction.FunctionType.TimeSeries)
+                {
+                    HasTimeSeriesSelect = true;
                     continue;
+                }
 
-                var body = function.Value.JavaScript.Body;
-                HandleDeclaredFunctionBody(body);
-                if (HasIncludeOrLoad)
-                    return;
+                if (function.Value.Type == DeclaredFunction.FunctionType.JavaScript)
+                {
+                    var body = function.Value.JavaScript.Body;
+                    HandleDeclaredFunctionBody(body);
+                    if (HasIncludeOrLoad)
+                        return;
+                }
             }
         }
 
@@ -504,7 +510,6 @@ namespace Raven.Server.Documents.Queries
                                 if (TimeSeriesIncludes == null)
                                 {
                                     TimeSeriesIncludes = new TimeSeriesIncludesField();
-                                    HasTimeSeries = true;
                                 }
 
                                 AddToTimeSeriesIncludes(TimeSeriesIncludes, me, parameters);

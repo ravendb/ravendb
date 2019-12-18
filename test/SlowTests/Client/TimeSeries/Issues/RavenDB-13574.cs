@@ -8,7 +8,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Client.TimeSeries
+namespace SlowTests.Client.TimeSeries.Issues
 {
     public class RavenDB_13574 : RavenTestBase
     {
