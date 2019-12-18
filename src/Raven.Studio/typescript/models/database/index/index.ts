@@ -37,6 +37,7 @@ class index {
     reduceSuccesses = ko.observable<number>();
     reduceOutputCollectionName = ko.observable<string>();
     hasPatternForReduceOutputCollection = ko.observable<boolean>(); 
+    mapReduceIndexInfoTooltip: KnockoutComputed<string>;
     
     type = ko.observable<Raven.Client.Documents.Indexes.IndexType>();
     typeForUI: KnockoutComputed<string>;
@@ -241,9 +242,20 @@ class index {
                 return "Idle";
             }
 
-           
-
             return "Normal";
+        });
+
+        this.mapReduceIndexInfoTooltip = ko.pureComputed(() => {
+            let infoTextHtml;
+
+            if (this.reduceOutputCollectionName()) {
+                infoTextHtml = `Reduce Results are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}</strong>`;
+            }
+            if (this.hasPatternForReduceOutputCollection()) {
+                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}/References</strong>`;
+            }
+
+            return infoTextHtml;
         });
     }
 

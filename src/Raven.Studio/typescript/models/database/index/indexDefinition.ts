@@ -39,6 +39,7 @@ class indexDefinition {
     defaultFieldOptions = ko.observable<indexFieldOptions>(null);
     isAutoIndex = ko.observable<boolean>(false);
 
+    hasReduce = ko.observable<boolean>(false);
     outputReduceToCollection = ko.observable<boolean>();
     reduceOutputCollectionName = ko.observable<string>(); 
     hasPatternForReduceOutputCollection = ko.observable<boolean>(); 
@@ -52,8 +53,6 @@ class indexDefinition {
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
 
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
-
-    hasReduce = ko.observable<boolean>(false);
 
     validationGroup: KnockoutValidationGroup;
 
@@ -122,20 +121,39 @@ class indexDefinition {
 
         this.reduce.extend({
             required: {
-                onlyIf: () => this.hasReduce()
-            }
+                onlyIf: () => this.hasReduce() && !this.reduce()
+            },
+            validation: [
+                {
+                    validator: (reduceContent: string) => {
+                        if (reduceContent && reduceContent.trim())
+                            return true; 
+                    },
+                    message: `Reduce function is empty!`
+                }
+            ]
         });
 
         this.reduceOutputCollectionName.extend({
             required: {
                 onlyIf: () => this.hasReduce() && this.outputReduceToCollection()
-            }
+            },
+            validation: [
+                {
+                    validator: () => !this.hasReduce() || this.reduce() || !this.outputReduceToCollection(),
+                    message: `Reduce function above is empty!`
+                }
+            ]
         });
 
         this.patternForReferencesToReduceOutputCollection.extend({
             required: {
                 onlyIf: () => this.hasReduce() && this.hasPatternForReduceOutputCollection()
-            }
+            },
+            validation: [{
+                validator: () => !this.hasReduce() || this.reduce() || !this.hasPatternForReduceOutputCollection(),
+                message: `Reduce function above is empty!`
+            }]
         });
 
         this.validationGroup = ko.validatedObservable({
@@ -209,8 +227,15 @@ class indexDefinition {
             Priority: this.priority(),
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
-            OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceOutputCollectionName() : null,
-            PatternForOutputReduceToCollectionReferences: this.outputReduceToCollection() && this.hasPatternForReduceOutputCollection() ? this.patternForReferencesToReduceOutputCollection() : null,
+            OutputReduceToCollection: this.hasReduce() &&
+                                      this.reduce()    &&
+                                      this.outputReduceToCollection() ? 
+                                           this.reduceOutputCollectionName() : null,
+            PatternForOutputReduceToCollectionReferences: this.hasReduce() &&
+                                                          this.reduce()    &&
+                                                          this.outputReduceToCollection() && 
+                                                          this.hasPatternForReduceOutputCollection() ? 
+                                                               this.patternForReferencesToReduceOutputCollection() : null,
             AdditionalSources: this.additionalSourceToDto()
         }
     }
