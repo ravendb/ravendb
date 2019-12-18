@@ -437,7 +437,7 @@ namespace Raven.Server.Rachis
                 // an admin needs to let us know that it is fine, either
                 // by explicit bootstrapping or by connecting us to a cluster
                 if (topology.TopologyId == null ||
-                    topology.Members.ContainsKey(_tag) == false)
+                    topology.Contains(_tag) == false)
                 {
                     CurrentState = RachisState.Passive;
                     return;
