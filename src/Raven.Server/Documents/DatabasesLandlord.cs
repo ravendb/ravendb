@@ -61,8 +61,25 @@ namespace Raven.Server.Documents
             return HandleClusterDatabaseChanged(databaseName, index, type, changeType);
         }
 
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
+        }
+
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
         {
+            ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged?.Invoke(_serverStore);
+
             if (PreventWakeUpIdleDatabase(databaseName, type))
                 return;
 
@@ -480,7 +497,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false)
+        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
         {
             IDisposable release = null;
             try
@@ -516,7 +533,7 @@ namespace Raven.Server.Documents
                         return database;
                     }
                 }
-                return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase);
+                return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
             }
             finally
             {
@@ -558,9 +575,9 @@ namespace Raven.Server.Documents
             throw new ObjectDisposedException("The server is being disposed, cannot load database " + databaseName);
         }
 
-        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false)
+        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant)
         {
-            var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase);
+            var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
             if (config == null)
                 return Task.FromResult<DocumentDatabase>(null);
 

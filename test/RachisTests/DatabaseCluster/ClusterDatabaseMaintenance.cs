@@ -614,6 +614,8 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task DontRemoveNodeWhileItHasNotReplicatedDocs()
         {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
             var databaseName = GetDatabaseName();
             var settings = new Dictionary<string, string>
             {
@@ -699,6 +701,7 @@ namespace RachisTests.DatabaseCluster
                 await Task.Delay(TimeSpan.FromSeconds(10));
                 Assert.Equal(2, await WaitForValueAsync(async () => await GetMembersCount(leaderStore, databaseName), 2));
                 Assert.Equal(1, await WaitForValueAsync(async () => await GetRehabCount(leaderStore, databaseName), 1));
+                Assert.Equal(1, await WaitForValueAsync(async () => await GetDeletionCount(leaderStore, databaseName), 1));
 
                 using (var session = leaderStore.OpenSession())
                 {
@@ -711,13 +714,26 @@ namespace RachisTests.DatabaseCluster
                 }, databaseName, "users/3", null, TimeSpan.FromSeconds(10)));
 
                 settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = urlsC[0];
+                var mre = new ManualResetEventSlim(false);
                 Servers[2] = GetNewServer(new ServerCreationOptions
                 {
                     CustomSettings = settings,
                     RunInMemory = false,
                     DeletePrevious = false,
-                    PartialPath = dataDirC
+                    PartialPath = dataDirC,
+                    BeforeDatabasesStartup = (server) =>
+                    {
+                        while (server.LoadDatabaseTopology(databaseName).Rehabs.Contains("C") == false)
+                        {
+                            Thread.Sleep(100);
+                        }
+                        mre.Set();
+                    }
                 });
+
+                if (mre.Wait(TimeSpan.FromSeconds(30)) == false)
+                    throw new TimeoutException();
+
                 Assert.Equal(2, await WaitForValueAsync(async () => await GetMembersCount(leaderStore, databaseName), 2));
                 Assert.Equal(0, await WaitForValueAsync(async () => await GetRehabCount(leaderStore, databaseName), 0, 30_000));
 
@@ -1242,6 +1258,16 @@ namespace RachisTests.DatabaseCluster
                 return -1;
             }
             return res.Topology.Members.Count;
+        }
+
+        private static async Task<int> GetDeletionCount(IDocumentStore store, string databaseName)
+        {
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            if (res == null)
+            {
+                return -1;
+            }
+            return res.DeletionInProgress.Count;
         }
     }
 }
