@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
@@ -828,11 +829,11 @@ namespace Raven.Server.Documents
             }
 
             var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
-            tombstoneTable.ReadByKey(lowerId, out TableValueReader tvr);
+            var (_, tvr) = tombstoneTable.SeekByPrimaryKeyPrefix(lowerId, Slices.Empty, 0).FirstOrDefault();
 
             return new DocumentOrTombstone
             {
-                Tombstone = TableValueToTombstone(context, ref tvr)
+                Tombstone = tvr == null ? null : TableValueToTombstone(context, ref tvr.Reader)
             };
         }
 
@@ -1213,6 +1214,8 @@ namespace Raven.Server.Documents
                 result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
             }
 
+            result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
+
             return result;
         }
 
@@ -1528,6 +1531,8 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
+            
+            var nonConflictedLowerId = ModifyLowerIdIfNeeded(context, table, lowerId);
 
             try
             {
@@ -1535,7 +1540,7 @@ namespace Raven.Server.Documents
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    tvb.Add(lowerId);
+                    tvb.Add(nonConflictedLowerId);
                     tvb.Add(Bits.SwapBytes(newEtag));
                     tvb.Add(Bits.SwapBytes(documentEtag));
                     tvb.Add(context.GetTransactionMarker());
@@ -1556,13 +1561,44 @@ namespace Raven.Server.Documents
                     var tombstoneCollectionName = ExtractCollectionName(context, tombstoneCollection);
 
                     if (tombstoneCollectionName != collectionName)
+                    {
+                        Debug.Assert(false, "Should never happened after RavenDB-14325");
                         ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(lowerId, collectionName, tombstoneCollectionName, e);
+                    }
                 }
 
                 throw;
             }
 
             return (newEtag, changeVector);
+        }
+
+        private Slice ModifyLowerIdIfNeeded(DocumentsOperationContext context, Table table, Slice lowerId)
+        {
+            if (table.ReadByKey(lowerId, out _) == false)
+                return lowerId;
+
+            var length = lowerId.Content.Length;
+            Slice.From(context.Allocator, lowerId.Content.Ptr, length + sizeof(long) * 2, out var newLowerId); // TODO: dispose?
+
+            *(long*)(newLowerId.Content.Ptr + length) = ConflictedTombstoneIdMarkerLong;
+            *(long*)(newLowerId.Content.Ptr + length + sizeof(long)) = Bits.SwapBytes(GenerateNextEtag()); // now the id will be unique
+
+            return newLowerId;
+        }
+
+        private const long ConflictedTombstoneIdMarkerLong = 20L;
+        private static readonly string ConflictedTombstoneIdMarkerString = Encoding.UTF8.GetString(BitConverter.GetBytes(ConflictedTombstoneIdMarkerLong));
+
+        private static LazyStringValue UnwrapLowerIdIfNeeded(JsonOperationContext context, string lowerId)
+        {
+            var index = lowerId.IndexOf(ConflictedTombstoneIdMarkerString, StringComparison.OrdinalIgnoreCase);
+            if (index > 0)
+            {
+                return context.GetLazyString(lowerId.Substring(0, index));
+            }
+            
+            return context.GetLazyString(lowerId);
         }
 
         private void ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(Slice lowerId, CollectionName collectionName,
