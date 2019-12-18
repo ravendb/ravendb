@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
@@ -188,6 +191,30 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 return etags;
+            }
+        }
+
+        public static bool ShouldReplace(Index index, ref bool? isSideBySide)
+        {
+            if (isSideBySide.HasValue == false)
+                isSideBySide = index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase);
+
+            if (isSideBySide == false)
+                return false;
+
+            using (index.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext databaseContext))
+            using (index._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+            {
+                using (indexContext.OpenReadTransaction())
+                using (databaseContext.OpenReadTransaction())
+                using ((index as MapReduceIndex)?.IgnoreStalenessDueToReduceOutputsToDelete())
+                {
+                    var canReplace = index.IsStale(databaseContext, indexContext) == false;
+                    if (canReplace)
+                        isSideBySide = null;
+
+                    return canReplace;
+                }
             }
         }
     }

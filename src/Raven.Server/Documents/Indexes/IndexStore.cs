@@ -759,24 +759,35 @@ namespace Raven.Server.Documents.Indexes
             switch (definition.SourceType)
             {
                 case IndexSourceType.Documents:
-                    var documentsIndexDefinition = (IndexDefinition)definition;
 
                     switch (definition.Type)
                     {
                         case IndexType.Map:
                         case IndexType.JavaScriptMap:
-                            MapIndex.Update(existingIndex, documentsIndexDefinition, _documentDatabase);
+                            MapIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
                         case IndexType.MapReduce:
                         case IndexType.JavaScriptMapReduce:
-                            MapReduceIndex.Update(existingIndex, documentsIndexDefinition, _documentDatabase);
+                            MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
                         default:
                             throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
                     }
                     break;
                 case IndexSourceType.TimeSeries:
-                    throw new InvalidOperationException("TODO ppekrol");
+                    switch (definition.Type)
+                    {
+                        case IndexType.Map:
+                        case IndexType.JavaScriptMap:
+                            MapTimeSeriesIndex.Update(existingIndex, definition, _documentDatabase);
+                            break;
+                        case IndexType.MapReduce:
+                        case IndexType.JavaScriptMapReduce:
+                            MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
+                            break;
+                        default:
+                            throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
+                    }
                     break;
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");

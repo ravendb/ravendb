@@ -897,7 +897,7 @@ namespace Raven.Server.Documents.Indexes
                         end);
         }
 
-        protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
+        internal virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             if (Type == IndexType.Faulty)
                 return true;

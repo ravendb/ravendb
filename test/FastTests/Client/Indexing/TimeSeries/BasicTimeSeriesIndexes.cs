@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
@@ -846,6 +847,220 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(0, terms.Length);
+            }
+        }
+
+        [Fact]
+        public void CanUpdateMapTimeSeriesIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MyTsIndex",
+                    Maps = {
+                    "from ts in timeSeries.Companies.HeartRate " +
+                    "from entry in ts.Entries " +
+                    "select new { " +
+                    "   HeartBeat = entry.Values[0], " +
+                    "   Date = entry.TimeStamp.Date, " +
+                    "   User = ts.DocumentId " +
+                    "}" }
+                }));
+
+
+                store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MyTsIndex",
+                    Maps = {
+                        "from ts in timeSeries.Companies.ChangedTs " +
+                        "from entry in ts.Entries " +
+                        "select new { " +
+                        "   HeartBeat = entry.Value, " +
+                        "   Date = entry.TimeStamp.Date, " +
+                        "   User = ts.DocumentId " +
+                        "}" }
+                }));
+
+                WaitForIndexing(store);
+
+                Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
+
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
+
+                Assert.Contains("ChangedTs", indexes[0].Maps.First());
+            }
+        }
+
+        [Fact]
+        public void CanUpdateMapTimeSeriesIndexWithoutUpdatingCompiledIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MyTsIndex",
+                    Maps = {
+                        "from ts in timeSeries.Companies.HeartRate " +
+                        "from entry in ts.Entries " +
+                        "select new { " +
+                        "   HeartBeat = entry.Values[0], " +
+                        "   Date = entry.TimeStamp.Date, " +
+                        "   User = ts.DocumentId " +
+                        "}" },
+                    Priority = IndexPriority.Low
+                }));
+
+                store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MyTsIndex",
+                    Maps = {
+                        "from ts in timeSeries.Companies.HeartRate " +
+                        "from entry in ts.Entries " +
+                        "select new { " +
+                        "   HeartBeat = entry.Values[0], " +
+                        "   Date = entry.TimeStamp.Date, " +
+                        "   User = ts.DocumentId " +
+                        "}" },
+                    Priority = IndexPriority.High
+                }));
+
+                WaitForIndexing(store); 
+
+                Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
+
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
+
+                Assert.Equal(IndexPriority.High, indexes[0].Priority);
+            }
+        }
+
+        [Fact]
+        public void CanUpdateMapReduceTimeSeriesIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MPTSIndex",
+                    Maps = {
+                        "from ts in timeSeries.Users.HeartRate " +
+                        "from entry in ts.Entries " +
+                        "select new { " +
+                        "   HeartBeat = entry.Value, " +
+                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   User = ts.DocumentId, " +
+                        "   Count = 1" +
+                        "}" },
+                    Reduce = "from r in results " +
+                             "group r by new { r.Date, r.User } into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumHeartBeat / sumCount, " +
+                             "  Date = g.Key.Date," +
+                             "  User = g.Key.User, " +
+                             "  Count = sumCount" +
+                             "}"
+                }));
+
+
+                store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MPTSIndex",
+                    Maps = {
+                        "from ts in timeSeries.Users.HeartRate " +
+                        "from entry in ts.Entries " +
+                        "select new { " +
+                        "   HeartBeat = entry.Value, " +
+                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   User = ts.DocumentId, " +
+                        "   Count = 1" +
+                        "}" },
+                    Reduce = "from r in results " +
+                             "group r by new { r.Date, r.User } into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumCount / sumHeartBeat, " + // <--- changed
+                             "  Date = g.Key.Date," +
+                             "  User = g.Key.User, " +
+                             "  Count = sumCount" +
+                             "}"
+                }));
+
+                WaitForIndexing(store);
+
+                Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
+
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
+
+                Assert.Contains("sumCount / sumHeartBeat", indexes[0].Reduce);
+            }
+        }
+
+        [Fact]
+        public void CanUpdateMapReduceTimeSeriesIndexWithoutUpdatingCompiledIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MPTSIndex",
+                    Maps = {
+                        "from ts in timeSeries.Users.HeartRate " +
+                        "from entry in ts.Entries " +
+                        "select new { " +
+                        "   HeartBeat = entry.Value, " +
+                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   User = ts.DocumentId, " +
+                        "   Count = 1" +
+                        "}" },
+                    Reduce = "from r in results " +
+                             "group r by new { r.Date, r.User } into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumHeartBeat / sumCount, " +
+                             "  Date = g.Key.Date," +
+                             "  User = g.Key.User, " +
+                             "  Count = sumCount" +
+                             "}",
+                    Priority = IndexPriority.Low
+                }));
+
+                store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MPTSIndex",
+                    Maps = {
+                        "from ts in timeSeries.Users.HeartRate " +
+                        "from entry in ts.Entries " +
+                        "select new { " +
+                        "   HeartBeat = entry.Value, " +
+                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   User = ts.DocumentId, " +
+                        "   Count = 1" +
+                        "}" },
+                    Reduce = "from r in results " +
+                             "group r by new { r.Date, r.User } into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumHeartBeat / sumCount, " +
+                             "  Date = g.Key.Date," +
+                             "  User = g.Key.User, " +
+                             "  Count = sumCount" +
+                             "}",
+                    Priority = IndexPriority.High
+                }));
+
+                WaitForIndexing(store);
+
+                Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
+
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
+
+                Assert.Equal(IndexPriority.High, indexes[0].Priority);
             }
         }
     }

@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         protected internal readonly StaticTimeSeriesIndexBase _compiled;
+        private bool? _isSideBySide;
 
         private HandleReferences _handleReferences;
 
@@ -112,7 +113,17 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return new TimeSeriesIndexItem(timeSeries.Key, timeSeries.Key, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, timeSeries.Baseline, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
-        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
+        protected override bool ShouldReplace()
+        {
+            return StaticIndexHelper.ShouldReplace(this, ref _isSideBySide);
+        }
+
+        public override void ResetIsSideBySideAfterReplacement()
+        {
+            _isSideBySide = null;
+        }
+
+        internal override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
             if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
@@ -181,6 +192,15 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapTimeSeriesIndex(staticMapIndexDefinition, staticIndex);
             return instance;
+        }
+
+        public static void Update(Index index, IndexDefinition definition, DocumentDatabase documentDatabase)
+        {
+            var staticMapIndex = (MapTimeSeriesIndex)index;
+            var staticIndex = staticMapIndex._compiled;
+
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
         private void HandleTimeSeriesChange(TimeSeriesChange change)
