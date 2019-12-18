@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Replication
                     foreach (var external in externals)
                     {
                         var state = GetExternalReplicationState(_server, Database.Name, external.TaskId, ctx);
-                        var myEtag = ChangeVectorUtils.GetEtagById(state.SourceChangeVector, Database.DbBase64Id);
+                        var myEtag = ChangeVectorUtils.GetEtagById(state.DestinationChangeVector, Database.DbBase64Id);
                         minEtag = Math.Min(myEtag, minEtag);
                     }
                 }
