@@ -1,3 +1,4 @@
+/// <reference path="../../../../typings/tsd.d.ts" />
 
 class timeSeriesValue {
     value = ko.observable<number>();
@@ -12,7 +13,7 @@ class timeSeriesValue {
     initValidation() {
         this.value.extend({
             required: true,
-            number: true
+            numberOrNaN: true
         });
         
         this.validationGroup = ko.validatedObservable({

@@ -73,6 +73,14 @@ class extensions {
                 return extensions.validateUrl(url());
             }
         };
+        
+        (ko.validation.rules as any)['numberOrNaN'] = {
+            validator: (value: string, validate: any) => {
+                if (!validate) { return true; }
+                return ko.validation.utils.isEmptyVal(value) || (validate && /^-?(?:\d+|\d{1,3}(?:,\d{3})+)?(?:\.\d+)?$/.test(value)) || (validate && value === "NaN");
+            },
+            message: 'Please enter a number or NaN'
+        };
 
         (ko.validation.rules as any)['validIpWithoutPort'] = {
             validator: (val: string) => !extensions.validateAddress(val, ["ipv4", "ipv6"], false),

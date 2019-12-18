@@ -7,8 +7,9 @@ import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindi
 
 class deleteTimeSeries extends dialogViewModelBase {
 
-    static readonly minDate = "0001-01-01T00:00:00.0000000Z";
-    static readonly maxDate = "9999-12-31T23:59:59.9999999Z";
+    static readonly minDate = "0001-01-01T00:00:00.000Z";
+    static readonly maxDate = "9999-12-31T23:59:59.999Z";
+    static readonly effectiveDateFormat = "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]";
     
     spinners = {
         delete: ko.observable<boolean>(false)
@@ -36,11 +37,11 @@ class deleteTimeSeries extends dialogViewModelBase {
         criteria.selection = criteria.selection || [];
         
         this.startDateToUse = ko.pureComputed(() => {
-            return this.useMinStartDate() ? deleteTimeSeries.minDate : this.startDate().utc().format();
+            return this.useMinStartDate() ? deleteTimeSeries.minDate : this.startDate().utc().format(deleteTimeSeries.effectiveDateFormat);
         });
         
         this.endDateToUse = ko.pureComputed(() => {
-            return this.useMaxEndDate() ? deleteTimeSeries.maxDate : this.endDate().utc().format();
+            return this.useMaxEndDate() ? deleteTimeSeries.maxDate : this.endDate().utc().format(deleteTimeSeries.effectiveDateFormat);
         });
         
         this.showWarning = ko.pureComputed(() => {
