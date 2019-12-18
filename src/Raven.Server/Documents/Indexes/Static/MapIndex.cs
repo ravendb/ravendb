@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Static
             base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
-        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
+        internal override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
             if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
@@ -130,25 +130,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override bool ShouldReplace()
         {
-            if (_isSideBySide.HasValue == false)
-                _isSideBySide = Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase);
-
-            if (_isSideBySide == false)
-                return false;
-
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext databaseContext))
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-            {
-                using (indexContext.OpenReadTransaction())
-                using (databaseContext.OpenReadTransaction())
-                {
-                    var canReplace = IsStale(databaseContext, indexContext) == false;
-                    if (canReplace)
-                        _isSideBySide = null;
-
-                    return canReplace;
-                }
-            }
+            return StaticIndexHelper.ShouldReplace(this, ref _isSideBySide);
         }
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()

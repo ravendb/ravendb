@@ -355,14 +355,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return PutMapResults(indexItem.LowerId, indexItem.Id, wrapper, indexContext, stats);
         }
 
-        private IDisposable IgnoreStalenessDueToReduceOutputsToDelete()
+        internal IDisposable IgnoreStalenessDueToReduceOutputsToDelete()
         {
             _ignoreStalenessDueToReduceOutputsToDelete.Value = true;
 
             return new DisposableAction(() => _ignoreStalenessDueToReduceOutputsToDelete.Value = false);
         }
 
-        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
+        internal override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
 
@@ -423,26 +423,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         protected override bool ShouldReplace()
         {
-            if (_isSideBySide.HasValue == false)
-                _isSideBySide = Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase);
-
-            if (_isSideBySide == false)
-                return false;
-
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext databaseContext))
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-            {
-                using (indexContext.OpenReadTransaction())
-                using (databaseContext.OpenReadTransaction())
-                using (IgnoreStalenessDueToReduceOutputsToDelete())
-                {
-                    var canReplace = IsStale(databaseContext, indexContext) == false;
-                    if (canReplace)
-                        _isSideBySide = null;
-
-                    return canReplace;
-                }
-            }
+            return StaticIndexHelper.ShouldReplace(this, ref _isSideBySide);
         }
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
