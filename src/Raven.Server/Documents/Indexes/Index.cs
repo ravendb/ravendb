@@ -2525,7 +2525,7 @@ namespace Raven.Server.Documents.Indexes
                                         query.Metadata.CounterIncludes.Counters);
                                 }
 
-                                if (query.Metadata.HasTimeSeries)
+                                if (query.Metadata.TimeSeriesIncludes != null)
                                 {
                                     includeTimeSeriesCommand = new IncludeTimeSeriesCommand(
                                         DocumentDatabase,
@@ -3202,27 +3202,31 @@ namespace Raven.Server.Documents.Indexes
                 //buffer[3] - last process tombstone etag
             }
 
-            if (q.CounterIncludes != null || q.HasCounterSelect)
+            var hasCounters = q.CounterIncludes != null || q.HasCounterSelect;
+            var hasTimeSeries = q.TimeSeriesIncludes != null || q.HasTimeSeriesSelect;
+            var hasCmpXchg = q.HasCmpXchg || q.HasCmpXchgSelect;
+
+            if (hasCounters)
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
 
                 var offset = length - sizeof(long) *
-                                       (1 + (q.HasCmpXchg || q.HasCmpXchgSelect ? 1 : 0) +
-                                        (q.HasTimeSeries ? 1 : 0));
+                                       (1 + (hasCmpXchg ? 1 : 0) +
+                                        (hasTimeSeries ? 1 : 0));
 
                 *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastCountersEtag(documentsContext.Transaction.InnerTransaction);
             }
 
-            if (q.HasTimeSeries)
+            if (hasTimeSeries)
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last time series etag");
 
-                var offset = length - (sizeof(long) * (q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1));
+                var offset = length - (sizeof(long) * (hasCmpXchg ? 2 : 1));
 
                 *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastTimeSeriesEtag(documentsContext.Transaction.InnerTransaction);
             }
 
-            if (q.HasCmpXchg || q.HasCmpXchgSelect)
+            if (hasCmpXchg)
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last compare exchange index");
 
@@ -3249,7 +3253,7 @@ namespace Raven.Server.Documents.Indexes
             if (q.CounterIncludes != null || q.HasCounterSelect)
                 length += sizeof(long); // last counter etag
 
-            if (q.HasTimeSeries)
+            if (q.TimeSeriesIncludes != null || q.HasTimeSeriesSelect)
                 length += sizeof(long); // last time series etag
 
             if (q.HasCmpXchg || q.HasCmpXchgSelect)

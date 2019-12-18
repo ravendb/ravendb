@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         query.Metadata.CounterIncludes.Counters);
                 }
 
-                if (query.Metadata.HasTimeSeries)
+                if (query.Metadata.TimeSeriesIncludes != null)
                 {
                     includeTimeSeriesCommand = new IncludeTimeSeriesCommand(
                         Database, 
@@ -244,10 +244,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var bufferSize = 3;
             var hasCounters = query.HasCounterSelect || query.CounterIncludes != null;
+            var hasTimeSeries = query.HasTimeSeriesSelect || query.TimeSeriesIncludes != null;
 
             if (hasCounters)
                 bufferSize++;
-            if (query.HasTimeSeries)
+            if (hasTimeSeries)
                 bufferSize++;
             if (query.HasCmpXchgSelect)
                 bufferSize++;
@@ -268,7 +269,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (hasCounters)
                     buffer[3] = DocumentsStorage.ReadLastCountersEtag(context.Transaction.InnerTransaction);
 
-                if (query.HasTimeSeries)
+                if (hasTimeSeries)
                     buffer[hasCounters ? 4 : 3] = DocumentsStorage.ReadLastTimeSeriesEtag(context.Transaction.InnerTransaction);
 
                 resultToFill.TotalResults = (int)numberOfDocuments;
@@ -283,7 +284,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (hasCounters)
                     buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context, collection);
 
-                if (query.HasTimeSeries)
+                if (hasTimeSeries)
                     buffer[hasCounters ? 4 : 3] = Database.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(context, collection);
 
                 resultToFill.TotalResults = (int)collectionStats.Count;
