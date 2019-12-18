@@ -124,7 +124,7 @@ namespace Raven.Server.Documents
                         // it. This is important so things like replication will start pumping, and that 
                         // configuration changes such as running periodic backup will get a chance to run, which
                         // they wouldn't unless the database is loaded / will have a request on it.          
-                        task = TryGetOrCreateResourceStore(databaseName);
+                        task = TryGetOrCreateResourceStore(databaseName, ignoreBeenDeleted: true);
                     }
 
                     if (task.IsCanceled || task.IsFaulted)
