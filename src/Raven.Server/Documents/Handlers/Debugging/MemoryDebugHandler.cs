@@ -78,6 +78,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["FreeMem"] = Size.Humane(item.FreeMem),
                     ["CurrentCommitCharge"] = Size.Humane(item.CurrentCommitCharge),
                     ["TotalUnmanaged"] = Size.Humane(item.TotalUnmanaged),
+                    ["TotalScratchDirty"] = Size.Humane(item.TotalScratchDirty),
                     ["PhysicalMem"] = Size.Humane(item.PhysicalMem),
                     ["Threshold"] = Size.Humane(item.LowMemThreshold)
                 };
@@ -88,6 +89,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["FreeMem"] = item.FreeMem,
                     ["CurrentCommitCharge"] = item.CurrentCommitCharge,
                     ["TotalUnmanaged"] = item.TotalUnmanaged,
+                    ["TotalScratchDirty"] = item.TotalScratchDirty,
                     ["PhysicalMem"] = item.PhysicalMem,
                     ["TimeOfEvent"] = item.Time,
                     ["HumanlyReadSizes"] = humanSizes
@@ -316,6 +318,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.TotalUnmanagedAllocations)] = totalUnmanagedAllocations,
                 [nameof(MemoryInfo.ManagedAllocations)] = managedMemoryInBytes,
                 [nameof(MemoryInfo.TotalMemoryMapped)] = totalMapping,
+                [nameof(MemoryInfo.TotalScratchDirtyMemory)] = Size.Humane(memInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.PhysicalMem)] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.FreeMem)] = Size.Humane(memInfo.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
@@ -406,6 +409,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public long TotalUnmanagedAllocations { get; set; }
             public long ManagedAllocations { get; set; }
             public long TotalMemoryMapped { get; set; }
+            public long TotalScratchDirtyMemory { get; set; }
             public string PhysicalMem { get; set; }
             public string FreeMem { get; set; }
             public string HighMemLastOneMinute { get; set; }

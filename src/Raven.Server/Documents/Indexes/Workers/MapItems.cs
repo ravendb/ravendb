@@ -42,6 +42,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
+            var totalProcessedCount = 0;
             foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
@@ -53,7 +54,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastMappedEtag;
-                    var count = 0;
                     var resultsCount = 0;
                     var pageSize = int.MaxValue;
 
@@ -93,11 +93,11 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     var current = itemEnumerator.Current;
 
-                                    count++;
+                                    totalProcessedCount++;
                                     collectionStats.RecordMapAttempt();
                                     stats.RecordDocumentSize(current.Size);
-                                    if (_logger.IsInfoEnabled && count % 8192 == 0)
-                                        _logger.Info($"Executing map for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag:#,#;;0}.");
+                                    if (_logger.IsInfoEnabled && totalProcessedCount % 8192 == 0)
+                                        _logger.Info($"Executing map for '{_index.Name}'. Processed count: {totalProcessedCount:#,#;;0} etag: {lastEtag:#,#;;0}.");
 
                                     lastEtag = current.Etag;
                                     inMemoryStats.UpdateLastEtag(lastEtag, isTombstone: false);
@@ -107,10 +107,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         var numberOfResults = _index.HandleMap(current, mapResults,
                                             indexWriter, indexContext, collectionStats);
 
-                                        _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
-
                                         resultsCount += numberOfResults;
                                         collectionStats.RecordMapSuccess();
+                                        _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
                                     }
                                     catch (Exception e) when (e.IsIndexError())
                                     {
@@ -125,13 +124,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, count) == false)
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
                                     {
                                         keepRunning = false;
                                         break;
                                     }
 
-                                    if (count >= pageSize)
+                                    if (totalProcessedCount >= pageSize)
                                     {
                                         keepRunning = false;
                                         break;
@@ -140,20 +139,20 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     if (MaybeRenewTransaction(databaseContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
                                         break;
                                 }
-
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Done executing map for '{_index.Name}'. Processed count: {count:#,#;;0} LastEtag {lastEtag}.");
                             }
                         }
                     }
 
-                    if (count > 0)
+                    if (lastMappedEtag == lastEtag)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing map for '{_index.Name}'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
-
-                        moreWorkFound = true;
+                        // the last mapped etag hasn't changed
+                        continue;
                     }
+
+                    moreWorkFound = true;
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Executed map for '{_index.Name}' index and '{collection}' collection. Got {resultsCount:#,#;;0} map results in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                     if (_index.Type.IsMap())
                     {
@@ -190,36 +189,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
-        private DateTime _lastCheckedFlushLock;
-
-        private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
-        {
-            if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources == false)
-                return false;
-
-            var now = DateTime.UtcNow;
-            if ((now - _lastCheckedFlushLock).TotalSeconds < 1)
-                return false;
-
-            _lastCheckedFlushLock = now;
-
-            var gotLock = _index._indexStorage.Environment().FlushInProgressLock.TryEnterReadLock(0);
-            try
-            {
-                if (gotLock == false)
-                {
-                    stats.RecordMapCompletedReason("Environment flush was waiting for us and global flusher was about to use all free flushing resources");
-                    return true;
-                }
-            }
-            finally
-            {
-                if (gotLock)
-                    _index._indexStorage.Environment().FlushInProgressLock.ExitReadLock();
-            }
-            return false;
-        }
-
         public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, IndexWriteOperation indexWriter, long currentEtag, long maxEtag, int count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
@@ -230,7 +199,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             if (_configuration.MapBatchSize.HasValue && count >= _configuration.MapBatchSize.Value)
             {
-                stats.RecordMapCompletedReason($"Reached maximum configured map batch size ({_configuration.MapBatchSize.Value}).");
+                stats.RecordMapCompletedReason($"Reached maximum configured map batch size ({_configuration.MapBatchSize.Value:#,#;;0}).");
                 return false;
             }
 
@@ -240,7 +209,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 return false;
             }
 
-            if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
+            if (_index.ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
                 return false;
 
             if (_index.CanContinueBatch(stats, documentsContext, indexingContext, indexWriter, count) == false)

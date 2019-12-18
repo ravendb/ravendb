@@ -7,11 +7,28 @@
             <h4 class="modal-title" data-bind="text: title"></h4>
         </div>
         <div class="modal-body">
-            <p data-bind="visible: indexNames.length === 1">You're deleting <strong data-bind="text: indexNames[0]"></strong></p>
-            <p data-bind="visible: indexNames.length > 1">You're deleting <strong data-bind="text: indexNames.length"></strong> indexes</p>
-            <ul data-bind="visible: indexNames.length > 1, foreach: indexNames" style="max-height: 200px; overflow-y: auto;">
-                <li data-bind="text: $data"></li>
+            <p data-bind="html: subTitleHtml"></p>
+            <ul data-bind="foreach: indexesInfoForDelete" style="max-height: 200px; overflow-y: auto;">
+                <li class="padding padding-xs">
+                    <strong data-bind="text: indexName"></strong>
+                    <small data-bind="if: reduceOutputCollection">
+                        <span data-bind="visible: referenceCollection, text: '(Reduce Results Collections: ' + reduceOutputCollection + ', ' + referenceCollection + ')'" class="margin-left margin-left-sm"></span>
+                        <span data-bind="visible: !referenceCollection, text: '(Reduce Results Collection: ' + reduceOutputCollection + ')'" class="margin-left margin-left-sm"></span>
+                    </small>
+                </li>
             </ul>
+            <hr data-bind="visible: showWarning">
+            <div data-bind="if: showWarning, visible: showWarning" class="flex-horizontal text-warning bg-warning margin margin-top-lg">
+                <span class="flex-start padding padding-xs">
+                    <i class="icon-warning"></i>
+                </span>
+                <span class="padding padding-xs">
+                     Note: <br>  
+                    'Reduce Results Collections' were created by above index(es).<br>  
+                     Clicking 'Delete' will delete the index(es) but Not the Results Collection(s).<br>
+                     Go to the collection itself to manually remove documents.                    
+                </span>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>

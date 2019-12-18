@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Indexes
         public string Name { get; set; }
 
         /// <summary>
-        /// Indicates how many times database tried to index documents (map) using this index.
+        /// Indicates how many times the database tried to index documents (map) using this index.
         /// </summary>
         public int MapAttempts { get; set; }
 
@@ -31,6 +31,21 @@ namespace Raven.Client.Documents.Indexes
         /// Indicates how many indexing attempts failed.
         /// </summary>
         public int MapErrors { get; set; }
+
+        /// <summary>
+        /// Indicates how many times the database tried to index referenced documents (map) using this index.
+        /// </summary>
+        public int? MapReferenceAttempts { get; set; }
+
+        /// <summary>
+        /// Indicates how many indexing attempts of referenced documents succeeded.
+        /// </summary>
+        public int? MapReferenceSuccesses { get; set; }
+
+        /// <summary>
+        /// Indicates how many indexing attempts of referenced documents failed.
+        /// </summary>
+        public int? MapReferenceErrors { get; set; }
 
         /// <summary>
         /// Indicates how many times database tried to index documents (reduce) using this index.
@@ -46,6 +61,16 @@ namespace Raven.Client.Documents.Indexes
         /// Indicates how many reducing attempts failed.
         /// </summary>
         public int? ReduceErrors { get; set; }
+        
+        /// <summary>
+        /// The reduce output collection.
+        /// </summary>
+        public string ReduceOutputCollection { get; set; }
+        
+        /// <summary>
+        /// Pattern for creating IDs for the reduce output reference-collection 
+        /// </summary>
+        public string ReduceOutputReferencePattern { get; set; }
 
         /// <summary>
         /// The value of docs/sec rate for the index over the last minute
@@ -123,7 +148,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Determines if index is invalid. If more than 15% of attempts (map or reduce) are errors then value will be <c>true</c>.
         /// </summary>
-        public bool IsInvalidIndex => IndexFailureInformation.CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors, () => IsStale);
+        public bool IsInvalidIndex => IndexFailureInformation.CheckIndexInvalid(MapAttempts, MapErrors, MapReferenceAttempts, MapReferenceErrors, ReduceAttempts, ReduceErrors, () => IsStale);
 
         public MemoryStats Memory { get; set; }
 

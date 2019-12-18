@@ -40,10 +40,9 @@ class indexDefinition {
     isAutoIndex = ko.observable<boolean>(false);
 
     outputReduceToCollection = ko.observable<boolean>();
-    reduceToCollectionName = ko.observable<string>();
-
-    patternForOutput = ko.observable<boolean>();
-    patternForOutputReduceToCollectionReferences = ko.observable<string>();
+    reduceOutputCollectionName = ko.observable<string>(); 
+    hasPatternForReduceOutputCollection = ko.observable<boolean>(); 
+    patternForReferencesToReduceOutputCollection = ko.observable<string>();
 
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
@@ -66,10 +65,13 @@ class indexDefinition {
         this.reduce(dto.Reduce);
         this.hasReduce(!!dto.Reduce);
         //this.isTestIndex(dto.IsTestIndex);
+        
         this.outputReduceToCollection(!!dto.OutputReduceToCollection);
-        this.reduceToCollectionName(dto.OutputReduceToCollection);
-        this.patternForOutput(!!dto.PatternForOutputReduceToCollectionReferences);
-        this.patternForOutputReduceToCollectionReferences(dto.PatternForOutputReduceToCollectionReferences);
+        this.reduceOutputCollectionName(dto.OutputReduceToCollection);
+        
+        this.hasPatternForReduceOutputCollection(!!dto.PatternForOutputReduceToCollectionReferences);
+        this.patternForReferencesToReduceOutputCollection(dto.PatternForOutputReduceToCollectionReferences);
+        
         this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
         
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
@@ -124,23 +126,23 @@ class indexDefinition {
             }
         });
 
-        this.reduceToCollectionName.extend({
+        this.reduceOutputCollectionName.extend({
             required: {
                 onlyIf: () => this.hasReduce() && this.outputReduceToCollection()
             }
         });
 
-        this.patternForOutputReduceToCollectionReferences.extend({
+        this.patternForReferencesToReduceOutputCollection.extend({
             required: {
-                onlyIf: () => this.hasReduce() && this.patternForOutput()
+                onlyIf: () => this.hasReduce() && this.hasPatternForReduceOutputCollection()
             }
-        })
+        });
 
         this.validationGroup = ko.validatedObservable({
             name: this.name,
             reduce: this.reduce,
-            reduceToCollectionName: this.reduceToCollectionName,
-            patternForOutputReduceToCollectionReferences: this.patternForOutputReduceToCollectionReferences
+            reduceOutputCollectionName: this.reduceOutputCollectionName,
+            patternForReferencesToReduceOutputCollection: this.patternForReferencesToReduceOutputCollection
         });
     }
 
@@ -208,8 +210,8 @@ class indexDefinition {
             Priority: this.priority(),
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
-            OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceToCollectionName() : null,
-            PatternForOutputReduceToCollectionReferences: this.outputReduceToCollection() && this.patternForOutput() ? this.patternForOutputReduceToCollectionReferences() : null,
+            OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceOutputCollectionName() : null,
+            PatternForOutputReduceToCollectionReferences: this.outputReduceToCollection() && this.hasPatternForReduceOutputCollection() ? this.patternForReferencesToReduceOutputCollection() : null,
             AdditionalSources: this.additionalSourceToDto()
         }
     }

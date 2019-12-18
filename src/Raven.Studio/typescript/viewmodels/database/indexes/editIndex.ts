@@ -228,9 +228,9 @@ class editIndex extends viewModelBase {
             indexDef.numberOfFields,
             indexDef.numberOfConfigurationFields,
             indexDef.outputReduceToCollection,
-            indexDef.reduceToCollectionName,
-            indexDef.patternForOutputReduceToCollectionReferences,
-            indexDef.patternForOutput,
+            indexDef.reduceOutputCollectionName,
+            indexDef.patternForReferencesToReduceOutputCollection,
+            indexDef.hasPatternForReduceOutputCollection,
             indexDef.numberOfAdditionalSources,
             hasAnyDirtyField,
             hasAnyDirtyConfiguration,
@@ -534,7 +534,7 @@ class editIndex extends viewModelBase {
         const indexName = this.originalIndexName;
         if (indexName) {
             const db = this.activeDatabase();
-            const deleteViewModel = new deleteIndexesConfirm([indexName], db);
+            const deleteViewModel = new deleteIndexesConfirm([this.editedIndex()], db);
             deleteViewModel.deleteTask.done((can: boolean) => {
                 if (can) {
                     this.dirtyFlag().reset(); // Resync Changes

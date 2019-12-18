@@ -28,10 +28,7 @@
                                 </div>
                             </div>
                         </div>
-                        
-
                         <div class="indexesToolbar-actions">
-                            
                             <div class="btn-group-label" data-bind="css: { active: selectedIndexesName().length }" data-label="Selection" role="group">
                                 <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete</span></button>
                                 <div class="btn-group">
@@ -367,7 +364,6 @@
                 </div>
             </div>
         </div>
-
         <div data-bind="with: progress, visible: !isErrorState() && !isFaulty()">
             <hr class="small" />
             <div class="progress-container">
@@ -418,7 +414,6 @@
         </div>
     </div>
 </script>
-
 
 <script type="text/html" id="indexes-filter-status-template">
     <div class="settings-item">
@@ -478,7 +473,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="bg-info auto-update-container">
             <div class="flex-horizontal">
                 <div class="control-label flex-grow">Auto refresh</div>
@@ -489,12 +483,9 @@
                     </div>
                 </div>
             </div>
-
             <div class="margin-right margin-right-sm">
                 <small>Automatically refreshes the list of indexes. Might result in list flickering.</small>
             </div>
         </div>
-       
     </div>
-
 </script>

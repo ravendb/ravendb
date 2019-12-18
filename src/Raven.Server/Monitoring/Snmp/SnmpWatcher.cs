@@ -230,9 +230,20 @@ namespace Raven.Server.Monitoring.Snmp
                 listener.Users.Add(new OctetString(server.Configuration.Monitoring.Snmp.AuthenticationUser), privacyProvider);
             }
 
-            var engineGroup = new EngineGroup();
-            var engineIdField = engineGroup.GetType().GetField("_engineId", BindingFlags.Instance | BindingFlags.NonPublic);
-            engineIdField.SetValue(engineGroup, new OctetString(server.ServerStore.GetServerId().ToString("N")));
+            int engineBoots;
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var tree = tx.InnerTransaction.CreateTree(nameof(SnmpWatcher));
+                engineBoots = (int)tree.Increment("EngineBoots", 1);
+
+                tx.Commit();
+            }
+
+            var engineGroup = new EngineGroup(engineBoots)
+            {
+                EngineId = new OctetString(server.ServerStore.GetServerId().ToString("N"))
+            };
 
             var engine = new SnmpEngine(factory, listener, engineGroup);
             engine.Listener.AddBinding(new IPEndPoint(IPAddress.Any, server.Configuration.Monitoring.Snmp.Port));

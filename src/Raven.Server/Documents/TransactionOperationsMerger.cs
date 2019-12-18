@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Json;
+using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -60,6 +62,8 @@ namespace Raven.Server.Documents
             _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
             _is32Bits = _parent.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
+            _timeToCheckHighDirtyMemory = _parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriod;
+            _lastHighDirtyMemCheck = _parent.Time.GetUtcNow();
         }
 
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(DatabasePerformanceMetrics.MetricType.GeneralWait, 256, 1);
@@ -807,6 +811,7 @@ namespace Raven.Server.Documents
             Task previousOperation, ref PerformanceMetrics.DurationMeasurement meter)
         {
             _alreadyListeningToPreviousOperationEnd = false;
+                    var percentageFromPhysicalMem = _parent.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage;
             context.TransactionMarkerOffset = 1;  // ensure that we are consistent here and don't use old values
             var sp = Stopwatch.StartNew();
             do
@@ -821,11 +826,41 @@ namespace Raven.Server.Documents
                     break;
 
                 pendingOps.Add(op);
-                meter.IncrementCounter(1);
-
-                meter.IncrementCommands(op.Execute(context, _recording.State));
 
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
+
+                if (_parent.Configuration.Memory.EnableHighTemporaryDirtyMemoryUse)
+                {
+                    var now = _parent.Time.GetUtcNow();
+                    if (now - _lastHighDirtyMemCheck > _timeToCheckHighDirtyMemory.AsTimeSpan) // we do not need to test scratch dirty mem every write
+                    {
+                        if (MemoryInformation.IsHighDirtyMemory(percentageFromPhysicalMem, out var details))
+                        {
+                            var highDirtyMemory = new HighDirtyMemoryException(
+                                $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
+                                $" This might be caused by a slow IO storage. Current memory usage: {details}");
+
+                            foreach (var pendingOp in pendingOps)
+                                pendingOp.Exception = highDirtyMemory;
+
+                            NotifyOnThreadPool(pendingOps);
+
+                            var rejectedBuffer = GetBufferForPendingOps();
+                            while (_operations.TryDequeue(out var operationToReject))
+                            {
+                                operationToReject.Exception = highDirtyMemory;
+                                rejectedBuffer.Add(operationToReject);
+                            }
+                            NotifyOnThreadPool(rejectedBuffer);
+                            break;
+                        }
+                        _lastHighDirtyMemCheck = now; // reset timer for next check only if no errors (otherwise check every single write until back to normal)
+                    }
+                }
+
+                meter.IncrementCounter(1);
+                meter.IncrementCommands(op.Execute(context, _recording.State));
+
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
 
                 modifiedSize += llt.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
@@ -1083,6 +1118,8 @@ namespace Raven.Server.Documents
         }
 
         private RecordingTx _recording = default;
+        private DateTime _lastHighDirtyMemCheck;
+        private readonly TimeSetting _timeToCheckHighDirtyMemory;
 
         private struct RecordingTx
         {

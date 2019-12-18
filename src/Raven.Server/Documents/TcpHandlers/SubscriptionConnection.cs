@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         _logger.Info(
                             $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                     }
-                  
+
                     timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15,50));
                     await SendHeartBeat($"Client from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} waiting for subscription that is serving IP {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
                     shouldRetry = true;
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)            
+                // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
                 SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
 
                 Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     Task.Run(async () =>
                     {
                         using (tcpConnectionOptions)
-                        using (tcpConnectionDisposable)                        
+                        using (tcpConnectionDisposable)
                         using (connection)
                         {
                             try
@@ -365,12 +365,11 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                         {
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
-                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] = 
+                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
                                 new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue
                                 {
                                     [item.Key]=item.Value
                                 }))
-                            
                         }
                     });
                 }
@@ -538,7 +537,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 this.AddToStatusDescription($"Acknowldeging docs processing progress without sending any documents to client. CV: {_lastChangeVector}");
                                 await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
                                     Options.SubscriptionName,
-                                    // if this is a new subscription that we sent anything in this iteration, 
+                                    // if this is a new subscription that we sent anything in this iteration,
                                     // _lastChangeVector is null, so let's not change it
                                     _lastChangeVector ??
                                         nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
@@ -552,8 +551,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 using (docsContext.OpenReadTransaction())
                                 {
-                                    var globalEtag = useRevisions ? 
-                                        TcpConnection.DocumentDatabase.DocumentsStorage.RevisionsStorage.GetLastRevisionEtag(docsContext, Subscription.Collection) : 
+                                    var globalEtag = useRevisions ?
+                                        TcpConnection.DocumentDatabase.DocumentsStorage.RevisionsStorage.GetLastRevisionEtag(docsContext, Subscription.Collection) :
                                         TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Subscription.Collection);
 
                                     if (globalEtag > _startEtag)
@@ -917,10 +916,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     // ignored
                 }
-                
+
                 Stats.Dispose();
 
-                RecentSubscriptionStatuses?.Clear();                
+                RecentSubscriptionStatuses?.Clear();
             }
         }
 
