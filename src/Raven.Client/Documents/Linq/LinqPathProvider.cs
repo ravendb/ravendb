@@ -98,16 +98,6 @@ namespace Raven.Client.Documents.Linq
                     return CreateCounterResult(callExpression);
                 }
 
-                if (IsTimeSeriesCall(callExpression))
-                {
-                    return new Result
-                    {
-                        MemberType = typeof(ITimeSeriesQueryable),
-                        IsNestedPath = false,
-                        Path = Constants.TimeSeries.SelectFieldName
-                    };
-                }
-
                 throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
             }
 
