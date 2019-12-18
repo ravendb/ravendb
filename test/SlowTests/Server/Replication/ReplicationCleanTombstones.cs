@@ -418,13 +418,14 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact(Skip = "RavenDB-14325")]
+        [Fact]
         public async Task CanReplicateTombstonesFromDifferentCollections()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
                 var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                var storage2 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database).Result;
 
                 using (var session = store1.OpenSession())
                 {
@@ -449,7 +450,6 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.True(WaitForDocument(store2, "foo/bar"));
 
-                await storage1.TombstoneCleaner.ExecuteCleanup();
 
                 using (var session = store1.OpenSession())
                 {
@@ -457,8 +457,98 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
                 EnsureReplicating(store1, store2);
+
+                using (storage1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(2,storage1.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(2, storage2.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                await storage1.TombstoneCleaner.ExecuteCleanup();
+                await storage2.TombstoneCleaner.ExecuteCleanup();
+
+                using (storage1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(0, storage1.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(0, storage2.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
             }
         }
 
+        [Fact]
+        public async Task CanDeleteFromDifferentCollections()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                await storage.TombstoneCleaner.ExecuteCleanup();
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(0, storage.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+            }
+        }
     }
 }
