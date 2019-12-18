@@ -106,6 +106,8 @@ namespace Raven.Server.Documents.Indexes
 
         public int MapAttempts => _stats.MapAttempts;
 
+        public int MapReferenceAttempts => _stats.MapReferenceAttempts;
+
         public int MapErrors => _stats.MapErrors;
 
         public int ReduceAttempts => _stats.ReduceAttempts;
@@ -165,6 +167,11 @@ namespace Raven.Server.Documents.Indexes
         {
             _stats.AddMapError(key, message);
         }
+        
+        public void AddMapReferenceError(string key, string message)
+        {
+            _stats.AddMapReferenceError(key, message);
+        }
 
         public void AddReduceError(string message)
         {
@@ -175,15 +182,30 @@ namespace Raven.Server.Documents.Indexes
         {
             _stats.MapAttempts++;
         }
+        
+        public void RecordMapReferenceAttempt()
+        {
+            _stats.MapReferenceAttempts++;
+        }
 
         public void RecordMapSuccess()
         {
             _stats.MapSuccesses++;
         }
 
+        public void RecordMapReferenceSuccess()
+        {
+            _stats.MapReferenceSuccesses++;
+        }
+
         public void RecordMapError()
         {
             _stats.MapErrors++;
+        }
+        
+        public void RecordMapReferenceError()
+        {
+            _stats.MapReferenceErrors++;
         }
 
         public void RecordIndexingOutput()

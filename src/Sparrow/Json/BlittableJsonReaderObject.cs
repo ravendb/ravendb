@@ -980,6 +980,7 @@ namespace Sparrow.Json
             _mem = null;
             _metadataPtr = null;
             _objStart = null;
+            Modifications = null;
 
             if (_objectsPathCache != null)
             {

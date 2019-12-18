@@ -82,7 +82,8 @@ namespace FastTests.Server.Replication
 
         protected bool WaitForDocumentDeletion(DocumentStore store,
             string docId,
-            int timeout = 10000)
+            int timeout = 10000,
+            string database = null)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -90,7 +91,7 @@ namespace FastTests.Server.Replication
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds < timeout)
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenSession(database ?? store.Database))
                 {
                     try
                     {
@@ -105,7 +106,7 @@ namespace FastTests.Server.Replication
                 }
                 Thread.Sleep(100);
             }
-            using (var session = store.OpenSession())
+            using (var session = store.OpenSession(database ?? store.Database))
             {
                 //one last try, and throw if there is still a conflict
                 var doc = session.Load<dynamic>(docId);

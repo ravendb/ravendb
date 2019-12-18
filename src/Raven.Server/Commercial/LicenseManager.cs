@@ -19,7 +19,6 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -48,6 +47,7 @@ namespace Raven.Server.Commercial
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
         private LicenseStatus _licenseStatus = new LicenseStatus();
+        private int _previousLicenseCores = 0;
         private Timer _leaseLicenseTimer;
         private bool _disableCalculatingLicenseLimits;
         private RSAParameters? _rsaParameters;
@@ -392,7 +392,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                var licenseLimits = await UpdateNodesInfoInternal(forceFetchingNodeInfo, newNodeDetails);
+                var licenseLimits = await UpdateNodesInfoInternal(forceFetchingNodeInfo, newNodeDetails, forceUpdate);
                 if (licenseLimits == null)
                     return;
 
@@ -498,6 +498,8 @@ namespace Raven.Server.Commercial
 
         private void ResetLicense(string error)
         {
+            _previousLicenseCores = _licenseStatus.MaxCores;
+
             _licenseStatus = new LicenseStatus
             {
                 FirstServerStartDate = _licenseStatus.FirstServerStartDate,
@@ -507,6 +509,8 @@ namespace Raven.Server.Commercial
 
         private void SetLicense(Guid id, Dictionary<string, object> attributes)
         {
+            _previousLicenseCores = _licenseStatus.MaxCores;
+
             _licenseStatus = new LicenseStatus
             {
                 Id = id,
@@ -792,9 +796,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task<LicenseLimits> UpdateNodesInfoInternal(
-            bool forceFetchingNodeInfo,
-            NodeDetails newNodeDetails)
+        private async Task<LicenseLimits> UpdateNodesInfoInternal(bool forceFetchingNodeInfo, NodeDetails newNodeDetails, bool licenseChanged)
         {
             var licenseLimits = GetOrCreateLicenseLimits();
             var hasChanges = false;
@@ -819,6 +821,7 @@ namespace Raven.Server.Commercial
             {
                 var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
                 var missingNodesAssignment = new List<string>();
+                var changedNodes = new List<string>();
 
                 foreach (var node in allNodes)
                 {
@@ -883,6 +886,9 @@ namespace Raven.Server.Commercial
                         continue;
                     }
 
+                    if (nodeDetails.NumberOfCores != numberOfCores)
+                        changedNodes.Add(nodeTag);
+
                     detailsPerNode[nodeTag].UtilizedCores = Math.Min(numberOfCores, nodeDetails.UtilizedCores);
                 }
 
@@ -894,7 +900,7 @@ namespace Raven.Server.Commercial
                 }
 
                 AssignMissingCoresForMissingNodes(missingNodesAssignment, detailsPerNode);
-                VerifyCoresPerNode(detailsPerNode, ref hasChanges);
+                VerifyCoresPerNode(detailsPerNode, changedNodes, licenseChanged, ref hasChanges);
                 ValidateLicenseStatus(detailsPerNode);
             }
 
@@ -920,7 +926,7 @@ namespace Raven.Server.Commercial
                 _licenseStatus.ErrorMessage = errorMessage;
         }
 
-        private void VerifyCoresPerNode(Dictionary<string, DetailsPerNode> detailsPerNode, ref bool hasChanges)
+        private void VerifyCoresPerNode(Dictionary<string, DetailsPerNode> detailsPerNode, List<string> changedNodes, bool licenseChanged, ref bool hasChanges)
         {
             var maxCores = _licenseStatus.MaxCores;
             var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
@@ -938,27 +944,35 @@ namespace Raven.Server.Commercial
                 {
                     nodeDetails.Value.UtilizedCores = coresPerNode;
                 }
+                
+                return;
             }
-            else
+
+            if (licenseChanged && _licenseStatus.MaxCores > _previousLicenseCores)
             {
-                // we have spare cores to distribute
-                var freeCoresToDistribute = maxCores - utilizedCores;
+                changedNodes = detailsPerNode.Select(x => x.Key).ToList();
+            }
 
-                foreach (var nodeDetails in detailsPerNode)
-                {
-                    if (freeCoresToDistribute == 0)
-                        break;
+            if (changedNodes.Count == 0)
+                return;
 
-                    var node = nodeDetails.Value;
-                    var utilizedCoresForNode = node.UtilizedCores;
-                    var availableCoresToAssignForNode = node.NumberOfCores - utilizedCoresForNode;
-                    if (availableCoresToAssignForNode == 0)
-                        continue;
+            // we have spare cores to distribute
+            var freeCoresToDistribute = maxCores - utilizedCores;
 
-                    var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, freeCoresToDistribute);
-                    nodeDetails.Value.UtilizedCores += numberOfCoresToAdd;
-                    freeCoresToDistribute -= numberOfCoresToAdd;
-                }
+            foreach (var node in changedNodes)
+            {
+                if (freeCoresToDistribute == 0)
+                    break;
+
+                var nodeDetails = detailsPerNode[node];
+
+                var availableCoresToAssignForNode = nodeDetails.NumberOfCores - nodeDetails.UtilizedCores;
+                if (availableCoresToAssignForNode <= 0)
+                    continue;
+
+                var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, freeCoresToDistribute);
+                nodeDetails.UtilizedCores += numberOfCoresToAdd;
+                freeCoresToDistribute -= numberOfCoresToAdd;
             }
         }
 

@@ -41,7 +41,7 @@ namespace Raven.Server.Documents
         public bool TryGetMetadata(out BlittableJsonReaderObject metadata) =>
             Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
 
-        public void EnsureMetadata(IMetadataModifier modifier = null)
+        public void EnsureMetadata()
         {
             if (_metadataEnsured)
                 return;
@@ -62,8 +62,6 @@ namespace Raven.Server.Documents
             };
 
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
-
-            modifier?.ModifyMetadata(metadata, ref mutatedMetadata);
 
             if (ChangeVector != null)
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;

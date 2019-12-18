@@ -24,6 +24,7 @@
         public Size AvailableMemory;
         public Size AvailableWithoutTotalCleanMemory;
         public Size SharedCleanMemory;
+        public Size TotalScratchDirtyMemory;
 
         public bool IsExtended;
     }

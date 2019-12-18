@@ -237,15 +237,22 @@ namespace Raven.Server.Documents.Indexes
                 stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
                 stats.MapAttempts = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
                 stats.MapErrors = statsTree.Read(IndexSchema.MapErrorsSlice).Reader.ReadLittleEndianInt32();
-                stats.MapSuccesses = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapSuccesses = statsTree.Read(IndexSchema.MapSuccessesSlice).Reader.ReadLittleEndianInt32();
                 stats.MaxNumberOfOutputsPerDocument =
                     statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument).Reader.ReadLittleEndianInt32();
 
                 if (_index.Type.IsMapReduce())
                 {
                     stats.ReduceAttempts = statsTree.Read(IndexSchema.ReduceAttemptsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
-                    stats.ReduceErrors = statsTree.Read(IndexSchema.ReduceErrorsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
                     stats.ReduceSuccesses = statsTree.Read(IndexSchema.ReduceSuccessesSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                    stats.ReduceErrors = statsTree.Read(IndexSchema.ReduceErrorsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                }
+
+                if (_index.GetReferencedCollections()?.Count > 0)
+                {
+                    stats.MapReferenceAttempts = statsTree.Read(IndexSchema.MapReferencedAttemptsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                    stats.MapReferenceSuccesses = statsTree.Read(IndexSchema.MapReferenceSuccessesSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                    stats.MapReferenceErrors = statsTree.Read(IndexSchema.MapReferenceErrorsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
                 }
             }
 
@@ -413,6 +420,13 @@ namespace Raven.Server.Documents.Indexes
                     result.ReduceAttempts = statsTree.Increment(IndexSchema.ReduceAttemptsSlice, stats.ReduceAttempts);
                     result.ReduceSuccesses = statsTree.Increment(IndexSchema.ReduceSuccessesSlice, stats.ReduceSuccesses);
                     result.ReduceErrors = statsTree.Increment(IndexSchema.ReduceErrorsSlice, stats.ReduceErrors);
+                }
+
+                if (_index.GetReferencedCollections()?.Count > 0)
+                {
+                    result.MapReferenceAttempts = statsTree.Increment(IndexSchema.MapReferencedAttemptsSlice, stats.MapReferenceAttempts);
+                    result.MapReferenceSuccesses = statsTree.Increment(IndexSchema.MapReferenceSuccessesSlice, stats.MapReferenceSuccesses);
+                    result.MapReferenceErrors = statsTree.Increment(IndexSchema.MapReferenceErrorsSlice, stats.MapReferenceErrors);
                 }
 
                 var binaryDate = indexingTime.ToBinary();
@@ -676,6 +690,12 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice MapErrorsSlice;
 
+            public static readonly Slice MapReferencedAttemptsSlice;
+
+            public static readonly Slice MapReferenceSuccessesSlice;
+
+            public static readonly Slice MapReferenceErrorsSlice;
+
             public static readonly Slice ReduceAttemptsSlice;
 
             public static readonly Slice ReduceSuccessesSlice;
@@ -697,8 +717,11 @@ namespace Raven.Server.Documents.Indexes
                     Slice.From(ctx, "Type", ByteStringType.Immutable, out TypeSlice);
                     Slice.From(ctx, "CreatedTimestamp", ByteStringType.Immutable, out CreatedTimestampSlice);
                     Slice.From(ctx, "MapAttempts", ByteStringType.Immutable, out MapAttemptsSlice);
+                    Slice.From(ctx, "MapReferencedAttempts", ByteStringType.Immutable, out MapReferencedAttemptsSlice);
                     Slice.From(ctx, "MapSuccesses", ByteStringType.Immutable, out MapSuccessesSlice);
+                    Slice.From(ctx, "MapReferenceSuccesses", ByteStringType.Immutable, out MapReferenceSuccessesSlice);
                     Slice.From(ctx, "MapErrors", ByteStringType.Immutable, out MapErrorsSlice);
+                    Slice.From(ctx, "MapReferenceErrors", ByteStringType.Immutable, out MapReferenceErrorsSlice);
                     Slice.From(ctx, "ReduceAttempts", ByteStringType.Immutable, out ReduceAttemptsSlice);
                     Slice.From(ctx, "ReduceSuccesses", ByteStringType.Immutable, out ReduceSuccessesSlice);
                     Slice.From(ctx, "ReduceErrors", ByteStringType.Immutable, out ReduceErrorsSlice);

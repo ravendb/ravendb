@@ -85,29 +85,42 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination =
             new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
 
-        public long MinimalEtagForReplication
+        public long GetMinimalEtagForReplication()
         {
-            get
-            {
-                var replicationNodes = Destinations?.ToList();
-                if (replicationNodes == null || replicationNodes.Count == 0)
-                    return long.MaxValue;
+            var replicationNodes = Destinations?.ToList();
+            if (replicationNodes == null || replicationNodes.Count == 0)
+                return long.MaxValue;
 
-                long minEtag = long.MaxValue;
-                foreach (var lastEtagPerDestination in _lastSendEtagPerDestination)
-                {
-                    replicationNodes.Remove(lastEtagPerDestination.Key);
-                    minEtag = Math.Min(lastEtagPerDestination.Value.LastEtag, minEtag);
-                }
-                if (replicationNodes.Count > 0)
-                {
-                    // if we don't have information from all our destinations, we don't know what tombstones
-                    // we can remove. Note that this explicitly _includes_ disabled destinations, which prevents
-                    // us from doing any tombstone cleanup.
-                    return 0;
-                }
-                return minEtag;
+            long minEtag = long.MaxValue;
+            foreach (var lastEtagPerDestination in _lastSendEtagPerDestination)
+            {
+                replicationNodes.Remove(lastEtagPerDestination.Key);
+                minEtag = Math.Min(lastEtagPerDestination.Value.LastEtag, minEtag);
             }
+            if (replicationNodes.Count > 0)
+            {
+                // if we don't have information from all our destinations, we don't know what tombstones
+                // we can remove. Note that this explicitly _includes_ disabled destinations, which prevents
+                // us from doing any tombstone cleanup.
+                return 0;
+            }
+
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var externals = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name).GetExternalReplications();
+                if (externals != null)
+                {
+                    foreach (var external in externals)
+                    {
+                        var state = GetExternalReplicationState(_server, Database.Name, external.TaskId, ctx);
+                        var myEtag = ChangeVectorUtils.GetEtagById(state.SourceChangeVector, Database.DbBase64Id);
+                        minEtag = Math.Min(myEtag, minEtag);
+                    }
+                }
+            }
+
+            return minEtag;
         }
 
         private readonly Logger _log;
@@ -723,10 +736,15 @@ namespace Raven.Server.Documents.Replication
             using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var stateBlittable = server.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database, taskId));
-
-                return stateBlittable != null ? JsonDeserializationCluster.ExternalReplicationState(stateBlittable) : new ExternalReplicationState();
+                return GetExternalReplicationState(server, database, taskId, context);
             }
+        }
+
+        private static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId, TransactionOperationContext context)
+        {
+            var stateBlittable = server.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database, taskId));
+
+            return stateBlittable != null ? JsonDeserializationCluster.ExternalReplicationState(stateBlittable) : new ExternalReplicationState();
         }
 
         public void EnsureNotDeleted(string node)
@@ -1271,7 +1289,7 @@ namespace Raven.Server.Documents.Replication
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
-            var minEtag = MinimalEtagForReplication;
+            var minEtag = GetMinimalEtagForReplication();
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
             {
                 {Constants.Documents.Collections.AllDocumentsCollection, minEtag}

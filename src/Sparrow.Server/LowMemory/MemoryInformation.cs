@@ -4,10 +4,12 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
@@ -98,6 +100,8 @@ namespace Sparrow.LowMemory
             public Size SharedCleanMemory;
             public Size TotalDirty;
         }
+
+        internal static ConcurrentSet<StrongReference<Func<long>>> DirtyMemoryObjects = new ConcurrentSet<StrongReference<Func<long>>>();
 
         public static void SetFreeCommittedMemory(float minimumFreeCommittedMemoryPercentage, Size maxFreeCommittedMemoryToKeep, Size lowMemoryCommitLimitInMb)
         {
@@ -315,16 +319,22 @@ namespace Sparrow.LowMemory
             {
                 extended &= PlatformDetails.RunningOnLinux == false;
 
+                MemoryInfoResult result;
                 using (var process = extended ? Process.GetCurrentProcess() : null)
                 {
                     if (PlatformDetails.RunningOnPosix == false)
-                        return GetMemoryInfoWindows(process, extended);
-
-                    if (PlatformDetails.RunningOnMacOsx)
-                        return GetMemoryInfoMacOs(process, extended);
-
-                    return GetMemoryInfoLinux(smapsReader, extended);
+                        result = GetMemoryInfoWindows(process, extended);
+                    else if (PlatformDetails.RunningOnMacOsx)
+                        result = GetMemoryInfoMacOs(process, extended);
+                    else
+                        result = GetMemoryInfoLinux(smapsReader, extended);
                 }
+
+                var totalScratchAllocated = GetTotalScratchAllocatedMemory();
+
+                result.AvailableMemory.Add(-totalScratchAllocated, SizeUnit.Bytes);
+                return result;
+
             }
             catch (Exception e)
             {
@@ -333,6 +343,17 @@ namespace Sparrow.LowMemory
                 _failedToGetAvailablePhysicalMemory = true;
                 return FailedResult;
             }
+        }
+
+        public static long GetTotalScratchAllocatedMemory()
+        {
+            long totalScratchAllocated = 0;
+            foreach (var scratchGetAllocated in DirtyMemoryObjects)
+            {
+                totalScratchAllocated += scratchGetAllocated.Value?.Invoke() ?? 0;
+            }
+
+            return totalScratchAllocated;
         }
 
         private static MemoryInfoResult GetMemoryInfoLinux(SmapsReader smapsReader, bool extended)
@@ -635,6 +656,24 @@ namespace Sparrow.LowMemory
             LowLastOneMinute = lowLastOneMinute;
             HighLastFiveMinutes = highLastFiveMinutes;
             LowLastFiveMinutes = lowLastFiveMinutes;
+        }
+
+        public static bool IsHighDirtyMemory(double percentageFromPhysicalMem, out string details)
+        {
+            details = null;
+            var totalScratchMemory = GetTotalScratchAllocatedMemory();
+
+            if (totalScratchMemory <= TotalPhysicalMemory.GetValue(SizeUnit.Bytes) * percentageFromPhysicalMem)
+                return false;
+
+            var memInfo = GetMemoryInfo();
+
+
+            details =
+                $"Total Physical Mem={memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)}, Total Scratch Allocated Memory={totalScratchMemory} (which is above {percentageFromPhysicalMem}% physical {TotalPhysicalMemory.GetValue(SizeUnit.Bytes)} memory), Available Memory={memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)}";
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"IsHighDirtyMemory: {details}");
+            return true;
         }
     }
 

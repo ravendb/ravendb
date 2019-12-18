@@ -81,6 +81,7 @@ namespace Raven.Server.Utils.Cli
                             msg.Append($"|UM:{memoryStats.TotalUnmanagedAllocations}");
                             msg.Append($"|M:{memoryStats.ManagedMemory}");
                             msg.Append($"|MP:{memoryStats.TotalMemoryMapped}");
+                            msg.Append($"|SD:{memoryStats.TotalScratchDirty}");
                         }
                         break;
                     case "%R":
@@ -320,7 +321,7 @@ namespace Raven.Server.Utils.Cli
         {
             if (cli._usingNamedPipes)
             {
-                // beware not to allow this from remote - will disable local console!                
+                // beware not to allow this from remote - will disable local console!
                 WriteText("'stats' command not supported on remote pipe connection. Use `info` or `prompt %M` instead", TextColor, cli);
                 return true;
             }
@@ -339,8 +340,8 @@ namespace Raven.Server.Utils.Cli
         private static void SetupLogMode(LogMode logMode, LogsConfiguration configuration)
         {
             LoggingSource.Instance.SetupLogMode(
-                logMode, 
-                configuration.Path.FullPath, 
+                logMode,
+                configuration.Path.FullPath,
                 configuration.RetentionTime?.AsTimeSpan,
                 configuration.RetentionSize?.GetValue(SizeUnit.Bytes),
                 configuration.Compress);
@@ -350,7 +351,7 @@ namespace Raven.Server.Utils.Cli
         {
             if (cli._usingNamedPipes)
             {
-                // beware not to allow this from remote - will disable local console!                
+                // beware not to allow this from remote - will disable local console!
                 WriteText("'topThreads' command not supported on remote pipe connection.", TextColor, cli);
                 return true;
             }
@@ -374,7 +375,7 @@ namespace Raven.Server.Utils.Cli
                     return false;
                 }
 
-                if (args.Count > 1 && 
+                if (args.Count > 1 &&
                     int.TryParse(args[1], out updateIntervalInMs) == false &&
                     updateIntervalInMs <= 0)
                 {
@@ -390,7 +391,7 @@ namespace Raven.Server.Utils.Cli
                     return false;
                 }
             }
-            
+
             Console.ResetColor();
 
             LoggingSource.Instance.DisableConsoleLogging();
@@ -422,7 +423,7 @@ namespace Raven.Server.Utils.Cli
             {
                 new[] {"%D", "UTC Date"},
                 new[] {"%T", "UTC Time"},
-                new[] {"%M", "Memory information (WS:WorkingSet, UM:Unmanaged, M:Managed, MP:MemoryMapped)"},
+                new[] {"%M", "Memory information (WS:WorkingSet, UM:Unmanaged, M:Managed, MP:MemoryMapped, SD:ScratchDirty)"},
                 new[] {"%R", "Momentary Req/Sec"},
                 new[] {"label", "any label"}
             };
@@ -566,7 +567,7 @@ namespace Raven.Server.Utils.Cli
                        Environment.NewLine +
                        $" PID {currentProcess.Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" +
                        Environment.NewLine +
-                       $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory, {memoryInfo.AvailableWithoutTotalCleanMemory} Calculated Available Memory" +
+                       $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory, {memoryInfo.AvailableWithoutTotalCleanMemory} Calculated Available Memory, {memoryInfo.TotalScratchDirtyMemory} Scratch Dirty Memory" +
                        Environment.NewLine +
                        $" {RuntimeSettings.Describe()}" +
                        Environment.NewLine +
@@ -1067,6 +1068,7 @@ namespace Raven.Server.Utils.Cli
             string WorkingSet,
             string TotalUnmanagedAllocations,
             string ManagedMemory,
+            string TotalScratchDirty,
             string TotalMemoryMapped) MemoryStatsWithMemoryMappedInfo()
         {
             long totalMemoryMapped = 0;
@@ -1082,6 +1084,7 @@ namespace Raven.Server.Utils.Cli
                 SizeClient.Humane(MemoryInformation.GetWorkingSetInBytes()),
                 SizeClient.Humane(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes()),
                 SizeClient.Humane(AbstractLowMemoryMonitor.GetManagedMemoryInBytes()),
+                SizeClient.Humane(MemoryInformation.GetTotalScratchAllocatedMemory()),
                 SizeClient.Humane(totalMemoryMapped));
         }
 
@@ -1333,7 +1336,7 @@ namespace Raven.Server.Utils.Cli
                     }
                     else
                     {
-                        Thread.Sleep(75); //waiting for Ctrl+C 
+                        Thread.Sleep(75); //waiting for Ctrl+C
                         if (ctrlCPressed)
                             break;
                         WriteText("End of standard input detected, switching to server mode...", WarningColor, this);

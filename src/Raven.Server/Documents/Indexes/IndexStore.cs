@@ -141,16 +141,21 @@ namespace Raven.Server.Documents.Indexes
 
         private void ExecuteForIndexes(IEnumerable<Index> indexes, Action<Index> action)
         {
-            var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
-            int numberOfUtilizedCores = licenseLimits != null && 
-                                        licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode)
-                ? detailsPerNode.UtilizedCores
-                : ProcessorInfo.ProcessorCount;
+            var numberOfUtilizedCores = GetNumberOfUtilizedCores();
 
             Parallel.ForEach(indexes, new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = Math.Max(1, numberOfUtilizedCores / 2)
-                }, action);
+            {
+                MaxDegreeOfParallelism = Math.Max(1, numberOfUtilizedCores / 2)
+            }, action);
+        }
+
+        private int GetNumberOfUtilizedCores()
+        {
+            var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
+
+            return licenseLimits != null && licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode)
+                ? detailsPerNode.UtilizedCores
+                : ProcessorInfo.ProcessorCount;
         }
 
         private void HandleSorters(DatabaseRecord record, long index)
@@ -379,7 +384,7 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     // original index needs to delete docs created by side-by-side indexing
 
-                                    currentMapReduceIndex.OutputReduceToCollection?.AddPrefixesOfDocumentsToDelete(new HashSet<string> {prefix});
+                                    currentMapReduceIndex.OutputReduceToCollection?.AddPrefixesOfDocumentsToDelete(new HashSet<string> { prefix });
                                 }
                             }
                         }
@@ -648,7 +653,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexBatchScope CreateIndexBatch()
         {
-            return new IndexBatchScope(this);
+            return new IndexBatchScope(this, GetNumberOfUtilizedCores());
         }
 
         public async Task<Index> CreateIndex(IndexDefinitionBase definition, string raftRequestId)
@@ -1802,12 +1807,14 @@ namespace Raven.Server.Documents.Indexes
         public class IndexBatchScope
         {
             private readonly IndexStore _store;
+            private readonly int _numberOfUtilizedCores;
 
             private PutIndexesCommand _command;
 
-            public IndexBatchScope(IndexStore store)
+            public IndexBatchScope(IndexStore store, int numberOfUtilizedCores)
             {
                 _store = store;
+                _numberOfUtilizedCores = numberOfUtilizedCores;
             }
 
             public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, string raftRequestId)
@@ -1861,7 +1868,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var indexCount = _command.Static.Count + _command.Auto.Count;
                     var operationTimeout = _store._serverStore.Engine.OperationTimeout;
-                    var timeout = TimeSpan.FromSeconds((indexCount / 50.0) * operationTimeout.TotalSeconds);
+                    var timeout = TimeSpan.FromSeconds(((double)indexCount / _numberOfUtilizedCores) * operationTimeout.TotalSeconds);
                     if (operationTimeout > timeout)
                         timeout = operationTimeout;
 

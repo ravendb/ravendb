@@ -45,7 +45,8 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentsOperationContext _context;
         private readonly DatabaseSource _source;
         private BlittableJsonTextWriter _writer;
-        private static DatabaseSmugglerOptionsServerSide _options;
+        private DatabaseSmugglerOptionsServerSide _options;
+        private Func<LazyStringValue, bool> _filterMetadataProperty;
 
         public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source)
         {
@@ -60,6 +61,8 @@ namespace Raven.Server.Smuggler.Documents
             _writer = new BlittableJsonTextWriter(_context, _gzipStream);
             _options = options;
 
+            SetupMetadataFilterMethod(_context);
+
             _writer.WriteStartObject();
 
             _writer.WritePropertyName("BuildVersion");
@@ -73,6 +76,36 @@ namespace Raven.Server.Smuggler.Documents
             });
         }
 
+        private void SetupMetadataFilterMethod(JsonOperationContext context)
+        {
+            var skipCountersMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false;
+            var skipAttachmentsMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false;
+
+            if (skipCountersMetadata == false && skipAttachmentsMetadata == false)
+            {
+                _filterMetadataProperty = null;
+            }
+            else if (skipCountersMetadata == false)
+            {
+                var attachments = context.GetLazyString(Constants.Documents.Metadata.Attachments);
+
+                _filterMetadataProperty = metadataProperty => metadataProperty.Equals(attachments);
+            }
+            else if (skipAttachmentsMetadata == false)
+            {
+                var counters = context.GetLazyString(Constants.Documents.Metadata.Counters);
+
+                _filterMetadataProperty = metadataProperty => metadataProperty.Equals(counters);
+            }
+            else
+            {
+                var attachments = context.GetLazyString(Constants.Documents.Metadata.Attachments);
+                var counters = context.GetLazyString(Constants.Documents.Metadata.Counters);
+
+                _filterMetadataProperty = metadataProperty => metadataProperty.Equals(attachments) || metadataProperty.Equals(counters);
+            }
+        }
+
         public IDatabaseRecordActions DatabaseRecord()
         {
             return new DatabaseRecordActions(_writer, _context);
@@ -80,22 +113,22 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions Documents()
         {
-            return new StreamDocumentActions(_writer, _context, _source, "Docs", new SmugglerMetadataModifier(_options.OperateOnTypes));
+            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, "Docs");
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.RevisionDocuments));
+            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.RevisionDocuments));
         }
 
         public IDocumentActions Tombstones()
         {
-            return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.Tombstones));
+            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Tombstones));
         }
 
         public IDocumentActions Conflicts()
         {
-            return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.Conflicts));
+            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Conflicts));
         }
 
         public IKeyValueActions<long> Identities()
@@ -714,15 +747,17 @@ namespace Raven.Server.Smuggler.Documents
         {
             private readonly DocumentsOperationContext _context;
             private readonly DatabaseSource _source;
+            private readonly DatabaseSmugglerOptionsServerSide _options;
+            private readonly Func<LazyStringValue, bool> _filterMetadataProperty;
             private HashSet<string> _attachmentStreamsAlreadyExported;
-            private readonly IMetadataModifier _modifier;
 
-            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName, IMetadataModifier modifier = null)
+            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, DatabaseSmugglerOptionsServerSide options, Func<LazyStringValue, bool> filterMetadataProperty, string propertyName)
                 : base(writer, propertyName)
             {
                 _context = context;
                 _source = source;
-                _modifier = modifier;
+                _options = options;
+                _filterMetadataProperty = filterMetadataProperty;
             }
 
             public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -740,13 +775,7 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteComma();
                     First = false;
 
-                    document.EnsureMetadata(_modifier);
-
-                    using (var old = document.Data)
-                    using (var data = _context.ReadObject(document.Data, document.Id))
-                    {
-                        _context.Write(Writer, data);
-                    }
+                    Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
                 }
             }
 
