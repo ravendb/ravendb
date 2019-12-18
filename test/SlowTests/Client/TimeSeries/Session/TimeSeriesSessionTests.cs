@@ -577,6 +577,25 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal("Heartrate2", tsNames[0]);
                     Assert.Equal("Nasdaq2", tsNames[1]);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("heartrate", DateTime.Today.AddMinutes(1), "fitbit", new[] { 58d }); // putting ts name as lower cased
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(2, tsNames.Count);
+
+                    // should preserve original casing
+                    Assert.Equal("Heartrate", tsNames[0]);
+                    Assert.Equal("Nasdaq", tsNames[1]);
+                }
             }
         }
 

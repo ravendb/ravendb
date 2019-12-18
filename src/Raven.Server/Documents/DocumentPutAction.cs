@@ -413,12 +413,14 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, IRecreationType type)
         {
             BlittableJsonReaderObject metadata;
+            BlittableJsonReaderArray current = null;
 
             if (nonPersistentFlags.Contain(type.ResolveConflictFlag))
             {
                 document.TryGet(Constants.Documents.Metadata.Key, out metadata);
-                Recreate(ref flags);
-                return true;
+                metadata.TryGet(type.MetadataProperty, out current);
+
+                return RecreatePreserveCasing(current, ref flags);
             }
 
             if (flags.Contain(type.HasFlag) == false || 
@@ -434,17 +436,17 @@ namespace Raven.Server.Documents
             // Make sure the user did not changed the value of @attachments in the @metadata
             // In most cases it won't be changed so we can use this value 
             // instead of recreating the document's blittable from scratch
+            
             if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(type.MetadataProperty, out BlittableJsonReaderArray current) == false ||
+                metadata.TryGet(type.MetadataProperty, out current) == false ||
                 current.Equals(old) == false)
             {
-                Recreate(ref flags);
-                return true;
+                return RecreatePreserveCasing(current, ref flags);
             }
 
             return false;
 
-            void Recreate(ref DocumentFlags documentFlags)
+            bool RecreatePreserveCasing(BlittableJsonReaderArray currentMetadata, ref DocumentFlags documentFlags)
             {
                 var values = type.GetMetadata(context, docId);
 
@@ -461,7 +463,34 @@ namespace Raven.Server.Documents
                     }
 
                     documentFlags &= ~type.HasFlag;
-                    return;
+                    return true;
+                }
+
+                if (currentMetadata != null && type.IsReturningLowerCasedMetadata)
+                {
+                    var casePreservingValues = new DynamicJsonArray();
+
+                    bool hasChanges = false;
+
+                    foreach (object value in values)
+                    {
+                        var location = currentMetadata.BinarySearch((string)value, StringComparison.OrdinalIgnoreCase);
+
+                        if (location >= 0)
+                        {
+                            casePreservingValues.Add(currentMetadata[location]);
+                        }
+                        else
+                        {
+                            casePreservingValues.Add(value);
+                            hasChanges = true;
+                        }
+                    }
+
+                    if (hasChanges == false)
+                        return false;
+
+                    values = casePreservingValues;
                 }
 
                 documentFlags |= type.HasFlag;
@@ -486,6 +515,8 @@ namespace Raven.Server.Documents
                         [Constants.Documents.Metadata.Key] = metadata
                     };
                 }
+
+                return true;
             }
         }
 
@@ -501,6 +532,8 @@ namespace Raven.Server.Documents
             NonPersistentDocumentFlags ByUpdateFlag { get; }
 
             Action<BlittableJsonReaderObject, DocumentFlags> Assert { get; }
+
+            bool IsReturningLowerCasedMetadata { get; }
         }
 
         private class RecreateAttachments : IRecreationType
@@ -526,6 +559,8 @@ namespace Raven.Server.Documents
             public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByAttachmentUpdate;
 
             public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (o, flags) => AttachmentsStorage.AssertAttachments(o, flags);
+
+            public bool IsReturningLowerCasedMetadata { get { return false; } } 
         }
 
         private class RecreateCounters : IRecreationType
@@ -551,6 +586,8 @@ namespace Raven.Server.Documents
             public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByCountersUpdate;
 
             public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (o, flags) => CountersStorage.AssertCounters(o, flags);
+
+            public bool IsReturningLowerCasedMetadata { get { return false; } }
         }
 
         private class RecreateTimeSeries : IRecreationType
@@ -566,7 +603,7 @@ namespace Raven.Server.Documents
 
             public DynamicJsonArray GetMetadata(DocumentsOperationContext context, string id)
             {
-                return _storage.TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, id);
+                return _storage.TimeSeriesStorage.GetTimeSeriesLowerNamesForDocument(context, id);
             }
 
             public DocumentFlags HasFlag => DocumentFlags.HasTimeSeries;
@@ -576,6 +613,8 @@ namespace Raven.Server.Documents
             public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByTimeSeriesUpdate;
 
             public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (_, __) => { };
+
+            public bool IsReturningLowerCasedMetadata { get { return true; } }
         }
 
         public static void ThrowRequiresTransaction([CallerMemberName]string caller = null)
