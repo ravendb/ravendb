@@ -80,29 +80,48 @@ namespace Raven.Server.Smuggler.Documents
         {
             var skipCountersMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false;
             var skipAttachmentsMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false;
+            var skipTimeSeriesMetadata = _options.OperateOnTypes.HasFlag(DatabaseItemType.TimeSeries) == false;
 
-            if (skipCountersMetadata == false && skipAttachmentsMetadata == false)
-            {
-                _filterMetadataProperty = null;
-            }
-            else if (skipCountersMetadata == false)
-            {
-                var attachments = context.GetLazyString(Constants.Documents.Metadata.Attachments);
+            var flags = 0;
+            if (skipCountersMetadata)
+                flags += 1;
+            if (skipAttachmentsMetadata)
+                flags += 2;
+            if (skipTimeSeriesMetadata)
+                flags += 4;
 
-                _filterMetadataProperty = metadataProperty => metadataProperty.Equals(attachments);
-            }
-            else if (skipAttachmentsMetadata == false)
-            {
-                var counters = context.GetLazyString(Constants.Documents.Metadata.Counters);
+            if (flags == 0)
+                return;
 
-                _filterMetadataProperty = metadataProperty => metadataProperty.Equals(counters);
-            }
-            else
-            {
-                var attachments = context.GetLazyString(Constants.Documents.Metadata.Attachments);
-                var counters = context.GetLazyString(Constants.Documents.Metadata.Counters);
+            var counters = context.GetLazyString(Constants.Documents.Metadata.Counters);
+            var attachments = context.GetLazyString(Constants.Documents.Metadata.Attachments);
+            var timeSeries = context.GetLazyString(Constants.Documents.Metadata.TimeSeries);
 
-                _filterMetadataProperty = metadataProperty => metadataProperty.Equals(attachments) || metadataProperty.Equals(counters);
+            switch (flags)
+            {
+                case 1: // counters
+                    _filterMetadataProperty = metadataProperty => metadataProperty.Equals(counters);
+                    break;
+                case 2: // attachments
+                    _filterMetadataProperty = metadataProperty => metadataProperty.Equals(attachments);
+                    break;
+                case 3: // counters, attachments
+                    _filterMetadataProperty = metadataProperty => metadataProperty.Equals(counters) || metadataProperty.Equals(attachments);
+                    break;
+                case 4: // timeseries
+                    _filterMetadataProperty = metadataProperty => metadataProperty.Equals(timeSeries);
+                    break;
+                case 5: // counters, timeseries
+                    _filterMetadataProperty = metadataProperty => metadataProperty.Equals(counters) || metadataProperty.Equals(timeSeries);
+                    break;
+                case 6: // attachments, timeseries
+                    _filterMetadataProperty = metadataProperty => metadataProperty.Equals(attachments) || metadataProperty.Equals(timeSeries);
+                    break;
+                case 7: // counters, attachments, timeseries
+                    _filterMetadataProperty = metadataProperty => metadataProperty.Equals(counters) || metadataProperty.Equals(attachments) || metadataProperty.Equals(timeSeries);
+                    break;
+                default:
+                    throw new NotSupportedException($"Not supported value: {flags}");
             }
         }
 

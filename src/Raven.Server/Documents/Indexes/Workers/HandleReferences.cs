@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             try
                                             {
                                                 var numberOfResults = _index.HandleMap(current, mapResults, indexWriter, indexContext, collectionStats);
-                                                
+
                                                 resultsCount += numberOfResults;
                                                 collectionStats.RecordMapReferenceSuccess();
                                                 _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 if (_logger.IsInfoEnabled)
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
 
-                                                collectionStats.AddMapReferenceError(current.Id, 
+                                                collectionStats.AddMapReferenceError(current.Id,
                                                     $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                             }
 
