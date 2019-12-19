@@ -78,7 +78,7 @@ namespace Raven.Server.Documents
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
         {
-            ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged?.Invoke(_serverStore);
+            ForTestingPurposes?.BeforeHandleClusterDatabaseChanged?.Invoke(_serverStore);
 
             if (PreventWakeUpIdleDatabase(databaseName, type))
                 return;
