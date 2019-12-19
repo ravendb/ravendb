@@ -558,8 +558,57 @@ namespace SlowTests.Server.Replication
                 {
                     Assert.Equal(0, storage.DocumentsStorage.GetNumberOfTombstones(ctx));
                 }
+            }
+        }
 
-                WaitForUserToContinueTheTest(store);
+        [Fact]
+        public async Task CanDeleteFromDifferentCollections2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(2, storage.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(1, storage.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
             }
         }
     }
