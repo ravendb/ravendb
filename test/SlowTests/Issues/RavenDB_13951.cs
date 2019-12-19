@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
         public async Task UtilizedCoresShouldNotChangeAfterRestart()
         {
             var server = GetNewServer(new ServerCreationOptions
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
             Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
         }
 
-        [Fact]
+        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
         public async Task DemotePromoteShouldNotChangeNodesTheUtilizedCores()
         {
             var reasonableTime = Debugger.IsAttached ? 5000 : 3000;
@@ -71,7 +71,7 @@ namespace SlowTests.Issues
                 Server = leader
             });
 
-            var tags = Servers.Where(x=> x.ServerStore.NodeTag != leader.ServerStore.NodeTag).Select(x => x.ServerStore.NodeTag).ToList();
+            var tags = Servers.Where(x => x.ServerStore.NodeTag != leader.ServerStore.NodeTag).Select(x => x.ServerStore.NodeTag).ToList();
             foreach (var tag in tags)
             {
                 await ActionWithLeader(l => l.ServerStore.LicenseManager.ChangeLicenseLimits(tag, 1, Guid.NewGuid().ToString()));
