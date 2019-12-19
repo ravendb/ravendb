@@ -424,6 +424,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task CanReplicateTombstonesFromDifferentCollections()
         {
+            var id = "Oren\r\nEini";
+
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -432,31 +434,31 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.Store(new User { Name = "Karmel" }, id);
                     session.SaveChanges();
                 }
 
                 await SetupReplicationAsync(store1, store2);
-                Assert.True(WaitForDocument(store2, "foo/bar"));
+                Assert.True(WaitForDocument(store2, id));
 
                 using (var session = store1.OpenSession())
                 {
-                    session.Delete("foo/bar");
+                    session.Delete(id);
                     session.SaveChanges();
                 }
                 EnsureReplicating(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new Company { Name = "Karmel" }, "foo/bar");
+                    session.Store(new Company { Name = "Karmel" }, id);
                     session.SaveChanges();
                 }
-                Assert.True(WaitForDocument(store2, "foo/bar"));
+                Assert.True(WaitForDocument(store2, id));
 
 
                 using (var session = store1.OpenSession())
                 {
-                    session.Delete("foo/bar");
+                    session.Delete(id);
                     session.SaveChanges();
                 }
                 EnsureReplicating(store1, store2);

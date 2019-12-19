@@ -21,6 +21,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -1577,26 +1578,27 @@ namespace Raven.Server.Documents
                 return lowerId;
 
             var length = lowerId.Content.Length;
-            Slice.From(context.Allocator, lowerId.Content.Ptr, length + sizeof(long) * 2, out var newLowerId); // TODO: dispose?
+            Slice.From(context.Allocator, lowerId.Content.Ptr, length + ConflictedTombstoneOverhead, out var newLowerId); // TODO: dispose?
 
-            *(long*)(newLowerId.Content.Ptr + length) = ConflictedTombstoneIdMarkerLong;
-            *(long*)(newLowerId.Content.Ptr + length + sizeof(long)) = Bits.SwapBytes(GenerateNextEtag()); // now the id will be unique
+            *(newLowerId.Content.Ptr + length) = SpecialChars.RecordSeparator;
+            *(long*)(newLowerId.Content.Ptr + length + sizeof(byte)) = Bits.SwapBytes(GenerateNextEtag()); // now the id will be unique
             
             return newLowerId;
         }
 
-        private const long ConflictedTombstoneIdMarkerLong = 20L;
-        private static readonly string ConflictedTombstoneIdMarkerString = Encoding.UTF8.GetString(BitConverter.GetBytes(ConflictedTombstoneIdMarkerLong));
+        private const int ConflictedTombstoneOverhead = sizeof(long) + sizeof(byte);
 
-        private static LazyStringValue UnwrapLowerIdIfNeeded(JsonOperationContext context, string lowerId)
+        private static LazyStringValue UnwrapLowerIdIfNeeded(JsonOperationContext context, LazyStringValue lowerId)
         {
-            var index = lowerId.IndexOf(ConflictedTombstoneIdMarkerString, StringComparison.OrdinalIgnoreCase);
-            if (index > 0)
+            if (lowerId.Size < ConflictedTombstoneOverhead + 1)
+                return lowerId;
+
+            if (lowerId[lowerId.Size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
             {
-                return context.GetLazyString(lowerId.Substring(0, index));
+                return new LazyStringValue(null, lowerId.Buffer, lowerId.Size - ConflictedTombstoneOverhead, context);
             }
-            
-            return context.GetLazyString(lowerId);
+
+            return lowerId;
         }
 
         private void ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(Slice lowerId, CollectionName collectionName,
