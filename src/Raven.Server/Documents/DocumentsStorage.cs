@@ -1208,13 +1208,12 @@ namespace Raven.Server.Documents
                 result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
                 result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
+                result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
             }
             else if (result.Type == Tombstone.TombstoneType.Revision)
             {
                 result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
             }
-
-            result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
 
             return result;
         }
@@ -1572,7 +1571,6 @@ namespace Raven.Server.Documents
 
             return (newEtag, changeVector);
         }
-
         private Slice ModifyLowerIdIfNeeded(DocumentsOperationContext context, Table table, Slice lowerId)
         {
             if (table.ReadByKey(lowerId, out _) == false)
@@ -1583,7 +1581,7 @@ namespace Raven.Server.Documents
 
             *(long*)(newLowerId.Content.Ptr + length) = ConflictedTombstoneIdMarkerLong;
             *(long*)(newLowerId.Content.Ptr + length + sizeof(long)) = Bits.SwapBytes(GenerateNextEtag()); // now the id will be unique
-
+            
             return newLowerId;
         }
 

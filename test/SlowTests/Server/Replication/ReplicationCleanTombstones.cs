@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using FastTests.Utils;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -493,10 +496,13 @@ namespace SlowTests.Server.Replication
             using (var store = GetDocumentStore())
             {
                 var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
+                using (var ms = new MemoryStream(new byte[]{1,2,3,4,5}))
                 {
                     session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.Advanced.Attachments.Store("foo/bar", "dummy", ms);
                     session.SaveChanges();
                 }
 
@@ -519,8 +525,10 @@ namespace SlowTests.Server.Replication
                 }
 
                 using (var session = store.OpenSession())
+                using (var ms = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.Advanced.Attachments.Store("foo/bar", "dummy", ms);
                     session.SaveChanges();
                 }
 
@@ -548,6 +556,8 @@ namespace SlowTests.Server.Replication
                 {
                     Assert.Equal(0, storage.DocumentsStorage.GetNumberOfTombstones(ctx));
                 }
+
+                WaitForUserToContinueTheTest(store);
             }
         }
     }
