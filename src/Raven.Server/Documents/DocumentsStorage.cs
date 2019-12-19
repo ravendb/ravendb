@@ -830,11 +830,22 @@ namespace Raven.Server.Documents
             }
 
             var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
-            var (_, tvr) = tombstoneTable.SeekByPrimaryKeyPrefix(lowerId, Slices.Empty, 0).FirstOrDefault();
+
+            foreach (var item in tombstoneTable.SeekByPrimaryKeyPrefix(lowerId, Slices.Empty, 0))
+            {
+                if (item.Value != null && IsTombstoneOfId(item.Key, lowerId))
+                {
+                    return new DocumentOrTombstone
+                    {
+                        Tombstone = TableValueToTombstone(context, ref item.Value.Reader)
+                    };
+                }
+                break;
+            }
 
             return new DocumentOrTombstone
             {
-                Tombstone = tvr == null ? null : TableValueToTombstone(context, ref tvr.Reader)
+                Tombstone = null
             };
         }
 
@@ -1532,10 +1543,9 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
             
-            var nonConflictedLowerId = ModifyLowerIdIfNeeded(context, table, lowerId);
-
             try
             {
+                using (ModifyLowerIdIfNeeded(context, table, lowerId, out var nonConflictedLowerId))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -1572,20 +1582,23 @@ namespace Raven.Server.Documents
 
             return (newEtag, changeVector);
         }
-        private Slice ModifyLowerIdIfNeeded(DocumentsOperationContext context, Table table, Slice lowerId)
+        private IDisposable ModifyLowerIdIfNeeded(DocumentsOperationContext context, Table table, Slice lowerId, out Slice nonConflictedLowerId)
         {
             if (table.ReadByKey(lowerId, out _) == false)
-                return lowerId;
+            {
+                nonConflictedLowerId = lowerId;
+                return null;
+            }
 
             var length = lowerId.Content.Length;
-            Slice.From(context.Allocator, lowerId.Content.Ptr, length + ConflictedTombstoneOverhead, out var newLowerId); // TODO: dispose?
+            var disposable = Slice.From(context.Allocator, lowerId.Content.Ptr, length + ConflictedTombstoneOverhead, out nonConflictedLowerId);
 
-            *(newLowerId.Content.Ptr + length) = SpecialChars.RecordSeparator;
-            *(long*)(newLowerId.Content.Ptr + length + sizeof(byte)) = Bits.SwapBytes(GenerateNextEtag()); // now the id will be unique
-            
-            return newLowerId;
+            *(nonConflictedLowerId.Content.Ptr + length) = SpecialChars.RecordSeparator;
+            *(long*)(nonConflictedLowerId.Content.Ptr + length + sizeof(byte)) = Bits.SwapBytes(GenerateNextEtag()); // now the id will be unique
+            return disposable;
         }
 
+        // long - Etag, byte - separator char
         private const int ConflictedTombstoneOverhead = sizeof(long) + sizeof(byte);
 
         private static LazyStringValue UnwrapLowerIdIfNeeded(JsonOperationContext context, LazyStringValue lowerId)
@@ -1599,6 +1612,19 @@ namespace Raven.Server.Documents
             }
 
             return lowerId;
+        }
+
+        public static bool IsTombstoneOfId(Slice tombstoneKey, Slice lowerId)
+        {
+            if (tombstoneKey.Size < ConflictedTombstoneOverhead + 1)
+                return SliceComparer.EqualsInline(tombstoneKey, lowerId);
+
+            if (tombstoneKey[tombstoneKey.Size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
+            {
+                return Memory.CompareInline(tombstoneKey.Content.Ptr, lowerId.Content.Ptr, lowerId.Size) == 0;
+            }
+
+            return SliceComparer.EqualsInline(tombstoneKey, lowerId);
         }
 
         private void ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(Slice lowerId, CollectionName collectionName,
