@@ -125,11 +125,9 @@ class indexDefinition {
             },
             validation: [
                 {
-                    validator: (reduceContent: string) => {
-                        if (reduceContent && reduceContent.trim())
-                            return true; 
-                    },
-                    message: `Reduce function is empty!`
+                    validator: (reduceContent: string) =>  (this.hasReduce() && reduceContent && reduceContent.trim()) ||
+                                                           !this.hasReduce(),
+                    message: `Reduce function is empty`
                 }
             ]
         });
@@ -137,23 +135,13 @@ class indexDefinition {
         this.reduceOutputCollectionName.extend({
             required: {
                 onlyIf: () => this.hasReduce() && this.outputReduceToCollection()
-            },
-            validation: [
-                {
-                    validator: () => !this.hasReduce() || this.reduce() || !this.outputReduceToCollection(),
-                    message: `Reduce function above is empty!`
-                }
-            ]
+            }
         });
 
         this.patternForReferencesToReduceOutputCollection.extend({
             required: {
                 onlyIf: () => this.hasReduce() && this.hasPatternForReduceOutputCollection()
-            },
-            validation: [{
-                validator: () => !this.hasReduce() || this.reduce() || !this.hasPatternForReduceOutputCollection(),
-                message: `Reduce function above is empty!`
-            }]
+            }
         });
 
         this.validationGroup = ko.validatedObservable({

@@ -240,7 +240,7 @@ class index {
         });
 
         this.mapReduceIndexInfoTooltip = ko.pureComputed(() => {
-            let infoTextHtml;
+            let infoTextHtml = "";
 
             if (this.reduceOutputCollectionName()) {
                 infoTextHtml = `Reduce Results are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}</strong>`;
