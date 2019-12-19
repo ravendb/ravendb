@@ -70,7 +70,10 @@ class editIndex extends viewModelBase {
             "deleteAdditionalSource", 
             "previewAdditionalSource",
             "createAnalyzerNameAutocompleter", 
-            "shouldDropupMenu");
+            "shouldDropupMenu",
+            "formatReduce",
+            "removeReduce",
+            "addReduce");
 
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();

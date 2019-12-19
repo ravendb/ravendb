@@ -67,8 +67,8 @@
                 <div data-bind="if: hasReduce">
                     <div class="clearfix">
                         <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                            <button type="button" class="btn btn-default" data-bind="click: $root.formatReduce.bind($root)"><i class="icon-indent"></i><span>Format</span></button>
-                            <button type="button" class="btn btn-danger" data-bind="click: $root.removeReduce.bind($root)" title="Remove the Reduce function from the index">
+                            <button type="button" class="btn btn-default" data-bind="click: $root.formatReduce"><i class="icon-indent"></i><span>Format</span></button>
+                            <button type="button" class="btn btn-danger" data-bind="click: $root.removeReduce" title="Remove the Reduce function from the index">
                                 <i class="icon-trash"></i> <span>Delete</span>
                             </button>
                         </div>
@@ -86,7 +86,7 @@
                     </div>
                 </div>
                 <div class="margin-bottom" data-bind="visible: !hasReduce()">
-                    <button class="btn btn-info" data-bind="click: $root.addReduce.bind($root)">
+                    <button class="btn btn-info" data-bind="click: $root.addReduce">
                         <i class="icon-plus"></i><span>Add Reduction</span>
                     </button>
                 </div>
