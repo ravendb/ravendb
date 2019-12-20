@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                 if (Collections != null)
                     return node;
 
-                var nodeToCheck = UnwrapNode(node);
+                var nodeToCheck = CollectionNameRetriever.UnwrapNode(node);
 
                 var nodeAsString = nodeToCheck.Expression.ToString();
                 const string nodePrefix = "timeSeries";
@@ -49,17 +49,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 
                 var newExpression = SyntaxFactory.ParseExpression(nodeAsString);
                 return node.WithExpression(newExpression);
-            }
-
-            private static InvocationExpressionSyntax UnwrapNode(InvocationExpressionSyntax node)
-            {
-                // we are unwrapping here expressions like docs.Method().Method()
-                // so as a result we will be analyzing only docs.Method() or docs.CollectionName.Method()
-                // e.g. docs.WhereEntityIs() or docs.Orders.Select()
-                if (node.Expression is MemberAccessExpressionSyntax mae && mae.Expression is InvocationExpressionSyntax ies)
-                    return UnwrapNode(ies);
-
-                return node;
             }
         }
 
