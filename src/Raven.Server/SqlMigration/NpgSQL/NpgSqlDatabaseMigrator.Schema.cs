@@ -6,23 +6,23 @@ namespace Raven.Server.SqlMigration.NpgSQL
 {
     internal partial class NpgSqlDatabaseMigrator : GenericDatabaseMigrator
     {
-        public const string SelectColumns = "select c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE" +
-                                            " from information_schema.COLUMNS c join information_schema.TABLES t " +
-                                            " on c.TABLE_CATALOG = t.TABLE_CATALOG and c.TABLE_SCHEMA = t.TABLE_SCHEMA and c.TABLE_NAME = t.TABLE_NAME " +
-                                            " where t.TABLE_TYPE <> 'VIEW' AND t.table_schema = 'public'";
+        public const string SelectColumns = "SELECT C.TABLE_SCHEMA, C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE" +
+                                            " FROM INFORMATION_SCHEMA.COLUMNS C JOIN INFORMATION_SCHEMA.TABLES T " +
+                                            " ON C.TABLE_CATALOG = T.TABLE_CATALOG AND C.TABLE_SCHEMA = T.TABLE_SCHEMA AND C.TABLE_NAME = T.TABLE_NAME " +
+                                            " WHERE T.TABLE_TYPE <> 'VIEW' AND T.TABLE_SCHEMA = 'public'";
 
-        public const string SelectPrimaryKeys = "select tc.TABLE_SCHEMA, tc.TABLE_NAME, COLUMN_NAME " +
-                                                "from information_schema.TABLE_CONSTRAINTS as tc " +
-                                                "inner join information_schema.KEY_COLUMN_USAGE as ku " +
-                                                "on tc.CONSTRAINT_TYPE = 'PRIMARY KEY' and tc.constraint_name = ku.CONSTRAINT_NAME" +
-                                                " order by ORDINAL_POSITION";
+        public const string SelectPrimaryKeys = "SELECT TC.TABLE_SCHEMA, TC.TABLE_NAME, COLUMN_NAME " +
+                                                "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS TC " +
+                                                "INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS KU " +
+                                                "ON TC.CONSTRAINT_TYPE = 'PRIMARY KEY' AND TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME" +
+                                                " ORDER BY ORDINAL_POSITION";
 
-        public const string SelectReferentialConstraints = "select CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME " +
-                                                           "from information_schema.REFERENTIAL_CONSTRAINTS";
+        public const string SelectReferentialConstraints = "SELECT CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME " +
+                                                           "FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS";
 
-        public const string SelectKeyColumnUsage = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
-                                                                      " from information_schema.KEY_COLUMN_USAGE " +
-                                                                      "order by ORDINAL_POSITION";
+        public const string SelectKeyColumnUsage = "SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
+                                                                      " FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
+                                                                      "ORDER BY ORDINAL_POSITION";
 
         public override DatabaseSchema FindSchema()
         {
