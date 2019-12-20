@@ -8,23 +8,23 @@ namespace Raven.Server.SqlMigration.MySQL
 {
     internal partial class MySqlDatabaseMigrator : GenericDatabaseMigrator
     {
-        public const string SelectColumns = "select c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE " +
-                                            " from information_schema.COLUMNS c join information_schema.TABLES t " +
-                                            " on c.TABLE_CATALOG = t.TABLE_CATALOG and c.TABLE_SCHEMA = t.TABLE_SCHEMA and c.TABLE_NAME = t.TABLE_NAME " +
-                                            " where c.TABLE_SCHEMA = @schema and t.TABLE_TYPE <> 'VIEW' ";
+        public const string SelectColumns = "SELECT C.TABLE_SCHEMA, C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE " +
+                                            " FROM INFORMATION_SCHEMA.COLUMNS C JOIN INFORMATION_SCHEMA.TABLES T " +
+                                            " ON C.TABLE_CATALOG = T.TABLE_CATALOG AND C.TABLE_SCHEMA = T.TABLE_SCHEMA AND C.TABLE_NAME = T.TABLE_NAME " +
+                                            " WHERE C.TABLE_SCHEMA = @schema AND T.TABLE_TYPE <> 'VIEW' ";
 
-        public const string SelectPrimaryKeys = "select TABLE_NAME, COLUMN_NAME, TABLE_SCHEMA from information_schema.KEY_COLUMN_USAGE " +
-                                                "where TABLE_SCHEMA = @schema and CONSTRAINT_NAME = 'PRIMARY' " +
-                                                "order by ORDINAL_POSITION";
+        public const string SelectPrimaryKeys = "SELECT TABLE_NAME, COLUMN_NAME, TABLE_SCHEMA FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
+                                                "WHERE TABLE_SCHEMA = @schema AND CONSTRAINT_NAME = 'PRIMARY' " +
+                                                "ORDER BY ORDINAL_POSITION";
 
-        public const string SelectReferentialConstraints = "select CONSTRAINT_SCHEMA, UNIQUE_CONSTRAINT_SCHEMA, CONSTRAINT_NAME, TABLE_NAME, REFERENCED_TABLE_NAME " +
-                                                           "from information_schema.REFERENTIAL_CONSTRAINTS " +
-                                                           "where UNIQUE_CONSTRAINT_SCHEMA = @schema ";
+        public const string SelectReferentialConstraints = "SELECT CONSTRAINT_SCHEMA, UNIQUE_CONSTRAINT_SCHEMA, CONSTRAINT_NAME, TABLE_NAME, REFERENCED_TABLE_NAME " +
+                                                           "FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS " +
+                                                           "WHERE UNIQUE_CONSTRAINT_SCHEMA = @schema ";
 
-        public const string SelectKeyColumnUsage = "select CONSTRAINT_SCHEMA, CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_COLUMN_NAME " +
-                                                                      " from information_schema.KEY_COLUMN_USAGE " +
-                                                                      " where TABLE_SCHEMA = @schema and CONSTRAINT_NAME <> 'PRIMARY' " +
-                                                                      " order by ORDINAL_POSITION";
+        public const string SelectKeyColumnUsage = "SELECT CONSTRAINT_SCHEMA, CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_COLUMN_NAME " +
+                                                                      " FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
+                                                                      " WHERE TABLE_SCHEMA = @schema AND CONSTRAINT_NAME <> 'PRIMARY' " +
+                                                                      " ORDER BY ORDINAL_POSITION";
         
         public override DatabaseSchema FindSchema()
         {
