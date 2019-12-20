@@ -14,6 +14,7 @@ using Lextm.SharpSnmpLib.Security;
 using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
@@ -240,7 +241,7 @@ namespace Raven.Server.Monitoring.Snmp
                 tx.Commit();
             }
 
-            var engineGroup = new EngineGroup(engineBoots, (currentTimeData, pastReboots, pastTime) => true)
+            var engineGroup = new EngineGroup(engineBoots, GetIsInTime(server.Configuration.Monitoring))
             {
                 EngineId = new OctetString(server.ServerStore.GetServerId().ToString("N"))
             };
@@ -254,6 +255,13 @@ namespace Raven.Server.Monitoring.Snmp
             };
 
             return engine;
+        }
+
+        private static Func<int[], int, int, bool> GetIsInTime(MonitoringConfiguration monitoringConfiguration)
+        {
+                return monitoringConfiguration.Snmp.DisableTimeWindowChecks
+                    ? (currentTimeData, pastReboots, pastTime) => true
+                    : (Func<int[], int, int, bool>)null;
         }
 
         private static (HashSet<SnmpVersion> Versions, string HandlerVersion) GetVersions(RavenServer server)
