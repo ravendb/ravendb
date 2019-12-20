@@ -6,11 +6,16 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class CommandsTests : RachisConsensusTestBase
     {
+        public CommandsTests(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         [Fact]
         public async Task When_command_committed_CompletionTaskSource_is_notified()
         {
