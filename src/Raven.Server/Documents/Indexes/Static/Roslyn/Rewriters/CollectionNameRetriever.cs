@@ -15,6 +15,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public static CollectionNameRetriever MethodSyntax => new MethodSyntaxRewriter();
 
+        public static InvocationExpressionSyntax UnwrapNode(InvocationExpressionSyntax node)
+        {
+            // we are unwrapping here expressions like docs.Method().Method()
+            // so as a result we will be analyzing only docs.Method() or docs.CollectionName.Method()
+            // e.g. docs.WhereEntityIs() or docs.Orders.Select()
+            if (node.Expression is MemberAccessExpressionSyntax mae && mae.Expression is InvocationExpressionSyntax ies)
+                return UnwrapNode(ies);
+
+            return node;
+        }
+
         private class MethodSyntaxRewriter : CollectionNameRetriever
         {
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -129,17 +140,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     throw new InvalidOperationException($"Couldn't extract any collections from '{nameof(MetadataExtensions.WhereEntityIs)}' arguments.");
 
                 return collections;
-            }
-
-            private static InvocationExpressionSyntax UnwrapNode(InvocationExpressionSyntax node)
-            {
-                // we are unwrapping here expressions like docs.Method().Method()
-                // so as a result we will be analyzing only docs.Method() or docs.CollectionName.Method()
-                // e.g. docs.WhereEntityIs() or docs.Orders.Select()
-                if (node.Expression is MemberAccessExpressionSyntax mae && mae.Expression is InvocationExpressionSyntax ies)
-                    return UnwrapNode(ies);
-
-                return node;
             }
         }
 
