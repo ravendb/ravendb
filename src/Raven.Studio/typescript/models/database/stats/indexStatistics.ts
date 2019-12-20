@@ -11,7 +11,13 @@ class indexStatistics {
 
     mapAttempts: string; 
     mapSuccesses: string;
-    mapErrors: string;    
+    mapErrors: string;
+    mapReferenceAttempts: string;
+    mapReferenceSuccesses: string;
+    mapReferenceErrors: string;
+    
+    showMapReferenceSection: boolean;
+    
     mappedPerSecondRate: number; 
     mappedPerSecondRateStr: string;
 
@@ -35,6 +41,12 @@ class indexStatistics {
         this.mapAttempts = dto.MapAttempts.toLocaleString();
         this.mapSuccesses = dto.MapSuccesses.toLocaleString();
         this.mapErrors = dto.MapErrors > 0 ? dto.MapErrors.toLocaleString() : "0";
+        
+        this.mapReferenceAttempts = dto.MapReferenceAttempts > 0 ? dto.MapReferenceAttempts.toLocaleString() : "0";
+        this.mapReferenceSuccesses = dto.MapReferenceSuccesses > 0 ? dto.MapReferenceSuccesses.toLocaleString() : "0";
+        this.mapReferenceErrors = dto.MapReferenceErrors > 0 ? dto.MapReferenceErrors.toLocaleString() : "0";
+        
+        this.showMapReferenceSection = dto.MapReferenceSuccesses > 0 || dto.MapReferenceErrors > 0 || dto.MapReferenceAttempts > 0;
 
         this.mappedPerSecondRate = dto.MappedPerSecondRate;
         this.mappedPerSecondRateStr = dto.MappedPerSecondRate > 1 ? genUtils.formatNumberToStringFixed(dto.MappedPerSecondRate, 2) : "";
