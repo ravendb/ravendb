@@ -49,6 +49,7 @@ class virtualBulkInsert extends abstractNotification {
         
         const totalDocumentsCount = _.sumBy(this.operations(), x => x.items);
         this.message(pluralizeHelpers.pluralize(this.operations().length, "bulk insert", "bulk inserts")
+            + " to database " + this.database.name
             + " completed successfully. "
             + pluralizeHelpers.pluralize(totalDocumentsCount, " document was created.", "documents were created.") );
     }
