@@ -13,7 +13,55 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 
         public static TimeSeriesCollectionNameRetriever QuerySyntax => new QuerySyntaxRewriter();
 
-        public static CollectionNameRetriever MethodSyntax => throw new NotImplementedException();
+        public static TimeSeriesCollectionNameRetriever MethodSyntax => new MethodSyntaxRewriter();
+
+        private class MethodSyntaxRewriter : TimeSeriesCollectionNameRetriever
+        {
+            public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
+            {
+                if (Collections != null)
+                    return node;
+
+                var nodeToCheck = UnwrapNode(node);
+
+                var nodeAsString = nodeToCheck.Expression.ToString();
+                const string nodePrefix = "timeSeries";
+                if (nodeAsString.StartsWith(nodePrefix) == false)
+                    return node;
+
+                var nodeParts = nodeAsString.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
+                if (nodeParts.Length < 3)
+                    throw new NotImplementedException("Not supported syntax exception. This might be a bug.");
+
+                var collectionName = nodeParts[1];
+                var timeSeriesName = nodeParts[2];
+                Collections = new (string CollectionName, string TimeSeriesName)[]
+                {
+                    (collectionName, timeSeriesName)
+                };
+
+                if (nodeToCheck != node)
+                    nodeAsString = node.Expression.ToString();
+
+                var collectionIndex = nodeAsString.IndexOf(collectionName, nodePrefix.Length, StringComparison.OrdinalIgnoreCase);
+                // removing collection name: "timeSeries.Users.HeartRate.Select" => "timeSeries.Select"
+                nodeAsString = nodeAsString.Remove(collectionIndex - 1, collectionName.Length + 1 + timeSeriesName.Length + 1);
+
+                var newExpression = SyntaxFactory.ParseExpression(nodeAsString);
+                return node.WithExpression(newExpression);
+            }
+
+            private static InvocationExpressionSyntax UnwrapNode(InvocationExpressionSyntax node)
+            {
+                // we are unwrapping here expressions like docs.Method().Method()
+                // so as a result we will be analyzing only docs.Method() or docs.CollectionName.Method()
+                // e.g. docs.WhereEntityIs() or docs.Orders.Select()
+                if (node.Expression is MemberAccessExpressionSyntax mae && mae.Expression is InvocationExpressionSyntax ies)
+                    return UnwrapNode(ies);
+
+                return node;
+            }
+        }
 
         private class QuerySyntaxRewriter : TimeSeriesCollectionNameRetriever
         {
@@ -36,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                     }
                 }
 
-                throw new NotImplementedException("TODO ppekrol");
+                throw new NotImplementedException("Not supported syntax exception. This might be a bug.");
                 /*
                 if (node.Expression is ElementAccessExpressionSyntax indexer)
                 {
