@@ -240,7 +240,7 @@ namespace Raven.Server.Monitoring.Snmp
                 tx.Commit();
             }
 
-            var engineGroup = new EngineGroup(engineBoots)
+            var engineGroup = new EngineGroup(engineBoots, (currentTimeData, pastReboots, pastTime) => true)
             {
                 EngineId = new OctetString(server.ServerStore.GetServerId().ToString("N"))
             };
