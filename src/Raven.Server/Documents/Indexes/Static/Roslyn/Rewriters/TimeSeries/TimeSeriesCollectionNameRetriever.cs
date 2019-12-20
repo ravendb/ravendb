@@ -73,7 +73,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                     }
                 }
 
-                throw new NotImplementedException("Not supported syntax exception. This might be a bug.");
                 /*
                 if (node.Expression is ElementAccessExpressionSyntax indexer)
                 {
@@ -90,19 +89,20 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 
                     return node.WithExpression(indexer.Expression);
                 }
+                */
 
+                // from ts in timeSeries.Companies.HeartRate.Where(x => true)
                 var invocationExpression = node.Expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
                 {
                     var methodSyntax = MethodSyntax;
                     var newExpression = (ExpressionSyntax)methodSyntax.VisitInvocationExpression(invocationExpression);
-                    CollectionNames = methodSyntax.CollectionNames;
+                    Collections = methodSyntax.Collections;
 
                     return node.WithExpression(newExpression);
                 }
 
-                return node;
-                */
+                throw new NotImplementedException("Not supported syntax exception. This might be a bug.");
             }
         }
     }
