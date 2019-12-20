@@ -9,11 +9,16 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class BasicCluster : RachisConsensusTestBase
     {
+        public BasicCluster(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         [Fact]
         public async Task ClusterWithFiveNodesAndMultipleElections()
         {

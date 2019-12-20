@@ -7,11 +7,16 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class TopologyChangesTests : RachisConsensusTestBase
     {
+        public TopologyChangesTests(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         [Fact]
         public async Task CanEnforceTopologyOnOldLeader()
         {
