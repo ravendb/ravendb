@@ -23,6 +23,9 @@ class index {
     mapAttempts = ko.observable<number>();
     mapErrors = ko.observable<number>();
     mapSuccesses = ko.observable<number>();
+    mapReferenceAttempts = ko.observable<number>();
+    mapReferenceSuccesses = ko.observable<number>();
+    mapReferenceErrors = ko.observable<number>();
     memory = ko.observable<Raven.Client.Documents.Indexes.IndexStats.MemoryStats>();
     name: string;
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
@@ -82,6 +85,9 @@ class index {
         this.mapAttempts(dto.MapAttempts);
         this.mapErrors(dto.MapErrors);
         this.mapSuccesses(dto.MapSuccesses);
+        this.mapReferenceAttempts(dto.MapReferenceAttempts);
+        this.mapReferenceErrors(dto.MapReferenceErrors);
+        this.mapReferenceSuccesses(dto.MapReferenceSuccesses);
         this.memory(dto.Memory);
         this.name = dto.Name;
         this.priority(dto.Priority);
@@ -280,6 +286,10 @@ class index {
         this.mapAttempts(incomingData.mapAttempts());
         this.mapErrors(incomingData.mapErrors());
         this.mapSuccesses(incomingData.mapSuccesses());
+        
+        this.mapReferenceAttempts(incomingData.mapReferenceAttempts());
+        this.mapReferenceErrors(incomingData.mapReferenceErrors());
+        this.mapReferenceSuccesses(incomingData.mapReferenceSuccesses());
         
         this.reduceAttempts(incomingData.reduceAttempts());
         this.reduceErrors(incomingData.reduceErrors());
