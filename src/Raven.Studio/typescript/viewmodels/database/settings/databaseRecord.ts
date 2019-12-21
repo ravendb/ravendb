@@ -7,17 +7,18 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import messagePublisher = require("common/messagePublisher");
 import accessManager = require("common/shell/accessManager");
 import eventsCollector = require("common/eventsCollector");
+import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
 
 class databaseRecord extends viewModelBase {
     autoCollapseMode = ko.observable<boolean>(false);
     document = ko.observable<document>();
     documentText = ko.observable<string>().extend({ required: true });
     docEditor: AceAjax.Editor;
-    securedSettings: string;
-    updatedDto: documentDto;
     isForbidden = ko.observable<boolean>(false);
+    
+    inEditMode = ko.observable<boolean>(false);
 
-    static containerId ="#databaseSettingsContainer";
+    static containerId = "#databaseSettingsContainer";
 
     constructor() {
         super();
@@ -25,14 +26,12 @@ class databaseRecord extends viewModelBase {
 
         this.document.subscribe(doc => {
             if (doc) {
-                const docDto: any = doc.toDto();
-                this.securedSettings = ko.toJSON(docDto.SecuredSettings);
                 const docText = this.stringify(doc.toDto());
                 this.documentText(docText);
             }
         });
         
-        this.bindToCurrentInstance("toggleAutoCollapse");
+        this.bindToCurrentInstance("toggleAutoCollapse", "save", "exitEditMode");
     }
 
     canActivate(args: any) {
@@ -66,7 +65,7 @@ class databaseRecord extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        var editorElement = $("#dbDocEditor");
+        const editorElement = $("#dbDocEditor");
         if (editorElement.length > 0) {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
@@ -88,10 +87,50 @@ class databaseRecord extends viewModelBase {
         folds.map(f => this.docEditor.getSession().expandFold(f));
     }
     
-    refreshFromServer() {
+    refreshFromServer(reportFetchProgress: boolean = true) {
         eventsCollector.default.reportEvent("database-settings", "refresh");
 
-        this.fetchDatabaseSettings(this.activeDatabase(), true);
+        this.fetchDatabaseSettings(this.activeDatabase(), reportFetchProgress);
+    }
+
+    enterEditMode() {
+        this.confirm()
+            .done(result => {
+                if (result.can) {
+                    const docText = this.stringify(this.document().toDto(), false);
+                    this.documentText(docText);
+                    this.inEditMode(true);
+                }
+            })
+    }
+    
+    exitEditMode() {
+        const docText = this.stringify(this.document().toDto(), true);
+        this.documentText(docText);
+        this.inEditMode(false);
+    }
+    
+    confirm() {
+        return this.confirmationMessage("Are you sure?", 
+            "Tampering with database record may result in unwanted behavior including loss of database along with all its data.",
+            {
+                buttons: ["Cancel", "Ok, I understand the risk"]
+            });
+    }
+    
+    save() {
+        this.confirm()
+            .then(result => {
+                if (result.can) {
+                    const dto = JSON.parse(this.documentText());
+                    new saveDatabaseSettingsCommand(this.activeDatabase(), dto, dto.Etag)
+                        .execute()
+                        .done(() => {
+                            this.refreshFromServer(false);
+                            this.exitEditMode();
+                        });
+                }
+            });
     }
 
     private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
@@ -100,12 +139,16 @@ class databaseRecord extends viewModelBase {
             .done((document: document) => this.document(document));
     }
 
-    private stringify(obj: any) {
+    private stringify(obj: any, stripNullAndEmptyValues: boolean = true) {
         const prettifySpacing = 4;
-        return JSON.stringify(obj, (key, val) => {
-            // strip out null properties
-            return _.isNull(val) || _.isEqual(val, {}) ? undefined : val;
-        }, prettifySpacing);
+        if (stripNullAndEmptyValues) {
+            return JSON.stringify(obj, (key, val) => {
+                // strip out null properties
+                return _.isNull(val) || _.isEqual(val, {}) ? undefined : val;
+            }, prettifySpacing);
+        } else {
+            return JSON.stringify(obj, null, prettifySpacing);
+        }
     }
 }
 

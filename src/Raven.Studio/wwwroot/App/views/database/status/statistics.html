@@ -140,6 +140,20 @@
                         <div class="name">Map Errors:</div>
                         <div class="value" data-bind="text: mapErrors"></div>
                     </div>
+                    <div data-bind="if: showMapReferenceSection">
+                        <div class="stats-item" data-bind="visible: !isFaultyIndex, if: !isFaultyIndex">
+                            <div class="name">Map Reference Attempts:</div>
+                            <div class="value" data-bind="text: mapReferenceAttempts"></div>
+                        </div>
+                        <div class="stats-item" data-bind="visible: !isFaultyIndex, if: !isFaultyIndex">
+                            <div class="name">Map Reference Successes:</div>
+                            <div class="value" data-bind="text: mapReferenceSuccesses"></div>
+                        </div>
+                        <div class="stats-item" data-bind="visible: mapReferenceErrors > 0, if: mapReferenceErrors > 0">
+                            <div class="name">Map Reference Errors:</div>
+                            <div class="value" data-bind="text: mapReferenceErrors"></div>
+                        </div>
+                    </div>
                     <div class="stats-item" data-bind="visible: mappedPerSecondRate > 1, if: mappedPerSecondRate > 1">
                         <div class="name">Mapped Per Second Rate:</div>
                         <div class="value" data-bind="text: mappedPerSecondRateStr"></div>

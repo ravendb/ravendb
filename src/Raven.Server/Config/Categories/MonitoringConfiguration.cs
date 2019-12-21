@@ -79,6 +79,11 @@ namespace Raven.Server.Config.Categories
             [DefaultValue("V2C;V3")]
             [ConfigurationEntry("Monitoring.Snmp.SupportedVersions", ConfigurationEntryScope.ServerWideOnly)]
             public string[] SupportedVersions { get; set; }
+            
+            [Description("EXPERT: Disables time window checks, which are problematic for some SNMP engines. Default: false")]
+            [DefaultValue(false)]
+            [ConfigurationEntry("Monitoring.Snmp.DisableTimeWindowChecks", ConfigurationEntryScope.ServerWideOnly)]
+            public bool DisableTimeWindowChecks { get; set; }
         }
     }
 }

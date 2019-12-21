@@ -116,7 +116,11 @@ CREATE TABLE [dbo].[Orders]
 )
 ")
         {
+            Console.WriteLine($"CreateRdbmsSchema (1). Src: {store.Database}. Test: {Context.UniqueTestName}");
+
             CreateRdbmsDatabase(store);
+
+            Console.WriteLine($"CreateRdbmsSchema (2). Src: {store.Database}. Test: {Context.UniqueTestName}");
 
             using (var con = new SqlConnection())
             {
@@ -129,11 +133,17 @@ CREATE TABLE [dbo].[Orders]
                     dbCommand.ExecuteNonQuery();
                 }
             }
+
+            Console.WriteLine($"CreateRdbmsSchema (3). Src: {store.Database}. Test: {Context.UniqueTestName}");
         }
 
         public override void Dispose()
         {
+            Console.WriteLine($"Dispose (1). Names: {string.Join(";", _dbNames)}. Test: {Context.UniqueTestName}");
+
             base.Dispose();
+
+            Console.WriteLine($"Dispose (2). Names: {string.Join(";", _dbNames)}. Test: {Context.UniqueTestName}");
 
             using (var con = new SqlConnection())
             {
@@ -142,6 +152,8 @@ CREATE TABLE [dbo].[Orders]
 
                 foreach (var dbName in _dbNames)
                 {
+                    Console.WriteLine($"Dispose (3). Name: {dbName}. Test: {Context.UniqueTestName}");
+
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = $@"
@@ -149,12 +161,18 @@ ALTER DATABASE [SqlReplication-{dbName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE
 DROP DATABASE [SqlReplication-{dbName}]";
                         dbCommand.ExecuteNonQuery();
                     }
+
+                    Console.WriteLine($"Dispose (4). Name: {dbName}. Test: {Context.UniqueTestName}");
                 }
             }
+
+            Console.WriteLine($"Dispose (5). Names: {string.Join(";", _dbNames)}. Test: {Context.UniqueTestName}");
         }
 
         private void CreateRdbmsDatabase(DocumentStore store)
         {
+            Console.WriteLine($"CreateRdbmsSchemaInner (1). Src: {store.Database}. Test: {Context.UniqueTestName}");
+
             using (var con = new SqlConnection())
             {
                 con.ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value;
@@ -173,6 +191,8 @@ CREATE DATABASE [SqlReplication-{store.Database}]
                     dbCommand.ExecuteNonQuery();
                 }
             }
+
+            Console.WriteLine($"CreateRdbmsSchemaInner (2). Src: {store.Database}. Test: {Context.UniqueTestName}");
         }
 
         [Fact]
@@ -1223,7 +1243,7 @@ loadToOrders(orderData);
             }
         }
 
-        protected static void SetupSqlEtl(DocumentStore store, string script, bool insertOnly = false, List<string> collections = null)
+        protected void SetupSqlEtl(DocumentStore store, string script, bool insertOnly = false, List<string> collections = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to SQL DB";
 

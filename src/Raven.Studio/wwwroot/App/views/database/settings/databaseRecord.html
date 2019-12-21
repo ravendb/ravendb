@@ -6,20 +6,33 @@
     <!-- /ko -->
     <!-- ko if: !isForbidden() -->
     <form class="flex-grow flex-vertical">
-        <div>
-            <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh">
+        <div data-bind="visible: !inEditMode()">
+            <button type="button" class="btn btn-default" data-bind="click: _.partial(refreshFromServer, true)" title="Refresh">
                 <i class="icon-refresh"></i>
                 <span>Refresh</span>
             </button>
+            <button type="button" class="btn btn-default" data-bind="click: enterEditMode" title="Edit database record.">
+                <i class="icon-edit"></i>
+                <span>Edit</span>
+            </button>
+        </div>
+        <div data-bind="visible: inEditMode()">
+            <button type="button" class="btn btn-primary" data-bind="click: save">
+                <i class="icon-save"></i>
+                <span>Save</span>
+            </button>
+            <button type="button" class="btn btn-default" data-bind="click: exitEditMode">
+                <i class="icon-cancel"></i>
+                <span>Cancel</span>
+            </button>
         </div>
         <div class="flex-horizontal">
-
             <div class="flex-grow"></div>
             <div class="btn-group btn-group-sm pull-right" role="group">
                 <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
             </div>
         </div>
-        <pre id="dbDocEditor" class="form-control flex-grow" data-bind="aceEditor: { code: documentText, lang: 'ace/mode/json', readOnly: true }" style="height: 500px"></pre>
+        <pre id="dbDocEditor" class="form-control flex-grow" data-bind="aceEditor: { code: documentText, lang: 'ace/mode/json', readOnly: !inEditMode() }" style="height: 500px"></pre>
     </form>
     <!-- /ko -->
 </div>

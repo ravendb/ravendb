@@ -504,6 +504,8 @@ namespace FastTests
             }
             private static readonly Lazy<ServerCreationOptions> _default = new Lazy<ServerCreationOptions>(() => new ServerCreationOptions(frozen: true));
             public static ServerCreationOptions Default => _default.Value;
+
+            public Action<ServerStore> BeforeDatabasesStartup;
         }
 
         protected virtual RavenServer GetNewServer(ServerCreationOptions options = null)
@@ -556,6 +558,12 @@ namespace FastTests
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
                 var server = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true };
+
+                if (options.BeforeDatabasesStartup != null)
+                {
+                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged = options.BeforeDatabasesStartup;
+                }
+
                 server.Initialize();
                 server.ServerStore.ValidateFixedPort = false;
 

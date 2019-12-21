@@ -23,6 +23,9 @@ class index {
     mapAttempts = ko.observable<number>();
     mapErrors = ko.observable<number>();
     mapSuccesses = ko.observable<number>();
+    mapReferenceAttempts = ko.observable<number>();
+    mapReferenceSuccesses = ko.observable<number>();
+    mapReferenceErrors = ko.observable<number>();
     memory = ko.observable<Raven.Client.Documents.Indexes.IndexStats.MemoryStats>();
     name: string;
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
@@ -34,6 +37,7 @@ class index {
     reduceSuccesses = ko.observable<number>();
     reduceOutputCollectionName = ko.observable<string>();
     hasPatternForReduceOutputCollection = ko.observable<boolean>(); 
+    mapReduceIndexInfoTooltip: KnockoutComputed<string>;
     
     type = ko.observable<Raven.Client.Documents.Indexes.IndexType>();
     typeForUI: KnockoutComputed<string>;
@@ -82,6 +86,9 @@ class index {
         this.mapAttempts(dto.MapAttempts);
         this.mapErrors(dto.MapErrors);
         this.mapSuccesses(dto.MapSuccesses);
+        this.mapReferenceAttempts(dto.MapReferenceAttempts);
+        this.mapReferenceErrors(dto.MapReferenceErrors);
+        this.mapReferenceSuccesses(dto.MapReferenceSuccesses);
         this.memory(dto.Memory);
         this.name = dto.Name;
         this.priority(dto.Priority);
@@ -235,9 +242,20 @@ class index {
                 return "Idle";
             }
 
-           
-
             return "Normal";
+        });
+
+        this.mapReduceIndexInfoTooltip = ko.pureComputed(() => {
+            let infoTextHtml = "";
+
+            if (this.reduceOutputCollectionName()) {
+                infoTextHtml = `Reduce Results are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}</strong>`;
+            }
+            if (this.hasPatternForReduceOutputCollection()) {
+                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}/References</strong>`;
+            }
+
+            return infoTextHtml;
         });
     }
 
@@ -280,6 +298,10 @@ class index {
         this.mapAttempts(incomingData.mapAttempts());
         this.mapErrors(incomingData.mapErrors());
         this.mapSuccesses(incomingData.mapSuccesses());
+        
+        this.mapReferenceAttempts(incomingData.mapReferenceAttempts());
+        this.mapReferenceErrors(incomingData.mapReferenceErrors());
+        this.mapReferenceSuccesses(incomingData.mapReferenceSuccesses());
         
         this.reduceAttempts(incomingData.reduceAttempts());
         this.reduceErrors(incomingData.reduceErrors());

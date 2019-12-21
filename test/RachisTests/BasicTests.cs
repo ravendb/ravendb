@@ -7,11 +7,16 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class BasicTests : RachisConsensusTestBase
     {
+        public BasicTests(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         [Theory]
         [InlineData(2)]
         [InlineData(3)]
