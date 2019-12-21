@@ -418,7 +418,8 @@ namespace Raven.Server.Documents
             if (nonPersistentFlags.Contain(type.ResolveConflictFlag))
             {
                 document.TryGet(Constants.Documents.Metadata.Key, out metadata);
-                metadata.TryGet(type.MetadataProperty, out current);
+                if (metadata != null)
+                    metadata.TryGet(type.MetadataProperty, out current);
 
                 return RecreatePreserveCasing(current, ref flags);
             }
