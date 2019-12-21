@@ -28,16 +28,25 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
 {
     [Trait("Category", "Rachis")]
-    public class RachisConsensusTestBase : IDisposable
+    public class RachisConsensusTestBase : XunitLoggingBase, IDisposable
     {
         static RachisConsensusTestBase()
         {
+            XunitLogging.RedirectStreams = false;
+            XunitLogging.Init();
+            XunitLogging.EnableExceptionCapture();
+            
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             JsonDeserializationCluster.Commands.Add(nameof(TestCommand), JsonDeserializationBase.GenerateJsonDeserializationRoutine<TestCommand>());
+        }
+
+        public RachisConsensusTestBase(ITestOutputHelper output, [CallerFilePath] string sourceFile = "") : base(output, sourceFile)
+        {
         }
 
         protected bool PredictableSeeds;

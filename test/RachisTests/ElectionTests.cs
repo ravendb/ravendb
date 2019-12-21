@@ -11,11 +11,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class ElectionTests : RachisConsensusTestBase
     {
+        public ElectionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         [Fact]
         public async Task Follower_as_a_single_node_becomes_leader_automatically()
         {

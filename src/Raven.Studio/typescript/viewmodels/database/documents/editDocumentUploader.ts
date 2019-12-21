@@ -84,6 +84,8 @@ class editDocumentUploader {
                 notificationCenter.instance.databaseNotifications.remove(upload);
             })
             .always(() => {
+                // reset file upload widget so user can reupload same file twice
+                $(editDocumentUploader.filePickerSelector).val("");
                 this.spinners.upload(false);
                 this.currentUpload(null);
             });

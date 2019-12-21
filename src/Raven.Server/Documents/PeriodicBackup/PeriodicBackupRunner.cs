@@ -466,7 +466,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     periodicBackup.RunningBackupTaskId = operationId;
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
-                    var backupTaskName = $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'";
+                    var backupTaskName = $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'. Database: '{_database.Name}'" ;
 
                     var task = _database.Operations.AddOperation(
                         null,

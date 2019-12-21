@@ -30,6 +30,7 @@ import fileDownloader = require("common/fileDownloader");
 import mapReduceIndexSyntax = require("viewmodels/database/indexes/mapReduceIndexSyntax");
 import additionalSourceSyntax = require("viewmodels/database/indexes/additionalSourceSyntax");
 import fileImporter = require("common/fileImporter");
+import popoverUtils = require("common/popoverUtils");
 
 class editIndex extends viewModelBase {
 
@@ -69,7 +70,10 @@ class editIndex extends viewModelBase {
             "deleteAdditionalSource", 
             "previewAdditionalSource",
             "createAnalyzerNameAutocompleter", 
-            "shouldDropupMenu");
+            "shouldDropupMenu",
+            "formatReduce",
+            "removeReduce",
+            "addReduce");
 
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -148,6 +152,35 @@ class editIndex extends viewModelBase {
         this.fetchIndexes();
     }
 
+    attached() {
+        super.attached();
+        
+        popoverUtils.longWithHover($("#reduce-output-info"),
+            {
+                content: "<small>Reduce results will be saved into documents <br> created under the provided collection name.</small>"
+            });
+
+        popoverUtils.longWithHover($("#reference-docs-info"),
+            {
+                content: 
+                    "<small>" +
+                            "<ul>" +
+                                "<li>" +
+                                  "A <i>Reference Collection</i> with documents that reference the above <i>Reduce Results Collection</i> will be created.<br>" +
+                                  "The Reference Collection name will be: <strong>'{reduce-results-collection-name} / References.'</strong><br><br>" +
+                                "</li>" +
+                                "<li>" +
+                                   "<strong>The pattern</strong> entered is used to create the IDs for the Reference Collection documents.<br><br>" +
+                                "</li>" +
+                                "<li>" +
+                                   "Use any combination of index-field(s) and fixed text in the pattern.<br>" + 
+                                   "i.e. <strong>{fixed-text} / {index-field-1} / {index-field-2}'</strong>" +                    
+                                "</li>" +
+                            "</ul> " +
+                    "</small>"
+            });
+    }
+    
     private initValidation() {
         this.editedIndex().name.extend({
             validation: [
@@ -279,7 +312,7 @@ class editIndex extends viewModelBase {
         if (!editedIndex.hasReduce()) {
             editedIndex.hasReduce(true);
             editedIndex.reduce("");
-            editedIndex.reduce.clearError();
+            editedIndex.reduce.isModified(false);
         }
     }
 
@@ -292,6 +325,7 @@ class editIndex extends viewModelBase {
         eventsCollector.default.reportEvent("index", "remove-reduce");
         this.editedIndex().reduce(null);
         this.editedIndex().hasReduce(false);
+        this.editedIndex().reduce.clearError();
     }
 
     addField() {

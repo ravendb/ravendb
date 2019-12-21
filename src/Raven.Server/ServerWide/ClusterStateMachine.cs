@@ -3100,19 +3100,26 @@ namespace Raven.Server.ServerWide
 
                 token.ThrowIfCancellationRequested();
 
-                // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
-                foreach (var db in GetDatabaseNames(context))
+                var databases = GetDatabaseNames(context).ToArray();
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
                 {
-                    var t = Task.Run(async () =>
+                    if (tx is LowLevelTransaction llt && llt.Committed)
                     {
-                        await OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
-                    }, token);
-                }
+                        // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
+                        foreach (var db in databases)
+                        {
+                            var t = Task.Run(async () =>
+                            {
+                                await OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                            }, token);
+                        }
 
-                var t2 = Task.Run(async () =>
-                {
-                    await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
-                }, token);
+                        var t2 = Task.Run(async () =>
+                        {
+                            await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                        }, token);
+                    }
+                };
                
                 context.Transaction.Commit();
             }

@@ -19,6 +19,7 @@ import indexProgress = require("models/database/index/indexProgress");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 import generalUtils = require("common/generalUtils");
 import shell = require("viewmodels/shell");
+import popoverUtils = require("common/popoverUtils");
 
 type indexGroup = {
     entityName: string;
@@ -220,7 +221,13 @@ class indexes extends viewModelBase {
 
         clearInterval(this.indexProgressInterval);
     }
+    
+    compositionComplete() {
+        super.compositionComplete();
 
+        $('.index-info [data-toggle="tooltip"]').tooltip();
+    }
+    
     private fetchIndexes(): JQueryPromise<void> {
         const statsTask = new getIndexesStatsCommand(this.activeDatabase())
             .execute();

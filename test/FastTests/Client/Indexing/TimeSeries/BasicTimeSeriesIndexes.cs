@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -921,7 +922,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     Priority = IndexPriority.High
                 }));
 
-                WaitForIndexing(store); 
+                WaitForIndexing(store);
 
                 Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
 

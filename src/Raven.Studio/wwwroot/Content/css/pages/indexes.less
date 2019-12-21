@@ -66,7 +66,6 @@
 
         .index-name,
         .index-type {
-            margin-left: 30px;
             margin-bottom: 0;
         }
 
@@ -83,6 +82,22 @@
         .index-type {
             font-style: italic;
             font-size: 14px;
+        }
+
+        .index-type-icon {
+            text-align: center;
+            width: 21px;
+            margin-right: @grid-gutter-width/4;
+            align-self: flex-start;
+            
+            .tooltip {
+                max-width: 400px;
+            }
+            
+            .tooltip-inner {
+                max-width: 100%;
+                word-wrap: break-word;
+            }
         }
 
         .state {

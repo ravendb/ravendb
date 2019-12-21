@@ -1048,16 +1048,19 @@ namespace SlowTests.Server
             }
         }
 
-        private static async Task WaitForConflictToBeResolved(IDocumentStore slave, string id)
+        private static async Task WaitForConflictToBeResolved(IDocumentStore slave, string id, int timeout = 15_000)
         {
-            while (true)
+            var timeoutAsTimeSpan = TimeSpan.FromMilliseconds(timeout);
+            var sw = Stopwatch.StartNew();
+
+            while (sw.Elapsed < timeoutAsTimeSpan)
             {
-                using (var session = slave.OpenSession())
+                using (var session = slave.OpenAsyncSession())
                 {
                     try
                     {
-                        session.Load<User>(id);
-                        break;
+                        await session.LoadAsync<User>(id);
+                        return;
                     }
                     catch (ConflictException)
                     {
@@ -1065,25 +1068,32 @@ namespace SlowTests.Server
                     }
                 }
             }
+
+            throw new InvalidOperationException($"Waited '{sw.Elapsed}' for conflict to be resolved on '{id}' but it did not happen.");
         }
 
-        private static async Task WaitForConflict(IDocumentStore slave, string id)
+        private static async Task WaitForConflict(IDocumentStore slave, string id, int timeout = 15_000)
         {
-            while (true)
+            var timeoutAsTimeSpan = TimeSpan.FromMilliseconds(timeout);
+            var sw = Stopwatch.StartNew();
+
+            while (sw.Elapsed < timeoutAsTimeSpan)
             {
-                using (var session = slave.OpenSession())
+                using (var session = slave.OpenAsyncSession())
                 {
                     try
                     {
-                        session.Load<User>(id);
+                        await session.LoadAsync<User>(id);
                         await Task.Delay(100);
                     }
                     catch (ConflictException)
                     {
-                        break;
+                        return;
                     }
                 }
             }
+
+            throw new InvalidOperationException($"Waited '{sw.Elapsed}' for conflict on '{id}' but it did not happen.");
         }
 
         [Fact]

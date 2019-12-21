@@ -18,29 +18,32 @@ namespace SlowTests.Server.Documents.ETL
         protected EtlTestBase(ITestOutputHelper output) : base(output)
         {
         }
-        
-        protected static AddEtlOperationResult AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
-        {
-            var result1 = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
-            Assert.NotNull(result1.RaftCommandIndex);
 
-            return src.Maintenance.Send(new AddEtlOperation<T>(configuration));
+        protected AddEtlOperationResult AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
+        {
+            Console.WriteLine($"Adding ETL. Src: {src.Database}. Test: {Context.UniqueTestName}");
+            var putResult = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
+            Assert.NotNull(putResult.RaftCommandIndex);
+
+            var addResult = src.Maintenance.Send(new AddEtlOperation<T>(configuration));
+            Console.WriteLine($"Added ETL. Src: {src.Database}. Test: {Context.UniqueTestName}");
+            return addResult;
         }
 
-        protected static AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
+        protected AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
         {
             return AddEtl(src, dst, new[] { collection }, script, applyToAllDocuments, disabled, mentor);
         }
 
-        protected static AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
+        protected AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
         {
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}";
 
             return AddEtl(src, new RavenEtlConfiguration()
-                {
-                    Name = connectionStringName,
-                    ConnectionStringName = connectionStringName,
-                    Transforms =
+            {
+                Name = connectionStringName,
+                ConnectionStringName = connectionStringName,
+                Transforms =
                     {
                         new Transformation
                         {
@@ -51,8 +54,8 @@ namespace SlowTests.Server.Documents.ETL
                             Disabled = disabled
                         }
                     },
-                    MentorNode = mentor
-                },
+                MentorNode = mentor
+            },
                 new RavenConnectionString
                 {
                     Name = connectionStringName,
@@ -64,6 +67,7 @@ namespace SlowTests.Server.Documents.ETL
 
         protected ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
         {
+            Console.WriteLine($"WaitForEtl (1). Src: {store.Database}. Test: {Context.UniqueTestName}");
             var database = GetDatabase(store.Database).Result;
 
             var mre = new ManualResetEventSlim();
@@ -73,6 +77,8 @@ namespace SlowTests.Server.Documents.ETL
                 if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
                     mre.Set();
             };
+
+            Console.WriteLine($"WaitForEtl (2). Src: {store.Database}. Test: {Context.UniqueTestName}");
 
             return mre;
         }
