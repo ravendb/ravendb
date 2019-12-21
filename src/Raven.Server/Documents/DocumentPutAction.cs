@@ -467,6 +467,8 @@ namespace Raven.Server.Documents
                     return true;
                 }
 
+                documentFlags |= type.HasFlag;
+
                 if (currentMetadata != null && type.IsReturningLowerCasedMetadata)
                 {
                     var casePreservingValues = new DynamicJsonArray();
@@ -494,7 +496,6 @@ namespace Raven.Server.Documents
                     values = casePreservingValues;
                 }
 
-                documentFlags |= type.HasFlag;
                 if (metadata == null)
                 {
                     document.Modifications = new DynamicJsonValue(document)
