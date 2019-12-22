@@ -831,13 +831,14 @@ namespace Raven.Server.Documents
 
             var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
-            foreach (var item in tombstoneTable.SeekByPrimaryKeyPrefix(lowerId, Slices.Empty, 0))
+            // return tombstone in any collection with the requested id
+            foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(lowerId, Slices.Empty, 0))
             {
-                if (item.Value != null && IsTombstoneOfId(item.Key, lowerId))
+                if (IsTombstoneOfId(tombstoneKey, lowerId))
                 {
                     return new DocumentOrTombstone
                     {
-                        Tombstone = TableValueToTombstone(context, ref item.Value.Reader)
+                        Tombstone = TableValueToTombstone(context, ref tvh.Reader)
                     };
                 }
                 break;
@@ -1259,12 +1260,18 @@ namespace Raven.Server.Documents
                 if (expectedChangeVector != null)
                     throw new ConcurrencyException($"Document {local.Tombstone.LowerId} does not exist, but delete was called with change vector '{expectedChangeVector}'. " +
                                                    "Optimistic concurrency violation, transaction will be aborted.");
-
-                collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
+                if (collectionName == null)
+                {
+                    collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
+                }
 
                 var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                     collectionName.GetTableName(CollectionTableType.Tombstones));
-                tombstoneTable.Delete(local.Tombstone.StorageId);
+
+                if (tombstoneTable.IsOwned(local.Tombstone.StorageId))
+                {
+                    tombstoneTable.Delete(local.Tombstone.StorageId);
+                }
 
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
                 var flags = localFlags | documentFlags;
@@ -1608,7 +1615,14 @@ namespace Raven.Server.Documents
 
             if (lowerId[lowerId.Size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
             {
-                return new LazyStringValue(null, lowerId.Buffer, lowerId.Size - ConflictedTombstoneOverhead, context);
+                var size = lowerId.Size - ConflictedTombstoneOverhead;
+                var allocated = context.GetMemory(size + 1); // we need this extra byte to mark that there is no escaping
+                allocated.Address[size] = 0;
+
+                Memory.Copy(allocated.Address, lowerId.Buffer, size);
+                var lsv = context.AllocateStringValue(null, allocated.Address, size);
+                lsv.AllocatedMemoryData = allocated;
+                return lsv;
             }
 
             return lowerId;

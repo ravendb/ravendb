@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -274,10 +275,6 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(3, total);
 
                 await CreateDatabaseInCluster(external, 3, cluster.Leader.WebUrl);
-
-                WaitForDocument(store, "marker", database: external);
-                WaitForDocumentDeletion(store, "foo/bar", database: external);
-
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
@@ -285,7 +282,10 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                WaitForDocument(store, "marker2", database: external);
+                using (var externalSession = store.OpenSession(external))
+                {
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)externalSession, "marker2", (m) => m.Id == "marker2", TimeSpan.FromSeconds(15));
+                }
 
                 total = 0L;
                 foreach (var server in cluster.Nodes)
@@ -608,6 +608,98 @@ namespace SlowTests.Server.Replication
                 using (ctx.OpenReadTransaction())
                 {
                     Assert.Equal(1, storage.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanBackupAndRestoreTombstonesWithSameId()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var id = "oren\r\nEini";
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, "marker");
+                    session.SaveChanges();
+                }
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    Name = "incremental",
+                    IncrementalBackupFrequency = "* * */6 * *",
+                    FullBackupFrequency = "* */6 * * *",
+                    BackupType = BackupType.Backup
+                };
+
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, result.TaskId));
+                Assert.Equal(1,await WaitForValueAsync(() =>
+                {
+                    var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, result.TaskId));
+                Assert.Equal(5,await WaitForValueAsync(() =>
+                {
+                    var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    Assert.Null(getPeriodicBackupResult.Status.Error);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 5));
+
+                var databaseName = GetDatabaseName();
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(), 
+                    DatabaseName = databaseName
+                }))
+                {
+                    var stats = store.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfDocuments); // the marker
+                    Assert.Equal(2, stats.CountOfTombstones);
+
+                    var storage = await GetDocumentDatabaseInstanceFor(store);
+                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        foreach (var tombstone in storage.DocumentsStorage.GetTombstonesFrom(ctx, 0))
+                        {
+                            Assert.Equal("oren\r\neini", tombstone.Id);
+                        }
+                    }
                 }
             }
         }
