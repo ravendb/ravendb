@@ -354,11 +354,22 @@ namespace Sparrow.Json
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 
-            if (AllocatedMemoryData != null)
+            ReturnAllocatedMemory();
+
+            IsDisposed = true;
+        }
+
+        private void ReturnAllocatedMemory()
+        {
+            if (AllocatedMemoryData == null) 
+                return;
+            
+            if (_context.Generation == AllocatedMemoryData.ContextGeneration)
             {
                 _context.ReturnMemory(AllocatedMemoryData);
             }
-            IsDisposed = true;
+
+            AllocatedMemoryData = null;
         }
 
         public bool Contains(char value)
@@ -1009,6 +1020,9 @@ namespace Sparrow.Json
         public void Renew(string str, byte* buffer, int size)
         {
             Debug.Assert(size >= 0);
+
+            ReturnAllocatedMemory();
+
             _size = size;
             _buffer = buffer;
             _string = str;
