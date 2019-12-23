@@ -17,6 +17,49 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
+    public abstract class AbstractIndexCreationTask : AbstractIndexCreationTaskBase<IndexDefinition>
+    {
+        /// <summary>
+        /// Allow to get to the metadata of the document
+        /// </summary>
+        protected JsonObject.Metadata MetadataFor(object doc)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+
+        /// <summary>
+        /// Allow to get attachments of the document (without binary data)
+        /// </summary>
+        protected IEnumerable<AttachmentName> AttachmentsFor(object doc)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+
+        /// <summary>
+        /// Allow to get counter names of the document
+        /// </summary>
+        protected IEnumerable<string> CounterNamesFor(object doc)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+
+        /// <summary>
+        /// Allow to get timeseries names of the document
+        /// </summary>
+        protected IEnumerable<string> TimeSeriesNamesFor(object doc)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+
+        /// <summary>
+        /// Allow to access an entity as a document
+        /// </summary>
+        protected JsonObject AsJson(object doc)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+    }
+
     /// <summary>
     /// Base class for creating indexes
     /// </summary>
@@ -24,12 +67,12 @@ namespace Raven.Client.Documents.Indexes
     /// The naming convention is that underscores in the inherited class names are replaced by slashed
     /// For example: Posts_ByName will be saved to Posts/ByName
     /// </remarks>
-    public abstract class AbstractIndexCreationTask : AbstractCommonApiForIndexes
+    public abstract class AbstractIndexCreationTaskBase<TIndexDefinition> : AbstractCommonApiForIndexes where TIndexDefinition : IndexDefinition
     {
         /// <summary>
         /// Creates the index definition.
         /// </summary>
-        public abstract IndexDefinition CreateIndexDefinition();
+        public abstract TIndexDefinition CreateIndexDefinition();
 
         /// <summary>
         /// Gets a value indicating whether this instance is map reduce index definition
@@ -146,8 +189,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// Base class for creating indexes
     /// </summary>
-    public class AbstractIndexCreationTask<TDocument> :
-        AbstractIndexCreationTask<TDocument, TDocument>
+    public class AbstractIndexCreationTask<TDocument> : AbstractIndexCreationTask<TDocument, TDocument>
     {
     }
 
@@ -296,38 +338,6 @@ namespace Raven.Client.Documents.Indexes
         protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, List<TResult>> func)
         {
             throw new NotSupportedException("This can only be run on the server side");
-        }
-
-        /// <summary>
-        /// Allow to get to the metadata of the document
-        /// </summary>
-        protected JsonObject.Metadata MetadataFor(object doc)
-        {
-            throw new NotSupportedException("This is here as a marker only");
-        }
-
-        /// <summary>
-        /// Allow to get attachments of the document (without binary data)
-        /// </summary>
-        protected IEnumerable<AttachmentName> AttachmentsFor(object doc)
-        {
-            throw new NotSupportedException("This is here as a marker only");
-        }
-
-        /// <summary>
-        /// Allow to get counter names of the document
-        /// </summary>
-        protected IEnumerable<string> CounterNamesFor(object doc)
-        {
-            throw new NotSupportedException("This is here as a marker only");
-        }
-
-        /// <summary>
-        /// Allow to access an entity as a document
-        /// </summary>
-        protected JsonObject AsJson(object doc)
-        {
-            throw new NotSupportedException("This is here as a marker only");
         }
 
         /// <summary>
