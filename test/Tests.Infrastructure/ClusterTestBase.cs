@@ -666,7 +666,9 @@ namespace Tests.Infrastructure
             {
                 if (IsGlobalServer(server))
                     continue; // must not dispose the global server
-                server?.Dispose();
+
+                if (ServersForDisposal.Contains(server) == false)
+                    ServersForDisposal.Add(server);
             }
 
             base.Dispose();

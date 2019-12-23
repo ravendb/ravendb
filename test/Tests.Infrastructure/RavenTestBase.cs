@@ -237,6 +237,19 @@ namespace FastTests
                                 await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
                             });
                         }
+
+                        // skip 'wait for requests' on DocumentDatabase dispose
+                        Servers.ForEach(x =>
+                        {
+                            try
+                            {
+                                var documentDatabase = AsyncHelpers.RunSync(async () => await x.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
+                                documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
+                            }
+                            catch (DatabaseNotRelevantException)
+                            {
+                            }
+                        });
                     }
 
                     store.BeforeDispose += (sender, args) =>
@@ -253,7 +266,8 @@ namespace FastTests
                         if (IsGlobalOrLocalServer(serverToUse) == false && 
                             result !=null)
                         {
-                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, TimeSpan.FromSeconds(5)));
+                            var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
+                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
                         }
                     };
                     CreatedStores.Add(store);

@@ -630,17 +630,19 @@ namespace Raven.Server.Documents
                     _logger.Info("Failed to generate and store database info", e);
             }
 
-            // we'll wait for 1 minute to drain all the requests
-            // from the database
-
-            var sp = Stopwatch.StartNew();
-            while (sp.ElapsedMilliseconds < 60 * 1000)
+            if (_forTestingPurposes == null || _forTestingPurposes.SkipDrainAllRequests == false)
             {
-                if (Interlocked.Read(ref _usages) == 0)
-                    break;
+                // we'll wait for 1 minute to drain all the requests
+                // from the database
+                var sp = Stopwatch.StartNew();
+                while (sp.ElapsedMilliseconds < 60 * 1000)
+                {
+                    if (Interlocked.Read(ref _usages) == 0)
+                        break;
 
-                if (_waitForUsagesOnDisposal.Wait(1000))
-                    _waitForUsagesOnDisposal.Reset();
+                    if (_waitForUsagesOnDisposal.Wait(1000))
+                        _waitForUsagesOnDisposal.Reset();
+                }
             }
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
@@ -1568,6 +1570,8 @@ namespace Raven.Server.Documents
         internal class TestingStuff
         {
             internal Action ActionToCallDuringDocumentDatabaseInternalDispose;
+
+            internal bool SkipDrainAllRequests = false;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {
