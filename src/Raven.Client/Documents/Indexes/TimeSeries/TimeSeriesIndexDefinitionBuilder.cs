@@ -26,10 +26,8 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
             if (map == null)
                 throw new ArgumentNullException(nameof(map));
 
-            // TODO [ppekrol] support multi-map
-
-            //if (_map != default)
-            //    throw new InvalidOperationException($"You cannot set Map more than once. Use {nameof(AbstractMultiMapTimeSeriesIndexCreationTask)} for this purpose.");
+            if (_map != default)
+                throw new InvalidOperationException($"You cannot set Map more than once. Use {nameof(AbstractMultiMapTimeSeriesIndexCreationTask)} for this purpose.");
 
             _map = (timeSeries, map);
         }
