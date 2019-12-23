@@ -3352,6 +3352,9 @@ namespace Raven.Server.Documents.Indexes
         {
             get
             {
+                if (_transactionSizeLimit != null)
+                    return _transactionSizeLimit.Value;
+
                 var limit = DocumentDatabase.IsEncrypted
                     ? Configuration.EncryptedTransactionSizeLimit ?? Configuration.TransactionSizeLimit
                     : Configuration.TransactionSizeLimit;
