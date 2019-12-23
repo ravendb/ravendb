@@ -1103,8 +1103,7 @@ namespace Raven.Client.Documents.Session
             else
                 newFieldsToFetch = null;
 
-            if (newFieldsToFetch != null)
-                UpdateFieldsToFetchToken(newFieldsToFetch);
+           
 
             var query = new DocumentQuery<TResult>(
                 TheSession,
@@ -1145,6 +1144,9 @@ namespace Raven.Client.Documents.Session
                 IsIntersect = IsIntersect,
                 DefaultOperator = DefaultOperator
             };
+
+            if (newFieldsToFetch != null)
+                query.UpdateFieldsToFetchToken(newFieldsToFetch);
 
             return query;
         }
