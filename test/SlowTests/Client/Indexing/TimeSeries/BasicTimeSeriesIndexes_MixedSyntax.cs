@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -8,7 +9,7 @@ using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Client.Indexing.TimeSeries
+namespace SlowTests.Client.Indexing.TimeSeries
 {
     public class BasicTimeSeriesIndexes_MixedSyntax : RavenTestBase
     {
