@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentSession
     {
-        public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
         {
             var indexCreator = new TIndexCreator();
             return Query<T>(indexCreator.IndexName, null, indexCreator.IsMapReduce);
@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="T">The result of the query</typeparam>
         /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
         /// <returns></returns>
-        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
         {
             var index = new TIndexCreator();
 

@@ -40,7 +40,23 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
             return base.ToIndexDefinition(conventions, validateMap);
         }
 
-        protected override string GetQuerySource(DocumentConventions conventions)
+        protected override void ToIndexDefinition(TimeSeriesIndexDefinition indexDefinition, DocumentConventions conventions)
+        {
+            if (_map == default)
+                return;
+
+            var querySource = GetQuerySource(conventions);
+
+            var map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<AbstractTimeSeriesIndexCreationTask.TimeSeriesSegment, TReduceResult>(
+                    _map.Map,
+                    conventions,
+                    querySource,
+                    translateIdentityProperty: true);
+
+            indexDefinition.Maps.Add(map);
+        }
+
+        private string GetQuerySource(DocumentConventions conventions)
         {
             var querySource = (typeof(TDocument) == typeof(object))
                 ? "timeSeries"
@@ -51,20 +67,6 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
                 return $"{querySource}.{timeSeries}";
 
             return $"{querySource}[@\"{timeSeries.Replace("\"", "\"\"")}\"]";
-        }
-
-        protected override void ToIndexDefinition(TimeSeriesIndexDefinition indexDefinition, string querySource, DocumentConventions conventions)
-        {
-            if (_map == default)
-                return;
-
-            var map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<AbstractTimeSeriesIndexCreationTask.TimeSeriesSegment, TReduceResult>(
-                    _map.Map,
-                    conventions,
-                    querySource,
-                    translateIdentityProperty: true);
-
-            indexDefinition.Maps.Add(map);
         }
     }
 
