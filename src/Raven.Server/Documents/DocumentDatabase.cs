@@ -103,6 +103,9 @@ namespace Raven.Server.Documents
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
             Scripts = new ScriptRunnerCache(this, Configuration);
+
+            Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
+
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             try
             {
@@ -149,9 +152,7 @@ namespace Raven.Server.Documents
                 HugeDocuments = new HugeDocuments(NotificationCenter, ConfigurationStorage.NotificationsStorage, Name, configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes, 
-                    (PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager
-                        ? TimeSpan.FromHours(12)
-                        : TimeSpan.FromDays(2)));
+                    Is32Bits ? TimeSpan.FromHours(12) : TimeSpan.FromDays(2));
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
@@ -239,6 +240,8 @@ namespace Raven.Server.Documents
         public ClientConfiguration ClientConfiguration { get; private set; }
 
         public StudioConfiguration StudioConfiguration { get; private set; }
+
+        public bool Is32Bits { get; }
 
         private long _lastDatabaseRecordChangeIndex;
 

@@ -49,9 +49,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _revisions = revisions;
             _subscription = subscription;
             _patch = patch;
-            _maximumAllowedMemory = new Size((PlatformDetails.Is32Bits || _db.Configuration.Storage.ForceUsing32BitsPager
-                ? 4
-                : 32)* Voron.Global.Constants.Size.Megabyte, SizeUnit.Bytes);
+            _maximumAllowedMemory = new Size((_db.Is32Bits ? 4 : 32) * Voron.Global.Constants.Size.Megabyte, SizeUnit.Bytes);
         }
 
         public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(

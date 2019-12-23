@@ -531,10 +531,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         internal void CleanupSubscriptions()
         {
-            var maxTaskLifeTime = (PlatformDetails.Is32Bits || this._db.Configuration.Storage.ForceUsing32BitsPager
-                        ? TimeSpan.FromHours(12)
-                        : TimeSpan.FromDays(2));
+            var maxTaskLifeTime = _db.Is32Bits ? TimeSpan.FromHours(12) : TimeSpan.FromDays(2);
             var oldestPossibleIdleSubscription = SystemTime.UtcNow - maxTaskLifeTime;
+
             foreach (var state in _subscriptionConnectionStates)
             {
                 if (state.Value.Connection != null)
