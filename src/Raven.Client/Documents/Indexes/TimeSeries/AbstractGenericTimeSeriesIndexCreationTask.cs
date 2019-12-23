@@ -1,20 +1,20 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes.Spatial;
 
-namespace Raven.Client.Documents.Indexes
+namespace Raven.Client.Documents.Indexes.TimeSeries
 {
     /// <summary>
     /// Abstract class used to provide infrastructure service for actual creation tasks
     /// </summary>
-    public abstract class AbstractGenericIndexCreationTask<TReduceResult> : AbstractIndexCreationTask
+    public abstract class AbstractGenericTimeSeriesIndexCreationTask<TReduceResult> : AbstractTimeSeriesIndexCreationTask
     {
         /// <summary>
         /// Create a new instance
         /// </summary>
-        protected AbstractGenericIndexCreationTask()
+        protected AbstractGenericTimeSeriesIndexCreationTask()
         {
             Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
             StoresStrings = new Dictionary<string, FieldStorage>();
