@@ -212,6 +212,17 @@ namespace Raven.Server.Documents.Indexes.Static
                 : new DynamicArray(Enumerable.Empty<object>());
         }
 
+        public dynamic TimeSeriesNamesFor(dynamic doc)
+        {
+            var metadata = MetadataFor(doc);
+            var timeSeries = metadata is DynamicNullObject
+                ? null : metadata[Constants.Documents.Metadata.TimeSeries];
+
+            return timeSeries != null
+                ? timeSeries
+                : new DynamicArray(Enumerable.Empty<object>());
+        }
+
         private static void ThrowInvalidDocType(dynamic doc, string funcName)
         {
             throw new InvalidOperationException(
