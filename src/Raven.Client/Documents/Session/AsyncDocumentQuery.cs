@@ -636,10 +636,12 @@ namespace Raven.Client.Documents.Session
             return CreateDocumentQueryInternal<TProjection>(queryData);
         }
 
-        public IAsyncDocumentQuery<TTs> SelectTimeSeries<TTs>(Func<ITimeSeriesQueryBuilder, TTs> timeSeriesQuery)
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<TTimeSeries> IAsyncDocumentQuery<T>.SelectTimeSeries<TTimeSeries>(Func<ITimeSeriesQueryBuilder, TTimeSeries> timeSeriesQuery)
         {
             var queryData = CreateTimeSeriesQueryData(timeSeriesQuery);
-            return SelectFields<TTs>(queryData);
+            return SelectFields<TTimeSeries>(queryData);
         }
 
         /// <inheritdoc />

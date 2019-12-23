@@ -101,11 +101,11 @@ namespace SlowTests.Client.TimeSeries.Query
 
         public class RawQueryResult
         {
-            public TimeSeriesAggregation HeartRate { get; set; }
+            public TimeSeriesAggregationResult HeartRate { get; set; }
 
-            public TimeSeriesAggregation BloodPressure { get; set; }
+            public TimeSeriesAggregationResult BloodPressure { get; set; }
 
-            public TimeSeriesAggregation Stocks { get; set; }
+            public TimeSeriesAggregationResult Stocks { get; set; }
 
             public string Name { get; set; }
         }
@@ -134,7 +134,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
     declare timeseries out(u) 
     {
         from u.Heartrate between $start and $end
@@ -219,7 +219,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
     declare timeseries out(u) 
     {
         from u.Heartrate between $start and $end
@@ -275,7 +275,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
     declare timeseries out(u) 
     {
         from u.Heartrate between $start and $end
@@ -335,7 +335,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
     declare timeseries out(u) 
     {
         from u.Heartrate between $start and $end
@@ -590,7 +590,7 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(c) 
 {
     from c.Stocks between $start and $end
@@ -663,7 +663,7 @@ select out(Company)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 from People as p 
 select timeseries(
     from HeartRate between $start and $end 
@@ -727,7 +727,7 @@ select timeseries(
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 from People as p 
 where p.Age > 49
 select timeseries(
@@ -796,7 +796,7 @@ select timeseries(
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 from index 'People'
 where Age > 49
 select timeseries(
@@ -1271,7 +1271,7 @@ as Stocks
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 from People as doc
 where doc.Age > 49
 select timeseries(from doc.HeartRate between $start and $end
@@ -1356,7 +1356,7 @@ select timeseries(from doc.HeartRate between $start and $end
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -1443,7 +1443,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate
@@ -1528,7 +1528,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesRaw>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -1632,7 +1632,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesRaw>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -1748,7 +1748,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(p, e) 
 {
     from p.HeartRate between $start and $end
@@ -1836,7 +1836,7 @@ select out(doc, e)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries heart_rate(doc) 
 {
     from doc.HeartRate between $start and $end
@@ -1946,7 +1946,7 @@ select heart_rate(p)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries heart_rate(doc) 
 {
     from doc.HeartRate between $start and $end
@@ -2124,7 +2124,7 @@ select heart_rate(p)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesRaw>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate
@@ -2213,7 +2213,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesRaw>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate
@@ -2302,7 +2302,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesRaw>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
 from People as doc
 where doc.Age > 49
 select timeseries(from doc.HeartRate where Tag == 'watches/fitbit' and Values[0] > 70)
@@ -2372,7 +2372,7 @@ select timeseries(from doc.HeartRate where Tag == 'watches/fitbit' and Values[0]
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -2461,7 +2461,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -2550,7 +2550,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -2639,7 +2639,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -2736,7 +2736,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -2837,7 +2837,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -2938,7 +2938,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -3035,7 +3035,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x, val) 
 {
     from x.HeartRate between $start and $end
@@ -3132,7 +3132,7 @@ select out(doc, c.AccountsReceivable)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x, y) 
 {
     from x.HeartRate between $start and $end
@@ -3223,7 +3223,7 @@ select out(doc, c)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -3313,7 +3313,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -3422,7 +3422,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -3542,7 +3542,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -3659,7 +3659,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -3776,7 +3776,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -3893,7 +3893,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -4007,7 +4007,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -4121,7 +4121,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -4213,7 +4213,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -4326,7 +4326,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -4440,7 +4440,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -4559,7 +4559,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -4678,7 +4678,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -4782,7 +4782,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x, e) 
 {
     from x.HeartRate between e.Start and e.End
@@ -4901,7 +4901,7 @@ select out(doc, e)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between x.AdditionalData.NestedClass.Event.Start and x.AdditionalData.NestedClass.Event.End
@@ -5010,7 +5010,7 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x, e) 
 {
     from x.HeartRate between $start and $end
@@ -5123,7 +5123,7 @@ select out(doc, c)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
@@ -5199,7 +5199,7 @@ select out(p)
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
