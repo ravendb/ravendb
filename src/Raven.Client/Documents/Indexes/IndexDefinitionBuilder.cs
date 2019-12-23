@@ -149,7 +149,6 @@ namespace Raven.Client.Documents.Indexes
                 if (Reduce != null)
                     IndexDefinitionHelper.ValidateReduce(Reduce);
 
-                var querySource = GetQuerySource(conventions);
                 var indexDefinition = new TIndexDefinition
                 {
                     Name = _indexName,
@@ -214,7 +213,7 @@ namespace Raven.Client.Documents.Indexes
                 indexDefinition.AdditionalSources = AdditionalSources;
                 indexDefinition.Configuration = Configuration;
 
-                ToIndexDefinition(indexDefinition, querySource, conventions);
+                ToIndexDefinition(indexDefinition, conventions);
 
                 return indexDefinition;
             }
@@ -224,9 +223,7 @@ namespace Raven.Client.Documents.Indexes
             }
         }
 
-        protected abstract void ToIndexDefinition(TIndexDefinition indexDefinition, string querySource, DocumentConventions conventions);
-
-        protected abstract string GetQuerySource(DocumentConventions conventions);
+        protected abstract void ToIndexDefinition(TIndexDefinition indexDefinition, DocumentConventions conventions);
 
         private string ConvertPatternForOutputReduceToCollectionReferencesToString(Expression<Func<TReduceResult, string>> reduceOutputReferencesPattern)
         {
@@ -378,10 +375,12 @@ namespace Raven.Client.Documents.Indexes
             return base.ToIndexDefinition(conventions, validateMap);
         }
 
-        protected override void ToIndexDefinition(IndexDefinition indexDefinition, string querySource, DocumentConventions conventions)
+        protected override void ToIndexDefinition(IndexDefinition indexDefinition, DocumentConventions conventions)
         {
             if (Map == null)
                 return;
+
+            var querySource = GetQuerySource(conventions);
 
             var map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
                     Map,
@@ -392,7 +391,7 @@ namespace Raven.Client.Documents.Indexes
             indexDefinition.Maps.Add(map);
         }
 
-        protected override string GetQuerySource(DocumentConventions conventions)
+        private string GetQuerySource(DocumentConventions conventions)
         {
             return (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs())
                 ? "docs"

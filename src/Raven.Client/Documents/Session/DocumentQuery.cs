@@ -927,7 +927,7 @@ namespace Raven.Client.Documents.Session
                 _parameterPrefix = parameterPrefix;
             }
 
-            public IDocumentQuery<T1> DocumentQuery<T1, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+            public IDocumentQuery<T1> DocumentQuery<T1, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
             {
                 var query = (DocumentQuery<T1>)_session.Advanced.DocumentQuery<T1, TIndexCreator>();
                 query.ParameterPrefix = _parameterPrefix;

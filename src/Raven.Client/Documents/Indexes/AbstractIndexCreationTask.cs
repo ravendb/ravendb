@@ -75,21 +75,6 @@ namespace Raven.Client.Documents.Indexes
         public abstract TIndexDefinition CreateIndexDefinition();
 
         /// <summary>
-        /// Gets a value indicating whether this instance is map reduce index definition
-        /// </summary>
-        /// <value>
-        /// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
-        /// </value>
-        public virtual bool IsMapReduce => false;
-
-        /// <summary>
-        /// Generates index name from type name replacing all _ with /
-        /// <para>e.g.</para>
-        /// <para>if our type is <code>'Orders_Totals'</code> then index name would be <code>'Orders/Totals'</code></para>
-        /// </summary>
-        public virtual string IndexName => GetType().Name.Replace("_", "/");
-
-        /// <summary>
         /// Gets or sets the conventions that should be used when index definition is created.
         /// </summary>
         public DocumentConventions Conventions { get; set; }
@@ -243,6 +228,21 @@ namespace Raven.Client.Documents.Indexes
         {
             Configuration = new IndexConfiguration();
         }
+
+        /// <summary>
+        /// Gets a value indicating whether this instance is map reduce index definition
+        /// </summary>
+        /// <value>
+        /// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
+        /// </value>
+        public virtual bool IsMapReduce => false;
+
+        /// <summary>
+        /// Generates index name from type name replacing all _ with /
+        /// <para>e.g.</para>
+        /// <para>if our type is <code>'Orders_Totals'</code> then index name would be <code>'Orders/Totals'</code></para>
+        /// </summary>
+        public virtual string IndexName => GetType().Name.Replace("_", "/");
 
         /// <summary>
         /// Allows to use lambdas recursively

@@ -1190,7 +1190,7 @@ namespace Raven.Client.Documents.Session
                 _session = session;
                 _parameterPrefix = parameterPrefix;
             }
-            public IAsyncDocumentQuery<T1> AsyncDocumentQuery<T1, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+            public IAsyncDocumentQuery<T1> AsyncDocumentQuery<T1, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
             {
                 var query = (AsyncDocumentQuery<T1>)_session.Advanced.AsyncDocumentQuery<T1, TIndexCreator>();
                 query.ParameterPrefix = _parameterPrefix;
