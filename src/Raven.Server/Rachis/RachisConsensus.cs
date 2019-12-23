@@ -70,7 +70,7 @@ namespace Raven.Server.Rachis
         
         public override void Dispose()
         {
-            SetNewState(RachisState.Follower, new NullDisposable(), -1, "Disposing Rachis");
+            SetNewState(RachisState.Follower, new NullDisposable(), -1, "Disposing Rachis", asyncDispose: false);
             StateMachine?.Dispose();
             base.Dispose();
         }
@@ -603,12 +603,12 @@ namespace Raven.Server.Rachis
             AnyChange
         }
 
-        public void SetNewState(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null)
+        public void SetNewState(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
-                SetNewStateInTx(context, rachisState, disposable, expectedTerm, stateChangedReason , beforeStateChangedEvent);
+                SetNewStateInTx(context, rachisState, disposable, expectedTerm, stateChangedReason , beforeStateChangedEvent, asyncDispose);
                 context.Transaction.Commit();
             }
             _leadershipTimeChanged.SetAndResetAtomically();
@@ -679,7 +679,8 @@ namespace Raven.Server.Rachis
             IDisposable parent,
             long expectedTerm,
             string stateChangedReason,
-            Action beforeStateChangedEvent = null)
+            Action beforeStateChangedEvent = null,
+            bool disposeAsync = true)
         {
             if (expectedTerm != CurrentTerm && expectedTerm != -1)
                 RachisConcurrencyException.Throw($"Attempted to switch state to {rachisState} on expected term {expectedTerm:#,#;;0} but the real term is {CurrentTerm:#,#;;0}");
@@ -714,7 +715,8 @@ namespace Raven.Server.Rachis
             {
                 _disposables.Add(parent);
             }
-            else if (rachisState != RachisState.Passive)
+            else if (rachisState != RachisState.Passive && 
+                     expectedTerm == -1) // we are disposing
             {
                 // if we are back to null state, wait to become candidate if no one talks to us
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
@@ -767,16 +769,24 @@ namespace Raven.Server.Rachis
                         }
                     }
 
-                    TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
+                    if (disposeAsync)
                     {
-                        if (Log.IsInfoEnabled)
+                        TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                         {
-                            Log.Info($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
-                        }
+                            if (Log.IsInfoEnabled)
+                            {
+                                Log.Info($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
+                            }
 
+                            ParallelDispose(toDispose);
+                        });
+                    }
+                    else
+                    {
                         ParallelDispose(toDispose);
-                    });
-                    
+                        TaskExecutor.CompleteAndReplace(ref _stateChanged);
+                    }
+
                     var elapsed = sp.Elapsed;
                     if (elapsed > ElectionTimeout / 2)
                     {
