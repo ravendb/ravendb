@@ -59,7 +59,7 @@ select min(), max(), avg()
 
                     var query = session.Advanced.DocumentQuery<User>()
                         .WhereGreaterThan(u => u.Age, 21)
-                        .SelectTimeSeries(builder => builder.Raw<TimeSeriesAggregation>(tsQueryText))
+                        .SelectTimeSeries(builder => builder.Raw<TimeSeriesAggregationResult>(tsQueryText))
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddMonths(3));
 
@@ -127,7 +127,7 @@ where Tag = 'watches/fitbit'
 
                     var query = session.Advanced.DocumentQuery<User>()
                         .WhereGreaterThan(u => u.Age, 21)
-                        .SelectTimeSeries(builder => builder.Raw<TimeSeriesRaw>(tsQueryText))
+                        .SelectTimeSeries(builder => builder.Raw<TimeSeriesRawResult>(tsQueryText))
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddMonths(3));
 
@@ -201,7 +201,7 @@ select min(), max(), avg()
 
                     var query = session.Advanced.AsyncDocumentQuery<User>()
                         .WhereGreaterThan(u => u.Age, 21)
-                        .SelectTimeSeries(builder => builder.Raw<TimeSeriesAggregation>(tsQueryText))
+                        .SelectTimeSeries(builder => builder.Raw<TimeSeriesAggregationResult>(tsQueryText))
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddMonths(3));
 
@@ -269,7 +269,7 @@ where Tag = 'watches/fitbit'
 
                     var query = session.Advanced.AsyncDocumentQuery<User>()
                         .WhereGreaterThan(u => u.Age, 21)
-                        .SelectTimeSeries(builder => builder.Raw<TimeSeriesRaw>(tsQueryText))
+                        .SelectTimeSeries(builder => builder.Raw<TimeSeriesRawResult>(tsQueryText))
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddMonths(3));
 

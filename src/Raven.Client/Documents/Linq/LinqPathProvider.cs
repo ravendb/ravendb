@@ -15,6 +15,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 
@@ -494,10 +495,26 @@ namespace Raven.Client.Documents.Linq
 
         public static bool IsTimeSeriesCall(MethodCallExpression mce)
         {
-            return mce.Method.DeclaringType == typeof(ITimeSeriesQueryable) ||
-                   mce.Method.DeclaringType == typeof(ITimeSeriesGroupByQueryable);
+            if (mce.Method.DeclaringType == typeof(ITimeSeriesQueryable) ||
+                mce.Method.DeclaringType == typeof(ITimeSeriesGroupByQueryable) ||
+                mce.Method.ReturnType == typeof(ITimeSeriesQueryable)) // not a valid TimeSeries call expression
+            {
+                if (mce.Method.ReturnType != typeof(TimeSeriesRawResult) && 
+                    mce.Method.ReturnType != typeof(TimeSeriesAggregationResult))
+                    ThrowInvalidTimeSeriesReturnType(mce.Method.ReturnType);
+
+                return true;
+            }
+
+            return false;
         }
 
+        private static void ThrowInvalidTimeSeriesReturnType(Type type)
+        {
+            throw new InvalidOperationException($"Time Series query expressions cannot return type '{type}'. " +
+                                                $"Time Series query expressions must return type '{nameof(TimeSeriesRawResult)}' or '{nameof(TimeSeriesAggregationResult)}'. " +
+                                                "Did you forget to call 'ToList'?");
+        }
     }
 }
 

@@ -8,12 +8,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         public long Count { get; set; }
     }
 
-    public class TimeSeriesRaw : TimeSeriesQueryResult
+    public class TimeSeriesRawResult : TimeSeriesQueryResult
     {
         public TimeSeriesValue[] Results { get; set; }
     }
 
-    public class TimeSeriesAggregation : TimeSeriesQueryResult
+    public class TimeSeriesAggregationResult : TimeSeriesQueryResult
     {
         public TimeSeriesRangeAggregation[] Results { get; set; }
     }

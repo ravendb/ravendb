@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesGroupByQueryable GroupBy(Action<ITimeSeriesGroupByBuilder> timePeriod);
 
-        TimeSeriesRaw ToList();
+        TimeSeriesRawResult ToList();
 
     }
 
@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     {
         ITimeSeriesGroupByQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
 
-        TimeSeriesAggregation ToList();
+        TimeSeriesAggregationResult ToList();
 
     }
 
