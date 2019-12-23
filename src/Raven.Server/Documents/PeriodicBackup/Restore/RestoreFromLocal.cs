@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override Task<Stream> GetStream(string path)
         {
-            var stream = File.Open(path, FileMode.Open);
+            var stream = File.OpenRead(path);
             return Task.FromResult<Stream>(stream);
         }
 
