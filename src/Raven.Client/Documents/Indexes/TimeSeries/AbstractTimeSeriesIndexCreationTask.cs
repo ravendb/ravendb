@@ -17,6 +17,8 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
 
         public class TimeSeriesSegmentEntry
         {
+            public string Tag { get; set; }
+
             public DateTime TimeStamp { get; set; }
 
             public double[] Values { get; set; }

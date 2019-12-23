@@ -360,7 +360,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact()]
+        [Fact]
         public void BasicMapReduceIndex()
         {
             using (var store = GetDocumentStore())
