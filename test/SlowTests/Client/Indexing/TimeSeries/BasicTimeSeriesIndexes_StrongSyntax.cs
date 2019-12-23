@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -10,7 +11,7 @@ using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Client.Indexing.TimeSeries
+namespace SlowTests.Client.Indexing.TimeSeries
 {
     public class BasicTimeSeriesIndexes_StrongSyntax : RavenTestBase
     {
@@ -30,7 +31,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                                   select new
                                   {
                                       HeartBeat = entry.Values[0],
-                                      Date = entry.TimeStamp.Date,
+                                      entry.TimeStamp.Date,
                                       User = ts.DocumentId
                                   });
             }
@@ -48,7 +49,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                                   select new
                                   {
                                       HeartBeat = entry.Value,
-                                      Date = entry.TimeStamp.Date,
+                                      entry.TimeStamp.Date,
                                       User = ts.DocumentId,
                                       Employee = employee.FirstName
                                   });
@@ -129,8 +130,8 @@ namespace FastTests.Client.Indexing.TimeSeries
                                     select new
                                     {
                                         HeartBeat = sumHeartBeat / sumCount,
-                                        Date = g.Key.Date,
-                                        City = g.Key.City,
+                                        g.Key.Date,
+                                        g.Key.City,
                                         Count = sumCount
                                     };
             }
