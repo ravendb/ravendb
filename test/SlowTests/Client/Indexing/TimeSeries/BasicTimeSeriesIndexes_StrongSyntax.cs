@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -183,6 +184,18 @@ namespace SlowTests.Client.Indexing.TimeSeries
                                       entry.TimeStamp.Date,
                                       User = ts.DocumentId
                                   });
+            }
+        }
+
+        private class Companies_ByTimeSeriesNames : AbstractIndexCreationTask<Company>
+        {
+            public Companies_ByTimeSeriesNames()
+            {
+                Map = companies => from company in companies
+                                   select new
+                                   {
+                                       Names = TimeSeriesNamesFor(company)
+                                   };
             }
         }
 
@@ -899,6 +912,37 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                     Assert.Equal(3, results.Count);
                 }
+            }
+        }
+
+        [Fact]
+        public void TimeSeriesNamesFor()
+        {
+            var now = DateTime.UtcNow.Date;
+
+            using (var store = GetDocumentStore())
+            {
+                var index = new Companies_ByTimeSeriesNames();
+                index.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company);
+
+                    session.TimeSeriesFor(company).Append("HeartRate", now, "tag1", new[] { 2.5d });
+                    session.TimeSeriesFor(company).Append("HeartRate2", now, "tag2", new[] { 3.5d });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("heartrate", terms);
+                Assert.Contains("heartrate2", terms);
             }
         }
     }
