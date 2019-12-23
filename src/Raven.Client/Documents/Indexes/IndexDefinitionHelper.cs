@@ -203,14 +203,27 @@ namespace Raven.Client.Documents.Indexes
             }
         }
 
-        internal static string GetQuerySource(DocumentConventions conventions, Type type)
+        internal static string GetQuerySource(DocumentConventions conventions, Type type, IndexSourceType sourceType)
         {
             var collectionName = conventions.GetCollectionName(type);
 
-            if (StringExtensions.IsIdentifier(collectionName))
-                return "docs." + collectionName;
+            string source;
+            switch (sourceType)
+            {
+                case IndexSourceType.Documents:
+                    source = "docs";
+                    break;
+                case IndexSourceType.TimeSeries:
+                    source = "timeSeries";
+                    break;
+                default:
+                    throw new NotSupportedException($"Not supported index source type '{sourceType}'.");
+            }
 
-            return "docs[@\"" + collectionName.Replace("\"", "\"\"") + "\"]";
+            if (StringExtensions.IsIdentifier(collectionName))
+                return $"{source}.{collectionName}";
+
+            return $"{source}[@\"{collectionName.Replace("\"", "\"\"")}\"]";
         }
 
         internal static IndexType DetectStaticIndexType(string map, string reduce)

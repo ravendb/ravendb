@@ -232,14 +232,6 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Gets a value indicating whether this instance is map reduce index definition
-        /// </summary>
-        /// <value>
-        /// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
-        /// </value>
-        public override bool IsMapReduce => Reduce != null;
-
-        /// <summary>
         /// The map definition
         /// </summary>
         protected Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }

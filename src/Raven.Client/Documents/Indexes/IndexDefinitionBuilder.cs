@@ -19,14 +19,10 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// This class provides a way to define a strongly typed index on the client.
     /// </summary>
-    public class IndexDefinitionBuilder<TDocument, TReduceResult>
+    public abstract class AbstractIndexDefinitionBuilder<TDocument, TReduceResult, TIndexDefinition> where TIndexDefinition : IndexDefinition, new()
     {
-        private readonly string _indexName;
-        /// <summary>
-        /// Gets or sets the map function
-        /// </summary>
-        /// <value>The map.</value>
-        public Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }
+        protected readonly string _indexName;
+
         /// <summary>
         /// Gets or sets the reduce function
         /// </summary>
@@ -111,7 +107,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Defines pattern for identifiers of documents which reference IDs of reduce outputs documents
         /// </summary>
-        public Expression<Func<TReduceResult, string>> PatternForOutputReduceToCollectionReferences{ get; set; }
+        public Expression<Func<TReduceResult, string>> PatternForOutputReduceToCollectionReferences { get; set; }
 
         /// <summary>
         /// Add additional sources to be compiled with the index on the server.
@@ -123,7 +119,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
         /// </summary>
-        public IndexDefinitionBuilder(string indexName = null)
+        protected AbstractIndexDefinitionBuilder(string indexName)
         {
             _indexName = indexName ?? DocumentConventions.DefaultGetCollectionName(GetType());
             if (_indexName.Length > 256)
@@ -146,19 +142,15 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Toes the index definition.
         /// </summary>
-        public IndexDefinition ToIndexDefinition(DocumentConventions conventions, bool validateMap = true)
+        public virtual TIndexDefinition ToIndexDefinition(DocumentConventions conventions, bool validateMap = true)
         {
-            if (Map == null && validateMap)
-                throw new InvalidOperationException(
-                    string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", _indexName));
-
             try
             {
                 if (Reduce != null)
                     IndexDefinitionHelper.ValidateReduce(Reduce);
 
-                string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : IndexDefinitionHelper.GetQuerySource(conventions, typeof(TDocument));
-                var indexDefinition = new IndexDefinition
+                var querySource = GetQuerySource(conventions);
+                var indexDefinition = new TIndexDefinition
                 {
                     Name = _indexName,
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, conventions, "results", translateIdentityProperty: false),
@@ -167,7 +159,7 @@ namespace Raven.Client.Documents.Indexes
                     OutputReduceToCollection = OutputReduceToCollection
                 };
 
-                if (PatternForOutputReduceToCollectionReferences!= null)
+                if (PatternForOutputReduceToCollectionReferences != null)
                     indexDefinition.PatternForOutputReduceToCollectionReferences = ConvertPatternForOutputReduceToCollectionReferencesToString(PatternForOutputReduceToCollectionReferences);
 
                 var indexes = ConvertToStringDictionary(Indexes);
@@ -219,19 +211,10 @@ namespace Raven.Client.Documents.Indexes
                 ApplyValues(indexDefinition, spatialOptions, (options, value) => options.Spatial = value);
                 ApplyValues(indexDefinition, suggestionsOptions, (options, value) => options.Suggestions = value);
 
-                if (Map != null)
-                {
-                    var map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
-                            Map,
-                            conventions,
-                            querySource,
-                            translateIdentityProperty: true);
-
-                    indexDefinition.Maps.Add(map);
-                }
-
                 indexDefinition.AdditionalSources = AdditionalSources;
                 indexDefinition.Configuration = Configuration;
+
+                ToIndexDefinition(indexDefinition, querySource, conventions);
 
                 return indexDefinition;
             }
@@ -240,6 +223,10 @@ namespace Raven.Client.Documents.Indexes
                 throw new IndexCompilationException("Failed to create index " + _indexName, e);
             }
         }
+
+        protected abstract void ToIndexDefinition(TIndexDefinition indexDefinition, string querySource, DocumentConventions conventions);
+
+        protected abstract string GetQuerySource(DocumentConventions conventions);
 
         private string ConvertPatternForOutputReduceToCollectionReferencesToString(Expression<Func<TReduceResult, string>> reduceOutputReferencesPattern)
         {
@@ -281,7 +268,7 @@ namespace Raven.Client.Documents.Indexes
 
                 return pattern;
             }
-            
+
             if (reduceOutputReferencesPattern.Body is BinaryExpression binaryExpression)
             {
                 // x => "reports/daily/" + x.OrderedAt;
@@ -294,7 +281,7 @@ namespace Raven.Client.Documents.Indexes
 
                     result += PatternFromExpression(left);
                     result += PatternFromExpression(right);
-                    
+
                     return result;
                 }
 
@@ -304,7 +291,7 @@ namespace Raven.Client.Documents.Indexes
                     {
                         return constantExpression.Value.ToString();
                     }
-                    
+
                     if (expr is BinaryExpression binaryExpr)
                     {
                         return PatternFromBinary(binaryExpr.Left, binaryExpr.Right);
@@ -345,27 +332,6 @@ namespace Raven.Client.Documents.Indexes
             }
         }
 
-        private bool ContainsWhereEntityIs()
-        {
-            if (Map == null)
-                return false;
-            var whereEntityIsVisitor = new WhereEntityIsVisitor();
-            whereEntityIsVisitor.Visit(Map.Body);
-            return whereEntityIsVisitor.HasWhereEntityIs;
-        }
-
-        private class WhereEntityIsVisitor : ExpressionVisitor
-        {
-            public bool HasWhereEntityIs { get; private set; }
-
-            protected override Expression VisitMethodCall(MethodCallExpression node)
-            {
-                if (node.Method.Name == "WhereEntityIs")
-                    HasWhereEntityIs = true;
-                return base.VisitMethodCall(node);
-            }
-        }
-
         private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
         {
             var result = new Dictionary<string, TValue>();
@@ -386,6 +352,72 @@ namespace Raven.Client.Documents.Indexes
                 result.Add(propertyPath);
             }
             return result;
+        }
+    }
+
+    /// <summary>
+    /// This class provides a way to define a strongly typed index on the client.
+    /// </summary>
+    public class IndexDefinitionBuilder<TDocument, TReduceResult> : AbstractIndexDefinitionBuilder<TDocument, TReduceResult, IndexDefinition>
+    {
+        /// <summary>
+        /// Gets or sets the map function
+        /// </summary>
+        /// <value>The map.</value>
+        public Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }
+
+        public IndexDefinitionBuilder(string indexName = null) : base(indexName)
+        {
+        }
+
+        public override IndexDefinition ToIndexDefinition(DocumentConventions conventions, bool validateMap = true)
+        {
+            if (Map == null && validateMap)
+                throw new InvalidOperationException(string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", _indexName));
+
+            return base.ToIndexDefinition(conventions, validateMap);
+        }
+
+        protected override void ToIndexDefinition(IndexDefinition indexDefinition, string querySource, DocumentConventions conventions)
+        {
+            if (Map == null)
+                return;
+
+            var map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
+                    Map,
+                    conventions,
+                    querySource,
+                    translateIdentityProperty: true);
+
+            indexDefinition.Maps.Add(map);
+        }
+
+        protected override string GetQuerySource(DocumentConventions conventions)
+        {
+            return (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs())
+                ? "docs"
+                : IndexDefinitionHelper.GetQuerySource(conventions, typeof(TDocument), IndexSourceType.Documents);
+        }
+
+        private bool ContainsWhereEntityIs()
+        {
+            if (Map == null)
+                return false;
+            var whereEntityIsVisitor = new WhereEntityIsVisitor();
+            whereEntityIsVisitor.Visit(Map.Body);
+            return whereEntityIsVisitor.HasWhereEntityIs;
+        }
+
+        private class WhereEntityIsVisitor : ExpressionVisitor
+        {
+            public bool HasWhereEntityIs { get; private set; }
+
+            protected override Expression VisitMethodCall(MethodCallExpression node)
+            {
+                if (node.Method.Name == "WhereEntityIs")
+                    HasWhereEntityIs = true;
+                return base.VisitMethodCall(node);
+            }
         }
     }
 
