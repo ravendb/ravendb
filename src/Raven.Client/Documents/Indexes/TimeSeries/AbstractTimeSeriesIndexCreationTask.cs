@@ -35,17 +35,15 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
     {
         private (string TimeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> Map) _map;
 
-        public void AddMap(string timeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> map)
+        protected void AddMap(string timeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> map)
         {
             if (string.IsNullOrWhiteSpace(timeSeries))
                 throw new ArgumentException("TimeSeries name cannot be null or whitespace.", nameof(timeSeries));
             if (map == null)
                 throw new ArgumentNullException(nameof(map));
 
-            // TODO [ppekrol] support multi-map
-
-            //if (_map != default)
-            //    throw new InvalidOperationException($"You cannot set Map more than once. Use {nameof(AbstractMultiMapTimeSeriesIndexCreationTask)} for this purpose.");
+            if (_map != default)
+                throw new InvalidOperationException($"You cannot set Map more than once. Use {nameof(AbstractMultiMapTimeSeriesIndexCreationTask)} for this purpose.");
 
             _map = (timeSeries, map);
         }

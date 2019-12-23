@@ -1,30 +1,38 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Extensions;
 
-namespace Raven.Client.Documents.Indexes
+namespace Raven.Client.Documents.Indexes.TimeSeries
 {
     /// <summary>
     /// Allow to create indexes with multiple maps
     /// </summary>
-    public abstract class AbstractMultiMapIndexCreationTask<TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
+    public abstract class AbstractMultiMapTimeSeriesIndexCreationTask<TReduceResult> : AbstractGenericTimeSeriesIndexCreationTask<TReduceResult>
     {
         private readonly List<Func<string>> _maps = new List<Func<string>>();
 
-        protected void AddMap<TSource>(Expression<Func<IEnumerable<TSource>, IEnumerable>> map)
+        protected void AddMap<TSource>(string timeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> map)
         {
+            if (string.IsNullOrWhiteSpace(timeSeries))
+                throw new ArgumentException("TimeSeries name cannot be null or whitespace.", nameof(timeSeries));
             if (map == null)
                 throw new ArgumentNullException(nameof(map));
 
             _maps.Add(() =>
             {
-                string querySource = typeof(TSource) == typeof(object)
-                    ? "docs"
-                    : IndexDefinitionHelper.GetQuerySource(Conventions, typeof(TSource), IndexSourceType.Documents);
+                var querySource = (typeof(TSource) == typeof(object))
+                    ? "timeSeries"
+                    : IndexDefinitionHelper.GetQuerySource(Conventions, typeof(TSource), IndexSourceType.TimeSeries);
+
+                if (StringExtensions.IsIdentifier(timeSeries))
+                    querySource = $"{querySource}.{timeSeries}";
+                else
+                    querySource = $"{querySource}[@\"{timeSeries.Replace("\"", "\"\"")}\"]";
 
                 return IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TSource, TReduceResult>(map, Conventions, querySource, translateIdentityProperty: true);
             });
@@ -35,16 +43,13 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         /// <remarks>This is taken from Oren's code in this thread https://groups.google.com/d/msg/ravendb/eFUlQG-spzE/Ac0PrvsFyJYJ </remarks>
         /// <typeparam name="TBase">The base class type whose descendant types are to be included in the index.</typeparam>
-        /// <param name="map"></param>
-        protected void AddMapForAll<TBase>(Expression<Func<IEnumerable<TBase>, IEnumerable>> map)
+        /// <param name="expr"></param>
+        protected void AddMapForAll<TBase>(string timeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> map)
         {
-            if (map == null)
-                throw new ArgumentNullException(nameof(map));
-
             // Index the base class.
             if (typeof(TBase).GetTypeInfo().IsAbstract == false &&
                 typeof(TBase).GetTypeInfo().IsInterface == false)
-                AddMap(map);
+                AddMap<TBase>(timeSeries, map);
 
             // Index child classes.
             var children = typeof(TBase).GetTypeInfo().Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
@@ -59,7 +64,7 @@ namespace Raven.Client.Documents.Indexes
                 var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
                 var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
                 var lambdaExpression = Expression.Lambda(delegateType, map.Body, Expression.Parameter(genericEnumerable, map.Parameters[0].Name));
-                addMapGeneric.MakeGenericMethod(child).Invoke(this, new[] { lambdaExpression });
+                addMapGeneric.MakeGenericMethod(child).Invoke(this, new object[] { timeSeries, lambdaExpression });
             }
         }
 
@@ -67,12 +72,12 @@ namespace Raven.Client.Documents.Indexes
         /// Creates the index definition.
         /// </summary>
         /// <returns></returns>
-        public override IndexDefinition CreateIndexDefinition()
+        public override TimeSeriesIndexDefinition CreateIndexDefinition()
         {
             if (Conventions == null)
                 Conventions = new DocumentConventions();
 
-            var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>(IndexName)
+            var indexDefinition = new TimeSeriesIndexDefinitionBuilder<object, TReduceResult>(IndexName)
             {
                 Indexes = Indexes,
                 Analyzers = Analyzers,
@@ -105,7 +110,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// Allow to create indexes with multiple maps
     /// </summary>
-    public abstract class AbstractMultiMapIndexCreationTask : AbstractMultiMapIndexCreationTask<object>
+    public abstract class AbstractMultiMapTimeSeriesIndexCreationTask : AbstractMultiMapTimeSeriesIndexCreationTask<object>
     {
     }
 }
