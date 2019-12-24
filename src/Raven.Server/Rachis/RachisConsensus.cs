@@ -715,8 +715,7 @@ namespace Raven.Server.Rachis
             {
                 _disposables.Add(parent);
             }
-            else if (rachisState != RachisState.Passive && 
-                     expectedTerm == -1) // we are disposing
+            else if (rachisState != RachisState.Passive)
             {
                 // if we are back to null state, wait to become candidate if no one talks to us
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
