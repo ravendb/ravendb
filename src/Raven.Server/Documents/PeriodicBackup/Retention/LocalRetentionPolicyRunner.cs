@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         public LocalRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, string folderPath)
             : base(parameters)
         {
-            _folderPath = folderPath;
+            _folderPath = Path.GetFullPath(folderPath);
         }
 
         protected override GetFoldersResult GetSortedFolders()
