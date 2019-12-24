@@ -87,10 +87,7 @@ namespace RachisTests
 
         [Theory]
         [TestParams(subscriptionsChainSize: 2, clusterSize: 3, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
-        [TestParams(subscriptionsChainSize: 2, clusterSize: 3, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]        
         [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
-        [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]        
-        [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
         [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
         [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 5, shouldTrapRevivedNodesIntoCandidate: false)]
         public async Task SubscriptionsShouldFailoverCorrectrlyAndAllowThemselvesToBeTerminated(int subscriptionsChainSize, int clusterSize ,int dBGroupSize, bool shouldTrapRevivedNodesIntoCandidate)

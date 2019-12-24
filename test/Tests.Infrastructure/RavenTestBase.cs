@@ -198,14 +198,13 @@ namespace FastTests
 
                     if (options.CreateDatabase)
                     {
-                        foreach (var server in Servers)
+                        if (IsGlobalOrLocalServer(serverToUse))
                         {
-                            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                            {
-                                context.OpenReadTransaction();
-                                if (server.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
-                                    throw new InvalidOperationException($"Database '{name}' already exists");
-                            }
+                            CheckIfDatabaseExists(serverToUse, name);
+                        }
+                        else
+                        {
+                            Servers.ForEach(server => CheckIfDatabaseExists(server, name));
                         }
 
                         DatabasePutResult result;
@@ -229,27 +228,19 @@ namespace FastTests
 
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
 
-                        if (IsGlobalOrLocalServer(serverToUse) == false)
+                        if (IsGlobalOrLocalServer(serverToUse))
+                        {
+                            // skip 'wait for requests' on DocumentDatabase dispose
+                            ApplySkipDrainAllRequestsToDatabase(serverToUse, name);
+                        }
+                        else
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () =>
-                            {
-                                await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
-                            });
-                        }
+                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
 
-                        // skip 'wait for requests' on DocumentDatabase dispose
-                        Servers.ForEach(x =>
-                        {
-                            try
-                            {
-                                var documentDatabase = AsyncHelpers.RunSync(async () => await x.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
-                                documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
-                            }
-                            catch (DatabaseNotRelevantException)
-                            {
-                            }
-                        });
+                            // skip 'wait for requests' on DocumentDatabase dispose
+                            Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name));
+                        }
                     }
 
                     store.BeforeDispose += (sender, args) =>
@@ -278,6 +269,28 @@ namespace FastTests
             catch (TimeoutException te)
             {
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
+            }
+        }
+
+        private static void CheckIfDatabaseExists(RavenServer server, string name)
+        {
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                context.OpenReadTransaction();
+                if (server.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
+                    throw new InvalidOperationException($"Database '{name}' already exists");
+            }
+        }
+
+        private static void ApplySkipDrainAllRequestsToDatabase(RavenServer serverToUse, string name)
+        {
+            try
+            {
+                var documentDatabase = AsyncHelpers.RunSync(async () => await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
+                documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
+            }
+            catch (DatabaseNotRelevantException)
+            {
             }
         }
 
