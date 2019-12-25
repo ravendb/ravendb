@@ -2007,7 +2007,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 if (Scanner.Identifier(beginning: part++ == 0) == false)
                 {
-                    if (Scanner.String(out var str))
+                    if (Scanner.String(out var str, fieldPath: part > 1))
                     {
                         if (part == 1)
                             quoted = true;
