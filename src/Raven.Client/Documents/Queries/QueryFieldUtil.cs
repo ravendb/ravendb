@@ -2,7 +2,7 @@
 {
     public static class QueryFieldUtil
     {
-        public static string EscapeIfNecessary(string name)
+        public static string EscapeIfNecessary(string name, bool path = false)
         {
             if (string.IsNullOrEmpty(name) || 
                 name == Constants.Documents.Indexing.Fields.DocumentIdFieldName || 
@@ -36,6 +36,12 @@
                 else
                 {
                     if (char.IsLetterOrDigit(c) == false && c != '_' && c != '-' && c != '@' && c != '.' && c != '[' && c != ']' && insideEscaped == false)
+                    {
+                        escape = true;
+                        break;
+                    }
+
+                    if (path && c == '.' && insideEscaped == false)
                     {
                         escape = true;
                         break;
