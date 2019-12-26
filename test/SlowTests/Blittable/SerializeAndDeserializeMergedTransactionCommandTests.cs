@@ -129,7 +129,7 @@ namespace SlowTests.Blittable
                 //Arrange
                 var recordFilePath = NewDataPath();
 
-                var attachmentStream = new StreamsTempFile(recordFilePath, database);
+                var attachmentStream = new StreamsTempFile(recordFilePath, database.DocumentsStorage.Environment);
                 var stream = attachmentStream.StartNewStream();
                 const string bufferContent = "Menahem";
                 var buffer = Encoding.ASCII.GetBytes(bufferContent);

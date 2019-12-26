@@ -5,14 +5,13 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Server.ServerWide;
 using Sparrow;
-using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Utils;
 
-namespace Raven.Server.Rachis
+namespace Raven.Server.Rachis.Remote
 {
     public class RemoteConnection : IDisposable
     {
@@ -270,66 +269,40 @@ namespace Raven.Server.Rachis
             });
         }
 
-        public unsafe int Read(byte[] buffer, int offset, int count)
+        internal int Read(byte[] buffer, int offset, int count)
         {
             using (_disposerLock.EnsureNotDisposed())
             {
-                if (_buffer.Used < _buffer.Valid)
-                {
-                    var size = Math.Min(count, _buffer.Valid - _buffer.Used);
-                    fixed (byte* pBuffer = buffer)
-                    {
-                        Memory.Copy(pBuffer + offset, _buffer.Pointer + _buffer.Used, size);
-                        _buffer.Used += size;
-                        return size;
-                    }
-                }
+                var read = ReadFromBuffer(buffer, offset, count);
+                if (read != -1) 
+                    return read;
+                
                 return _stream.Read(buffer, offset, count);
+            }
+        }
+
+        private unsafe int ReadFromBuffer(byte[] buffer, int offset, int count)
+        {
+            if (_buffer.Used >= _buffer.Valid) 
+                return -1;
+            
+            var size = Math.Min(count, _buffer.Valid - _buffer.Used);
+            fixed (byte* pBuffer = buffer)
+            {
+                Memory.Copy(pBuffer + offset, _buffer.Pointer + _buffer.Used, size);
+                _buffer.Used += size;
+                return size;
             }
         }
 
         public Reader CreateReader()
         {
-            return new Reader(this);
+            return new RemoteReader(this);
         }
-
-        public class Reader
+        
+        public Reader CreateReaderToStream(Stream stream)
         {
-            private readonly RemoteConnection _parent;
-            private byte[] _buffer = new byte[1024];
-
-            public Reader(RemoteConnection parent)
-            {
-                _parent = parent;
-            }
-
-            public int ReadInt32()
-            {
-                ReadExactly(sizeof(int));
-                return BitConverter.ToInt32(_buffer, 0);
-            }
-
-            public long ReadInt64()
-            {
-                ReadExactly(sizeof(long));
-                return BitConverter.ToInt64(_buffer, 0);
-            }
-
-            public byte[] Buffer => _buffer;
-
-            public void ReadExactly(int size)
-            {
-                if (_buffer.Length < size)
-                    _buffer = new byte[Bits.PowerOf2(size)];
-                var remaining = 0;
-                while (remaining < size)
-                {
-                    var read = _parent.Read(_buffer, remaining, size - remaining);
-                    if (read == 0)
-                        throw new EndOfStreamException();
-                    remaining += read;
-                }
-            }
+            return new RemoteReaderToStream(this, stream);
         }
 
         public T Read<T>(JsonOperationContext context)
