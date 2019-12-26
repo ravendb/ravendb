@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Threading;

@@ -6,6 +6,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Sparrow.Threading;
 using Raven.Server.Utils;

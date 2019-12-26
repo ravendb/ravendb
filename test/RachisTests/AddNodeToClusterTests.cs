@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -61,6 +62,73 @@ namespace RachisTests
             using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
             {
                 await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(watcher.WebUrl, watcher.ServerStore.NodeTag), ctx);
+            }
+        }
+        
+        private static async Task AddManyCompareExchange(IDocumentStore store, RavenServer ravenServer)
+        {
+            var list = Enumerable.Range(0, 10)
+                .Select(i =>
+                {
+                    return Task.Run(async () =>
+                    {
+                        int k = 0;
+                        for (int f = 0; f < 200; f++)
+                        {
+                            using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                            {
+                                for (int j = 0; j < 30; j++)
+                                {
+                                    for (int d = 0; d < 5; d++)
+                                    {
+                                        session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernamesb{i}/{k}", k);
+                                        k++;
+                                    }
+
+                                    await session.SaveChangesAsync();
+                                }
+                            }
+                        }
+                    });
+                });
+            
+            await Task.WhenAll(list);
+        }
+        
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task ReAddMemberNode(bool withManyCompareExchange)
+        {
+            var customSettings = new Dictionary<string, string>
+            {
+                {"Cluster.TcpTimeoutInMs", "3000"}
+            };
+            
+            var (nodes, leader) = await CreateRaftCluster(2, customSettings:customSettings);
+            var follower = nodes.Single(x => x != leader);
+
+            using (var store = new DocumentStore {Urls = new[] {leader.WebUrl}, Database = "Snapshot"}.Initialize())
+            {
+                try
+                {
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("Snapshot"), 2));
+                }
+                catch (ConcurrencyException)
+                {
+                }
+
+                if(withManyCompareExchange)
+                    await AddManyCompareExchange(store, leader);
+
+                await leader.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag);
+                await follower.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
+
+                store.Operations.Send(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0));
+            
+                await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl,follower.ServerStore.NodeTag);
+            
+                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
         }
 
