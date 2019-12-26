@@ -213,7 +213,7 @@ namespace Raven.Client.Http
         Raw
     }
 
-    public class StreamReaderWithTimeout : Stream, IDisposable
+    internal class StreamReaderWithTimeout : Stream, IDisposable
     {
         private static readonly TimeSpan DefaultReadTimeout = TimeSpan.FromSeconds(60);
 
