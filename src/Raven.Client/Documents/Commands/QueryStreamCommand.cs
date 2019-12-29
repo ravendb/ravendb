@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Commands
             Result = new StreamResult
             {
                 Response = response,
-                Stream = new StreamReaderWithTimeout(responseStream)
+                Stream = new StreamWithTimeout(responseStream)
             };
 
             return ResponseDisposeHandling.Manually;
