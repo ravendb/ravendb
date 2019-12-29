@@ -52,20 +52,20 @@ namespace Sparrow.Server.Platform
             var retries = 0;
             while (true)
             {
-                if (CopyPalFile(toFilename, fromFilename, out Exception e))
+                var e = CopyPalFile(toFilename, fromFilename);
+                if (e == null)
                     break;
 
                 if (++retries < 10)
                     continue;
 
+                var msg = $"Cannot copy {fromFilename} to {toFilename}";
                 if (e is IOException)
                 {
-                    throw new IOException(
-                        $"Cannot copy {fromFilename} to {toFilename}, " +
-                        $"make sure appropriate {toFilename} to your platform architecture exists in Raven.Server executable folder", e);
+                    throw new IOException($"{msg}, make sure appropriate {toFilename} to your platform architecture exists in Raven.Server executable folder.", e);
                 }
 
-                throw e;
+                throw new InvalidOperationException($"{msg}.", e);
             }
 
             PalFlags.FailCodes rc = PalFlags.FailCodes.None;
@@ -98,7 +98,7 @@ namespace Sparrow.Server.Platform
                 PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
         }
 
-        private static bool CopyPalFile(string toFilename, string fromFilename, out Exception exception)
+        private static Exception CopyPalFile(string toFilename, string fromFilename)
         {
             try
             {
@@ -114,14 +114,12 @@ namespace Sparrow.Server.Platform
                 if (copy)
                     File.Copy(fromFilename, toFilename, overwrite: true);
 
-                exception = null;
-                return true;
+                return null;
             }
             catch (Exception e)
             {
                 Thread.Sleep(100);
-                exception = e;
-                return false;
+                return e;
             }
         }
 
