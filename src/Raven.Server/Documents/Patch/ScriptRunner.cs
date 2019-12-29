@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -21,13 +20,18 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Spatial4n.Core.Distance;
+using ExpressionType = System.Linq.Expressions.ExpressionType;
 using JavaScriptException = Jint.Runtime.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
@@ -198,6 +202,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, "toStringWithFormat", ToStringWithFormat));
 
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
+
+                ScriptEngine.SetValue("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", TimeSeries));
+
 
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
@@ -746,6 +753,96 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 return JsBoolean.True;
+            }
+
+            private JsValue TimeSeries(JsValue self, JsValue[] args)
+            {
+                AssertValidDatabaseContext();
+                if (args.Length == 0 || args.Length > 3)
+                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
+
+                if (args[args.Length - 1].IsString() == false)
+                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
+                var tsQueryText = args[args.Length - 1].AsString();
+
+                var parameters = new List<QueryExpression>();
+
+                if (args.Length > 1)
+                {
+                    if (args[0].IsString()== false)
+                        throw new InvalidOperationException($"must be called with exactly 1 string argument");
+
+                    parameters.Add(new FieldExpression(new List<StringSegment> { args[0].AsString() }));
+
+                    if (args.Length == 3)
+                    {
+                        if (args[1].IsString() == false)
+                            throw new InvalidOperationException($"must be called with exactly 1 string argument");
+
+                        parameters.Add(new FieldExpression(new List<StringSegment> { args[1].AsString() }));
+                    }
+                }
+
+                var tsParser = new QueryParser();
+                tsParser.Init(tsQueryText);
+
+                var ts = tsParser.ParseTimeSeriesBody("time series select function");
+
+                var declaredFunction = new DeclaredFunction
+                {
+                    Type = DeclaredFunction.FunctionType.TimeSeries,
+                    FunctionText = tsQueryText,
+                    TimeSeries = ts,
+                    Parameters = parameters
+                };
+
+                string docId = default;
+                BlittableJsonReaderObject queryParameters = default;
+                var tsFunctionArgs = new object[_args.Length];
+
+                List<IDisposable> lazyIds = new List<IDisposable>();
+
+                for (var index = 0; index < _args.Length; index++)
+                {
+                    var arg = _args[index].AsObject();
+                    if (!(arg is BlittableObjectInstance boi))
+                        throw new InvalidOperationException($"must be called with exactly 1 string argument");
+
+                    if (index == 0)
+                        docId = boi.DocumentId;
+                    
+                    if (index != _args.Length - 1)
+                    {
+                        var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
+                        lazyIds.Add(lazyId);
+                        tsFunctionArgs[index] = new Document
+                        {
+                            Data = boi.Blittable,
+                            Id = lazyId
+                        };
+                    }
+                    else
+                    {
+                        queryParameters = boi.Blittable;
+                        tsFunctionArgs[index] = new Document
+                        {
+                            Data = boi.Blittable,
+                        };
+                    }
+                }
+
+
+                var retriever = new TimeSeriesRetriever(_database, _docsCtx, queryParameters, null);
+
+                var result = retriever.InvokeTimeSeriesFunction(declaredFunction, docId, tsFunctionArgs);
+
+                foreach (var  id in lazyIds)
+                {
+                    id?.Dispose();
+                }
+
+                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, result);
+
             }
 
             private static void ThrowInvalidIncrementCounterArgs(JsValue[] args)
