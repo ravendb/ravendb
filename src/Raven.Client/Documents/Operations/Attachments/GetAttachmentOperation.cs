@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                 };
 
                 var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                var streamReader = new StreamReaderWithTimeout(responseStream);
+                var streamReader = new StreamWithTimeout(responseStream);
                 var stream = new AttachmentStream(response, streamReader);
 
                 Result = new AttachmentResult
