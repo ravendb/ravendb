@@ -20,7 +20,7 @@ namespace Raven.Client.Util
             _canBaseStreamTimeoutOnWrite = _stream.CanTimeout && _stream.WriteTimeout < int.MaxValue;
 
             if (_canBaseStreamTimeoutOnWrite)
-                _writeTimeout = _stream.WriteTimeout;
+                _writeTimeout = (int?)writeTimeout?.TotalMilliseconds ?? _stream.WriteTimeout;
             else
                 _writeTimeout = (int)(writeTimeout ?? DefaultWriteTimeout).TotalMilliseconds;
         }
@@ -41,12 +41,11 @@ namespace Raven.Client.Util
 
         private Task WriteAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_cts == null)
-                _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _cts?.Dispose();
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _cts.CancelAfter(_writeTimeout);
 
-            _cts.Token.ThrowIfCancellationRequested();
-
-            return _stream.WriteAsync(buffer, offset, count, _cts.Token).WaitForTaskCompletion(TimeSpan.FromMilliseconds(_writeTimeout), _cts);
+            return _stream.WriteAsync(buffer, offset, count, _cts.Token);
         }
 
         public override long Seek(long offset, SeekOrigin origin)

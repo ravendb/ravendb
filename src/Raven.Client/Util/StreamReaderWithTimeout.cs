@@ -20,7 +20,7 @@ namespace Raven.Client.Util
             _canBaseStreamTimeoutOnRead = _stream.CanTimeout && _stream.ReadTimeout < int.MaxValue;
 
             if (_canBaseStreamTimeoutOnRead)
-                _readTimeout = _stream.ReadTimeout;
+                _readTimeout = (int?)readTimeout?.TotalMilliseconds ?? _stream.ReadTimeout;
             else
                 _readTimeout = (int)(readTimeout ?? DefaultReadTimeout).TotalMilliseconds;
         }
@@ -52,12 +52,11 @@ namespace Raven.Client.Util
 
         private Task<int> ReadAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_cts == null)
-                _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _cts?.Dispose();
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _cts.CancelAfter(_readTimeout);
 
-            _cts.Token.ThrowIfCancellationRequested();
-
-            return _stream.ReadAsync(buffer, offset, count, _cts.Token).WaitForTaskCompletion(TimeSpan.FromMilliseconds(_readTimeout), _cts);
+            return _stream.ReadAsync(buffer, offset, count, _cts.Token);
         }
 
         public override long Seek(long offset, SeekOrigin origin)
