@@ -1336,7 +1336,7 @@ namespace Raven.Server.Documents.Queries.Parser
             };
         }
 
-        private TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource = default)
+        internal TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource = default)
         {
             _insideTimeSeriesBody = true;
 
