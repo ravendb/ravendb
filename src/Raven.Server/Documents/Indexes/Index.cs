@@ -31,7 +31,6 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -3442,6 +3441,9 @@ namespace Raven.Server.Documents.Indexes
         {
             get
             {
+                if (_transactionSizeLimit != null)
+                    return _transactionSizeLimit.Value;
+
                 var limit = DocumentDatabase.IsEncrypted
                     ? Configuration.EncryptedTransactionSizeLimit ?? Configuration.TransactionSizeLimit
                     : Configuration.TransactionSizeLimit;
@@ -3542,7 +3544,7 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            if (sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager)
+            if (DocumentDatabase.Is32Bits)
             {
                 IPagerLevelTransactionState pagerLevelTransactionState = documentsOperationContext.Transaction?.InnerTransaction?.LowLevelTransaction;
                 var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();

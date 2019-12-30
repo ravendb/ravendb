@@ -4,6 +4,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
@@ -11,7 +12,7 @@ namespace Raven.Server.Config.Categories
     {
         public TransactionMergerConfiguration(bool forceUsing32BitsPager)
         {
-            if (IntPtr.Size == sizeof(int) || forceUsing32BitsPager)
+            if (PlatformDetails.Is32Bits || forceUsing32BitsPager)
             {
                 MaxTxSize = new Size(4, SizeUnit.Megabytes);
                 return;

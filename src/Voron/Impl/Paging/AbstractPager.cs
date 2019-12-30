@@ -124,7 +124,7 @@ namespace Voron.Impl.Paging
                 // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
                 var nextWorkingSetSize = GetNearestFileSize(currentProcess.MinWorkingSet.ToInt64() + sizeToLock);
 
-                if (nextWorkingSetSize > int.MaxValue && IntPtr.Size == sizeof(int))
+                if (nextWorkingSetSize > int.MaxValue && PlatformDetails.Is32Bits)
                 {
                     nextWorkingSetSize = int.MaxValue;
                 }

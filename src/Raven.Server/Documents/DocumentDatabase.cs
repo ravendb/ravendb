@@ -103,6 +103,9 @@ namespace Raven.Server.Documents
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
             Scripts = new ScriptRunnerCache(this, Configuration);
+
+            Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
+
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             try
             {
@@ -149,9 +152,7 @@ namespace Raven.Server.Documents
                 HugeDocuments = new HugeDocuments(NotificationCenter, ConfigurationStorage.NotificationsStorage, Name, configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes, 
-                    (PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager
-                        ? TimeSpan.FromHours(12)
-                        : TimeSpan.FromDays(2)));
+                    Is32Bits ? TimeSpan.FromHours(12) : TimeSpan.FromDays(2));
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
@@ -239,6 +240,8 @@ namespace Raven.Server.Documents
         public ClientConfiguration ClientConfiguration { get; private set; }
 
         public StudioConfiguration StudioConfiguration { get; private set; }
+
+        public bool Is32Bits { get; }
 
         private long _lastDatabaseRecordChangeIndex;
 
@@ -630,17 +633,19 @@ namespace Raven.Server.Documents
                     _logger.Info("Failed to generate and store database info", e);
             }
 
-            // we'll wait for 1 minute to drain all the requests
-            // from the database
-
-            var sp = Stopwatch.StartNew();
-            while (sp.ElapsedMilliseconds < 60 * 1000)
+            if (_forTestingPurposes == null || _forTestingPurposes.SkipDrainAllRequests == false)
             {
-                if (Interlocked.Read(ref _usages) == 0)
-                    break;
+                // we'll wait for 1 minute to drain all the requests
+                // from the database
+                var sp = Stopwatch.StartNew();
+                while (sp.ElapsedMilliseconds < 60 * 1000)
+                {
+                    if (Interlocked.Read(ref _usages) == 0)
+                        break;
 
-                if (_waitForUsagesOnDisposal.Wait(1000))
-                    _waitForUsagesOnDisposal.Reset();
+                    if (_waitForUsagesOnDisposal.Wait(1000))
+                        _waitForUsagesOnDisposal.Reset();
+                }
             }
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
@@ -1568,6 +1573,8 @@ namespace Raven.Server.Documents
         internal class TestingStuff
         {
             internal Action ActionToCallDuringDocumentDatabaseInternalDispose;
+
+            internal bool SkipDrainAllRequests = false;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

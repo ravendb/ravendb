@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
-            var mode = sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager
+            var mode = DocumentDatabase.Is32Bits
                 ? CollectionOfBloomFilters.Mode.X86
                 : CollectionOfBloomFilters.Mode.X64;
 

@@ -3,6 +3,7 @@ using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
 
@@ -45,28 +46,26 @@ namespace Sparrow.Server.Platform
             }
             else
             {
-                throw new NotSupportedException("Not supported platform - no Linux/OSX/Windows is detected ");
+                throw new NotSupportedException("Not supported platform - no Windows/OSX/Linux is detected ");
             }
 
-            try
+            var retries = 0;
+            while (true)
             {
-                var copy = true;
-                if (File.Exists(toFilename))
-                {
-                    var fromHash = FileHelper.CalculateHash(fromFilename);
-                    var toHash = FileHelper.CalculateHash(toFilename);
+                var e = CopyPalFile(toFilename, fromFilename);
+                if (e == null)
+                    break;
 
-                    copy = fromHash != toHash;
+                if (++retries < 10)
+                    continue;
+
+                var msg = $"Cannot copy {fromFilename} to {toFilename}";
+                if (e is IOException)
+                {
+                    throw new IOException($"{msg}, make sure appropriate {toFilename} to your platform architecture exists in Raven.Server executable folder.", e);
                 }
 
-                if (copy)
-                    File.Copy(fromFilename, toFilename, overwrite: true);
-            }
-            catch (IOException e)
-            {
-                throw new IOException(
-                    $"Cannot copy {fromFilename} to {toFilename}, make sure appropriate {toFilename} to your platform architecture exists in Raven.Server executable folder",
-                    e);
+                throw new InvalidOperationException($"{msg}.", e);
             }
 
             PalFlags.FailCodes rc = PalFlags.FailCodes.None;
@@ -97,6 +96,31 @@ namespace Sparrow.Server.Platform
 
             if (rc != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
+        }
+
+        private static Exception CopyPalFile(string toFilename, string fromFilename)
+        {
+            try
+            {
+                var copy = true;
+                if (File.Exists(toFilename))
+                {
+                    var fromHash = FileHelper.CalculateHash(fromFilename);
+                    var toHash = FileHelper.CalculateHash(toFilename);
+
+                    copy = fromHash != toHash;
+                }
+
+                if (copy)
+                    File.Copy(fromFilename, toFilename, overwrite: true);
+
+                return null;
+            }
+            catch (Exception e)
+            {
+                Thread.Sleep(100);
+                return e;
+            }
         }
 
         private const string LIBRVNPAL = "librvnpal";

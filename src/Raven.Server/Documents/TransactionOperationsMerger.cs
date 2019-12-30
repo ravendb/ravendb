@@ -50,8 +50,6 @@ namespace Raven.Server.Documents
         private readonly long _maxTxSizeInBytes;
         private readonly double _maxTimeToWaitForPreviousTxBeforeRejectingInMs;
 
-        private readonly bool _is32Bits;
-
         public TransactionOperationsMerger(DocumentDatabase parent, CancellationToken shutdown)
         {
             _parent = parent;
@@ -61,7 +59,6 @@ namespace Raven.Server.Documents
             _maxTimeToWaitForPreviousTxInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTx.AsTimeSpan.TotalMilliseconds;
             _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
-            _is32Bits = _parent.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
             _timeToCheckHighDirtyMemory = _parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriod;
             _lastHighDirtyMemCheck = _parent.Time.GetUtcNow();
         }
@@ -866,7 +863,7 @@ namespace Raven.Server.Documents
                 modifiedSize += llt.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
-                if (canCloseCurrentTx || _is32Bits)
+                if (canCloseCurrentTx || _parent.Is32Bits)
                 {
                     if (_operations.IsEmpty)
                         break; // nothing remaining to do, let's us close this work
@@ -1001,7 +998,7 @@ namespace Raven.Server.Documents
         private PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context, bool forceCompletion = false)
         {
             // this optimization is disabled for 32 bits
-            if (sizeof(int) == IntPtr.Size || _parent.Configuration.Storage.ForceUsing32BitsPager)
+            if (_parent.Is32Bits)
                 return PendingOperations.CompletedAll;
 
             // This optimization is disabled when encryption is on

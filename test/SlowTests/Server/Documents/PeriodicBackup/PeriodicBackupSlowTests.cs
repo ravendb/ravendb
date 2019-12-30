@@ -17,6 +17,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
@@ -487,9 +488,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
+                var backupLocation = Directory.GetDirectories(backupPath).First();
+                
+                using (ReadOnly(backupLocation))
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    BackupLocation = backupLocation,
                     DatabaseName = databaseName
                 }))
                 {
@@ -589,9 +593,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
+                var backupLocation = Directory.GetDirectories(backupPath).First();
+                using (ReadOnly(backupLocation))
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    BackupLocation = backupLocation,
                     DatabaseName = restoredDatabaseName
                 }))
                 {
@@ -1423,6 +1429,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 : Constants.Documents.PeriodicBackup.FullBackupExtension;
 
             return Path.Combine(backupDirectory, $"{datePrefix}{fileExtension}");
+        }
+
+        private static IDisposable ReadOnly(string path)
+        {
+            var files = Directory.GetFiles(path);
+            var attributes = new FileInfo(files[0]).Attributes;
+            foreach (string file in files)
+            {
+                File.SetAttributes(file, FileAttributes.ReadOnly);
+            }
+
+            return new DisposableAction(() =>
+            {
+                foreach (string file in files)
+                {
+                    File.SetAttributes(file, attributes);
+                }
+            });
         }
     }
 }
