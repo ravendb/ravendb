@@ -29,11 +29,13 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(45, 1, true)]
         [InlineData(50, 50, true)]
         [InlineData(70, 13, true)]
-        public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
+        [InlineData(7, 3, false, "\\E\\G\\O\\R\\..\\..\\..\\..")]
+        [InlineData(7, 3, false, "\\E/G\\../..\\O\\R/..\\..")]
+        public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental, string suffix = null)
         {
             using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention(Output))
             {
-                await test.can_delete_backups_by_date(backupAgeInSeconds, numberOfBackupsToCreate, checkIncremental);
+                await test.can_delete_backups_by_date(backupAgeInSeconds, numberOfBackupsToCreate, checkIncremental, suffix);
             }
         }
 
