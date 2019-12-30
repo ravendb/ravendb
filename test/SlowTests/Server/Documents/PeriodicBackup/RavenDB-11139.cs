@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -51,7 +50,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -135,7 +134,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -218,7 +217,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *", // once a year on 1st january at 00:00
                     BackupType = BackupType.Backup
                 };
 
@@ -237,7 +236,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var val2 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/clown"));
                 Assert.True(user2.Name == val2.Value.Name, "val.Value.Name = 'emojis/clown'");
 
-                config.IncrementalBackupFrequency = "* */300 * * *";
+                config.FullBackupFrequency = null;
+                config.IncrementalBackupFrequency = "0 0 1 1 *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 RunBackup(result.TaskId, documentDatabase, false, store);   // INCREMENTAL1
@@ -250,7 +250,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var val3 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/goblin"));
                 Assert.True(user3.Name == val3.Value.Name, "val.Value.Name = 'emojis/goblin'");
 
-                config.IncrementalBackupFrequency = "* */300 * * *";
+                config.IncrementalBackupFrequency = "0 0 1 1 *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 RunBackup(result.TaskId, documentDatabase, false, store);   // INCREMENTAL2
@@ -263,7 +263,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var val4 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/ghost"));
                 Assert.True(user4.Name == val4.Value.Name, "val.Value.Name = 'emojis/ghost'");
 
-                config.IncrementalBackupFrequency = "* */300 * * *";
+                config.IncrementalBackupFrequency = "0 0 1 1 *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 RunBackup(result.TaskId, documentDatabase, false, store);   // INCREMENTAL3
@@ -279,7 +279,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var emojisNum = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation()).CountOfCompareExchange;
                 Assert.True(emojisNum == 5, "CountOfCompareExchange == 5");
 
-                config.IncrementalBackupFrequency = "* */300 * * *";
+                config.IncrementalBackupFrequency = "0 0 1 1 *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 RunBackup(result.TaskId, documentDatabase, false, store);   // INCREMENTAL4
@@ -356,7 +356,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -445,7 +445,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -594,7 +594,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -714,7 +714,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -807,7 +807,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -903,7 +903,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -1048,7 +1048,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "snapshot",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Snapshot
                 };
 
@@ -1132,7 +1132,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "snapshot",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Snapshot
                 };
 
@@ -1286,7 +1286,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "snapshot",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Snapshot
                 };
 
@@ -1424,7 +1424,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
