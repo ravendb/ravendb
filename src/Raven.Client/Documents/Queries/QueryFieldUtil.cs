@@ -2,13 +2,18 @@
 {
     public static class QueryFieldUtil
     {
-        public static string EscapeIfNecessary(string name, bool path = false)
+        public static string EscapeIfNecessary(string name)
         {
-            if (string.IsNullOrEmpty(name) || 
-                name == Constants.Documents.Indexing.Fields.DocumentIdFieldName || 
-                name == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName || 
-                name == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName || 
-                name == Constants.Documents.Indexing.Fields.SpatialShapeFieldName )
+            return EscapeIfNecessary(name, isPath: false);
+        }
+
+        public static string EscapeIfNecessary(string name, bool isPath)
+        {
+            if (string.IsNullOrEmpty(name) ||
+                name == Constants.Documents.Indexing.Fields.DocumentIdFieldName ||
+                name == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName ||
+                name == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName ||
+                name == Constants.Documents.Indexing.Fields.SpatialShapeFieldName)
                 return name;
 
             var escape = false;
@@ -41,7 +46,7 @@
                         break;
                     }
 
-                    if (path && c == '.' && insideEscaped == false)
+                    if (isPath && c == '.' && insideEscaped == false)
                     {
                         escape = true;
                         break;
