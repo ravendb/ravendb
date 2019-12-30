@@ -198,9 +198,7 @@ namespace Raven.Server.Smuggler.Documents
                 _buildType = buildType;
                 _isRevision = isRevision;
                 _log = log;
-                _enqueueThreshold = new Sparrow.Size(
-                    (sizeof(int) == IntPtr.Size || database.Configuration.Storage.ForceUsing32BitsPager) ? 2 : 32,
-                    SizeUnit.Megabytes);
+                _enqueueThreshold = new Sparrow.Size(database.Is32Bits ? 2 : 32, SizeUnit.Megabytes);
 
                 _missingDocumentsForRevisions = isRevision ? new ConcurrentDictionary<string, CollectionName>() : null;
                 _documentIdsOfMissingAttachments = isRevision ? null : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -867,8 +865,7 @@ namespace Raven.Server.Smuggler.Documents
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
                 _missingDocumentsForRevisions = missingDocumentsForRevisions;
                 _documentIdsOfMissingAttachments = documentIdsOfMissingAttachments;
-                Is32Bit = _database.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
-                if (Is32Bit)
+                if (_database.Is32Bits)
                 {
                     using (var ctx = DocumentsOperationContext.ShortTermSingleUse(database))
                     using (ctx.OpenReadTransaction())
@@ -1108,7 +1105,6 @@ namespace Raven.Server.Smuggler.Documents
 
             private HashSet<string> _collectionNames;
             private int _schemaOverHeadSize;
-            private bool Is32Bit { get; }
 
             public void Add(DocumentItem document)
             {
@@ -1128,7 +1124,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (Is32Bit && document.Document != null)
+                if (_database.Is32Bits && document.Document != null)
                 {
                     if (document.Document.TryGetMetadata(out var metadata)
                         && metadata.TryGet(Client.Constants.Documents.Metadata.Collection, out string collectionName)
@@ -1423,9 +1419,7 @@ namespace Raven.Server.Smuggler.Documents
                 _result = result;
                 _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database, _result);
 
-                _maxBatchSize = PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
-                    ? 2 * 1024
-                    : 10 * 1024;
+                _maxBatchSize = _database.Is32Bits ? 2 * 1024 : 10 * 1024;
             }
 
             private void AddToBatch(CounterGroupDetail counterGroupDetail)

@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.Queries.AST
                     _sb.Append(" = ");
                     break;
                 case OperatorType.NotEqual:
-                    _sb.Append(" ~= ");
+                    _sb.Append(" != ");
                     break;
                 case OperatorType.LessThan:
                     _sb.Append(" < ");

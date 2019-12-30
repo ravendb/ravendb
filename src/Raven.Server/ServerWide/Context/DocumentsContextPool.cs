@@ -7,6 +7,7 @@
 using System;
 using Raven.Server.Documents;
 using Sparrow.Json;
+using Sparrow.Platform;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -21,9 +22,9 @@ namespace Raven.Server.ServerWide.Context
 
         protected override DocumentsOperationContext CreateContext()
         {
-            if (sizeof(int) == IntPtr.Size || _database.Configuration.Storage.ForceUsing32BitsPager)
-                return new DocumentsOperationContext(_database, 32 * 1024, 4 * 1024, LowMemoryFlag);
-            return new DocumentsOperationContext(_database, 64 * 1024, 16 * 1024, LowMemoryFlag);
+            return _database.Is32Bits ? 
+                new DocumentsOperationContext(_database, 32 * 1024, 4 * 1024, LowMemoryFlag) :
+                new DocumentsOperationContext(_database, 64 * 1024, 16 * 1024, LowMemoryFlag);
         }
 
         public override void Dispose()

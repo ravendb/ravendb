@@ -552,7 +552,7 @@ namespace Raven.Server.Utils.Cli
 
             WriteText(GetInfoText(), ConsoleColor.Cyan, cli);
 
-            if (cli._server.Configuration.Storage.ForceUsing32BitsPager || IntPtr.Size == sizeof(int))
+            if (cli._server.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                 WriteText(" Running in 32 bits mode", ConsoleColor.DarkCyan, cli);
 
             return true;

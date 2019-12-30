@@ -3,19 +3,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +23,7 @@ namespace RachisTests
 {
     public class SubscriptionFailoverWithWaitingChains : ClusterTestBase
     {
-        public class CountdownsArray : IDisposable
+        private class CountdownsArray : IDisposable
         {
             private CountdownEvent[] _array;
             public CountdownsArray(int arraySize, int countdownCount)
@@ -57,13 +55,6 @@ namespace RachisTests
 
         private class TestParams: DataAttribute
         {
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="subscriptionsChainSize">Suka</param>
-            /// <param name="clusterSize"></param>
-            /// <param name="dBGroupSize"></param>
-            /// <param name="ShouldTrapRevivedNodesIntoCandidate"></param>
             public TestParams(int subscriptionsChainSize, int clusterSize, int dBGroupSize, bool shouldTrapRevivedNodesIntoCandidate)
             {
                 SubscriptionsChainSize = subscriptionsChainSize;
@@ -96,10 +87,7 @@ namespace RachisTests
 
         [Theory]
         [TestParams(subscriptionsChainSize: 2, clusterSize: 3, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
-        [TestParams(subscriptionsChainSize: 2, clusterSize: 3, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]        
         [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
-        [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]        
-        [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
         [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
         [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 5, shouldTrapRevivedNodesIntoCandidate: false)]
         public async Task SubscriptionsShouldFailoverCorrectrlyAndAllowThemselvesToBeTerminated(int subscriptionsChainSize, int clusterSize ,int dBGroupSize, bool shouldTrapRevivedNodesIntoCandidate)
@@ -305,7 +293,7 @@ namespace RachisTests
 
         }
 
-        private static async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store)
+        internal static async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store)
         {
             while (false == store.WasDisposed)
             {
@@ -352,7 +340,16 @@ namespace RachisTests
                     }
                     await Task.Delay(16);
                 }
-                catch
+                catch (AllTopologyNodesDownException)
+                {
+                }
+                catch (DatabaseDisabledException)
+                {
+                }
+                catch (DatabaseDoesNotExistException)
+                {
+                }
+                catch (RavenException)
                 {
                 }
             }
@@ -406,7 +403,7 @@ namespace RachisTests
                     }
                 }
                 while (--attempts > 0 && rehabCount > 0);
-                Assert.True(attempts > 0, "waited for rehab for too long");
+                Assert.True(attempts >= 0 && rehabCount == 0, "waited for rehab for too long");
             }
         }
 
@@ -419,7 +416,7 @@ namespace RachisTests
                 {
                     db = await curNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                 }
-                catch (Exception)
+                catch (DatabaseNotRelevantException)
                 {
                     continue;
                 }

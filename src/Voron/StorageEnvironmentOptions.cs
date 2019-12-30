@@ -228,7 +228,7 @@ namespace Voron
                 ForceUsing32BitsPager = result;
 
 
-            bool shouldConfigPagersRunInlimitedMemoryEnvironment = (sizeof(int) == IntPtr.Size || ForceUsing32BitsPager);
+            bool shouldConfigPagersRunInlimitedMemoryEnvironment = PlatformDetails.Is32Bits || ForceUsing32BitsPager;
             MaxLogFileSize = ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 4 : 256) * Constants.Size.Megabyte);            
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
@@ -1167,7 +1167,7 @@ namespace Voron
             => RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
-        public bool RunningOn32Bits => IntPtr.Size == sizeof(int) || ForceUsing32BitsPager;
+        public bool RunningOn32Bits => PlatformDetails.Is32Bits || ForceUsing32BitsPager;
 
 
         public TransactionsMode TransactionsMode { get; set; }

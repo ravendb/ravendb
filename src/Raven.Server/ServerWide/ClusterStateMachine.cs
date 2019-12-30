@@ -751,6 +751,10 @@ namespace Raven.Server.ServerWide
         private void UpdateDatabaseRecordId(TransactionOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
         {
             var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
+
+            if (rawRecord == null)
+                throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
+
             var topology = rawRecord.GetTopology();
             if (topology.DatabaseTopologyIdBase64 == null)
             {
@@ -761,7 +765,11 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, dbKey, out var valueName))
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out var valueNameLowered))
                 {
-                    databaseRecordJson.Modifications = new DynamicJsonValue { [nameof(DatabaseRecord.Topology)] = topology };
+                    databaseRecordJson.Modifications = new DynamicJsonValue
+                    {
+                        [nameof(DatabaseRecord.Topology)] = topology.ToJson()
+                    };
+
                     using (var old = databaseRecordJson)
                     {
                         databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
