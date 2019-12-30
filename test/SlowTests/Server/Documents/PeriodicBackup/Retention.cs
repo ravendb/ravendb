@@ -30,8 +30,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(7, 3, false)]
         [InlineData(7, 3, true)]
         [InlineData(7, 3, false, "/E/G/O/R/../../../..")]
-        [InlineData(7, 3, false, "\\E\\G\\O\\R\\..\\..\\..\\..")]
-        [InlineData(7, 3, false, "\\E/G\\../..\\O\\R/..\\..")]
         public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental, string suffix = null)
         {
             await Locker.WaitAsync();
@@ -261,10 +259,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var value = WaitForValue(() =>
             {
                 status = store.Maintenance.Send(operation).Status;
-                if (status == null)
+                if (status?.LastEtag == null)
                     return false;
 
-                if (status.LastEtag <= lastEtag)
+                if (status.LastEtag.Value <= lastEtag)
                     return false;
 
                 lastEtag = status.LastEtag.Value;
