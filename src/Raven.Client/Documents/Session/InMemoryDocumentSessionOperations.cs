@@ -1736,29 +1736,29 @@ more responsive application.
                 throw new InvalidDataException($"Unable to read time series range result on document : '{id}', timeseries : '{name}'." +
                                                $"Missing '{nameof(TimeSeriesRangeResult.From)}' and/or '{nameof(TimeSeriesRangeResult.To)}' properties");
 
-            if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.Values), out BlittableJsonReaderArray valuesBlittable) == false)
+            if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.Entries), out BlittableJsonReaderArray valuesBlittable) == false)
                 throw new InvalidDataException($"Unable to read time series range result on document : '{id}', timeseries : '{name}'." +
-                                               $"Missing '{nameof(TimeSeriesRangeResult.Values)}' property");
+                                               $"Missing '{nameof(TimeSeriesRangeResult.Entries)}' property");
 
-            var valuesArray = new TimeSeriesValue[valuesBlittable.Length];
+            var valuesArray = new TimeSeriesEntry[valuesBlittable.Length];
 
             for (int j = 0; j < valuesBlittable.Length; j++)
             {
                 var timeSeriesValueBlittable = valuesBlittable.GetByIndex<BlittableJsonReaderObject>(j);
 
-                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Timestamp), out DateTime timestamp) == false)
+                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Timestamp), out DateTime timestamp) == false)
                     throw new InvalidDataException($"Unable to read time series value on document : '{id}', timeseries : '{name}'. " +
-                                                   $"The time series value is missing '{nameof(TimeSeriesValue.Timestamp)}' property");
+                                                   $"The time series value is missing '{nameof(TimeSeriesEntry.Timestamp)}' property");
 
-                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Tag), out string tag) == false)
+                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Tag), out string tag) == false)
                     throw new InvalidDataException($"Unable to read time series value on document: '{id}', timeseries: '{name}'. " +
-                                                   $"The time series value is missing '{nameof(TimeSeriesValue.Tag)}' property");
+                                                   $"The time series value is missing '{nameof(TimeSeriesEntry.Tag)}' property");
 
-                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Values), out BlittableJsonReaderArray values) == false)
+                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Values), out BlittableJsonReaderArray values) == false)
                     throw new InvalidDataException($"Unable to read time series value on document: '{id}', timeseries: '{name}'. " +
-                                                   $"The time series value is missing '{nameof(TimeSeriesValue.Values)}' property");
+                                                   $"The time series value is missing '{nameof(TimeSeriesEntry.Values)}' property");
 
-                valuesArray[j] = new TimeSeriesValue
+                valuesArray[j] = new TimeSeriesEntry
                 {
                     Tag = tag,
                     Timestamp = timestamp,
@@ -1773,18 +1773,18 @@ more responsive application.
                 Name = name,
                 From = from,
                 To = to,
-                Values = valuesArray
+                Entries = valuesArray
             };
         }
 
-        private static TimeSeriesValue[] MergeRanges(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> localRanges, TimeSeriesRangeResult newRange)
+        private static TimeSeriesEntry[] MergeRanges(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> localRanges, TimeSeriesRangeResult newRange)
         {
-            var mergedValues = new List<TimeSeriesValue>();
+            var mergedValues = new List<TimeSeriesEntry>();
 
             if (fromRangeIndex != -1 &&
                 localRanges[fromRangeIndex].To >= newRange.From)
             {
-                foreach (var val in localRanges[fromRangeIndex].Values)
+                foreach (var val in localRanges[fromRangeIndex].Entries)
                 {
                     if (val.Timestamp >= newRange.From)
                         break;
@@ -1792,11 +1792,11 @@ more responsive application.
                 }
             }
 
-            mergedValues.AddRange(newRange.Values);
+            mergedValues.AddRange(newRange.Entries);
 
             if (toRangeIndex < localRanges.Count && localRanges[toRangeIndex].From <= newRange.To)
             {
-                foreach (var val in localRanges[toRangeIndex].Values)
+                foreach (var val in localRanges[toRangeIndex].Entries)
                 {
                     if (val.Timestamp <= newRange.To)
                         continue;
@@ -1809,27 +1809,27 @@ more responsive application.
 
         private static void UpdateExistingRange(TimeSeriesRangeResult localRange, TimeSeriesRangeResult newRange)
         {
-            var newValues = new List<TimeSeriesValue>();
+            var newValues = new List<TimeSeriesEntry>();
             int index;
-            for (index = 0; index < localRange.Values.Length; index++)
+            for (index = 0; index < localRange.Entries.Length; index++)
             {
-                if (localRange.Values[index].Timestamp >= newRange.From)
+                if (localRange.Entries[index].Timestamp >= newRange.From)
                     break;
 
-                newValues.Add(localRange.Values[index]);
+                newValues.Add(localRange.Entries[index]);
             }
 
-            newValues.AddRange(newRange.Values);
+            newValues.AddRange(newRange.Entries);
 
-            for (int j = index; j < localRange.Values.Length; j++)
+            for (int j = index; j < localRange.Entries.Length; j++)
             {
-                if (localRange.Values[j].Timestamp <= newRange.To)
+                if (localRange.Entries[j].Timestamp <= newRange.To)
                     continue;
 
-                newValues.Add(localRange.Values[j]);
+                newValues.Add(localRange.Entries[j]);
             }
 
-            localRange.Values = newValues.ToArray();
+            localRange.Entries = newValues.ToArray();
         }
 
         public override int GetHashCode()

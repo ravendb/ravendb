@@ -1553,11 +1553,11 @@ namespace Raven.Server.Json
                 writer.WriteDateTime(ts.To, true);
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Values));
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Entries));
 
                 writer.WriteStartArray();
                 {
-                    for (var i = 0; i < ts.Values.Length; i++)
+                    for (var i = 0; i < ts.Entries.Length; i++)
                     {
                         if (i > 0)
                         {
@@ -1566,13 +1566,13 @@ namespace Raven.Server.Json
 
                         writer.WriteStartObject();
 
-                        writer.WritePropertyName(nameof(TimeSeriesValue.Timestamp));
-                        writer.WriteDateTime(ts.Values[i].Timestamp, true);
+                        writer.WritePropertyName(nameof(TimeSeriesEntry.Timestamp));
+                        writer.WriteDateTime(ts.Entries[i].Timestamp, true);
                         writer.WriteComma();
-                        writer.WritePropertyName(nameof(TimeSeriesValue.Tag));
-                        writer.WriteString(ts.Values[i].Tag);
+                        writer.WritePropertyName(nameof(TimeSeriesEntry.Tag));
+                        writer.WriteString(ts.Entries[i].Tag);
                         writer.WriteComma();
-                        writer.WriteArray(nameof(TimeSeriesValue.Values), ts.Values[i].Values);
+                        writer.WriteArray(nameof(TimeSeriesEntry.Values), ts.Entries[i].Values);
 
                         writer.WriteEndObject();
                     }

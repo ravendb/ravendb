@@ -4,6 +4,6 @@
     {
         public string DocumentId { get; set; }
 
-        public TimeSeriesValue[] Entries { get; set; }
+        public TimeSeriesEntry[] Entries { get; set; }
     }
 }

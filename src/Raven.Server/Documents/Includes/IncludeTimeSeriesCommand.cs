@@ -61,12 +61,12 @@ namespace Raven.Server.Documents.Includes
 
         private TimeSeriesRangeResult GetTimeSeries(string docId, string name, DateTime from, DateTime to)
         {
-            var values = new List<TimeSeriesValue>();
+            var values = new List<TimeSeriesEntry>();
             var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_context, docId, name, from, to);
 
             foreach (var singleResult in reader.AllValues())
             {
-                values.Add(new TimeSeriesValue
+                values.Add(new TimeSeriesEntry
                 {
                     Timestamp = singleResult.TimeStamp,
                     Tag = singleResult.Tag,
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Includes
                 Name = name,
                 From = from,
                 To = to,
-                Values = values.ToArray()
+                Entries = values.ToArray()
             };
 
         }

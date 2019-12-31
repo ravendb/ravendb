@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteBool(false); // TODO: Need to figure this out
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Values));
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Entries));
                 writer.WriteStartArray();
                 {
                     var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, docId, name, from, to);
@@ -132,13 +132,13 @@ namespace Raven.Server.Documents.Handlers
 
                         writer.WriteStartObject();
 
-                        writer.WritePropertyName(nameof(TimeSeriesValue.Timestamp));
+                        writer.WritePropertyName(nameof(TimeSeriesEntry.Timestamp));
                         writer.WriteDateTime(item.TimeStamp, true);
                         writer.WriteComma();
-                        writer.WritePropertyName(nameof(TimeSeriesValue.Tag));
+                        writer.WritePropertyName(nameof(TimeSeriesEntry.Tag));
                         writer.WriteString(item.Tag);
                         writer.WriteComma();
-                        writer.WriteArray(nameof(TimeSeriesValue.Values), item.Values);
+                        writer.WriteArray(nameof(TimeSeriesEntry.Values), item.Values);
 
                         writer.WriteEndObject();
                     }

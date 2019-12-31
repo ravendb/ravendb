@@ -553,7 +553,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out var cache));
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(1, ranges.Count);
-                    Assert.Empty(ranges[0].Values);
+                    Assert.Empty(ranges[0].Entries);
                     Assert.Equal(baseline.AddMinutes(-30), ranges[0].From);
                     Assert.Equal(baseline.AddMinutes(-10), ranges[0].To);
 
@@ -587,7 +587,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.True(cache.TryGetValue("BloodPressure", out ranges));
                     Assert.Equal(1, ranges.Count);
-                    Assert.Empty(ranges[0].Values);
+                    Assert.Empty(ranges[0].Entries);
                     Assert.Equal(baseline.AddMinutes(10), ranges[0].From);
                     Assert.Equal(baseline.AddMinutes(30), ranges[0].To);
 
@@ -1395,7 +1395,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out var cache));
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(1, ranges.Count);
-                    Assert.Empty(ranges[0].Values);
+                    Assert.Empty(ranges[0].Entries);
                     Assert.Equal(baseline.AddMinutes(-30), ranges[0].From);
                     Assert.Equal(baseline.AddMinutes(-10), ranges[0].To);
 
@@ -1429,7 +1429,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.True(cache.TryGetValue("BloodPressure", out ranges));
                     Assert.Equal(1, ranges.Count);
-                    Assert.Empty(ranges[0].Values);
+                    Assert.Empty(ranges[0].Entries);
                     Assert.Equal(baseline.AddMinutes(10), ranges[0].From);
                     Assert.Equal(baseline.AddMinutes(30), ranges[0].To);
 

@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     {
         public string Name;
         public DateTime From, To;
-        public TimeSeriesValue[] Values;
+        public TimeSeriesEntry[] Entries;
         public bool FullRange;
     }
 }

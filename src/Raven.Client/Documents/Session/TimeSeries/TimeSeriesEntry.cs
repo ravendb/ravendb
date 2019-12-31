@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Documents.Session.TimeSeries
 {
-    public class TimeSeriesValue
+    public class TimeSeriesEntry
     {
         public DateTime Timestamp { get; set; }
 
