@@ -973,14 +973,14 @@ namespace Raven.Server.Documents.TimeSeries
             string documentId,
             string collection,
             string name,
-            IEnumerable<AppendTimeSeriesOperation> toAppend,
+            IEnumerable<TimeSeriesOperation.AppendOperation> toAppend,
             string changeVectorFromReplication = null)
         {
             var holder = new Reader.SingleResult();
 
             return AppendTimestamp(context, documentId, collection, name, toAppend.Select(ToResult), changeVectorFromReplication);
 
-            Reader.SingleResult ToResult(AppendTimeSeriesOperation element)
+            Reader.SingleResult ToResult(TimeSeriesOperation.AppendOperation element)
             {
                 holder.Values = element.Values;
                 holder.Tag = context.GetLazyString(element.Tag);

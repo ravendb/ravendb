@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Abstract implementation for in memory session operations
     /// </summary>
-    public abstract class SessionTimeSeriesBase 
+    public abstract class SessionTimeSeriesBase
     {
         protected string DocId;
         protected InMemoryDocumentSessionOperations Session;
@@ -51,35 +51,28 @@ namespace Raven.Client.Documents.Session
                 Session.DeletedEntities.Contains(documentInfo.Entity))
                 ThrowDocumentAlreadyDeletedInSession(DocId, timeseries);
 
-            var op = new AppendTimeSeriesOperation
+            var op = new TimeSeriesOperation.AppendOperation
             {
                 Name = timeseries,
                 Timestamp = timestamp,
                 Tag = tag,
                 Values = values is double[] arr
-                    ? arr 
+                    ? arr
                     : values.ToArray()
             };
 
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, null), out var command))
             {
-                var tsCmd = (DocumentTimeSeriesOperation)command;
+                var tsCmd = (TimeSeriesBatchCommandData)command;
 
-                if (tsCmd.Appends == null)
-                    tsCmd.Appends = new List<AppendTimeSeriesOperation>();
+                if (tsCmd.TimeSeries.Appends == null)
+                    tsCmd.TimeSeries.Appends = new List<TimeSeriesOperation.AppendOperation>();
 
-                tsCmd.Appends.Add(op);
+                tsCmd.TimeSeries.Appends.Add(op);
             }
             else
             {
-                Session.Defer(new DocumentTimeSeriesOperation
-                {
-                    Id = DocId,
-                    Appends = new List<AppendTimeSeriesOperation>
-                    {
-                        op
-                    }
-                });
+                Session.Defer(new TimeSeriesBatchCommandData(DocId, appends: new List<TimeSeriesOperation.AppendOperation> { op }, removals: null));
             }
         }
 
@@ -97,7 +90,7 @@ namespace Raven.Client.Documents.Session
                 Session.DeletedEntities.Contains(documentInfo.Entity))
                 ThrowDocumentAlreadyDeletedInSession(DocId, timeseries);
 
-            var op = new RemoveTimeSeriesOperation
+            var op = new TimeSeriesOperation.RemoveOperation
             {
                 Name = timeseries,
                 From = from,
@@ -106,23 +99,16 @@ namespace Raven.Client.Documents.Session
 
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, null), out var command))
             {
-                var tsCmd = (DocumentTimeSeriesOperation)command;
+                var tsCmd = (TimeSeriesBatchCommandData)command;
 
-                if (tsCmd.Removals == null)
-                    tsCmd.Removals = new List<RemoveTimeSeriesOperation>();
+                if (tsCmd.TimeSeries.Removals == null)
+                    tsCmd.TimeSeries.Removals = new List<TimeSeriesOperation.RemoveOperation>();
 
-                tsCmd.Removals.Add(op);
+                tsCmd.TimeSeries.Removals.Add(op);
             }
             else
             {
-                Session.Defer(new DocumentTimeSeriesOperation
-                {
-                    Id = DocId,
-                    Removals = new List<RemoveTimeSeriesOperation>
-                    {
-                        op
-                    }
-                });
+                Session.Defer(new TimeSeriesBatchCommandData(DocId, appends: null, removals: new List<TimeSeriesOperation.RemoveOperation> { op }));
             }
         }
 

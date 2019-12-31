@@ -21,10 +21,10 @@ namespace Raven.Client.Documents.Operations.Counters
         
         public static DocumentCountersOperation Parse(BlittableJsonReaderObject input)
         {
-            if (input.TryGet("DocumentId", out string docId) == false || docId == null)
+            if (input.TryGet(nameof(DocumentId), out string docId) == false || docId == null)
                 ThrowMissingDocumentId();
 
-            if (input.TryGet("Operations", out BlittableJsonReaderArray operations) == false || operations == null)
+            if (input.TryGet(nameof(Operations), out BlittableJsonReaderArray operations) == false || operations == null)
                 ThrowMissingCounterOperations();
 
             var result = new DocumentCountersOperation
@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
         private static void ThrowNotBlittableJsonReaderObjectOperation(object op)
         {
-            throw new InvalidDataException($"input.Operations should contain items of type BlittableJsonReaderObject only, but got {op.GetType()}");
+            throw new InvalidDataException($"'Operations' should contain items of type BlittableJsonReaderObject only, but got {op.GetType()}");
         }
 
         private static void ThrowMissingCounterOperations()
