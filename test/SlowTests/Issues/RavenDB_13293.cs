@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
@@ -91,12 +92,10 @@ namespace SlowTests.Issues
         public async Task CanPassNodeTagToRestoreBackupOperation()
         {
             var myBackupsList = new List<MyBackup>();
-            var myNodesList = new List<string>();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: false);
-
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -105,8 +104,9 @@ namespace SlowTests.Issues
             {
                 var doc = new DatabaseRecord(databaseName);
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                store.Maintenance.Send(new CreateSampleDataOperation());
-                myNodesList.AddRange(databaseResult.Topology.AllNodes);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+                var myNodesList = databaseResult.Topology.AllNodes.ToList();
+                Assert.True(clusterSize == myNodesList.Count, $"clusterSize({clusterSize}) == myNodesList.Count({myNodesList.Count})");
 
                 foreach (var node in myNodesList)
                 {
@@ -117,14 +117,15 @@ namespace SlowTests.Issues
                         {
                             FolderPath = Path.Combine(backupPath, myGuid.ToString())
                         },
-                        FullBackupFrequency = "0 */3 * * *",
+                        FullBackupFrequency = "0 0 1 1 *", // once a year on 1st january at 00:00
                         BackupType = BackupType.Backup,
                         Name = $"Task_{node}_{myGuid}",
                         MentorNode = node
                     };
                     var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
                     var res = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup));
-
+                    Assert.True(node == res.MentorNode, $"node({node}) == res.MentorNode({res.MentorNode})");
+                    Assert.True(node == res.ResponsibleNode.NodeTag, $"node({node}) == res.ResponsibleNode.NodeTag({res.ResponsibleNode.NodeTag})");
                     myBackupsList.Add(new MyBackup
                     {
                         BackupTaskId = result.TaskId,
@@ -135,35 +136,44 @@ namespace SlowTests.Issues
 
                 foreach (var myBackup in myBackupsList)
                 {
-                    await store.Maintenance.SendAsync(new StartBackupOperation(true, myBackup.BackupTaskId));
-                    var backupOperation = new GetPeriodicBackupStatusOperation(myBackup.BackupTaskId);
-                    var getPeriodicBackupResult = store.Maintenance.Send(backupOperation);
-
+                    var res = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, myBackup.BackupTaskId));
+                    Assert.True(myBackup.NodeTag == res.ResponsibleNode, $"myBackup.NodeTag({myBackup.NodeTag}) == res.ResponsibleNode({res.ResponsibleNode})");
+                    var operation = new GetPeriodicBackupStatusOperation(myBackup.BackupTaskId);
+                    PeriodicBackupStatus status = null;
                     var value = WaitForValue(() =>
                     {
-                        getPeriodicBackupResult = store.Maintenance.Send(backupOperation);
-                        return getPeriodicBackupResult.Status?.LastEtag > 0;
-                    }, true);
-                    Assert.Equal(true, value);
+                        status = store.Maintenance.Send(operation).Status;
+                        if (status?.LastEtag == null)
+                            return false;
 
-                    Assert.NotNull(getPeriodicBackupResult);
-                    Assert.Equal(myBackup.NodeTag, getPeriodicBackupResult.Status.NodeTag);
+                        return true;
+                    }, true);
+
+                    Assert.True(value, $"Got status: {status != null}, exception: {status?.Error?.Exception}");
+                    Assert.True(status != null, $"status != null, exception: {status?.Error?.Exception}");
+                    Assert.True(myBackup.NodeTag == status.NodeTag, $"myBackup.NodeTag({myBackup.NodeTag}) == status.NodeTag({status.NodeTag})");
+
                     var prePath = Path.Combine(backupPath, myBackup.Guid.ToString());
-                    myBackup.BackupPath = Path.Combine(prePath, getPeriodicBackupResult.Status.FolderName);
+                    myBackup.BackupPath = Path.Combine(prePath, status.FolderName);
                 }
 
+                var dbs = new List<string>();
                 foreach (var myBackup in myBackupsList)
                 {
+                    var name = $"restored_DB1_{myBackup.NodeTag}";
                     var restoreConfig = new RestoreBackupConfiguration
                     {
-                        DatabaseName = $"restored_DB1_{myBackup.NodeTag}",
+                        DatabaseName = name,
                         BackupLocation = myBackup.BackupPath
                     };
+
+                    dbs.Add(name);
                     var restoreBackupTask = store.Maintenance.Server.Send(new RestoreBackupOperation(restoreConfig, myBackup.NodeTag));
                     restoreBackupTask.WaitForCompletion(TimeSpan.FromSeconds(30));
                 }
-                var numOfDbs = await store.Maintenance.Server.SendAsync(new GetDatabaseNamesOperation(0, int.MaxValue));
-                Assert.Equal(clusterSize + 1, numOfDbs.Length);
+                var dbNames = await store.Maintenance.Server.SendAsync(new GetDatabaseNamesOperation(0, int.MaxValue));
+                Assert.Equal(clusterSize + 1, dbNames.Length);
+                dbs.ForEach(db => Assert.True(dbNames.Contains(db), $"numOfDbs.Contains(db), db = {db}"));
             }
         }
 
