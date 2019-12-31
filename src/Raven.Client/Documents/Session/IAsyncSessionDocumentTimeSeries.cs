@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Session
 {

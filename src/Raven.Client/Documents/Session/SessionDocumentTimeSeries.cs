@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session

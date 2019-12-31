@@ -33,7 +33,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                                   select new
                                   {
                                       HeartBeat = entry.Values[0],
-                                      entry.TimeStamp.Date,
+                                      entry.Timestamp.Date,
                                       User = ts.DocumentId
                                   });
             }
@@ -51,7 +51,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                                   select new
                                   {
                                       HeartBeat = entry.Value,
-                                      entry.TimeStamp.Date,
+                                      entry.Timestamp.Date,
                                       User = ts.DocumentId,
                                       Employee = employee.FirstName
                                   });
@@ -80,7 +80,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                                   select new Result
                                   {
                                       HeartBeat = entry.Value,
-                                      Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day),
+                                      Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day),
                                       User = ts.DocumentId,
                                       Count = 1
                                   });
@@ -120,7 +120,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                                                   select new Result
                                                   {
                                                       HeartBeat = entry.Value,
-                                                      Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day),
+                                                      Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day),
                                                       City = address.City,
                                                       Count = 1
                                                   });
@@ -159,7 +159,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                                   select new
                                   {
                                       HeartBeat = entry.Values[0],
-                                      entry.TimeStamp.Date,
+                                      entry.Timestamp.Date,
                                       User = ts.DocumentId
                                   });
 
@@ -170,7 +170,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                                   select new
                                   {
                                       HeartBeat = entry.Values[0],
-                                      entry.TimeStamp.Date,
+                                      entry.Timestamp.Date,
                                       User = ts.DocumentId
                                   });
 
@@ -181,7 +181,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                                   select new
                                   {
                                       HeartBeat = entry.Values[0],
-                                      entry.TimeStamp.Date,
+                                      entry.Timestamp.Date,
                                       User = ts.DocumentId
                                   });
             }

@@ -1,6 +1,6 @@
 using System;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {

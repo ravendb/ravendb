@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes.TimeSeries
