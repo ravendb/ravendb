@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 
@@ -36,7 +37,10 @@ namespace StressTests
 
         private void RunTest(int numberOfDatabases)
         {
-            UseNewLocalServer();
+            UseNewLocalServer(new Dictionary<string, string>
+            {
+                { RavenConfiguration.GetKey(x => x.Memory.EnableHighTemporaryDirtyMemoryUse), "false" }
+            });
 
             using (var store = GetDocumentStore())
             {
