@@ -156,12 +156,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "timeseries");
 
-                var timeSeriesBatch = JsonDeserializationClient.DocumentTimeSeriesOperation(blittable);
+                var timeSeriesBatch = JsonDeserializationClient.TimeSeriesBatch(blittable);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(blittable.ToString(), TrafficWatchChangeType.TimeSeries);
 
-                var cmd = new ExecuteTimeSeriesBatchCommand(Database, timeSeriesBatch, false);
+                var cmd = new ExecuteTimeSeriesBatchCommand(Database, timeSeriesBatch.Documents, false);
 
                 try
                 {
@@ -175,125 +175,131 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-              
+
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
-            private readonly TimeSeriesBatchCommandData _batch;
+            private readonly List<TimeSeriesOperation> _operations;
             private readonly bool _fromEtl;
 
-            private readonly Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>> _appendDictionary;
-            private readonly TimeSeriesOperation.AppendOperation _singleValue;
+            private Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>> _appendDictionary;
+            private TimeSeriesOperation.AppendOperation _singleValue;
 
             public string LastChangeVector;
 
-            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, TimeSeriesBatchCommandData batch, bool fromEtl)
+            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, List<TimeSeriesOperation> operations, bool fromEtl)
             {
                 _database = database;
-                _batch = batch;
+                _operations = operations;
                 _fromEtl = fromEtl;
-
-                ConvertBatch(batch, out _appendDictionary, out _singleValue);
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 int changes = 0;
-                string docCollection = GetDocumentCollection(context, _batch);
 
-                if (docCollection == null)
-                    return 0;
-
-                var tss = _database.DocumentsStorage.TimeSeriesStorage;
-
-                if (_appendDictionary != null)
+                foreach (var operation in _operations)
                 {
-                    foreach (var kvp in _appendDictionary)
+                    string docCollection = GetDocumentCollection(context, operation);
+
+                    if (docCollection == null)
+                        continue;
+
+                    ConvertBatch(operation);
+
+                    var tss = _database.DocumentsStorage.TimeSeriesStorage;
+
+                    if (_appendDictionary != null)
+                    {
+                        foreach (var kvp in _appendDictionary)
+                        {
+                            LastChangeVector = tss.AppendTimestamp(context,
+                                operation.DocumentId,
+                                docCollection,
+                                kvp.Key,
+                                kvp.Value.Values
+                            );
+
+                            changes += kvp.Value.Values.Count;
+                        }
+
+                        _appendDictionary.Clear();
+                    }
+                    else if (_singleValue != null)
                     {
                         LastChangeVector = tss.AppendTimestamp(context,
-                            _batch.Id,
+                            operation.DocumentId,
                             docCollection,
-                            kvp.Key,
-                            kvp.Value.Values
-                        );
-
-                        changes += kvp.Value.Values.Count;
-                    }
-
-                    _appendDictionary.Clear();
-                }
-                else if (_singleValue != null)
-                {
-                    LastChangeVector = tss.AppendTimestamp(context,
-                        _batch.Id,
-                        docCollection,
-                        _singleValue.Name,
-                        new []
-                        {
+                            _singleValue.Name,
+                            new[]
+                            {
                             _singleValue
-                        });
+                            });
 
-                    changes++;
-                }
-
-                if (_batch?.TimeSeries.Removals != null)
-                {
-                    foreach (var removal in _batch.TimeSeries.Removals)
-                    {
-                        LastChangeVector = tss.RemoveTimestampRange(context,
-                            _batch.Id,
-                            docCollection,
-                            removal.Name,
-                            removal.From,
-                            removal.To
-                        );
                         changes++;
                     }
+
+                    if (operation?.Removals != null)
+                    {
+                        foreach (var removal in operation.Removals)
+                        {
+                            LastChangeVector = tss.RemoveTimestampRange(context,
+                                operation.DocumentId,
+                                docCollection,
+                                removal.Name,
+                                removal.From,
+                                removal.To
+                            );
+                            changes++;
+                        }
+                    }
                 }
+
                 return changes;
             }
-            private void ConvertBatch(TimeSeriesBatchCommandData batch, out Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>> appendDictionary, out TimeSeriesOperation.AppendOperation singleValue)
+
+            private void ConvertBatch(TimeSeriesOperation operation)
             {
-                appendDictionary = null;
-                singleValue = null;
+                _appendDictionary?.Clear();
+                _singleValue = null;
 
-                if (batch.TimeSeries.Appends == null || batch.TimeSeries.Appends.Count == 0)
+                if (operation.Appends == null || operation.Appends.Count == 0)
                 {
                     return;
                 }
 
-                if (batch.TimeSeries.Appends.Count == 1)
+                if (operation.Appends.Count == 1)
                 {
-                    singleValue = batch.TimeSeries.Appends[0];
+                    _singleValue = operation.Appends[0];
                     return;
                 }
 
-                appendDictionary = new Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>>();
+                _appendDictionary = new Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>>();
 
-                foreach (var item in batch.TimeSeries.Appends)
+                foreach (var item in operation.Appends)
                 {
-                    if (appendDictionary.TryGetValue(item.Name, out var sorted) == false)
+                    if (_appendDictionary.TryGetValue(item.Name, out var sorted) == false)
                     {
                         sorted = new SortedList<long, TimeSeriesOperation.AppendOperation>();
-                        appendDictionary[item.Name] = sorted;
+                        _appendDictionary[item.Name] = sorted;
                     }
 
                     sorted[item.Timestamp.Ticks] = item;
                 }
             }
 
-            private string GetDocumentCollection(DocumentsOperationContext context, TimeSeriesBatchCommandData docBatch)
+            private string GetDocumentCollection(DocumentsOperationContext context, TimeSeriesOperation operation)
             {
                 try
                 {
-                    var doc = _database.DocumentsStorage.Get(context, docBatch.Id,
+                    var doc = _database.DocumentsStorage.Get(context, operation.DocumentId,
                          throwOnConflict: true);
                     if (doc == null)
                     {
                         if (_fromEtl)
                             return null;
 
-                        ThrowMissingDocument(docBatch.Id);
+                        ThrowMissingDocument(operation.DocumentId);
                         return null;// never hit
                     }
 
@@ -312,7 +318,7 @@ namespace Raven.Server.Documents.Handlers
                     // done by the conflict resolver
 
                     // avoid loading same document again, we validate write using the metadata instance
-                    return _database.DocumentsStorage.ConflictsStorage.GetCollection(context, docBatch.Id);
+                    return _database.DocumentsStorage.ConflictsStorage.GetCollection(context, operation.DocumentId);
                 }
             }
 

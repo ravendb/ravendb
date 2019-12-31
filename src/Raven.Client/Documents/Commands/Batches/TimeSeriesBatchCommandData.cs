@@ -10,11 +10,6 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class TimeSeriesBatchCommandData : ICommandData
     {
-        internal TimeSeriesBatchCommandData()
-        {
-            TimeSeries = new TimeSeriesOperation();
-        }
-
         public TimeSeriesBatchCommandData(string documentId, List<TimeSeriesOperation.AppendOperation> appends, List<TimeSeriesOperation.RemoveOperation> removals)
         {
             if (string.IsNullOrWhiteSpace(documentId))
@@ -45,7 +40,7 @@ namespace Raven.Client.Documents.Commands.Batches
             var result = new DynamicJsonValue
             {
                 [nameof(Id)] = Id,
-                [nameof(TimeSeries)] = TimeSeries.ToJson()
+                [nameof(TimeSeries)] = TimeSeries.ToJson(),
                 [nameof(Type)] = Type
             };
 
