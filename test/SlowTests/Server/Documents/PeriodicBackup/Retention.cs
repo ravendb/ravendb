@@ -13,6 +13,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Tests.Core.Utils.Entities;
+using Voron.Util.Settings;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -55,6 +56,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     },
                     _ =>
                     {
+                        backupPath = PathUtil.ToFullPath(backupPath);
                         var directories = Directory.GetDirectories(backupPath)
                             .Where(x => Directory.GetFiles(x).Any(BackupUtils.IsFullBackupOrSnapshot));
 
