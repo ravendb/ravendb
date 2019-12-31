@@ -29,7 +29,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Theory]
         [InlineData(7, 3, false)]
         [InlineData(7, 3, true)]
-        public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
+        [InlineData(7, 3, false, "/E/G/O/R/../../../..")]
+        public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental, string suffix = null)
         {
             await Locker.WaitAsync();
 
@@ -38,6 +39,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
 
                 var backupPath = NewDataPath(suffix: "BackupFolder");
+
+                if (suffix != null)
+                {
+                    backupPath += suffix;
+                }
+
                 await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                     (configuration, _) =>
                     {
@@ -248,19 +255,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, backupTaskId));
             var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+            PeriodicBackupStatus status = null;
             var value = WaitForValue(() =>
             {
-                var status = store.Maintenance.Send(operation).Status;
-                if (status == null)
+                status = store.Maintenance.Send(operation).Status;
+                if (status?.LastEtag == null)
                     return false;
 
-                if (status.LastEtag <= lastEtag)
+                if (status.LastEtag.Value <= lastEtag)
                     return false;
 
                 lastEtag = status.LastEtag.Value;
                 return true;
             }, true, timeout: timeout);
-            Assert.True(value);
+            Assert.True(value, $"Got status: {status != null}, exception: {status?.Error?.Exception}");
 
             return lastEtag;
         }

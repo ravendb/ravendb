@@ -68,7 +68,7 @@ namespace Voron.Util.Settings
     
     public class PathUtil
     {
-        public static string ToFullPath(string inputPath, string baseDataDirFullPath)
+        public static string ToFullPath(string inputPath, string baseDataDirFullPath = null)
         {
             var path = Environment.ExpandEnvironmentVariables(inputPath);
 
@@ -90,9 +90,9 @@ namespace Voron.Util.Settings
                 result = result.TrimEnd('\\', '/');
 
             if (PlatformDetails.RunningOnPosix)
-                return PosixHelper.FixLinuxPath(result);
+                result = PosixHelper.FixLinuxPath(result);
 
-            return Path.GetFullPath(result); // it will unify directory separators
+            return Path.GetFullPath(result); // it will unify directory separators and sort out parent directories
         }
 
         public static bool IsSubDirectory(string userPath, string rootPath)

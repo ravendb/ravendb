@@ -4,6 +4,11 @@
     {
         public static string EscapeIfNecessary(string name)
         {
+            return EscapeIfNecessary(name, isPath: false);
+        }
+
+        public static string EscapeIfNecessary(string name, bool isPath)
+        {
             if (string.IsNullOrEmpty(name) ||
                 name == Constants.Documents.Indexing.Fields.DocumentIdFieldName ||
                 name == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName ||
@@ -37,6 +42,12 @@
                 else
                 {
                     if (char.IsLetterOrDigit(c) == false && c != '_' && c != '-' && c != '@' && c != '.' && c != '[' && c != ']' && insideEscaped == false)
+                    {
+                        escape = true;
+                        break;
+                    }
+
+                    if (isPath && c == '.' && insideEscaped == false)
                     {
                         escape = true;
                         break;

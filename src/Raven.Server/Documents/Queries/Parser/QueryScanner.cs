@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return false;
         }
 
-        public bool String(out StringSegment str)
+        public bool String(out StringSegment str, bool fieldPath = false)
         {
             if (SkipWhitespace() == false)
             {
@@ -359,8 +359,12 @@ namespace Raven.Server.Documents.Queries.Parser
             _tokenStart = _pos;
             var i = _pos + 1;
             bool hasEscape = false;
+            bool hasDot = false;
+
             for (; i < _q.Length; i++)
             {
+                if (fieldPath && _q[i] == '.')
+                    hasDot = true;
                 if (_q[i] == '\\')
                     hasEscape = true;
                 else if (_q[i] != quoteChar)
@@ -382,9 +386,16 @@ namespace Raven.Server.Documents.Queries.Parser
                 _pos = i + 1;
                 _tokenLength = _pos - _tokenStart;
 
-                str = hasEscape ? 
-                    GetEscapedString(quoteChar) :
-                    new StringSegment(Input, _tokenStart + 1, _tokenLength - 2);
+                if (hasDot == false)
+                {
+                    str = hasEscape ?
+                        GetEscapedString(quoteChar) :
+                        new StringSegment(Input, _tokenStart + 1, _tokenLength - 2);
+                }
+                else
+                {
+                    str = new StringSegment(Input, _tokenStart, _tokenLength);
+                }
 
                 return true;
             }
