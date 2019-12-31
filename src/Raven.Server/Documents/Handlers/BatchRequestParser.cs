@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Handlers
 
             #region Time Series
 
-            public DocumentTimeSeriesOperation TimeSeries;
+            public TimeSeriesBatchCommandData TimeSeries;
 
             #endregion
         }
@@ -487,7 +487,7 @@ namespace Raven.Server.Documents.Handlers
 
                             using (var append = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
                             {
-                                commandData.TimeSeries.Appends.Add(AppendTimeSeriesOperation.Parse(append));
+                                commandData.TimeSeries.TimeSeries.Appends.Add(TimeSeriesOperation.AppendOperation.Parse(append));
                             }
 
                         }
@@ -509,7 +509,7 @@ namespace Raven.Server.Documents.Handlers
 
                             using (var removal = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
                             {
-                                commandData.TimeSeries.Removals.Add(RemoveTimeSeriesOperation.Parse(removal));
+                                commandData.TimeSeries.TimeSeries.Removals.Add(TimeSeriesOperation.RemoveOperation.Parse(removal));
                             }
                         }
                         break;
@@ -654,17 +654,17 @@ namespace Raven.Server.Documents.Handlers
         private static void EnsureTimeSeriesAppendExists(ref CommandData commandData)
         {
             if (commandData.TimeSeries == null)
-                commandData.TimeSeries = new DocumentTimeSeriesOperation();
-            if (commandData.TimeSeries.Appends == null)
-                commandData.TimeSeries.Appends = new List<AppendTimeSeriesOperation>();
+                commandData.TimeSeries = new TimeSeriesBatchCommandData();
+            if (commandData.TimeSeries.TimeSeries.Appends == null)
+                commandData.TimeSeries.TimeSeries.Appends = new List<TimeSeriesOperation.AppendOperation>();
         }
 
         private static void EnsureTimeSeriesRemoveExists(ref CommandData commandData)
         {
             if (commandData.TimeSeries == null)
-                commandData.TimeSeries = new DocumentTimeSeriesOperation();
-            if (commandData.TimeSeries.Removals == null)
-                commandData.TimeSeries.Removals = new List<RemoveTimeSeriesOperation>();
+                commandData.TimeSeries = new TimeSeriesBatchCommandData();
+            if (commandData.TimeSeries.TimeSeries.Removals == null)
+                commandData.TimeSeries.TimeSeries.Removals = new List<TimeSeriesOperation.RemoveOperation>();
         }
 
         private static CommandData[] IncreaseSizeOfCommandsBuffer(int index, CommandData[] cmds)

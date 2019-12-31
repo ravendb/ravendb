@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
@@ -178,15 +179,15 @@ namespace Raven.Server.Documents.Handlers
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
-            private readonly DocumentTimeSeriesOperation _batch;
+            private readonly TimeSeriesBatchCommandData _batch;
             private readonly bool _fromEtl;
 
-            private readonly Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> _appendDictionary;
-            private readonly AppendTimeSeriesOperation _singleValue;
+            private readonly Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>> _appendDictionary;
+            private readonly TimeSeriesOperation.AppendOperation _singleValue;
 
             public string LastChangeVector;
 
-            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, DocumentTimeSeriesOperation batch, bool fromEtl)
+            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, TimeSeriesBatchCommandData batch, bool fromEtl)
             {
                 _database = database;
                 _batch = batch;
@@ -235,9 +236,9 @@ namespace Raven.Server.Documents.Handlers
                     changes++;
                 }
 
-                if (_batch?.Removals != null)
+                if (_batch?.TimeSeries.Removals != null)
                 {
-                    foreach (var removal in _batch.Removals)
+                    foreach (var removal in _batch.TimeSeries.Removals)
                     {
                         LastChangeVector = tss.RemoveTimestampRange(context,
                             _batch.Id,
@@ -251,29 +252,29 @@ namespace Raven.Server.Documents.Handlers
                 }
                 return changes;
             }
-            private void ConvertBatch(DocumentTimeSeriesOperation batch, out Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> appendDictionary, out AppendTimeSeriesOperation singleValue)
+            private void ConvertBatch(TimeSeriesBatchCommandData batch, out Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>> appendDictionary, out TimeSeriesOperation.AppendOperation singleValue)
             {
                 appendDictionary = null;
                 singleValue = null;
 
-                if (batch.Appends == null || batch.Appends.Count == 0)
+                if (batch.TimeSeries.Appends == null || batch.TimeSeries.Appends.Count == 0)
                 {
                     return;
                 }
 
-                if (batch.Appends.Count == 1)
+                if (batch.TimeSeries.Appends.Count == 1)
                 {
-                    singleValue = batch.Appends[0];
+                    singleValue = batch.TimeSeries.Appends[0];
                     return;
                 }
 
-                appendDictionary = new Dictionary<string, SortedList<long, AppendTimeSeriesOperation>>();
+                appendDictionary = new Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>>();
 
-                foreach (var item in batch.Appends)
+                foreach (var item in batch.TimeSeries.Appends)
                 {
                     if (appendDictionary.TryGetValue(item.Name, out var sorted) == false)
                     {
-                        sorted = new SortedList<long, AppendTimeSeriesOperation>();
+                        sorted = new SortedList<long, TimeSeriesOperation.AppendOperation>();
                         appendDictionary[item.Name] = sorted;
                     }
 
@@ -281,7 +282,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            private string GetDocumentCollection(DocumentsOperationContext context, DocumentTimeSeriesOperation docBatch)
+            private string GetDocumentCollection(DocumentsOperationContext context, TimeSeriesBatchCommandData docBatch)
             {
                 try
                 {

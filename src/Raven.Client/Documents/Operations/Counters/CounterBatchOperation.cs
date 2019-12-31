@@ -20,20 +20,17 @@ namespace Raven.Client.Documents.Operations.Counters
 
         public RavenCommand<CountersDetail> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new CounterBatchCommand(_counterBatch, conventions);
+            return new CounterBatchCommand(_counterBatch);
         }
 
-        public class CounterBatchCommand : RavenCommand<CountersDetail>
+        private class CounterBatchCommand : RavenCommand<CountersDetail>
         {
-            private readonly DocumentConventions _conventions;
             private readonly CounterBatch _counterBatch;
 
-            public CounterBatchCommand(CounterBatch counterBatch, DocumentConventions conventions)
+            public CounterBatchCommand(CounterBatch counterBatch)
             {
                 _counterBatch = counterBatch ?? throw new ArgumentNullException(nameof(counterBatch));
-                _conventions = conventions;
             }
-
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

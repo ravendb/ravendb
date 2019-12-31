@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -10,11 +11,28 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesBatchOperation : IOperation
     {
-        private readonly DocumentTimeSeriesOperation _timeSeriesBatch;
+        private readonly TimeSeriesBatch _timeSeriesBatch;
 
-        public TimeSeriesBatchOperation(DocumentTimeSeriesOperation timeSeriesBatch)
+        internal TimeSeriesBatchOperation(TimeSeriesOperation operation)
         {
-            _timeSeriesBatch = timeSeriesBatch;
+            if (operation == null)
+                throw new ArgumentNullException(nameof(operation));
+
+            _timeSeriesBatch = new TimeSeriesBatch
+            {
+                Documents = new List<TimeSeriesOperation>
+                {
+                    operation
+                }
+            };
+        }
+
+        public TimeSeriesBatchOperation(TimeSeriesBatch batch)
+        {
+            if (batch == null)
+                throw new ArgumentNullException(nameof(batch));
+
+            _timeSeriesBatch = batch;
         }
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
@@ -24,11 +42,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         private class TimeSeriesBatchCommand : RavenCommand
         {
-            private readonly DocumentTimeSeriesOperation _timeSeriesBatch;
+            private readonly TimeSeriesBatch _timeSeriesBatch;
 
-            public TimeSeriesBatchCommand(DocumentTimeSeriesOperation tsBatch)
+            public TimeSeriesBatchCommand(TimeSeriesBatch batch)
             {
-                _timeSeriesBatch = tsBatch ?? throw new ArgumentNullException(nameof(tsBatch));
+                _timeSeriesBatch = batch ?? throw new ArgumentNullException(nameof(batch));
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
