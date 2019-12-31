@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session

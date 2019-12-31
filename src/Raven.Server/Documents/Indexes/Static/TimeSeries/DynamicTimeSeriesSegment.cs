@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Client.Documents.Indexes.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Utils;
 
@@ -52,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             Debug.Assert(_segmentEntry != null, "Item cannot be null");
 
-            if (string.Equals("DocumentId", name)) // TODO arek - https://github.com/ravendb/ravendb/pull/9875/files#r346221961
+            if (string.Equals(nameof(TimeSeriesSegment.DocumentId), name))
             {
                 result = TypeConverter.ToDynamicType(_segmentEntry.DocId);
                 return true;

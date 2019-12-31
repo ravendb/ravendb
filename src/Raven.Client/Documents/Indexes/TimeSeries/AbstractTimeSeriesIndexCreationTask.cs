@@ -3,28 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Indexes.TimeSeries
 {
     public abstract class AbstractTimeSeriesIndexCreationTask : AbstractIndexCreationTaskBase<TimeSeriesIndexDefinition>
     {
-        public class TimeSeriesSegment
-        {
-            public string DocumentId { get; set; }
-
-            public TimeSeriesSegmentEntry[] Entries { get; set; }
-        }
-
-        public class TimeSeriesSegmentEntry
-        {
-            public string Tag { get; set; }
-
-            public DateTime TimeStamp { get; set; }
-
-            public double[] Values { get; set; }
-
-            public double Value => Values[0];
-        }
     }
 
     public class AbstractTimeSeriesIndexCreationTask<TDocument> : AbstractTimeSeriesIndexCreationTask<TDocument, TDocument>

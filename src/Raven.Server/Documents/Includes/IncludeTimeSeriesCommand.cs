@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Includes

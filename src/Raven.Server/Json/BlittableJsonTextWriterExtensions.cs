@@ -10,7 +10,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Queries.Timings;
-using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Stats;

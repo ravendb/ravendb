@@ -6,12 +6,16 @@
 
 using System;
 
-namespace Raven.Client.Documents.Session
+namespace Raven.Client.Documents.Session.TimeSeries
 {
     public class TimeSeriesValue
     {
-        public DateTime Timestamp;
-        public double[] Values;
-        public string Tag;
+        public DateTime Timestamp { get; set; }
+
+        public string Tag { get; set; }
+
+        public double[] Values { get; set; }
+
+        public double Value => Values[0];
     }
 }

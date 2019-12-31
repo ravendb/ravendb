@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes.TimeSeries
@@ -17,9 +18,9 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
         {
         }
 
-        private (string TimeSeries, Expression<Func<IEnumerable<AbstractTimeSeriesIndexCreationTask.TimeSeriesSegment>, IEnumerable>> Map) _map;
+        private (string TimeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> Map) _map;
 
-        public void AddMap(string timeSeries, Expression<Func<IEnumerable<AbstractTimeSeriesIndexCreationTask.TimeSeriesSegment>, IEnumerable>> map)
+        public void AddMap(string timeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> map)
         {
             if (string.IsNullOrWhiteSpace(timeSeries))
                 throw new ArgumentException("TimeSeries name cannot be null or whitespace.", nameof(timeSeries));
@@ -47,7 +48,7 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
 
             var querySource = GetQuerySource(conventions);
 
-            var map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<AbstractTimeSeriesIndexCreationTask.TimeSeriesSegment, TReduceResult>(
+            var map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TimeSeriesSegment, TReduceResult>(
                     _map.Map,
                     conventions,
                     querySource,
