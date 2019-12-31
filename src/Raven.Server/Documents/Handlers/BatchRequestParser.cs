@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Handlers
 
             #region Time Series
 
-            public TimeSeriesBatchCommandData TimeSeries;
+            public TimeSeriesOperation TimeSeries;
 
             #endregion
         }
@@ -470,48 +470,11 @@ namespace Raven.Server.Documents.Handlers
                         var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.Patch = PatchRequest.Parse(patch, out commandData.PatchArgs);
                         break;
-                    case CommandPropertyName.Appends:
-
-                        EnsureTimeSeriesAppendExists(ref commandData);
-
-                        while (true)
-                        {
-                            while (parser.Read() == false)
-                                await RefillParserBuffer(stream, buffer, parser, token);
-
-                            if (state.CurrentTokenType == JsonParserToken.StartArray)
-                                continue;
-
-                            if (state.CurrentTokenType == JsonParserToken.EndArray)
-                                break;
-
-                            using (var append = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
-                            {
-                                commandData.TimeSeries.TimeSeries.Appends.Add(TimeSeriesOperation.AppendOperation.Parse(append));
-                            }
-
-                        }
-                        break;
-                    case CommandPropertyName.Removals:
-
-                        EnsureTimeSeriesRemoveExists(ref commandData);
-
-                        while (true)
-                        {
-                            while (parser.Read() == false)
-                                await RefillParserBuffer(stream, buffer, parser, token);
-
-                            if (state.CurrentTokenType == JsonParserToken.StartArray)
-                                continue;
-
-                            if (state.CurrentTokenType == JsonParserToken.EndArray)
-                                break;
-
-                            using (var removal = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
-                            {
-                                commandData.TimeSeries.TimeSeries.Removals.Add(TimeSeriesOperation.RemoveOperation.Parse(removal));
-                            }
-                        }
+                    case CommandPropertyName.TimeSeries:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        commandData.TimeSeries = TimeSeriesOperation.Parse(timeSeriesOperations);
                         break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
@@ -649,22 +612,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return commandData;
-        }
-
-        private static void EnsureTimeSeriesAppendExists(ref CommandData commandData)
-        {
-            if (commandData.TimeSeries == null)
-                commandData.TimeSeries = new TimeSeriesBatchCommandData();
-            if (commandData.TimeSeries.TimeSeries.Appends == null)
-                commandData.TimeSeries.TimeSeries.Appends = new List<TimeSeriesOperation.AppendOperation>();
-        }
-
-        private static void EnsureTimeSeriesRemoveExists(ref CommandData commandData)
-        {
-            if (commandData.TimeSeries == null)
-                commandData.TimeSeries = new TimeSeriesBatchCommandData();
-            if (commandData.TimeSeries.TimeSeries.Removals == null)
-                commandData.TimeSeries.TimeSeries.Removals = new List<TimeSeriesOperation.RemoveOperation>();
         }
 
         private static CommandData[] IncreaseSizeOfCommandsBuffer(int index, CommandData[] cmds)
@@ -813,8 +760,7 @@ namespace Raven.Server.Documents.Handlers
 
             #region TimeSeries
 
-            Appends,
-            Removals,
+            TimeSeries,
 
             #endregion
 
@@ -842,8 +788,6 @@ namespace Raven.Server.Documents.Handlers
                 case 8:
                     if (*(long*)state.StringBuffer == 8318823012450529091)
                         return CommandPropertyName.Counters;
-                    if (*(long*)state.StringBuffer == 8317129773149939026)
-                        return CommandPropertyName.Removals;
                     if (*(long*)state.StringBuffer != 8389754676633104196)
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Document;
@@ -869,6 +813,10 @@ namespace Raven.Server.Documents.Handlers
                         *(short*)(state.StringBuffer + sizeof(long)) == 25701)
                         return CommandPropertyName.IdPrefixed;
 
+                    if (*(long*)state.StringBuffer == 7598246930185808212 &&
+                        *(short*)(state.StringBuffer + sizeof(long)) == 29541)
+                        return CommandPropertyName.TimeSeries;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 11:
@@ -888,11 +836,6 @@ namespace Raven.Server.Documents.Handlers
                         *(short*)(state.StringBuffer + sizeof(int)) == 29765 &&
                         state.StringBuffer[6] == (byte)'l')
                         return CommandPropertyName.FromEtl;
-
-                    if (*(int*)state.StringBuffer == 1701867585 &&
-                       *(short*)(state.StringBuffer + sizeof(int)) == 25710 &&
-                       state.StringBuffer[6] == (byte)'s')
-                        return CommandPropertyName.Appends;
 
                     return CommandPropertyName.NoSuchProperty;
                 case 13:

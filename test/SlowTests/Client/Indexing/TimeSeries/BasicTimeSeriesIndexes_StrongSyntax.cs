@@ -220,7 +220,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 var timeSeriesIndex = new MyTsIndex();
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
-                RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Companies.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Values[0],\r\n    Date = entry.TimeStamp.Date,\r\n    User = ts.DocumentId\r\n})", indexDefinition.Maps.First());
+                RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Companies.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Values[0],\r\n    Date = entry.Timestamp.Date,\r\n    User = ts.DocumentId\r\n})", indexDefinition.Maps.First());
 
                 timeSeriesIndex.Execute(store);
 
@@ -395,7 +395,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 var timeSeriesIndex = new MyTsIndex_Load();
                 var indexName = timeSeriesIndex.IndexName;
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
-                RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Companies.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    ts = ts,\r\n    entry = entry\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    employee = this.LoadDocument(this0.entry.Tag, \"Employees\")\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.entry.Value,\r\n    Date = this1.this0.entry.TimeStamp.Date,\r\n    User = this1.this0.ts.DocumentId,\r\n    Employee = this1.employee.FirstName\r\n})", indexDefinition.Maps.First());
+                RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Companies.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    ts = ts,\r\n    entry = entry\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    employee = this.LoadDocument(this0.entry.Tag, \"Employees\")\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.entry.Value,\r\n    Date = this1.this0.entry.Timestamp.Date,\r\n    User = this1.this0.ts.DocumentId,\r\n    Employee = this1.employee.FirstName\r\n})", indexDefinition.Maps.First());
 
                 timeSeriesIndex.Execute(store);
 
@@ -548,7 +548,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 var timeSeriesIndex = new AverageHeartRateDaily_ByDateAndUser();
                 var indexName = timeSeriesIndex.IndexName;
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
-                RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Users.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Value,\r\n    Date = new DateTime((int) entry.TimeStamp.Date.Year, (int) entry.TimeStamp.Date.Month, (int) entry.TimeStamp.Date.Day),\r\n    User = ts.DocumentId,\r\n    Count = 1\r\n})", indexDefinition.Maps.First());
+                RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Users.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Value,\r\n    Date = new DateTime((int) entry.TimeStamp.Date.Year, (int) entry.Timestamp.Date.Month, (int) entry.Timestamp.Date.Day),\r\n    User = ts.DocumentId,\r\n    Count = 1\r\n})", indexDefinition.Maps.First());
                 RavenTestHelper.AssertEqualRespectingNewLines("results.GroupBy(r => new {\r\n    Date = r.Date,\r\n    User = r.User\r\n}).Select(g => new {\r\n    g = g,\r\n    sumHeartBeat = Enumerable.Sum(g, x => ((double) x.HeartBeat))\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    sumCount = Enumerable.Sum(this0.g, x0 => ((long) x0.Count))\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.sumHeartBeat / ((double) this1.sumCount),\r\n    Date = this1.this0.g.Key.Date,\r\n    User = this1.this0.g.Key.User,\r\n    Count = this1.sumCount\r\n})", indexDefinition.Reduce);
 
                 timeSeriesIndex.Execute(store);
@@ -738,7 +738,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     var timeSeriesIndex = new AverageHeartRateDaily_ByDateAndCity();
                     var indexName = timeSeriesIndex.IndexName;
                     var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
-                    RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Users.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    ts = ts,\r\n    entry = entry\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    address = this.LoadDocument(this0.entry.Tag, \"Addresses\")\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.entry.Value,\r\n    Date = new DateTime((int) this1.this0.entry.TimeStamp.Date.Year, (int) this1.this0.entry.TimeStamp.Date.Month, (int) this1.this0.entry.TimeStamp.Date.Day),\r\n    City = this1.address.City,\r\n    Count = 1\r\n})", indexDefinition.Maps.First());
+                    RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Users.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    ts = ts,\r\n    entry = entry\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    address = this.LoadDocument(this0.entry.Tag, \"Addresses\")\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.entry.Value,\r\n    Date = new DateTime((int) this1.this0.entry.Timestamp.Date.Year, (int) this1.this0.entry.Timestamp.Date.Month, (int) this1.this0.entry.Timestamp.Date.Day),\r\n    City = this1.address.City,\r\n    Count = 1\r\n})", indexDefinition.Maps.First());
                     RavenTestHelper.AssertEqualRespectingNewLines("results.GroupBy(r => new {\r\n    Date = r.Date,\r\n    City = r.City\r\n}).Select(g => new {\r\n    g = g,\r\n    sumHeartBeat = Enumerable.Sum(g, x => ((double) x.HeartBeat))\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    sumCount = Enumerable.Sum(this0.g, x0 => ((long) x0.Count))\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.sumHeartBeat / ((double) this1.sumCount),\r\n    Date = this1.this0.g.Key.Date,\r\n    City = this1.this0.g.Key.City,\r\n    Count = this1.sumCount\r\n})", indexDefinition.Reduce);
 
                     timeSeriesIndex.Execute(store);
