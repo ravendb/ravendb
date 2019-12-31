@@ -14,17 +14,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly TimeSeriesBatch _timeSeriesBatch;
 
         internal TimeSeriesBatchOperation(TimeSeriesOperation operation)
-        {
-            if (operation == null)
-                throw new ArgumentNullException(nameof(operation));
-
-            _timeSeriesBatch = new TimeSeriesBatch
+            : this(new TimeSeriesBatch
             {
                 Documents = new List<TimeSeriesOperation>
                 {
                     operation
                 }
-            };
+            })
+        {
+            if (operation == null)
+                throw new ArgumentNullException(nameof(operation));
         }
 
         public TimeSeriesBatchOperation(TimeSeriesBatch batch)

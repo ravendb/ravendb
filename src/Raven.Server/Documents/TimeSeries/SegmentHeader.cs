@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.TimeSeries
     public unsafe struct SegmentHeader
     {
         [FieldOffset(0)]
-        public int PreviousTimeStamp;
+        public int PreviousTimestamp;
         [FieldOffset(4)]
         public int PreviousDelta;
         [FieldOffset(8)]

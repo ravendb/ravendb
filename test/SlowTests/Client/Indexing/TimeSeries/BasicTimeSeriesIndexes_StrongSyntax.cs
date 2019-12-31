@@ -548,7 +548,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 var timeSeriesIndex = new AverageHeartRateDaily_ByDateAndUser();
                 var indexName = timeSeriesIndex.IndexName;
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
-                RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Users.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Value,\r\n    Date = new DateTime((int) entry.TimeStamp.Date.Year, (int) entry.Timestamp.Date.Month, (int) entry.Timestamp.Date.Day),\r\n    User = ts.DocumentId,\r\n    Count = 1\r\n})", indexDefinition.Maps.First());
+                RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Users.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Value,\r\n    Date = new DateTime((int) entry.Timestamp.Date.Year, (int) entry.Timestamp.Date.Month, (int) entry.Timestamp.Date.Day),\r\n    User = ts.DocumentId,\r\n    Count = 1\r\n})", indexDefinition.Maps.First());
                 RavenTestHelper.AssertEqualRespectingNewLines("results.GroupBy(r => new {\r\n    Date = r.Date,\r\n    User = r.User\r\n}).Select(g => new {\r\n    g = g,\r\n    sumHeartBeat = Enumerable.Sum(g, x => ((double) x.HeartBeat))\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    sumCount = Enumerable.Sum(this0.g, x0 => ((long) x0.Count))\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.sumHeartBeat / ((double) this1.sumCount),\r\n    Date = this1.this0.g.Key.Date,\r\n    User = this1.this0.g.Key.User,\r\n    Count = this1.sumCount\r\n})", indexDefinition.Reduce);
 
                 timeSeriesIndex.Execute(store);

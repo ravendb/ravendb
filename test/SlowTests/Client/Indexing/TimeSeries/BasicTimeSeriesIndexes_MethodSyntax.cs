@@ -61,7 +61,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     Maps = {
                     "timeSeries.Companies.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {" +
                     "   HeartBeat = entry.Values[0], " +
-                    "   Date = entry.TimeStamp.Date, " +
+                    "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId " +
                     "});" }
                 }));
@@ -248,7 +248,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     "   employee = LoadDocument(this0.entry.Tag, \"Employees\")" +
                     "}).Select(this1 => new {" +
                     "   HeartBeat = this1.this0.entry.Values[0], " +
-                    "   Date = this1.this0.entry.TimeStamp.Date, " +
+                    "   Date = this1.this0.entry.Timestamp.Date, " +
                     "   User = this1.this0.ts.DocumentId, " +
                     "   Employee = this1.employee.FirstName" +
                     "});"
@@ -409,7 +409,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     Maps = {
                     "timeSeries.Users.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {" +
                     "   HeartBeat = entry.Value, " +
-                    "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                    "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
                     "   User = ts.DocumentId, " +
                     "   Count = 1" +
                     "});"
@@ -627,7 +627,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                             "   address = LoadDocument(this0.entry.Tag, \"Addresses\")" +
                             "}).Select(this1 => new {" +
                             "   HeartBeat = this1.this0.entry.Value, " +
-                            "   Date = new DateTime(this1.this0.entry.TimeStamp.Date.Year, this1.this0.entry.TimeStamp.Date.Month, this1.this0.entry.TimeStamp.Date.Day), " +
+                            "   Date = new DateTime(this1.this0.entry.Timestamp.Date.Year, this1.this0.entry.Timestamp.Date.Month, this1.this0.entry.Timestamp.Date.Day), " +
                             "   City = this1.address.City, " +
                             "   Count = 1" +
                             "});"

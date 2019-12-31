@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 foreach (var cur in items)
                 {
-                    MaybeMoveToNextRange(cur.TimeStamp);
+                    MaybeMoveToNextRange(cur.Timestamp);
 
                     if (ShouldFilter(cur, timeSeriesFunction.Where))
                         continue;
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Queries.Results
                     array.Add(new DynamicJsonValue
                     {
                         ["Tag"] = singleResult.Tag.ToString(),
-                        ["Timestamp"] = singleResult.TimeStamp,
+                        ["Timestamp"] = singleResult.Timestamp,
                         ["Values"] = vals
                     });
 
@@ -598,7 +598,7 @@ namespace Raven.Server.Documents.Queries.Results
                         case "timestamp":
                             if (fe.Compound.Count > 1)
                                 throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
-                            return singleResult.TimeStamp;
+                            return singleResult.Timestamp;
                         default:
                             if (fe.Compound[0].Value == timeSeriesFunction.LoadTagAs?.Value)
                                 return GetValueFromLoadedTag(fe, singleResult);

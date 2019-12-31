@@ -349,7 +349,7 @@ namespace Raven.Server.Documents.Queries.AST
             _values.Clear();
         }
 
-        public void Segment(Span<StatefulTimeStampValue> values)
+        public void Segment(Span<StatefulTimestampValue> values)
         {
             if (_count.Count < values.Length)
             {
