@@ -28,9 +28,9 @@ namespace Raven.Server.Documents.TimeSeries
         private SegmentHeader* Header => (SegmentHeader*)_buffer;
 
         public byte* Ptr => _buffer;
-        public StatefulTimeStampValueSpan SegmentValues =>
-            new StatefulTimeStampValueSpan(
-                (StatefulTimeStampValue*)(_buffer + sizeof(SegmentHeader)),
+        public StatefulTimestampValueSpan SegmentValues =>
+            new StatefulTimestampValueSpan(
+                (StatefulTimestampValue*)(_buffer + sizeof(SegmentHeader)),
                 Header->NumberOfValues
             );
 
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public DateTime GetLastTimestamp(DateTime baseline)
         {
-            return baseline.AddMilliseconds(Header->PreviousTimeStamp);
+            return baseline.AddMilliseconds(Header->PreviousTimestamp);
         }
 
         public int NumberOfBytes
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.TimeSeries
             throw new ArgumentOutOfRangeException("Maximum capacity for segment is 2KB, but was: " + _capacity);
         }
 
-        private static int GetDataStart(SegmentHeader* header) => sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * header->NumberOfValues + header->SizeOfTags;
+        private static int GetDataStart(SegmentHeader* header) => sizeof(SegmentHeader) + sizeof(StatefulTimestampValue) * header->NumberOfValues + header->SizeOfTags;
 
         public int NumberOfValues => Header->NumberOfValues;
 
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.TimeSeries
                 2 // previous tag position (10 bits)
                 ;
 
-            var copiedHeaderSize = sizeof(SegmentHeader) + Header->NumberOfValues * sizeof(StatefulTimeStampValue);
+            var copiedHeaderSize = sizeof(SegmentHeader) + Header->NumberOfValues * sizeof(StatefulTimestampValue);
             using (allocator.Allocate(maximumSize + copiedHeaderSize, out var tempBuffer))
             {
                 Memory.Set(tempBuffer.Ptr, 0, maximumSize);
@@ -142,8 +142,8 @@ namespace Raven.Server.Documents.TimeSeries
                 AssertValueStatus(status);
                 tempBitsBuffer.AddValue(status, 1);
 
-                var prevs = new Span<StatefulTimeStampValue>((tempBuffer.Ptr + maximumSize) + sizeof(SegmentHeader), tempHeader->NumberOfValues);
-                AddTimeStamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
+                var prevs = new Span<StatefulTimestampValue>((tempBuffer.Ptr + maximumSize) + sizeof(SegmentHeader), tempHeader->NumberOfValues);
+                AddTimestamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
                 if (tempHeader->NumberOfEntries == 0 && 
                     status == Live)
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.TimeSeries
                     tempHeader->PreviousTagIndex = (byte)(~prevTagIndex);
                 }
 
-                tempHeader->PreviousTimeStamp = deltaFromStart;
+                tempHeader->PreviousTimestamp = deltaFromStart;
                 tempHeader->NumberOfEntries++;
                 var actualBitsBuffer = GetBitsBuffer(tempHeader);
 
@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (tag.IsEmpty)
                 return byte.MaxValue;
             var offset = tempHeader->SizeOfTags;
-            var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * tempHeader->NumberOfValues;
+            var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimestampValue) * tempHeader->NumberOfValues;
             var numberOfTags = *(tagsPtr + offset - 1);
             if (numberOfTags == 0)
                 return ~0;
@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.TimeSeries
         public void InsertTag(Span<byte> tag, SegmentHeader* tempHeader, int numberOfBytes)
         {
             var offset = tempHeader->SizeOfTags;
-            var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * tempHeader->NumberOfValues;
+            var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimestampValue) * tempHeader->NumberOfValues;
             var numberOfTags = tagsPtr[offset - 1];
 
             if (numberOfTags >= 127)
@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.TimeSeries
             return new BitsBuffer(_buffer + dataStart, _capacity - dataStart);
         }
 
-        private static void AddTimeStamp(int deltaFromStart, ref BitsBuffer bitsBuffer, SegmentHeader* tempHeader)
+        private static void AddTimestamp(int deltaFromStart, ref BitsBuffer bitsBuffer, SegmentHeader* tempHeader)
         {
             if (tempHeader->NumberOfEntries == 0)
             {
@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
             }
 
-            int delta = deltaFromStart - tempHeader->PreviousTimeStamp;
+            int delta = deltaFromStart - tempHeader->PreviousTimestamp;
             int deltaOfDelta = delta - tempHeader->PreviousDelta;
             if (deltaOfDelta == 0)
             {
@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.TimeSeries
             tempHeader->PreviousDelta = delta;
         }
 
-        private static void AddValue(ref StatefulTimeStampValue prev, ref BitsBuffer bitsBuffer, double dblVal, ulong status)
+        private static void AddValue(ref StatefulTimestampValue prev, ref BitsBuffer bitsBuffer, double dblVal, ulong status)
         {
             long val = BitConverter.DoubleToInt64Bits(dblVal);
 
@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var result = new TimeSeriesStorage.Reader.SingleResult();
             var values = new double[NumberOfValues];
-            var states = new TimeStampState[NumberOfValues];
+            var states = new TimestampState[NumberOfValues];
 
             var tagPointer = new TagPointer();
             using (var enumerator = GetEnumerator(allocator))
@@ -424,7 +424,7 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         end--;
                     }
-                    result.TimeStamp = cur;
+                    result.Timestamp = cur;
                     result.Tag = tag;
                     result.Values = new Memory<double>(values, 0, end);
                     result.Status = status;
@@ -497,7 +497,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             private readonly TimeSeriesValuesSegment _parent;
             private int _bitsPosition;
-            private int _previousTimeStamp, _previousTimeStampDelta;
+            private int _previousTimestamp, _previousTimestampDelta;
             private BitsBuffer _bitsBuffer;
             private ByteStringContext.InternalScope _scope;
 
@@ -505,7 +505,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 _parent = parent;
                 _bitsPosition = 0;
-                _previousTimeStamp = _previousTimeStampDelta = -1;
+                _previousTimestamp = _previousTimestampDelta = -1;
                 _bitsBuffer = _parent.GetBitsBuffer(_parent.Header);
                 if (_bitsBuffer.IsCompressed)
                 {
@@ -517,7 +517,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            public bool MoveNext(out int timestamp, Span<double> values, Span<TimeStampState> state, ref TagPointer tag, out ulong valueState)
+            public bool MoveNext(out int timestamp, Span<double> values, Span<TimestampState> state, ref TagPointer tag, out ulong valueState)
             {
                 if (values.Length != _parent.Header->NumberOfValues)
                     ThrowInvalidNumberOfValues();
@@ -538,7 +538,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 valueState = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
 
-                timestamp = ReadTimeStamp(_bitsBuffer);
+                timestamp = ReadTimestamp(_bitsBuffer);
 
                 ReadValues(MemoryMarshal.Cast<double, long>(values), state);
 
@@ -563,7 +563,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 var tagIndex = (int)_bitsBuffer.ReadValue(ref _bitsPosition, 7);
                 var offset = _parent.Header->SizeOfTags;
-                var tagsPtr = _parent._buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * _parent.Header->NumberOfValues;
+                var tagsPtr = _parent._buffer + sizeof(SegmentHeader) + sizeof(StatefulTimestampValue) * _parent.Header->NumberOfValues;
                 var numberOfTags = *(tagsPtr + offset - 1);
                 if (tagIndex < 0 || tagIndex >= numberOfTags)
                     throw new ArgumentOutOfRangeException("Tag index " + tagIndex + " is outside the boundaries for tags for this segment: 0.." + numberOfTags);
@@ -583,7 +583,7 @@ namespace Raven.Server.Documents.TimeSeries
                 };*/
             }
 
-            private void ReadValues(Span<long> values, Span<TimeStampState> state)
+            private void ReadValues(Span<long> values, Span<TimestampState> state)
             {
                 for (int i = 0; i < values.Length; i++)
                 {
@@ -617,13 +617,13 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            private int ReadTimeStamp(BitsBuffer bitsBuffer)
+            private int ReadTimestamp(BitsBuffer bitsBuffer)
             {
                 if (_bitsPosition == 1)
                 {
-                    _previousTimeStamp = (int)bitsBuffer.ReadValue(ref _bitsPosition, BitsForFirstTimestamp);
-                    _previousTimeStampDelta = DefaultDelta;
-                    return _previousTimeStamp;
+                    _previousTimestamp = (int)bitsBuffer.ReadValue(ref _bitsPosition, BitsForFirstTimestamp);
+                    _previousTimestampDelta = DefaultDelta;
+                    return _previousTimestamp;
                 }
 
                 var type = bitsBuffer.FindTheFirstZeroBit(ref _bitsPosition, TimestampEncodingDetails.MaxControlBitLength);
@@ -639,11 +639,11 @@ namespace Raven.Server.Documents.TimeSeries
                         // [-128, 127] becomes [-128, 128] without the zero in the middle
                         decodedValue++;
                     }
-                    _previousTimeStampDelta += (int)decodedValue;
+                    _previousTimestampDelta += (int)decodedValue;
                 }
-                _previousTimeStamp += _previousTimeStampDelta;
+                _previousTimestamp += _previousTimestampDelta;
 
-                return _previousTimeStamp;
+                return _previousTimestamp;
             }
 
             private void ThrowInvalidNumberOfValues()

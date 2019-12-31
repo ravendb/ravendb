@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteStartObject();
 
                         writer.WritePropertyName(nameof(TimeSeriesEntry.Timestamp));
-                        writer.WriteDateTime(item.TimeStamp, true);
+                        writer.WriteDateTime(item.Timestamp, true);
                         writer.WriteComma();
                         writer.WritePropertyName(nameof(TimeSeriesEntry.Tag));
                         writer.WriteString(item.Tag);

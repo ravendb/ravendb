@@ -45,7 +45,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Values[0], " +
-                    "   Date = entry.TimeStamp.Date, " +
+                    "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId " +
                     "}" }
                 }));

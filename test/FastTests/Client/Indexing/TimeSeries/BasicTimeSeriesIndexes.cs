@@ -47,7 +47,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Values[0], " +
-                    "   Date = entry.TimeStamp.Date, " +
+                    "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId " +
                     "}" }
                 }));
@@ -231,7 +231,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "let employee = LoadDocument(entry.Tag, \"Employees\")" +
                     "select new { " +
                     "   HeartBeat = entry.Value, " +
-                    "   Date = entry.TimeStamp.Date, " +
+                    "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId, " +
                     "   Employee = employee.FirstName" +
                     "}" }
@@ -393,7 +393,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Value, " +
-                    "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                    "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
                     "   User = ts.DocumentId, " +
                     "   Count = 1" +
                     "}" },
@@ -603,7 +603,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                             "let address = LoadDocument(entry.Tag, \"Addresses\")" +
                             "select new { " +
                             "   HeartBeat = entry.Value, " +
-                            "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                            "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
                             "   City = address.City, " +
                             "   Count = 1" +
                             "}"
@@ -758,7 +758,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                         "from entry in ts.Entries " +
                         "select new { " +
                         "   HeartBeat = entry.Value, " +
-                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
                         "   User = ts.DocumentId, " +
                         "   Count = 1" +
                         "}" },
@@ -819,7 +819,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Values[0], " +
-                    "   Date = entry.TimeStamp.Date, " +
+                    "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId " +
                     "}" }
                 }));
@@ -860,7 +860,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Values[0], " +
-                    "   Date = entry.TimeStamp.Date, " +
+                    "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId " +
                     "}" }
                 }));
@@ -874,7 +874,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                         "from entry in ts.Entries " +
                         "select new { " +
                         "   HeartBeat = entry.Value, " +
-                        "   Date = entry.TimeStamp.Date, " +
+                        "   Date = entry.Timestamp.Date, " +
                         "   User = ts.DocumentId " +
                         "}" }
                 }));
@@ -902,7 +902,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                         "from entry in ts.Entries " +
                         "select new { " +
                         "   HeartBeat = entry.Values[0], " +
-                        "   Date = entry.TimeStamp.Date, " +
+                        "   Date = entry.Timestamp.Date, " +
                         "   User = ts.DocumentId " +
                         "}" },
                     Priority = IndexPriority.Low
@@ -916,7 +916,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                         "from entry in ts.Entries " +
                         "select new { " +
                         "   HeartBeat = entry.Values[0], " +
-                        "   Date = entry.TimeStamp.Date, " +
+                        "   Date = entry.Timestamp.Date, " +
                         "   User = ts.DocumentId " +
                         "}" },
                     Priority = IndexPriority.High
@@ -945,7 +945,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                         "from entry in ts.Entries " +
                         "select new { " +
                         "   HeartBeat = entry.Value, " +
-                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
                         "   User = ts.DocumentId, " +
                         "   Count = 1" +
                         "}" },
@@ -970,7 +970,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                         "from entry in ts.Entries " +
                         "select new { " +
                         "   HeartBeat = entry.Value, " +
-                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
                         "   User = ts.DocumentId, " +
                         "   Count = 1" +
                         "}" },
@@ -1009,7 +1009,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                         "from entry in ts.Entries " +
                         "select new { " +
                         "   HeartBeat = entry.Value, " +
-                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
                         "   User = ts.DocumentId, " +
                         "   Count = 1" +
                         "}" },
@@ -1034,7 +1034,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                         "from entry in ts.Entries " +
                         "select new { " +
                         "   HeartBeat = entry.Value, " +
-                        "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                        "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
                         "   User = ts.DocumentId, " +
                         "   Count = 1" +
                         "}" },

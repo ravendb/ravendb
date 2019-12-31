@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             public DynamicTimeSeriesEntry(TimeSeriesStorage.Reader.SingleResult entry)
             {
                 Debug.Assert(nameof(Values) == nameof(entry.Values), "nameof(Values) == nameof(entry.Values)");
-                Debug.Assert(nameof(TimeStamp) == nameof(_entry.TimeStamp), "nameof(TimeStamp) == nameof(_segmentEntry.TimeStamp");
+                Debug.Assert(nameof(Timestamp) == nameof(_entry.Timestamp), "nameof(Timestamp) == nameof(_segmentEntry.Timestamp");
                 Debug.Assert(nameof(Tag) == nameof(_entry.Tag), "nameof(Tag) == nameof(_segmentEntry.Tag)");
 
                 _entry = entry;
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 }
             }
 
-            public dynamic TimeStamp => TypeConverter.ToDynamicType(_entry.TimeStamp);
+            public dynamic Timestamp => TypeConverter.ToDynamicType(_entry.Timestamp);
 
             public dynamic Tag => TypeConverter.ToDynamicType(_entry.Tag);
 

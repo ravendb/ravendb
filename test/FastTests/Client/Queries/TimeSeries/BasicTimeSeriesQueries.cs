@@ -55,7 +55,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Values[0], " +
-                    "   Date = entry.TimeStamp.Date, " +
+                    "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId.ToString() " +
                     "}" }
                 }));
@@ -287,7 +287,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Value, " +
-                    "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                    "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
                     "   User = ts.DocumentId.ToString(), " + // TODO arek RavenDB-14322
                     "   Count = 1" +
                     "}" },

@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Includes
             {
                 values.Add(new TimeSeriesEntry
                 {
-                    Timestamp = singleResult.TimeStamp,
+                    Timestamp = singleResult.Timestamp,
                     Tag = singleResult.Tag,
                     Values = singleResult.Values.ToArray()
                 });
