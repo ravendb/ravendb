@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public class TimeSeriesRawResult : TimeSeriesQueryResult
     {
-        public TimeSeriesValue[] Results { get; set; }
+        public TimeSeriesEntry[] Results { get; set; }
     }
 
     public class TimeSeriesAggregationResult : TimeSeriesQueryResult

@@ -58,9 +58,9 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 Assert.Equal("users/ayende", timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(1, timesSeriesDetails.Values["Heartrate"][0].Values.Length);
+                Assert.Equal(1, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Values[0];
+                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);
@@ -128,22 +128,22 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 Assert.Equal("users/ayende", timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Values.Length);
+                Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Values[0];
+                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);
                 Assert.Equal(baseline.AddSeconds(1), value.Timestamp);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Values[1];
+                value = timesSeriesDetails.Values["Heartrate"][0].Entries[1];
 
                 Assert.Equal(61d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);
                 Assert.Equal(baseline.AddSeconds(2), value.Timestamp);
 
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Values[2];
+                value = timesSeriesDetails.Values["Heartrate"][0].Entries[2];
 
                 Assert.Equal(60d, value.Values[0]);
                 Assert.Equal("watches/apple-watch", value.Tag);
@@ -231,7 +231,7 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 Assert.Equal("users/ayende", timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(5, timesSeriesDetails.Values["Heartrate"][0].Values.Length);
+                Assert.Equal(5, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
 
                 timeSeriesOp = new DocumentTimeSeriesOperation
@@ -257,17 +257,17 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 Assert.Equal("users/ayende", timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Values.Length);
+                Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Values[0];
+                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(1), value.Timestamp);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Values[1];
+                value = timesSeriesDetails.Values["Heartrate"][0].Entries[1];
                 Assert.Equal(62.5d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(4), value.Timestamp);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Values[2];
+                value = timesSeriesDetails.Values["Heartrate"][0].Entries[2];
                 Assert.Equal(62d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(5), value.Timestamp);
 
@@ -492,7 +492,7 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 Assert.Equal("users/ayende", timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Values.Length);
+                Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
                 timeSeriesOp = new DocumentTimeSeriesOperation
                 {
@@ -550,21 +550,21 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 Assert.Equal("users/ayende", timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(4, timesSeriesDetails.Values["Heartrate"][0].Values.Length);
+                Assert.Equal(4, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Values[0];
+                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(1), value.Timestamp);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Values[1];
+                value = timesSeriesDetails.Values["Heartrate"][0].Entries[1];
                 Assert.Equal(60d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(4), value.Timestamp);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Values[2];
+                value = timesSeriesDetails.Values["Heartrate"][0].Entries[2];
                 Assert.Equal(62.5d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(5), value.Timestamp);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Values[3];
+                value = timesSeriesDetails.Values["Heartrate"][0].Entries[3];
                 Assert.Equal(62d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(6), value.Timestamp);
 
@@ -710,27 +710,27 @@ namespace SlowTests.Client.TimeSeries.Operations
                 Assert.Equal(baseline.AddMinutes(5), range.From);
                 Assert.Equal(baseline.AddMinutes(10), range.To);
 
-                Assert.Equal(31, range.Values.Length);
-                Assert.Equal(baseline.AddMinutes(5), range.Values[0].Timestamp);
-                Assert.Equal(baseline.AddMinutes(10), range.Values[30].Timestamp);
+                Assert.Equal(31, range.Entries.Length);
+                Assert.Equal(baseline.AddMinutes(5), range.Entries[0].Timestamp);
+                Assert.Equal(baseline.AddMinutes(10), range.Entries[30].Timestamp);
 
                 range = timesSeriesDetails.Values["Heartrate"][1];
 
                 Assert.Equal(baseline.AddMinutes(15), range.From);
                 Assert.Equal(baseline.AddMinutes(30), range.To);
 
-                Assert.Equal(91, range.Values.Length);
-                Assert.Equal(baseline.AddMinutes(15), range.Values[0].Timestamp);
-                Assert.Equal(baseline.AddMinutes(30), range.Values[90].Timestamp);
+                Assert.Equal(91, range.Entries.Length);
+                Assert.Equal(baseline.AddMinutes(15), range.Entries[0].Timestamp);
+                Assert.Equal(baseline.AddMinutes(30), range.Entries[90].Timestamp);
 
                 range = timesSeriesDetails.Values["Heartrate"][2];
 
                 Assert.Equal(baseline.AddMinutes(40), range.From);
                 Assert.Equal(baseline.AddMinutes(60), range.To);
 
-                Assert.Equal(121, range.Values.Length);
-                Assert.Equal(baseline.AddMinutes(40), range.Values[0].Timestamp);
-                Assert.Equal(baseline.AddMinutes(60), range.Values[120].Timestamp);
+                Assert.Equal(121, range.Entries.Length);
+                Assert.Equal(baseline.AddMinutes(40), range.Entries[0].Timestamp);
+                Assert.Equal(baseline.AddMinutes(60), range.Entries[120].Timestamp);
             }
         }
     }

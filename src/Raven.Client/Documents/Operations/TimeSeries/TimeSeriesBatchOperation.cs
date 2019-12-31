@@ -10,7 +10,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesBatchOperation : IOperation
     {
-
         private readonly DocumentTimeSeriesOperation _timeSeriesBatch;
 
         public TimeSeriesBatchOperation(DocumentTimeSeriesOperation timeSeriesBatch)
@@ -20,18 +19,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new TimeSeriesBatchCommand(_timeSeriesBatch, conventions);
+            return new TimeSeriesBatchCommand(_timeSeriesBatch);
         }
 
-        public class TimeSeriesBatchCommand : RavenCommand
+        private class TimeSeriesBatchCommand : RavenCommand
         {
-            private readonly DocumentConventions _conventions;
             private readonly DocumentTimeSeriesOperation _timeSeriesBatch;
 
-            public TimeSeriesBatchCommand(DocumentTimeSeriesOperation tsBatch, DocumentConventions conventions)
+            public TimeSeriesBatchCommand(DocumentTimeSeriesOperation tsBatch)
             {
                 _timeSeriesBatch = tsBatch ?? throw new ArgumentNullException(nameof(tsBatch));
-                _conventions = conventions;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

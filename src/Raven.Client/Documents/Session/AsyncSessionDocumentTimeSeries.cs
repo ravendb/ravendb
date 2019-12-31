@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public async Task<IEnumerable<TimeSeriesValue>> GetAsync(string timeseries, DateTime from, DateTime to, CancellationToken token = default)
+        public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(string timeseries, DateTime from, DateTime to, CancellationToken token = default)
         {
             TimeSeriesDetails details;
             
@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Session
                         ranges.Insert(index, details.Values[timeseries][0]);
                     }
 
-                    return details.Values[timeseries][0].Values;
+                    return details.Values[timeseries][0].Entries;
                 }
 
                 var (servedFromCache, resultToUser, mergedValues, fromRangeIndex, toRangeIndex) = 
@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Session
                 metadataTimeSeries.BinarySearch(timeseries) < 0)
             {
                 // the document is loaded in the session, but the metadata says that there is no such timeseries
-                return Array.Empty<TimeSeriesValue>();
+                return Array.Empty<TimeSeriesEntry>();
             }
 
             Session.IncrementRequestCount();
@@ -98,15 +98,15 @@ namespace Raven.Client.Documents.Session
                 };
             }
 
-            return details.Values[timeseries][0].Values;
+            return details.Values[timeseries][0].Entries;
         }
 
-        private static IEnumerable<TimeSeriesValue> SkipAndTrimRangeIfNeeded(
+        private static IEnumerable<TimeSeriesEntry> SkipAndTrimRangeIfNeeded(
             DateTime from, 
             DateTime to, 
             TimeSeriesRangeResult fromRange, 
             TimeSeriesRangeResult toRange, 
-            List<TimeSeriesValue> values, 
+            List<TimeSeriesEntry> values, 
             int skip, 
             int trim)
         {
@@ -132,7 +132,7 @@ namespace Raven.Client.Documents.Session
             return values;
         }
 
-        private async Task<(bool ServedFromCache, IEnumerable<TimeSeriesValue> ResultToUser, TimeSeriesValue[] MergedValues, int FromRangeIndex, int ToRangeIndex)>
+        private async Task<(bool ServedFromCache, IEnumerable<TimeSeriesEntry> ResultToUser, TimeSeriesEntry[] MergedValues, int FromRangeIndex, int ToRangeIndex)>
             ServeFromCacheOrGetMissingPartsFromServerAndMerge(
                 string timeseries,
                 DateTime from,
@@ -152,7 +152,7 @@ namespace Raven.Client.Documents.Session
             var fromRangeIndex = -1;
 
             List<TimeSeriesRange> rangesToGetFromServer = default;
-            IEnumerable<TimeSeriesValue> resultToUser;
+            IEnumerable<TimeSeriesEntry> resultToUser;
 
             for (toRangeIndex = 0; toRangeIndex < ranges.Count; toRangeIndex++)
             {
@@ -224,12 +224,12 @@ namespace Raven.Client.Documents.Session
 
         }
 
-        private static TimeSeriesValue[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRangeResult> ranges, int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> resultFromServer, out IEnumerable<TimeSeriesValue> resultToUser)
+        private static TimeSeriesEntry[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRangeResult> ranges, int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> resultFromServer, out IEnumerable<TimeSeriesEntry> resultToUser)
         {
             var skip = 0;
             var trim = 0;
             var currentResultIndex = 0;
-            var mergedValues = new List<TimeSeriesValue>();
+            var mergedValues = new List<TimeSeriesEntry>();
 
             var start = fromRangeIndex != -1 ? fromRangeIndex : 0;
             var end = toRangeIndex == ranges.Count ? ranges.Count - 1 : toRangeIndex;
@@ -245,7 +245,7 @@ namespace Raven.Client.Documents.Session
                         // so we might need to skip a part of it when we return the 
                         // result to the user (i.e. skip [fromRange.From, from])
 
-                        foreach (var v in ranges[i].Values)
+                        foreach (var v in ranges[i].Entries)
                         {
                             mergedValues.Add(v);
                             if (v.Timestamp < from)
@@ -265,7 +265,7 @@ namespace Raven.Client.Documents.Session
                     // in order to avoid duplication, skip first item in range
                     // (unless this is the first time we're adding to the merged list)
 
-                    mergedValues.AddRange(resultFromServer[currentResultIndex++].Values.Skip(mergedValues.Count == 0 ? 0 : 1));
+                    mergedValues.AddRange(resultFromServer[currentResultIndex++].Entries.Skip(mergedValues.Count == 0 ? 0 : 1));
                 }
 
                 if (i == toRangeIndex)
@@ -276,10 +276,10 @@ namespace Raven.Client.Documents.Session
                         // so we might need to trim a part of it when we return the 
                         // result to the user (i.e. trim [to, toRange.to])
 
-                        for (var index = mergedValues.Count == 0 ? 0 : 1; index < ranges[i].Values.Length; index++)
+                        for (var index = mergedValues.Count == 0 ? 0 : 1; index < ranges[i].Entries.Length; index++)
                         {
-                            mergedValues.Add(ranges[i].Values[index]);
-                            if (ranges[i].Values[index].Timestamp > to)
+                            mergedValues.Add(ranges[i].Entries[index]);
+                            if (ranges[i].Entries[index].Timestamp > to)
                             {
                                 trim++;
                             }
@@ -292,7 +292,7 @@ namespace Raven.Client.Documents.Session
                 // add current range from cache to the merged list.
                 // in order to avoid duplication, skip first item in range if needed
 
-                mergedValues.AddRange(ranges[i].Values.Skip(mergedValues.Count == 0 ? 0 : 1));
+                mergedValues.AddRange(ranges[i].Entries.Skip(mergedValues.Count == 0 ? 0 : 1));
             }
 
             if (currentResultIndex < resultFromServer.Count)
@@ -301,7 +301,7 @@ namespace Raven.Client.Documents.Session
                 // so the last missing part is from server
                 // add last missing part to the merged list
 
-                mergedValues.AddRange(resultFromServer[currentResultIndex++].Values.Skip(mergedValues.Count == 0 ? 0 : 1));
+                mergedValues.AddRange(resultFromServer[currentResultIndex++].Entries.Skip(mergedValues.Count == 0 ? 0 : 1));
             }
 
             Debug.Assert(currentResultIndex == resultFromServer.Count);
@@ -322,7 +322,7 @@ namespace Raven.Client.Documents.Session
             int toRangeIndex, 
             List<TimeSeriesRangeResult> ranges, 
             Dictionary<string, List<TimeSeriesRangeResult>> cache, 
-            TimeSeriesValue[] values)
+            TimeSeriesEntry[] values)
         {
             if (fromRangeIndex == -1)
             {
@@ -343,7 +343,7 @@ namespace Raven.Client.Documents.Session
                             Name = timeseries,
                             From = from,
                             To = to,
-                            Values = values
+                            Entries = values
                         }
                     };
 
@@ -366,7 +366,7 @@ namespace Raven.Client.Documents.Session
                         Name = timeseries,
                         From = from,
                         To = to,
-                        Values = values
+                        Entries = values
                     });
 
                     return;
@@ -381,7 +381,7 @@ namespace Raven.Client.Documents.Session
                 // after this action cache will be : [[1,10]]
 
                 ranges[toRangeIndex].From = from;
-                ranges[toRangeIndex].Values = values;
+                ranges[toRangeIndex].Entries = values;
                 ranges.RemoveRange(0, toRangeIndex);
 
                 return;
@@ -411,7 +411,7 @@ namespace Raven.Client.Documents.Session
                         From = from,
                         To = to,
                         Name = timeseries,
-                        Values = values
+                        Entries = values
                     });
 
                     return;
@@ -427,7 +427,7 @@ namespace Raven.Client.Documents.Session
                 // after this action cache will be : [[2,3], [4,12]]
 
                 ranges[fromRangeIndex].To = to;
-                ranges[fromRangeIndex].Values = values;
+                ranges[fromRangeIndex].Entries = values;
                 ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
 
                 return;
@@ -458,7 +458,7 @@ namespace Raven.Client.Documents.Session
                         Name = timeseries,
                         From = from,
                         To = to,
-                        Values = values
+                        Entries = values
                     });
 
                     return;
@@ -476,7 +476,7 @@ namespace Raven.Client.Documents.Session
 
                 ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
                 ranges[toRangeIndex].From = from;
-                ranges[toRangeIndex].Values = values;
+                ranges[toRangeIndex].Entries = values;
 
                 return;
             }
@@ -496,7 +496,7 @@ namespace Raven.Client.Documents.Session
                 // after this action cache will be : [[2,7], [8,10]]
 
                 ranges[fromRangeIndex].To = to;
-                ranges[fromRangeIndex].Values = values;
+                ranges[fromRangeIndex].Entries = values;
                 ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
 
                 return;
@@ -514,14 +514,14 @@ namespace Raven.Client.Documents.Session
             // after this action cache will be : [[2,10]]
 
             ranges[fromRangeIndex].To = ranges[toRangeIndex].To;
-            ranges[fromRangeIndex].Values = values;
+            ranges[fromRangeIndex].Entries = values;
 
             ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex);
         }
 
-        private static IEnumerable<TimeSeriesValue> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to)
+        private static IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to)
         {
-            foreach (var value in range.Values)
+            foreach (var value in range.Entries)
             {
                 if (value.Timestamp > to)
                     yield break;

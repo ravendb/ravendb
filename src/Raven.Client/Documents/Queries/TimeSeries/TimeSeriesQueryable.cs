@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     {
         ITimeSeriesLoadQueryable<TTag> LoadTag<TTag>();
 
-        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesValue, bool>> predicate);
+        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, bool>> predicate);
 
         ITimeSeriesGroupByQueryable GroupBy(string s);
 
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public interface ITimeSeriesLoadQueryable<T> : ITimeSeriesQueryable
     {
-        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesValue, T, bool>> predicate);
+        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, T, bool>> predicate);
     }
 
     public interface ITimeSeriesGroupByQueryable
