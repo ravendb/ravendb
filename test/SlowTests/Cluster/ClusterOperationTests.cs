@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -178,10 +179,18 @@ namespace SlowTests.Cluster
                 var ex = Assert.Throws<AllTopologyNodesDownException>(() => result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|")));
                 Assert.True(sp.Elapsed < TimeSpan.FromSeconds(45));
 
-                var exText = ex.ToString();
-                Assert.Contains("Request to a server has failed. Reason: No connection could be made because the target machine actively refused it", exText); // the disposed node
-                Assert.Contains("there is no leader, and we timed out waiting for one", exText); // the last active one
-                Assert.Contains("failed with timeout after 00:00:30", exText); // the hang node
+                var ae = (AggregateException)ex.InnerException;
+                Assert.NotNull(ae);
+
+                var exceptionTypes = new List<Type>{
+                    typeof(HttpRequestException),  // the disposed node
+                    typeof(TimeoutException), // the hang node
+                    typeof(RavenException) // the last active one (no leader)
+                };
+
+                Assert.Contains(ae.InnerExceptions[0].InnerException.GetType(), exceptionTypes);
+                Assert.Contains(ae.InnerExceptions[1].InnerException.GetType(), exceptionTypes);
+                Assert.Contains(ae.InnerExceptions[2].InnerException.GetType(), exceptionTypes);
             }
         }
 
