@@ -170,11 +170,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var localSettings = GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
                     settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(settings, _database.Name));
 
-                GenerateFolderNameAndBackupDirectory(localSettings, out var now, out var folderName, out var backupDirectory);
+                GenerateFolderNameAndBackupDirectory(localSettings, out var nowAsString, out var folderName, out var backupDirectory);
                 var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
                 var startRaftIndex = _isFullBackup == false ? _previousBackupStatus.LastRaftIndex.LastEtag : null;
 
-                var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, out string backupFilePath);
+                var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, nowAsString, _configuration.BackupType, out string backupFilePath);
                 var internalBackupResult = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, startRaftIndex);
 
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
@@ -391,16 +391,23 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void GenerateFolderNameAndBackupDirectory(LocalSettings localSettings, out string now, out string folderName, out PathSetting backupDirectory)
+        private void GenerateFolderNameAndBackupDirectory(LocalSettings localSettings, out string nowAsString, out string folderName, out PathSetting backupDirectory)
         {
+            var nowInLocalTime = _periodicBackup.StartTimeInUtc.ToLocalTime();
+
             if (_isFullBackup)
             {
-                do
+                while (true)
                 {
-                    now = GetFormattedDate();
-                    folderName = $"{now}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{_configuration.BackupType.ToString().ToLower()}";
+                    folderName = $"{nowInLocalTime}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{_configuration.BackupType.ToString().ToLower()}";
                     backupDirectory = _backupToLocalFolder ? new PathSetting(localSettings.FolderPath).Combine(folderName) : _tempBackupPath;
-                } while (_backupToLocalFolder && DirectoryContainsBackupFiles(backupDirectory.FullPath, IsAnyBackupFile));
+
+                    if (_backupToLocalFolder == false || DirectoryContainsBackupFiles(backupDirectory.FullPath, IsAnyBackupFile) == false)
+                        break;
+
+                    // the backup folder contains backup files
+                    nowInLocalTime = DateTime.Now;
+                }
 
                 if (Directory.Exists(backupDirectory.FullPath) == false)
                     Directory.CreateDirectory(backupDirectory.FullPath);
@@ -409,15 +416,16 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 Debug.Assert(_previousBackupStatus.FolderName != null);
 
-                now = GetFormattedDate();
                 folderName = _previousBackupStatus.FolderName;
                 backupDirectory = _backupToLocalFolder ? new PathSetting(_previousBackupStatus.LocalBackup.BackupDirectory) : _tempBackupPath;
             }
+
+            nowAsString = GetFormattedDate(nowInLocalTime);
         }
 
-        private static string GetFormattedDate()
+        private static string GetFormattedDate(DateTime dataTime)
         {
-            return DateTime.Now.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
+            return dataTime.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
         }
 
         private BackupResult GenerateBackupResult()
@@ -476,14 +484,14 @@ namespace Raven.Server.Documents.PeriodicBackup
         private string GetFileName(
             bool isFullBackup,
             string backupFolder,
-            string now,
+            string nowAsString,
             BackupType backupType,
             out string backupFilePath)
         {
             var backupExtension = GetBackupExtension(backupType, isFullBackup);
             var fileName = isFullBackup ?
-                GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath, throwWhenFileExists: true) :
-                GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath);
+                GetFileNameFor(backupExtension, nowAsString, backupFolder, out backupFilePath, throwWhenFileExists: true) :
+                GetFileNameFor(backupExtension, nowAsString, backupFolder, out backupFilePath);
 
             return fileName;
         }
@@ -509,12 +517,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private static string GetFileNameFor(
             string backupExtension,
-            string now,
+            string nowAsString,
             string backupFolder,
             out string backupFilePath,
             bool throwWhenFileExists = false)
         {
-            var fileName = $"{now}{backupExtension}";
+            var fileName = $"{nowAsString}{backupExtension}";
             backupFilePath = Path.Combine(backupFolder, fileName);
 
             if (File.Exists(backupFilePath))
@@ -524,7 +532,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 while (true)
                 {
-                    fileName = $"{GetFormattedDate()}{backupExtension}";
+                    fileName = $"{GetFormattedDate(DateTime.Now)}{backupExtension}";
                     backupFilePath = Path.Combine(backupFolder, fileName);
 
                     if (File.Exists(backupFilePath) == false)
@@ -553,8 +561,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    
-
                     BackupTypeValidation();
 
                     if (_configuration.BackupType == BackupType.Backup ||
