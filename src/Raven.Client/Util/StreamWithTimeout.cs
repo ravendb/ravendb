@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Util
 {
-    internal class StreamWithTimeout : Stream, IDisposable
+    internal class StreamWithTimeout : Stream
     {
         private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         private static readonly TimeSpan DefaultReadTimeout = TimeSpan.FromSeconds(120);
@@ -131,9 +131,9 @@ namespace Raven.Client.Util
             set => _stream.Position = value;
         }
 
-        public new void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            base.Dispose(true);
+            base.Dispose(disposing);
             _stream.Dispose();
             _cts?.Dispose();
         }
