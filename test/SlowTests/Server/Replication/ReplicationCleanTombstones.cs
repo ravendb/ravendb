@@ -1,15 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using FastTests.Utils;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -50,11 +54,11 @@ namespace SlowTests.Server.Replication
 
                 Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
                 //Assert.Equal(4, WaitForValue(() => storage1.ReplicationLoader.MinimalEtagForReplication, 4));
-                
+
                 EnsureReplicating(store1, store2);
-                
+
                 await storage1.TombstoneCleaner.ExecuteCleanup();
-                
+
                 Assert.Equal(0, WaitForValue(() => WaitUntilHasTombstones(store1, 0).Count, 0));
             }
         }
@@ -82,8 +86,8 @@ namespace SlowTests.Server.Replication
                         FolderPath = backupPath
                     },
                     Name = "incremental",
-                    IncrementalBackupFrequency = "* * */6 * *",
-                    FullBackupFrequency = "* */6 * * *",
+                    IncrementalBackupFrequency = "0 0 1 1 *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -173,7 +177,7 @@ namespace SlowTests.Server.Replication
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -271,18 +275,17 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(3, total);
 
                 await CreateDatabaseInCluster(external, 3, cluster.Leader.WebUrl);
-
-                WaitForDocument(store, "marker", database: external);
-                WaitForDocumentDeletion(store, "foo/bar", database: external);
-
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
-                    session.Store(new User (), "marker2");
+                    session.Store(new User(), "marker2");
                     session.SaveChanges();
                 }
 
-                WaitForDocument(store, "marker2", database: external);
+                using (var externalSession = store.OpenSession(external))
+                {
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)externalSession, "marker2", (m) => m.Id == "marker2", TimeSpan.FromSeconds(15));
+                }
 
                 total = 0L;
                 foreach (var server in cluster.Nodes)
@@ -307,7 +310,7 @@ namespace SlowTests.Server.Replication
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
-                ModifyDocumentStore = s => s.Conventions = new DocumentConventions() ,
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions(),
                 ReplicationFactor = 3
             }))
             using (var dest = GetDocumentStore())
@@ -354,7 +357,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 if (sent.Wait(TimeSpan.FromSeconds(15)) == false)
-                    Assert.False(true,"timeout!");
+                    Assert.False(true, "timeout!");
 
                 using (var session = store.OpenSession())
                 {
@@ -369,7 +372,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                   await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
                 }
 
                 var total = 0L;
@@ -418,47 +421,287 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact(Skip = "RavenDB-14325")]
+        [Fact]
         public async Task CanReplicateTombstonesFromDifferentCollections()
         {
+            var id = "Oren\r\nEini";
+
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
                 var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                var storage2 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database).Result;
 
                 using (var session = store1.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, id);
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                Assert.True(WaitForDocument(store2, id));
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+                EnsureReplicating(store1, store2);
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, id);
+                    session.SaveChanges();
+                }
+                Assert.True(WaitForDocument(store2, id));
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+                EnsureReplicating(store1, store2);
+
+                using (storage1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(2, storage1.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(2, storage2.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                await storage1.TombstoneCleaner.ExecuteCleanup();
+                await storage2.TombstoneCleaner.ExecuteCleanup();
+
+                using (storage1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(0, storage1.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(0, storage2.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanDeleteFromDifferentCollections()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                using (var session = store.OpenSession())
+                using (var ms = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.Advanced.Attachments.Store("foo/bar", "dummy", ms);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                using (var ms = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.Advanced.Attachments.Store("foo/bar", "dummy", ms);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                await storage.TombstoneCleaner.ExecuteCleanup();
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(0, storage.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanDeleteFromDifferentCollections2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Karmel" }, "foo/bar");
                     session.SaveChanges();
                 }
 
-                await SetupReplicationAsync(store1, store2);
-                Assert.True(WaitForDocument(store2, "foo/bar"));
-
-                using (var session = store1.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Delete("foo/bar");
                     session.SaveChanges();
                 }
-                EnsureReplicating(store1, store2);
 
-                using (var session = store1.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Name = "Karmel" }, "foo/bar");
                     session.SaveChanges();
                 }
-                Assert.True(WaitForDocument(store2, "foo/bar"));
 
-                await storage1.TombstoneCleaner.ExecuteCleanup();
-
-                using (var session = store1.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Delete("foo/bar");
                     session.SaveChanges();
                 }
-                EnsureReplicating(store1, store2);
+
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(2, storage.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(1, storage.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
             }
         }
 
+        [Fact]
+        public async Task CanBackupAndRestoreTombstonesWithSameId()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var id = "oren\r\nEini";
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, "marker");
+                    session.SaveChanges();
+                }
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    Name = "incremental",
+                    IncrementalBackupFrequency = "* * */6 * *",
+                    FullBackupFrequency = "* */6 * * *",
+                    BackupType = BackupType.Backup
+                };
+
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, result.TaskId));
+                Assert.Equal(1, await WaitForValueAsync(() =>
+                 {
+                     var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
+                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                     return getPeriodicBackupResult.Status?.LastEtag;
+                 }, 1));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, result.TaskId));
+                Assert.Equal(5, await WaitForValueAsync(() =>
+                 {
+                     var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
+                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                     Assert.Null(getPeriodicBackupResult.Status.Error);
+                     return getPeriodicBackupResult.Status?.LastEtag;
+                 }, 5));
+
+                var databaseName = GetDatabaseName();
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName
+                }))
+                {
+                    var stats = store.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfDocuments); // the marker
+                    Assert.Equal(2, stats.CountOfTombstones);
+
+                    var storage = await GetDocumentDatabaseInstanceFor(store);
+                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        foreach (var tombstone in storage.DocumentsStorage.GetTombstonesFrom(ctx, 0))
+                        {
+                            var documentTombstone = (DocumentReplicationItem)tombstone;
+                            Assert.Equal("oren\r\neini", documentTombstone.Id);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

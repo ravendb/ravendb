@@ -584,6 +584,8 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
+                ServerStore.EnsureNotPassive();
+
                 RestoreType restoreType;
                 if (restoreConfiguration.TryGet("Type", out string typeAsString))
                 {

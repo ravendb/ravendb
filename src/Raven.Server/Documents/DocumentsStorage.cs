@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
@@ -22,6 +23,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -845,11 +847,23 @@ namespace Raven.Server.Documents
             }
 
             var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
-            tombstoneTable.ReadByKey(lowerId, out TableValueReader tvr);
+
+            // return tombstone in any collection with the requested id
+            foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(lowerId, Slices.Empty, 0))
+            {
+                if (IsTombstoneOfId(tombstoneKey, lowerId))
+                {
+                    return new DocumentOrTombstone
+                    {
+                        Tombstone = TableValueToTombstone(context, ref tvh.Reader)
+                    };
+                }
+                break;
+            }
 
             return new DocumentOrTombstone
             {
-                Tombstone = TableValueToTombstone(context, ref tvr)
+                Tombstone = null
             };
         }
 
@@ -1224,6 +1238,7 @@ namespace Raven.Server.Documents
                 result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
                 result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
+                result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
             }
             else if (result.Type == Tombstone.TombstoneType.Revision)
             {
@@ -1262,12 +1277,18 @@ namespace Raven.Server.Documents
                 if (expectedChangeVector != null)
                     throw new ConcurrencyException($"Document {local.Tombstone.LowerId} does not exist, but delete was called with change vector '{expectedChangeVector}'. " +
                                                    "Optimistic concurrency violation, transaction will be aborted.");
-
-                collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
+                if (collectionName == null)
+                {
+                    collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
+                }
 
                 var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                     collectionName.GetTableName(CollectionTableType.Tombstones));
-                tombstoneTable.Delete(local.Tombstone.StorageId);
+
+                if (tombstoneTable.IsOwned(local.Tombstone.StorageId))
+                {
+                    tombstoneTable.Delete(local.Tombstone.StorageId);
+                }
 
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
                 var flags = localFlags | documentFlags;
@@ -1546,14 +1567,15 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
-
+            
             try
             {
+                using (ModifyLowerIdIfNeeded(context, table, lowerId, out var nonConflictedLowerId))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    tvb.Add(lowerId);
+                    tvb.Add(nonConflictedLowerId);
                     tvb.Add(Bits.SwapBytes(newEtag));
                     tvb.Add(Bits.SwapBytes(documentEtag));
                     tvb.Add(context.GetTransactionMarker());
@@ -1574,13 +1596,67 @@ namespace Raven.Server.Documents
                     var tombstoneCollectionName = ExtractCollectionName(context, tombstoneCollection);
 
                     if (tombstoneCollectionName != collectionName)
+                    {
+                        Debug.Assert(false, "Should never happened after RavenDB-14325");
                         ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(lowerId, collectionName, tombstoneCollectionName, e);
+                    }
                 }
 
                 throw;
             }
 
             return (newEtag, changeVector);
+        }
+        private IDisposable ModifyLowerIdIfNeeded(DocumentsOperationContext context, Table table, Slice lowerId, out Slice nonConflictedLowerId)
+        {
+            if (table.ReadByKey(lowerId, out _) == false)
+            {
+                nonConflictedLowerId = lowerId;
+                return null;
+            }
+
+            var length = lowerId.Content.Length;
+            var disposable = Slice.From(context.Allocator, lowerId.Content.Ptr, length + ConflictedTombstoneOverhead, out nonConflictedLowerId);
+
+            *(nonConflictedLowerId.Content.Ptr + length) = SpecialChars.RecordSeparator;
+            *(long*)(nonConflictedLowerId.Content.Ptr + length + sizeof(byte)) = Bits.SwapBytes(GenerateNextEtag()); // now the id will be unique
+            return disposable;
+        }
+
+        // long - Etag, byte - separator char
+        private const int ConflictedTombstoneOverhead = sizeof(long) + sizeof(byte);
+
+        private static LazyStringValue UnwrapLowerIdIfNeeded(JsonOperationContext context, LazyStringValue lowerId)
+        {
+            if (lowerId.Size < ConflictedTombstoneOverhead + 1)
+                return lowerId;
+
+            if (lowerId[lowerId.Size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
+            {
+                var size = lowerId.Size - ConflictedTombstoneOverhead;
+                var allocated = context.GetMemory(size + 1); // we need this extra byte to mark that there is no escaping
+                allocated.Address[size] = 0;
+
+                Memory.Copy(allocated.Address, lowerId.Buffer, size);
+                var lsv = context.AllocateStringValue(null, allocated.Address, size);
+                lsv.AllocatedMemoryData = allocated;
+                return lsv;
+            }
+
+            return lowerId;
+        }
+
+        public static bool IsTombstoneOfId(Slice tombstoneKey, Slice lowerId)
+        {
+            if (tombstoneKey.Size < ConflictedTombstoneOverhead + 1)
+                return SliceComparer.EqualsInline(tombstoneKey, lowerId);
+
+            if (tombstoneKey[tombstoneKey.Size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
+            {
+                return Memory.CompareInline(tombstoneKey.Content.Ptr, lowerId.Content.Ptr, lowerId.Size) == 0;
+            }
+
+            return SliceComparer.EqualsInline(tombstoneKey, lowerId);
         }
 
         private void ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(Slice lowerId, CollectionName collectionName,
