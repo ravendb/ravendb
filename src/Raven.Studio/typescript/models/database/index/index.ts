@@ -322,11 +322,11 @@ class index {
         this.isStale(incomingData.isStale());
     }
 
-    filter(indexName: string, allowedStatuses: indexStatusFilter[]): boolean {
-        let matches = this.matches(indexName, allowedStatuses);
+    filter(indexName: string, allowedStatuses: indexStatus[], withIndexingErrorsOnly: boolean): boolean {
+        let matches = this.matches(indexName, allowedStatuses, withIndexingErrorsOnly);
 
         const replacement = this.replacement();
-        if (!matches && replacement && replacement.matches(indexName, allowedStatuses)) {
+        if (!matches && replacement && replacement.matches(indexName, allowedStatuses, withIndexingErrorsOnly)) {
             matches = true;
         }
 
@@ -335,45 +335,31 @@ class index {
         return matches;
     }
 
-    private matches(indexName: string, allowedStatuses: indexStatusFilter[]): boolean {
+    private matches(indexName: string, allowedStatuses: indexStatus[], withIndexingErrorsOnly: boolean): boolean {
         const nameMatch = !indexName || this.name.toLowerCase().indexOf(indexName) >= 0;
         const statusMatch = this.matchesAnyStatus(allowedStatuses);
-        const matches = nameMatch && statusMatch;
+        const indexingErrorsMatch = !withIndexingErrorsOnly || (withIndexingErrorsOnly && !!this.errorsCount()); 
+        
+        const matches = nameMatch && statusMatch && indexingErrorsMatch;
         return matches;
     }
 
-    private matchesAnyStatus(status: indexStatusFilter[]) {
+    private matchesAnyStatus(status: indexStatus[]) {
+
         if (status.length === 0) {
             return false;
         }
         
-        if (_.includes(status, "Stale") && this.isStale()) {
-            return true;
+        if (_.includes(status, "Stale")         && this.isStale()                            ||
+           (_.includes(status, "Normal")        && this.isNormalState())                     ||
+           (_.includes(status, "ErrorOrFaulty") && (this.isErrorState() || this.isFaulty())) ||
+           (_.includes(status, "Paused")        && this.isPausedState())                     ||
+           (_.includes(status, "Disabled")      && this.isDisabledState())                   ||
+           (_.includes(status, "Idle")          && this.isIdleState())) 
+        {
+           return true;
         }
-        
-        if (_.includes(status, "Normal") && this.isNormalState()) {
-            return true;
-        }
-        
-        if (_.includes(status, "ErrorOrFaulty") && (this.isErrorState() || this.isFaulty())) {
-            return true;
-        }
-        
-        if (_.includes(status, "Paused") && this.isPausedState()) {
-            return true;
-        }
-        
-        if (_.includes(status, "Disabled") && this.isDisabledState()) {
-            return true;
-        }
-        
-        if (_.includes(status, "Idle") && this.isIdleState()) {
-            return true;
-        }
-        
-        return false;
     }
-    
 }
 
 export = index; 
