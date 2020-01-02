@@ -656,12 +656,16 @@ namespace Raven.Server.Documents
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
-                if (tombstoneTable.ReadByKey(id, out var reader) == false)
-                    return;
-
-                if (tombstoneTable.IsOwned(reader.Id))
+                foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(id, Slices.Empty, 0))
                 {
-                    tombstoneTable.Delete(reader.Id);
+                    if (IsTombstoneOfId(tombstoneKey, id) == false)
+                        return;
+
+                    if (tombstoneTable.IsOwned(tvh.Reader.Id))
+                    {
+                        tombstoneTable.Delete(tvh.Reader.Id);
+                        return; // there could be only one tombstone per collection
+                    }
                 }
             }
         }
