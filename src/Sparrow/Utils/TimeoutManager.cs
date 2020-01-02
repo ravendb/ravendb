@@ -112,32 +112,6 @@ namespace Sparrow.Utils
             return value;
         }
 
-        public static async Task<T> WaitForTaskCompletion<T>(this Task<T> task, TimeSpan duration, CancellationTokenSource source = null)
-        {
-            var timeoutTask = WaitFor(duration);
-            var t = await Task.WhenAny(timeoutTask, task).ConfigureAwait(false);
-            if (t == timeoutTask)
-            {
-                source?.Cancel();
-                throw new TimeoutException();
-            }
-
-            return await task.ConfigureAwait(false);
-        }
-
-        public static async Task WaitForTaskCompletion(this Task task, TimeSpan duration, CancellationTokenSource source = null)
-        {
-            var timeoutTask = WaitFor(duration);
-            var t = await Task.WhenAny(timeoutTask, task).ConfigureAwait(false);
-            if (t == timeoutTask)
-            {
-                source?.Cancel();
-                throw new TimeoutException();
-            }
-
-            await task.ConfigureAwait(false);
-        }
-
         public static async Task WaitFor(TimeSpan duration, CancellationToken token = default(CancellationToken))
         {
             if (duration == TimeSpan.Zero)
