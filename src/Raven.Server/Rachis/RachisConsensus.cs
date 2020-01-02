@@ -1939,7 +1939,7 @@ namespace Raven.Server.Rachis
         {
             var leader = _currentLeader;
             if (leader == null)
-                throw new NotLeadingException("There is no leader, cannot accept commands. " + _lastStateChangeReason);
+                throw new NotLeadingException("I am not the leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
             while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, validateNotInTopology) == false)

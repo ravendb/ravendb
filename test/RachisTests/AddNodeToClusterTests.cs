@@ -118,18 +118,24 @@ namespace RachisTests
                 {
                 }
 
-                if(withManyCompareExchange)
+                if (withManyCompareExchange)
                     await AddManyCompareExchange(store, leader);
-
-                await leader.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag);
-                await follower.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
-
-                store.Operations.Send(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0));
-            
-                await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl,follower.ServerStore.NodeTag);
-            
-                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
+
+            leader = await ActionWithLeader(l =>
+            {
+                follower = nodes.Single(x => x != l);
+                return l.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag);
+            });
+            await follower.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
+
+            using (var store = new DocumentStore {Urls = new[] {leader.WebUrl}, Database = "Snapshot"}.Initialize())
+            {
+                store.Operations.Send(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0));
+            }
+
+            await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl, follower.ServerStore.NodeTag);
+            await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
         }
 
         [Fact]
