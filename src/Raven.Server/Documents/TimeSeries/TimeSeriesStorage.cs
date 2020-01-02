@@ -1259,7 +1259,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (localTime == remote.Timestamp)
             {
-                return holder.FromReplication == false || // if not from replication, this value overrides
+                return holder.FromReplication && // if not from replication, other value overrides
                        localValues.SequenceCompareTo(remote.Values.Span) > 0; // if from replication, the largest value wins
             }
 
