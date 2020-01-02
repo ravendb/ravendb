@@ -82,8 +82,8 @@ namespace SlowTests.Server.Replication
                         FolderPath = backupPath
                     },
                     Name = "incremental",
-                    IncrementalBackupFrequency = "* * */6 * *",
-                    FullBackupFrequency = "* */6 * * *",
+                    IncrementalBackupFrequency = "0 0 1 1 *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
@@ -173,7 +173,7 @@ namespace SlowTests.Server.Replication
                         FolderPath = backupPath
                     },
                     Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     BackupType = BackupType.Backup
                 };
 
