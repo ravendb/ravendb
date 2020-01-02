@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -12,9 +11,8 @@ using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
-namespace SlowTests.Server.Replication
+namespace SlowTests.Client.TimeSeries.Replication
 {
     public class TimeSeriesReplicationTests : ReplicationTestBase
     {
