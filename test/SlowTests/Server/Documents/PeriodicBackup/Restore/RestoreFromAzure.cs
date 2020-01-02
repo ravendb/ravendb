@@ -21,8 +21,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
         }
 
-        private readonly AzureSettings _azureSettings = GenerateAzureSettings();
-
         [Fact, Trait("Category", "Smuggler")]
         public void restore_azure_cloud_settings_tests()
         {
@@ -58,8 +56,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [AzureStorageEmulatorFact]
         public void can_backup_and_restore()
         {
+            var azureSettings = GenerateAzureSettings();
+            InitContainer(azureSettings);
 
-            InitContainer();
             using (var store = GetDocumentStore())
             {
 
@@ -73,63 +72,68 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Backup,
-                    AzureSettings = _azureSettings,
-                    IncrementalBackupFrequency = "* * * * *" //every minute
+                    AzureSettings = azureSettings,
+                    IncrementalBackupFrequency = "0 0 1 1 *"
                 };
 
                 var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
                 store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                PeriodicBackupStatus status = null;
                 var value = WaitForValue(() =>
                 {
-                    var status = store.Maintenance.Send(operation).Status;
+                    status = store.Maintenance.Send(operation).Status;
                     return status?.LastEtag;
                 }, 4);
-                Assert.Equal(4, value);
+                Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
+                Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
 
-                var backupStatus = store.Maintenance.Send(operation);
-                var backupOperationId = backupStatus.Status.LastOperationId;
-
-                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
 
                 var backupResult = backupOperation.Result as BackupResult;
-                Assert.True(backupResult.Counters.Processed);
-                Assert.Equal(1, backupResult.Counters.ReadCount);
+                Assert.True(backupResult != null && backupResult.Counters.Processed, "backupResult != null && backupResult.Counters.Processed");
+                Assert.True(1 == backupResult.Counters.ReadCount, "1 == backupResult.Counters.ReadCount");
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "ayende" }, "users/2");
                     session.CountersFor("users/2").Increment("downloads", 200);
 
-                     session.SaveChanges();
+                    session.SaveChanges();
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                 store.Maintenance.Send(new StartBackupOperation(false, backupTaskId));
+                store.Maintenance.Send(new StartBackupOperation(false, backupTaskId));
                 value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
                 Assert.Equal(lastEtag, value);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                _azureSettings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+                azureSettings.RemoteFolderName = status.FolderName;
                 var restoreFromGoogleCloudConfiguration = new RestoreFromAzureConfiguration()
                 {
                     DatabaseName = databaseName,
-                    Settings = _azureSettings
+                    Settings = azureSettings,
+                    DisableOngoingTasks = true
                 };
                 var googleCloudOperation = new RestoreBackupOperation(restoreFromGoogleCloudConfiguration);
                 var restoreOperation = store.Maintenance.Server.Send(googleCloudOperation);
 
                 restoreOperation.WaitForCompletion(TimeSpan.FromSeconds(30));
+                using (var store2 = GetDocumentStore(new Options()
                 {
-                    using (var session = store.OpenSession(databaseName))
+                    CreateDatabase = false,
+                    ModifyDatabaseName = s => databaseName
+                }))
+                {
+                    using (var session = store2.OpenSession(databaseName))
                     {
-                        var users =  session.Load<User>(new[] { "users/1", "users/2" });
+                        var users = session.Load<User>(new[] { "users/1", "users/2" });
                         Assert.True(users.Any(x => x.Value.Name == "oren"));
                         Assert.True(users.Any(x => x.Value.Name == "ayende"));
 
-                        var val =  session.CountersFor("users/1").Get("likes");
+                        var val = session.CountersFor("users/1").Get("likes");
                         Assert.Equal(100, val);
                         val = session.CountersFor("users/2").Get("downloads");
                         Assert.Equal(200, val);
@@ -147,16 +151,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private void InitContainer()
+        private void InitContainer(AzureSettings azureSettings)
         {
-            using (var client = new RavenAzureClient(_azureSettings))
+            using (var client = new RavenAzureClient(azureSettings))
             {
                 client.DeleteContainer();
                 client.PutContainer();
             }
         }
 
-        public static AzureSettings GenerateAzureSettings(string containerName = "mycontainer")
+        private AzureSettings GenerateAzureSettings(string containerName = "mycontainer")
         {
             return new AzureSettings
             {
