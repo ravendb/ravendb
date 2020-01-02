@@ -158,14 +158,26 @@ namespace Raven.Server.Documents.PeriodicBackup
             Debug.Assert(configuration.TaskId != 0);
 
             var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup);
-            var nextBackupDateTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
-            var timeSpan = nextBackupDateTimeLocal - SystemTime.UtcNow.ToLocalTime();
-            var nextBackupTimeSpan = timeSpan.Ticks <= 0 ? TimeSpan.Zero : timeSpan;
+            var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
+            var nowLocalTime = SystemTime.UtcNow.ToLocalTime();
+            var timeSpan = nextBackupTimeLocal - nowLocalTime;
+
+            TimeSpan nextBackupTimeSpan;
+            if (timeSpan.Ticks <= 0)
+            {
+                // the backup will run now
+                nextBackupTimeSpan = TimeSpan.Zero;
+                nextBackupTimeLocal = nowLocalTime;
+            }
+            else
+            {
+                nextBackupTimeSpan = timeSpan;
+            }
 
             return new NextBackup
             {
                 TimeSpan = nextBackupTimeSpan,
-                DateTime = nextBackupDateTimeLocal.ToUniversalTime(),
+                DateTime = nextBackupTimeLocal.ToUniversalTime(),
                 IsFull = isFullBackup,
                 TaskId = configuration.TaskId
             };

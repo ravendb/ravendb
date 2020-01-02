@@ -521,6 +521,44 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Theory]
+        [InlineData("* * * * *", null)]
+        [InlineData(null, "* * * * *")]
+        [InlineData("0 0 1 * *", null)]
+        [InlineData(null, "0 0 1 * *")]
+        public async Task next_full_backup_time_calculated_correctly(string fullBackupFrequency, string incrementalBackupFrequency)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    FullBackupFrequency = fullBackupFrequency,
+                    IncrementalBackupFrequency = incrementalBackupFrequency
+                };
+
+                var backup = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var now = DateTime.UtcNow;
+                var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record, record.PeriodicBackups.First(), new PeriodicBackupStatus
+                {
+                    LastFullBackupInternal = now.AddDays(-360)
+                });
+
+                Assert.Equal(backup.TaskId, nextBackupDetails.TaskId);
+                Assert.Equal(TimeSpan.Zero, nextBackupDetails.TimeSpan);
+                Assert.Equal(true, nextBackupDetails.IsFull);
+                Assert.True(nextBackupDetails.DateTime >= now);
+            }
+        }
+
         [Theory, Trait("Category", "Smuggler")]
         [InlineData(CompressionLevel.Optimal)]
         [InlineData(CompressionLevel.Fastest)]
