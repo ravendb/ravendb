@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using Sparrow.Binary;
 
@@ -15,11 +14,10 @@ namespace Raven.Server.Rachis.Remote
             _stream = stream;
         }
 
-        protected override int Read(int size)
+        public override void ReadExactly(int size)
         {
-            var read = base.Read(size);
-            _stream.Write(Buffer, 0, read);
-            return read;
+            base.ReadExactly(size);
+            _stream.Write(Buffer, 0, size);
         }
     }
         
@@ -49,6 +47,8 @@ namespace Raven.Server.Rachis.Remote
     
     public abstract class Reader
     {
+        public byte[] Buffer { get; private set;} = new byte[1024];
+        
         public int ReadInt32()
         {
             ReadExactly(sizeof(int));
@@ -61,20 +61,7 @@ namespace Raven.Server.Rachis.Remote
             return BitConverter.ToInt64(Buffer, 0);
         }
 
-        public byte[] Buffer
-        {
-            get;
-            private set;
-        } = new byte[1024];
-
-        public void ReadExactly(int size)
-        {
-            var read = Read(size);
-            if(read < size)
-                throw new EndOfStreamException();
-        }
-
-        protected virtual int Read(int size)
+        public virtual void ReadExactly(int size)
         {
             if (Buffer.Length < size)
                 Buffer = new byte[Bits.PowerOf2(size)];
@@ -83,12 +70,9 @@ namespace Raven.Server.Rachis.Remote
             {
                 var read = InternalRead(totalRead, size - totalRead);
                 if (read == 0)
-                    break;
+                    throw new EndOfStreamException();
                 totalRead += read;
             }
-
-            Debug.Assert(totalRead <= size);
-            return totalRead;
         }
             
         protected abstract int InternalRead(int offset, int count);
