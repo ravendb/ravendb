@@ -26,7 +26,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     lockSeriesName: boolean;
     lockTimeStamp: boolean;
     
-    constructor(private documentId: string, private db: database, private timeSeriesName: string, private editDto?: Raven.Client.Documents.Session.TimeSeriesValue) {
+    constructor(private documentId: string, private db: database, private timeSeriesName: string, private editDto?: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         super();
         
         this.lockTimeStamp = !!editDto;

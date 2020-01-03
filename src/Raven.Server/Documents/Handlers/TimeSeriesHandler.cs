@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers
                     
                     writer.WriteStartArray();
                     
-                    var timeSeriesNames = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, documentId);
+                    var timeSeriesNames = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesLowerNamesForDocument(context, documentId);
                     
                     var first = true;
                     for (var i = 0; i < timeSeriesNames.Count; i++)

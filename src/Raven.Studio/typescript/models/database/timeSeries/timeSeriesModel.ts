@@ -2,7 +2,7 @@ import timeSeriesValue = require("models/database/timeSeries/timeSeriesValue");
 
 class timeSeriesModel {
     
-    constructor(name: string, dto: Raven.Client.Documents.Session.TimeSeriesValue) {
+    constructor(name: string, dto: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         this.name(name);
         this.tag(dto.Tag);
         this.timestamp(dto.Timestamp ? moment.utc(dto.Timestamp) : null);
@@ -53,7 +53,7 @@ class timeSeriesModel {
         });
     }
     
-    public toDto(): Raven.Client.Documents.Operations.TimeSeries.AppendTimeSeriesOperation {
+    public toDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation {
         return {
             Name: this.name(),
             Tag: this.tag(),
@@ -66,6 +66,7 @@ class timeSeriesModel {
         return new timeSeriesModel(name, {
             Timestamp: null,
             Tag: null,
+            Value: undefined,
             Values: []
         });
     }

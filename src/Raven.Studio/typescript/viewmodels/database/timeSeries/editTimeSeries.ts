@@ -27,8 +27,8 @@ class editTimeSeries extends viewModelBase {
     deleteCriteria: KnockoutComputed<timeSeriesDeleteCriteria>;
     deleteButtonText: KnockoutComputed<string>;
 
-    private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Session.TimeSeriesValue>>();
-    private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Session.TimeSeriesValue>();
+    private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
+    private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>();
     
     constructor() {
         super();
@@ -65,7 +65,7 @@ class editTimeSeries extends viewModelBase {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        const editColumn = new actionColumn<Raven.Client.Documents.Session.TimeSeriesValue>(
+        const editColumn = new actionColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(
             grid, item => this.editItem(item), "Edit", `<i class="icon-edit"></i>`, "70px",
             {
                 title: () => 'Edit item'
@@ -75,14 +75,14 @@ class editTimeSeries extends viewModelBase {
             [
                 new checkedColumn(true),
                 editColumn,
-                new textColumn<Raven.Client.Documents.Session.TimeSeriesValue>(grid, x => formatTimeSeriesDate(x.Timestamp), "Date", "20%"),
-                new textColumn<Raven.Client.Documents.Session.TimeSeriesValue>(grid, x => x.Tag, "Tag", "20%"),
-                new textColumn<Raven.Client.Documents.Session.TimeSeriesValue>(grid, x => x.Values.join(", "), "Values", "40%")
+                new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => formatTimeSeriesDate(x.Timestamp), "Date", "20%"),
+                new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Tag, "Tag", "20%"),
+                new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Values.join(", "), "Values", "40%")
             ]
         );
 
         this.columnPreview.install("virtual-grid", ".js-time-series-tooltip",
-            (item: Raven.Client.Documents.Session.TimeSeriesValue, column: textColumn<Raven.Client.Documents.Session.TimeSeriesValue>,
+            (item: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry, column: textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>,
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue && column.getCellValue(item);
                 if (column.header === "Edit") {
@@ -95,7 +95,7 @@ class editTimeSeries extends viewModelBase {
             });
     }
     
-    private editItem(item: Raven.Client.Documents.Session.TimeSeriesValue) {
+    private editItem(item: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         const editTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(), this.activeDatabase(), this.timeSeriesName(), item);
         app.showBootstrapDialog(editTimeSeriesDialog)
             .done((seriesName) => {
@@ -105,8 +105,8 @@ class editTimeSeries extends viewModelBase {
             });
     }
 
-    private fetchSeries(skip: number, take: number): JQueryPromise<pagedResult<Raven.Client.Documents.Session.TimeSeriesValue>> {
-        const fetchTask = $.Deferred<pagedResult<Raven.Client.Documents.Session.TimeSeriesValue>>();
+    private fetchSeries(skip: number, take: number): JQueryPromise<pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>> {
+        const fetchTask = $.Deferred<pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
         const timeSeriesName = this.timeSeriesName();
 
         if (timeSeriesName) {
@@ -114,7 +114,7 @@ class editTimeSeries extends viewModelBase {
                 .execute()
                 .done(result => {
                     const seriesValues = result.Values[timeSeriesName];
-                    const values = seriesValues && seriesValues.length > 0 ? seriesValues[0].Values : [];
+                    const values = seriesValues && seriesValues.length > 0 ? seriesValues[0].Entries : [];
 
                     fetchTask.resolve({
                         items: values,
