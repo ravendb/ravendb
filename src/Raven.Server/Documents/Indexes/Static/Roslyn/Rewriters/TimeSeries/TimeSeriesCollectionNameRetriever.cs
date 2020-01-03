@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -9,7 +8,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 {
     public class TimeSeriesCollectionNameRetriever : CSharpSyntaxRewriter
     {
-        public (string CollectionName, string TimeSeriesName)[] Collections { get; protected set; }
+        public HashSet<Collection> Collections { get; protected set; }
 
         public static TimeSeriesCollectionNameRetriever QuerySyntax => new QuerySyntaxRewriter();
 
@@ -35,9 +34,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 
                 var collectionName = nodeParts[1];
                 var timeSeriesName = nodeParts[2];
-                Collections = new (string CollectionName, string TimeSeriesName)[]
+
+                Collections = new HashSet<Collection>
                 {
-                    (collectionName, timeSeriesName)
+                    { new Collection(collectionName, timeSeriesName) }
                 };
 
                 if (nodeToCheck != node)
@@ -61,15 +61,27 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 
                 if (node.Expression is MemberAccessExpressionSyntax timeSeriesExpression)
                 {
-                    if (timeSeriesExpression.Expression is MemberAccessExpressionSyntax collectionExpression)
+                    if (timeSeriesExpression.Expression is MemberAccessExpressionSyntax collectionExpression) // from ts in timeSeries.Companies.HeartRate
                     {
                         var timeSeriesIdentifier = collectionExpression.Expression as IdentifierNameSyntax;
                         if (string.Equals(timeSeriesIdentifier?.Identifier.Text, "timeSeries", StringComparison.OrdinalIgnoreCase) == false)
                             return node;
 
-                        Collections = new (string CollectionName, string TimeSeriesName)[] { (collectionExpression.Name.Identifier.Text, timeSeriesExpression.Name.Identifier.Text) };
+                        Collections = new HashSet<Collection>
+                        {
+                            { new Collection(collectionExpression.Name.Identifier.Text, timeSeriesExpression.Name.Identifier.Text) }
+                        };
 
                         return node.WithExpression(collectionExpression.Expression);
+                    }
+                    else if (timeSeriesExpression.Expression is IdentifierNameSyntax identifierNameSyntax) // from ts in timeSeries.Companies
+                    {
+                        Collections = new HashSet<Collection>
+                        {
+                            { new Collection(timeSeriesExpression.Name.Identifier.Text, null) }
+                        };
+
+                        return node.WithExpression(identifierNameSyntax);
                     }
                 }
 
@@ -103,6 +115,36 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                 }
 
                 throw new NotImplementedException("Not supported syntax exception. This might be a bug.");
+            }
+        }
+
+        public class Collection
+        {
+            public readonly string CollectionName;
+
+            public readonly string TimeSeriesName;
+
+            public Collection(string collectionName, string timeSeriesName)
+            {
+                CollectionName = collectionName;
+                TimeSeriesName = timeSeriesName;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is Collection collection &&
+                       string.Equals(CollectionName, collection.CollectionName, StringComparison.OrdinalIgnoreCase) &&
+                       string.Equals(TimeSeriesName, collection.TimeSeriesName, StringComparison.OrdinalIgnoreCase);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = (CollectionName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(CollectionName) : 0);
+                    hashCode = (hashCode * 397) ^ (TimeSeriesName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(TimeSeriesName) : 0);
+                    return hashCode;
+                }
             }
         }
     }
