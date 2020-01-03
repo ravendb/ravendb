@@ -20,10 +20,27 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
 
         private (string TimeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> Map) _map;
 
+        /// <summary>
+        /// Sets map function for all TimeSeries
+        /// </summary>
+        public void AddMapForAll(Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> map)
+        {
+            AddMapInternal(null, map);
+        }
+
+        /// <summary>
+        /// Sets map function for specified TimeSeries
+        /// </summary>
         public void AddMap(string timeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> map)
         {
             if (string.IsNullOrWhiteSpace(timeSeries))
                 throw new ArgumentException("TimeSeries name cannot be null or whitespace.", nameof(timeSeries));
+
+            AddMapInternal(timeSeries, map);
+        }
+
+        private void AddMapInternal(string timeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> map)
+        {
             if (map == null)
                 throw new ArgumentNullException(nameof(map));
 
@@ -64,6 +81,9 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
                 : IndexDefinitionHelper.GetQuerySource(conventions, typeof(TDocument), IndexSourceType.TimeSeries);
 
             var timeSeries = _map.TimeSeries;
+            if (timeSeries == null)
+                return querySource;
+
             if (StringExtensions.IsIdentifier(timeSeries))
                 return $"{querySource}.{timeSeries}";
 
