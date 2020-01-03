@@ -1296,6 +1296,10 @@ class normalCrudActions implements editDocumentCrudActions {
     
     fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>> {
         const doc = this.document();
+
+        if (!doc.__metadata.hasFlag("HasTimeSeries")) {
+            return connectedDocuments.emptyDocResult<timeSeriesItem>();
+        }
         
         const fetchTask = $.Deferred<pagedResult<timeSeriesItem>>();
         new getTimeSeriesStatsCommand(doc.getId(), this.db())
