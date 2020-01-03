@@ -2,10 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -45,6 +45,14 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 }
 
                 return _entries;
+            }
+        }
+
+        public LazyStringValue Name
+        {
+            get
+            {
+                return _segmentEntry.Name;
             }
         }
 

@@ -47,6 +47,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Values[0], " +
+                    "   Name = ts.Name," +
                     "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId " +
                     "}" }
@@ -102,6 +103,10 @@ namespace FastTests.Client.Indexing.TimeSeries
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "User", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("companies/1", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("heartrate", terms);
 
                 // delete time series
 
@@ -1089,6 +1094,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Values[0], " +
+                    "   Name = ts.Name," +
                     "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId " +
                     "}" }
@@ -1139,6 +1145,11 @@ namespace FastTests.Client.Indexing.TimeSeries
                 Assert.Contains("3", terms);
                 Assert.Contains("2", terms);
 
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Name", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("heartrate", terms);
+                Assert.Contains("likes", terms);
+
                 store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
@@ -1166,6 +1177,11 @@ namespace FastTests.Client.Indexing.TimeSeries
                 Assert.Contains("3", terms);
                 Assert.Contains("2", terms);
 
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Name", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("heartrate", terms);
+                Assert.Contains("likes", terms);
+
                 store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
@@ -1192,6 +1208,10 @@ namespace FastTests.Client.Indexing.TimeSeries
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("3", terms);
 
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("likes", terms);
+
                 store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
@@ -1214,6 +1234,9 @@ namespace FastTests.Client.Indexing.TimeSeries
                 Assert.False(staleness.IsStale);
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
+                Assert.Equal(0, terms.Length);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Name", null));
                 Assert.Equal(0, terms.Length);
             }
         }
