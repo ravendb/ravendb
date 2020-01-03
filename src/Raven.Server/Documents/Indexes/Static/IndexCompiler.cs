@@ -518,7 +518,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var timeSeriesName = c.TimeSeriesName;
                 if (string.IsNullOrWhiteSpace(timeSeriesName))
-                    throw new InvalidOperationException("TimeSeries name cannot be null or whitespace.");
+                    timeSeriesName = Constants.TimeSeries.All;
 
                 var timeSeries = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(timeSeriesName));
 

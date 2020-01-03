@@ -68,9 +68,9 @@ namespace Raven.Client
                 private Windows()
                 {
                 }
-                
+
                 public static readonly int MaxPath = short.MaxValue;
-                
+
                 internal static readonly string[] ReservedFileNames = {
                     "con",
                     "prn",
@@ -140,6 +140,8 @@ namespace Raven.Client
         {
             internal const string SelectFieldName = "timeseries";
             internal const string QueryFunction = "__timeSeriesQueryFunction";
+
+            public const string All = "@all_timeseries";
         }
 
         public class Documents
@@ -312,6 +314,10 @@ namespace Raven.Client
 
             public class PeriodicBackup
             {
+                private PeriodicBackup()
+                {
+                }
+
                 public const string FullBackupExtension = ".ravendb-full-backup";
 
                 public const string SnapshotExtension = ".ravendb-snapshot";
@@ -326,6 +332,10 @@ namespace Raven.Client
 
                 public class Folders
                 {
+                    private Folders()
+                    {
+                    }
+
                     public const string Indexes = "Indexes";
 
                     public const string Documents = "Documents";

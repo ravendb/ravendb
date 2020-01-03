@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -13,6 +14,8 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly Dictionary<string, MultipleIndexingFunctionsEnumerator<TType>> _multipleIndexingFunctionsEnumerator;
         private readonly bool _singleKey;
         private readonly string _firstKey;
+        private readonly bool _allItems;
+        private readonly string _allItemsKey;
 
         protected StaticIndexItemEnumerator(IEnumerable<IndexItem> items)
         {
@@ -34,6 +37,26 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 if (_singleKey)
                     _firstKey = kvp.Key;
+
+                if (_allItems == false)
+                {
+                    switch (kvp.Key)
+                    {
+                        case Constants.Documents.Collections.AllDocumentsCollection:
+                            {
+                                _allItems = true;
+                                _allItemsKey = Constants.Documents.Collections.AllDocumentsCollection;
+                                break;
+                            }
+
+                        case Constants.TimeSeries.All:
+                            {
+                                _allItems = true;
+                                _allItemsKey = Constants.TimeSeries.All;
+                                break;
+                            }
+                    }
+                }
 
                 if (kvp.Value.Count == 1)
                     _resultsOfCurrentDocument[kvp.Key] = new TimeCountingEnumerable(kvp.Value[0](new DynamicIteratorOfCurrentItemWrapper<TType>(this)), mapFuncStats);
@@ -64,6 +87,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     if (Current.IndexingKey == null && _singleKey)
                         resultsOfCurrentDocument = _resultsOfCurrentDocument[_firstKey];
+                    else if (_allItems)
+                        resultsOfCurrentDocument = _resultsOfCurrentDocument[_allItemsKey];
                     else if (_resultsOfCurrentDocument.TryGetValue(Current.IndexingKey, out resultsOfCurrentDocument) == false)
                         continue;
 
