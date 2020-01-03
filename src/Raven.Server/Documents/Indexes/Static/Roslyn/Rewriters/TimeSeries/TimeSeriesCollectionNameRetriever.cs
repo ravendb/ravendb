@@ -29,23 +29,38 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                     return node;
 
                 var nodeParts = nodeAsString.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-                if (nodeParts.Length < 3)
+                var nodePartsLength = nodeParts.Length;
+                if (nodePartsLength < 3 || nodePartsLength > 4)
                     throw new NotImplementedException("Not supported syntax exception. This might be a bug.");
 
                 var collectionName = nodeParts[1];
-                var timeSeriesName = nodeParts[2];
+                var timeSeriesNameLength = 0;
 
-                Collections = new HashSet<Collection>
+                if (nodePartsLength == 4) // from ts in timeSeries.Companies.HeartRate.SelectMany
                 {
-                    { new Collection(collectionName, timeSeriesName) }
-                };
+                    var timeSeriesName = nodeParts[2];
+                    timeSeriesNameLength = timeSeriesName.Length + 1;
+
+                    Collections = new HashSet<Collection>
+                    {
+                        { new Collection(collectionName, timeSeriesName) }
+                    };
+                }
+                else if (nodePartsLength == 3) // from ts in timeSeries.Companies.SelectMany
+                {
+                    Collections = new HashSet<Collection>
+                    {
+                        { new Collection(collectionName, null) }
+                    };
+                }
 
                 if (nodeToCheck != node)
                     nodeAsString = node.Expression.ToString();
 
                 var collectionIndex = nodeAsString.IndexOf(collectionName, nodePrefix.Length, StringComparison.OrdinalIgnoreCase);
                 // removing collection name: "timeSeries.Users.HeartRate.Select" => "timeSeries.Select"
-                nodeAsString = nodeAsString.Remove(collectionIndex - 1, collectionName.Length + 1 + timeSeriesName.Length + 1);
+
+                nodeAsString = nodeAsString.Remove(collectionIndex - 1, collectionName.Length + 1 + timeSeriesNameLength);
 
                 var newExpression = SyntaxFactory.ParseExpression(nodeAsString);
                 return node.WithExpression(newExpression);
