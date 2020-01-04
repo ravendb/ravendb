@@ -29,10 +29,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
         private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-            {
-                //return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
-                throw new NotImplementedException("TODO ppekrol");
-            }
+                return _timeSeriesStorage.GetTimeSeriesFrom(databaseContext, lastEtag + 1, pageSize);
 
             return _timeSeriesStorage.GetTimeSeriesFrom(databaseContext, collection, lastEtag + 1, pageSize);
         }

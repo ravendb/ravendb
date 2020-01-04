@@ -188,8 +188,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 }
 
                 return node;
-
-
             }
         }
     }
