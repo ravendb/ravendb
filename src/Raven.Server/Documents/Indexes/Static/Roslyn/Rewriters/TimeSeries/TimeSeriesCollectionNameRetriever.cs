@@ -30,8 +30,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 
                 var nodeParts = nodeAsString.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
                 var nodePartsLength = nodeParts.Length;
-                if (nodePartsLength < 3 || nodePartsLength > 4)
+                if (nodePartsLength < 2 || nodePartsLength > 4)
                     throw new NotImplementedException("Not supported syntax exception. This might be a bug.");
+
+                if (nodePartsLength == 2) // from ts in timeSeries.SelectMany
+                    return node;
 
                 var collectionName = nodeParts[1];
                 var timeSeriesNameLength = 0;
@@ -72,6 +75,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
             public override SyntaxNode VisitFromClause(FromClauseSyntax node)
             {
                 if (Collections != null)
+                    return node;
+
+                var nodeAsString = node.Expression.ToString();
+                const string nodePrefix = "timeSeries";
+                if (nodeAsString.StartsWith(nodePrefix) == false)
+                    return node;
+
+                if (node.Expression is IdentifierNameSyntax) // from ts in timeSeries
                     return node;
 
                 if (node.Expression is MemberAccessExpressionSyntax timeSeriesExpression)

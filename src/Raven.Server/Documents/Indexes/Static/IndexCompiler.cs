@@ -506,9 +506,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var collectionRetriever = (TimeSeriesCollectionNameRetriever)mapRewriter.CollectionRetriever;
 
-            // TODO ppekrol: handle @all_docs
+            var collections = collectionRetriever.Collections?.ToArray()
+                ?? new TimeSeriesCollectionNameRetriever.Collection[] { new TimeSeriesCollectionNameRetriever.Collection(Constants.Documents.Collections.AllDocumentsCollection, Constants.TimeSeries.All) };
 
-            foreach (var c in collectionRetriever.Collections)
+            foreach (var c in collections)
             {
                 var collectionName = c.CollectionName;
                 if (string.IsNullOrWhiteSpace(collectionName))

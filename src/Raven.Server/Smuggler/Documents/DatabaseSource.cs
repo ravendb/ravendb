@@ -485,7 +485,7 @@ namespace Raven.Server.Smuggler.Documents
                 yield break;
             }
 
-            foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, _startDocumentEtag))
+            foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, _startDocumentEtag, long.MaxValue))
             {
                 yield return new TimeSeriesItem
                 {

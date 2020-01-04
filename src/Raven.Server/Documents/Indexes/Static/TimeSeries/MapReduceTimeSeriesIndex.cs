@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                throw new InvalidOperationException("TODO arek");
+                return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(databaseContext);
 
             return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(databaseContext, collection);
         }
@@ -103,9 +103,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
-            // TODO arek handle all docs
-
-            if (change.Type == DocumentChangeTypes.Delete && Collections.Contains(change.CollectionName))
+            if (change.Type == DocumentChangeTypes.Delete && (HandleAllDocs || Collections.Contains(change.CollectionName)))
             {
                 // in time series we need to subscribe only to deletions of source documents
 
@@ -121,10 +119,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         private void HandleTimeSeriesChange(TimeSeriesChange change)
         {
-            if (HandleAllDocs)
-                throw new InvalidOperationException("TODO ppekrol");
-
-            if (Collections.Contains(change.CollectionName) == false)
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false)
                 return;
 
             _mre.Set();
