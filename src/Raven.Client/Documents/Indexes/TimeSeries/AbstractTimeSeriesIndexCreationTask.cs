@@ -32,6 +32,9 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
         /// </summary>
         protected void AddMap(string timeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> map)
         {
+            if (typeof(TDocument) == typeof(object))
+                throw new NotSupportedException($"TimeSeries name cannot be specified when indexing all documents. Use '{nameof(AddMapForAll)}' method and filter by TimeSeries name in map expression if needed.");
+
             if (string.IsNullOrWhiteSpace(timeSeries))
                 throw new ArgumentException("TimeSeries name cannot be null or whitespace.", nameof(timeSeries));
 
