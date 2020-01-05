@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -50,16 +48,78 @@ namespace SlowTests.Client.TimeSeries.Query
             public TimeSeriesAggregationResult BloodPressure { get; set; }
         }
 
-        private class QueryResult2
+
+
+        [Fact]
+        public void TimeSeriesAggregationInJsProjection_RawQuery()
         {
-            public string Id { get; set; }
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
 
-            public string Name { get; set; }
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        LastName = "Ayende",
+                        Age = 30,
+                    }, "people/1");
 
-            public TimeSeriesRawResult HeartRate { get; set; }
 
-            public TimeSeriesRawResult BloodPressure { get; set; }
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var timeSeriesQuery = 
+@"from p.Heartrate between $start and $end 
+where Tag != 'watches/apple'
+group by '1 month' 
+select max(), avg()";
+
+                    var rawQuery = session.Advanced.RawQuery<QueryResult>(
+@"from People as p
+select {
+    Name : p.Name + ' ' + p.LastName ,
+    Heartrate : timeseries($ts)
+}
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddYears(1))
+                        .AddParameter("ts", timeSeriesQuery);
+
+                    var result = rawQuery.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Oren Ayende", result[0].Name);
+
+                    Assert.Equal(3, result[0].HeartRate.Count);
+
+                    var agg = result[0].HeartRate.Results;
+
+                    Assert.Equal(2, agg.Length);
+
+                    Assert.Equal(79, agg[0].Max[0]);
+                    Assert.Equal(69, agg[0].Avg[0]);
+
+                    Assert.Equal(179, agg[1].Max[0]);
+                    Assert.Equal(179, agg[1].Avg[0]);
+
+                }
+            }
         }
+
 
         [Fact]
         public void TimeSeriesAggregationInJsProjection_UsingLinq()
@@ -98,7 +158,7 @@ namespace SlowTests.Client.TimeSeries.Query
                                 select new
                                 {
                                     Heartrate = RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
-                                        .Where(ts => ts.Tag == "tags/1")
+                                        .Where(ts => ts.Tag == "watches/fitbit")
                                         .GroupBy(g => g.Months(1))
                                         .Select(g => new
                                         {
@@ -114,7 +174,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(1, result.Count);
                     Assert.Equal("Oren Ayende", result[0].Name);
 
-                    Assert.Equal(4, result[0].Heartrate.Count);
+                    Assert.Equal(3, result[0].Heartrate.Count);
 
                     var agg = result[0].Heartrate.Results;
 
@@ -123,8 +183,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(79, agg[0].Max[0]);
                     Assert.Equal(69, agg[0].Avg[0]);
 
-                    Assert.Equal(169, agg[1].Max[0]);
-                    Assert.Equal(164, agg[1].Avg[0]);
+                    Assert.Equal(179, agg[1].Max[0]);
+                    Assert.Equal(179, agg[1].Avg[0]);
 
                 }
             }

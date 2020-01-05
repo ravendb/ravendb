@@ -4,6 +4,7 @@ using Lucene.Net.Documents;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
@@ -20,6 +21,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Indexes;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -650,19 +652,27 @@ namespace Raven.Server.Documents.Queries.Results
         private class QueryKey : ScriptRunnerCache.Key
         {
             private readonly Dictionary<string, DeclaredFunction> _functions;
+            private readonly List<StringSegment> _rootAliasPaths;
 
             private bool Equals(QueryKey other)
             {
                 if (_functions?.Count != other._functions?.Count)
                     return false;
 
+                if (_rootAliasPaths?.Count != other._rootAliasPaths?.Count)
+                    return false;
+
                 foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
-                    if (function.Value.Type != DeclaredFunction.FunctionType.JavaScript)
-                        continue;
+                    if (other._functions != null && 
+                        (other._functions.TryGetValue(function.Key, out var otherVal) == false || 
+                         function.Value.FunctionText != otherVal.FunctionText))
+                        return false;
+                }
 
-                    if (other._functions != null && (other._functions.TryGetValue(function.Key, out var otherVal) == false
-                                                     || function.Value.FunctionText != otherVal.FunctionText))
+                for (var i = 0; i < _rootAliasPaths?.Count; i++)
+                {
+                    if (_rootAliasPaths[i] != other._rootAliasPaths[i])
                         return false;
                 }
 
@@ -687,22 +697,31 @@ namespace Raven.Server.Documents.Queries.Results
                     int hashCode = 0;
                     foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                     {
-                        if (function.Value.Type != DeclaredFunction.FunctionType.JavaScript)
-                            continue;
-
                         hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
                     }
+
+
+                    for (var i = 0; i < _rootAliasPaths?.Count; i++)
+                    {
+                        hashCode = (hashCode * 397) ^ (_rootAliasPaths[i].GetHashCode());
+                    }
+
                     return hashCode;
                 }
             }
 
-            public QueryKey(Dictionary<string, DeclaredFunction> functions)
+            public QueryKey(Dictionary<string, DeclaredFunction> functions,
+                List<StringSegment> rootAliasPaths)
             {
                 _functions = functions;
+                _rootAliasPaths = rootAliasPaths;
             }
 
             public override void GenerateScript(ScriptRunner runner)
             {
+                if (_rootAliasPaths != null)
+                    runner.RegisterRootAliases(_rootAliasPaths);
+
                 foreach (var kvp in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
                     if (kvp.Value.Type != DeclaredFunction.FunctionType.JavaScript)
@@ -723,7 +742,7 @@ namespace Raven.Server.Documents.Queries.Results
                 return _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args);
             }
 
-            var key = new QueryKey(query.DeclaredFunctions);
+            var key = new QueryKey(query.DeclaredFunctions, _query.Metadata.HasTimeSeriesSelect ? _query.Metadata.RootAliasPaths?.Keys.ToList() : null);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
             {
