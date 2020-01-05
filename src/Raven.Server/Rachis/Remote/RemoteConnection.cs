@@ -273,9 +273,8 @@ namespace Raven.Server.Rachis.Remote
         {
             using (_disposerLock.EnsureNotDisposed())
             {
-                var read = ReadFromBuffer(buffer, offset, count);
-                if (read != -1) 
-                    return read;
+                if (_buffer.Used < _buffer.Valid) 
+                    return ReadFromBuffer(buffer, offset, count);
                 
                 return _stream.Read(buffer, offset, count);
             }
@@ -283,9 +282,6 @@ namespace Raven.Server.Rachis.Remote
 
         private unsafe int ReadFromBuffer(byte[] buffer, int offset, int count)
         {
-            if (_buffer.Used >= _buffer.Valid) 
-                return -1;
-            
             var size = Math.Min(count, _buffer.Valid - _buffer.Used);
             fixed (byte* pBuffer = buffer)
             {
@@ -295,14 +291,14 @@ namespace Raven.Server.Rachis.Remote
             }
         }
 
-        public Reader CreateReader()
+        public SnapshotReader CreateReader()
         {
-            return new RemoteReader(this);
+            return new RemoteSnapshotReader(this);
         }
         
-        public Reader CreateReaderToStream(Stream stream)
+        public SnapshotReader CreateReaderToStream(Stream stream)
         {
-            return new RemoteReaderToStream(this, stream);
+            return new RemoteToStreamSnapshotReader(this, stream);
         }
 
         public T Read<T>(JsonOperationContext context)
