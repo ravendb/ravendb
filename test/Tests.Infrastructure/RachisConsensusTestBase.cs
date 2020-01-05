@@ -150,11 +150,14 @@ namespace Tests.Infrastructure
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
-            var ch = (char)(66 + Interlocked.Increment(ref _count));
+            char ch;
             if (bootstrap)
             {
                 ch = (char)65;
-                Interlocked.Decrement(ref _count);
+            }
+            else
+            {
+                ch = (char)(65 + Interlocked.Increment(ref _count));
             }
 
             var url = $"tcp://{tcpListener.LocalEndpoint}/?{caller}#{ch}";
