@@ -632,8 +632,16 @@ namespace Raven.Server.Documents.Queries.Results
                 var compound = ((FieldExpression)timeSeriesFunction.Between.Source).Compound;
 
                 if (compound.Count == 1)
-                    return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValue;
-                
+                {
+                    var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
+                    if (paramIndex == declaredFunction.Parameters.Count) //not found
+                        return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValue;
+                    if (!(args[paramIndex] is string s))
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                                                        $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[paramIndex].GetType()}'"); //todo aviv : write a better error message
+                    return s;
+                }
+
                 if (args == null)
                     throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                         $"'{compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
