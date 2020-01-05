@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Patch
         private readonly DateTime _creationTime;
         public readonly List<string> ScriptsSource = new List<string>();
 
+        private List<StringSegment> _rootAliases;
+
         public long Runs;
         DateTime _lastRun;
 
@@ -77,6 +79,11 @@ namespace Raven.Server.Documents.Patch
         public void AddScript(string script)
         {
             ScriptsSource.Add(script);
+        }
+
+        internal void RegisterRootAliases(List<StringSegment> rootAliases)
+        {
+            _rootAliases = rootAliases;
         }
 
         public ReturnRun GetRunner(out SingleRun run)
@@ -758,30 +765,22 @@ namespace Raven.Server.Documents.Patch
             private JsValue TimeSeries(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
-                if (args.Length == 0 || args.Length > 3)
+                if (args.Length != 1)
                     throw new InvalidOperationException($"must be called with exactly 1 string argument");
 
-                if (args[args.Length - 1].IsString() == false)
+                if (args[0].IsString() == false)
                     throw new InvalidOperationException($"must be called with exactly 1 string argument");
-                var tsQueryText = args[args.Length - 1].AsString();
+                var tsQueryText = args[0].AsString();
 
                 var parameters = new List<QueryExpression>();
 
-                if (args.Length > 1)
+                foreach (var rootAlias in _runner._rootAliases)
                 {
-                    if (args[0].IsString()== false)
-                        throw new InvalidOperationException($"must be called with exactly 1 string argument");
-
-                    parameters.Add(new FieldExpression(new List<StringSegment> { args[0].AsString() }));
-
-                    if (args.Length == 3)
-                    {
-                        if (args[1].IsString() == false)
-                            throw new InvalidOperationException($"must be called with exactly 1 string argument");
-
-                        parameters.Add(new FieldExpression(new List<StringSegment> { args[1].AsString() }));
-                    }
+                    parameters.Add(new FieldExpression(new List<StringSegment> { rootAlias }));
                 }
+
+
+                //this._runner._cache.tr
 
                 var tsParser = new QueryParser();
                 tsParser.Init(tsQueryText);
@@ -804,9 +803,13 @@ namespace Raven.Server.Documents.Patch
 
                 for (var index = 0; index < _args.Length; index++)
                 {
-                    var arg = _args[index].AsObject();
-                    if (!(arg is BlittableObjectInstance boi))
-                        throw new InvalidOperationException($"must be called with exactly 1 string argument");
+                    if (_args[index].IsObject() == false ||
+                        !(_args[index].AsObject() is BlittableObjectInstance boi))
+                    {
+                        tsFunctionArgs[index] = null;
+                        //todo aviv
+                        continue;
+                    }
 
                     if (index == 0)
                         docId = boi.DocumentId;

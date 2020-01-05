@@ -7,6 +7,8 @@ namespace Raven.Server.Documents.Queries
     {
         private readonly QueryMetadata _queryMetadata;
 
+        //todo aviv : change class name 
+
         public HasLoadIncludeCounterOrCmpXcngVisitor(QueryMetadata queryMetadata)
         {
             _queryMetadata = queryMetadata;
@@ -14,22 +16,29 @@ namespace Raven.Server.Documents.Queries
 
         public override void VisitCallExpression(CallExpression callExpression)
         {
-            if (_queryMetadata.HasIncludeOrLoad && _queryMetadata.HasCounterSelect && _queryMetadata.HasCmpXchgSelect)
+            if (_queryMetadata.HasIncludeOrLoad && _queryMetadata.HasCounterSelect && 
+                _queryMetadata.HasCmpXchgSelect && _queryMetadata.HasTimeSeriesSelect)
                 return;
 
             if (callExpression.Callee is Identifier id )
             {
-                if (id.Name.Equals("load") || id.Name.Equals("include") || id.Name.Equals("loadPath"))
+                switch (id.Name)
                 {
-                    _queryMetadata.HasIncludeOrLoad = true;
-                }
-                else if (id.Name.Equals("counter") || id.Name.Equals("counterRaw"))
-                {
-                    _queryMetadata.HasCounterSelect = true;
-                }
-                else if (id.Name.Equals("cmpxchg"))
-                {
-                    _queryMetadata.HasCmpXchgSelect = true;
+                    case "load":
+                    case "include":
+                    case "loadPath":
+                        _queryMetadata.HasIncludeOrLoad = true;
+                        break;
+                    case "counter":
+                    case "counterRaw":
+                        _queryMetadata.HasCounterSelect = true;
+                        break;
+                    case "cmpxchg":
+                        _queryMetadata.HasCmpXchgSelect = true;
+                        break;
+                    case "timeseries":
+                        _queryMetadata.HasTimeSeriesSelect = true;
+                        break;
                 }
             }
 

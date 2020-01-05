@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasCmpXchgSelect { get; internal set; }
 
-        public bool HasTimeSeriesSelect { get; private set; }
+        public bool HasTimeSeriesSelect { get; internal set; }
 
         public bool IsCollectionQuery { get; private set; } = true;
 
