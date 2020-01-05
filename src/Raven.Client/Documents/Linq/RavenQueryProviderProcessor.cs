@@ -2118,192 +2118,208 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                     break;
                 case ExpressionType.MemberAccess:
-                    var memberExpression = ((MemberExpression)body);
-
-                    var selectPath = GetSelectPath(memberExpression);
-                    AddToFieldsToFetch(selectPath, selectPath);
-
-                    if (_insideSelect == 1)
-                    {
-                        foreach (var fieldToFetch in FieldsToFetch)
-                        {
-                            if (fieldToFetch.Name != memberExpression.Member.Name)
-                                continue;
-
-                            fieldToFetch.Alias = null;
-                        }
-                    }
+                    SelectMemberAccess(body);
                     break;
                 //Anonymous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
                 //See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
                 case ExpressionType.New:
-                    var newExpression = ((NewExpression)body);
-
-                    if (_insideLet > 0)
-                    {
-                        VisitLet(newExpression);
-                        _insideLet--;
-                        break;
-                    }
-
-                    _newExpressionType = newExpression.Type;
-
-                    if (_declareBuilder != null)
-                    {
-                        AddReturnStatementToOutputFunction(newExpression);
-                        break;
-                    }
-
-                    if (FromAlias != null)
-                    {
-                        //lambda 2 js
-                        _jsSelectBody = TranslateSelectBodyToJs(newExpression);
-                        break;
-                    }
-
-                    for (int index = 0; index < newExpression.Arguments.Count; index++)
-                    {
-                        if (newExpression.Arguments[index] is ConstantExpression constant)
-                        {
-                            AddToFieldsToFetch(GetConstantValueAsString(constant.Value), GetSelectPath(newExpression.Members[index]));
-                            continue;
-                        }
-
-                        if (newExpression.Arguments[index].NodeType == ExpressionType.ArrayLength)
-                        {
-                            var info = GetMember(newExpression.Arguments[index]);
-                            AddToFieldsToFetch(info.Path, GetSelectPath(newExpression.Members[index]));
-                            continue;
-                        }
-
-                        if (newExpression.Arguments[index] is MemberExpression member && HasComputation(member) == false)
-                        {
-                            AddToFieldsToFetch(GetSelectPathOrConstantValue(member), GetSelectPath(newExpression.Members[index]));
-                            continue;
-                        }
-
-                        if (newExpression.Arguments[index] is MethodCallExpression mce)
-                        {
-                            if (LinqPathProvider.IsCounterCall(mce))
-                            {
-                                HandleSelectCounter(mce, lambdaExpression, newExpression.Members[index]);
-                                continue;
-                            }
-
-                            if (LinqPathProvider.IsTimeSeriesCall(mce))
-                            {
-                                HandleSelectTimeSeries(mce, GetSelectPath(newExpression.Members[index]));
-                                continue;
-                            }
-                        }
-
-                        //lambda 2 js
-                        if (FromAlias == null)
-                        {
-                            AddFromAlias(lambdaExpression?.Parameters[0].Name);
-                        }
-
-                        FieldsToFetch.Clear();
-                        _jsSelectBody = TranslateSelectBodyToJs(newExpression);
-                        break;
-                    }
-
+                    SelectNewExpression((NewExpression)body, lambdaExpression);
                     break;
                 //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
                 case ExpressionType.MemberInit:
-                    var memberInitExpression = ((MemberInitExpression)body);
-                    _newExpressionType = memberInitExpression.NewExpression.Type;
-
-                    if (_declareBuilder != null)
-                    {
-                        AddReturnStatementToOutputFunction(memberInitExpression);
-                        break;
-                    }
-
-                    if (FromAlias != null)
-                    {
-                        //lambda 2 js
-                        _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
-                        break;
-                    }
-
-                    foreach (MemberBinding t in memberInitExpression.Bindings)
-                    {
-                        var field = t as MemberAssignment;
-                        if (field == null)
-                            continue;
-
-                        if (field.Expression is ConstantExpression constant)
-                        {
-                            AddToFieldsToFetch(GetConstantValueAsString(constant.Value), GetSelectPath(field.Member));
-                            continue;
-                        }
-
-                        if (field.Expression.NodeType == ExpressionType.ArrayLength)
-                        {
-                            var info = GetMember(field.Expression);
-                            AddToFieldsToFetch(info.Path, GetSelectPath(field.Member));
-                            continue;
-                        }
-
-                        if (TryGetMemberExpression(field.Expression, out var member) && HasComputation(member) == false)
-                        {
-                            var renamedField = GetSelectPathOrConstantValue(member);
-                            AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
-                            continue;
-                        }
-
-                        if (field.Expression is MethodCallExpression mce)
-                        {
-                            if (LinqPathProvider.IsCounterCall(mce))
-                            {
-                                HandleSelectCounter(mce, lambdaExpression, field.Member);
-                                continue;
-                            }
-
-                            if (LinqPathProvider.IsTimeSeriesCall(mce))
-                            {
-                                HandleSelectTimeSeries(mce, GetSelectPath(field.Member));
-                                continue;
-                            }
-                        }
-
-                        //lambda 2 js
-                        if (FromAlias == null)
-                        {
-                            AddFromAlias(lambdaExpression?.Parameters[0].Name);
-                        }
-
-                        FieldsToFetch.Clear();
-                        _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
-
-                        break;
-                    }
+                    SelectMemberInit((MemberInitExpression)body, lambdaExpression);
                     break;
                 case ExpressionType.Parameter: // want the full thing, so just pass it on.
                     break;
                 //for example .Select(product => product.Properties["VendorName"])
                 case ExpressionType.Call:
-                    if (body is MethodCallExpression call && LinqPathProvider.IsTimeSeriesCall(call))
-                    {
-                        HandleSelectTimeSeries(call);
-                        break;
-                    }
-
-                    var expressionInfo = GetMember(body);
-                    var path = expressionInfo.Path;
-                    string alias = null;
-
-                    if (expressionInfo.Args != null)
-                    {
-                        AddCallArgumentsToPath(expressionInfo.Args, lambdaExpression?.Parameters[0].Name, ref path, out alias);
-                    }
-
-                    AddToFieldsToFetch(path, alias);
+                    SelectCall(body, lambdaExpression);
                     break;
 
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
+            }
+        }
+
+        private void SelectCall(Expression body, LambdaExpression lambdaExpression)
+        {
+            if (body is MethodCallExpression call && LinqPathProvider.IsTimeSeriesCall(call))
+            {
+                HandleSelectTimeSeries(call);
+                return;
+            }
+
+            var expressionInfo = GetMember(body);
+            var path = expressionInfo.Path;
+            string alias = null;
+
+            if (expressionInfo.Args != null)
+            {
+                AddCallArgumentsToPath(expressionInfo.Args, lambdaExpression?.Parameters[0].Name, ref path, out alias);
+            }
+
+            AddToFieldsToFetch(path, alias);
+        }
+
+        private void SelectMemberInit(MemberInitExpression memberInitExpression, LambdaExpression lambdaExpression)
+        {
+            _newExpressionType = memberInitExpression.NewExpression.Type;
+
+            if (_declareBuilder != null)
+            {
+                AddReturnStatementToOutputFunction(memberInitExpression);
+                return;
+            }
+
+            if (FromAlias != null)
+            {
+                //lambda 2 js
+                _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
+                return;
+            }
+
+            foreach (MemberBinding t in memberInitExpression.Bindings)
+            {
+                var field = t as MemberAssignment;
+                if (field == null)
+                    continue;
+
+                if (field.Expression is ConstantExpression constant)
+                {
+                    AddToFieldsToFetch(GetConstantValueAsString(constant.Value), GetSelectPath(field.Member));
+                    continue;
+                }
+
+                if (field.Expression.NodeType == ExpressionType.ArrayLength)
+                {
+                    var info = GetMember(field.Expression);
+                    AddToFieldsToFetch(info.Path, GetSelectPath(field.Member));
+                    continue;
+                }
+
+                if (TryGetMemberExpression(field.Expression, out var member) && HasComputation(member) == false)
+                {
+                    var renamedField = GetSelectPathOrConstantValue(member);
+                    AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
+                    continue;
+                }
+
+                if (field.Expression is MethodCallExpression mce)
+                {
+                    if (LinqPathProvider.IsCounterCall(mce))
+                    {
+                        HandleSelectCounter(mce, lambdaExpression, field.Member);
+                        continue;
+                    }
+
+                    if (LinqPathProvider.IsTimeSeriesCall(mce))
+                    {
+                        HandleSelectTimeSeries(mce, GetSelectPath(field.Member));
+                        continue;
+                    }
+                }
+
+                //lambda 2 js
+                if (FromAlias == null)
+                {
+                    AddFromAlias(lambdaExpression?.Parameters[0].Name);
+                }
+
+                FieldsToFetch.Clear();
+                _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
+
+                break;
+            }
+        }
+
+        private void SelectNewExpression(NewExpression newExpression, LambdaExpression lambdaExpression)
+        {
+            if (_insideLet > 0)
+            {
+                VisitLet(newExpression);
+                _insideLet--;
+                return;
+            }
+
+            _newExpressionType = newExpression.Type;
+
+            if (_declareBuilder != null)
+            {
+                AddReturnStatementToOutputFunction(newExpression);
+                return;
+            }
+
+            if (FromAlias != null)
+            {
+                //lambda 2 js
+                _jsSelectBody = TranslateSelectBodyToJs(newExpression);
+                return;
+            }
+
+            for (int index = 0; index < newExpression.Arguments.Count; index++)
+            {
+                if (newExpression.Arguments[index] is ConstantExpression constant)
+                {
+                    AddToFieldsToFetch(GetConstantValueAsString(constant.Value), GetSelectPath(newExpression.Members[index]));
+                    continue;
+                }
+
+                if (newExpression.Arguments[index].NodeType == ExpressionType.ArrayLength)
+                {
+                    var info = GetMember(newExpression.Arguments[index]);
+                    AddToFieldsToFetch(info.Path, GetSelectPath(newExpression.Members[index]));
+                    continue;
+                }
+
+                if (newExpression.Arguments[index] is MemberExpression member && HasComputation(member) == false)
+                {
+                    AddToFieldsToFetch(GetSelectPathOrConstantValue(member), GetSelectPath(newExpression.Members[index]));
+                    continue;
+                }
+
+                if (newExpression.Arguments[index] is MethodCallExpression mce)
+                {
+                    if (LinqPathProvider.IsCounterCall(mce))
+                    {
+                        HandleSelectCounter(mce, lambdaExpression, newExpression.Members[index]);
+                        continue;
+                    }
+
+                    if (LinqPathProvider.IsTimeSeriesCall(mce))
+                    {
+                        HandleSelectTimeSeries(mce, GetSelectPath(newExpression.Members[index]));
+                        continue;
+                    }
+                }
+
+                //lambda 2 js
+                if (FromAlias == null)
+                {
+                    AddFromAlias(lambdaExpression?.Parameters[0].Name);
+                }
+
+                FieldsToFetch.Clear();
+                _jsSelectBody = TranslateSelectBodyToJs(newExpression);
+                break;
+            }
+        }
+
+        private void SelectMemberAccess(Expression body)
+        {
+            var memberExpression = ((MemberExpression)body);
+
+            var selectPath = GetSelectPath(memberExpression);
+            AddToFieldsToFetch(selectPath, selectPath);
+
+            if (_insideSelect == 1)
+            {
+                foreach (var fieldToFetch in FieldsToFetch)
+                {
+                    if (fieldToFetch.Name != memberExpression.Member.Name)
+                        continue;
+
+                    fieldToFetch.Alias = null;
+                }
             }
         }
 
@@ -2349,8 +2365,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var visitor = new TimeSeriesQueryVisitor<T>(this);
             var tsQueryText = visitor.Visit(callExpression);
-
-            var path = $"{Constants.TimeSeries.SelectFieldName}({tsQueryText})";
+            string path = $"{Constants.TimeSeries.SelectFieldName}({tsQueryText})";
             alias ??= Constants.TimeSeries.QueryFunction + FieldsToFetch.Count;
 
             AddToFieldsToFetch(path, alias);
@@ -2684,26 +2699,51 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             _jsProjectionNames.Add(name);
 
-            string js;
-            if (expression is MethodCallExpression mce
-                && mce.Method.DeclaringType == typeof(RavenQuery)
-                && mce.Method.Name == "Raw")
+            string script;
+            if (expression is MethodCallExpression mce)
             {
-                if (mce.Arguments.Count == 1)
+                if (IsRawCall(mce))
                 {
-                    js = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
+                    if (mce.Arguments.Count == 1)
+                    {
+                        script = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
+                    }
+                    else
+                    {
+                        var path = ToJs(mce.Arguments[0]);
+                        var raw = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
+
+                        script = $"{path}.{raw}";
+                    }
+                }
+                else if (LinqPathProvider.IsTimeSeriesCall(mce))
+                {
+                    var visitor = new TimeSeriesQueryVisitor<T>(this);
+                    var tsQueryText = visitor.Visit(mce);
+
+                    var parameter = DocumentQuery.ProjectionParameter(tsQueryText);
+
+                    var pathBuilder = new StringBuilder();
+                    pathBuilder.Append(Constants.TimeSeries.SelectFieldName).Append('(');
+                    
+                    if (FromAlias != null)
+                        pathBuilder.Append('\'').Append(FromAlias).Append('\'').Append(", ");
+                    if (visitor.SourceAlias != null && visitor.SourceAlias != FromAlias)
+                        pathBuilder.Append('\'').Append(visitor.SourceAlias).Append('\'').Append(", ");
+
+                    pathBuilder.Append(parameter).Append(')');
+
+                    script = pathBuilder.ToString();
                 }
                 else
                 {
-                    var path = ToJs(mce.Arguments[0]);
-                    var raw = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
-
-                    js = $"{path}.{raw}";
+                    script = ToJs(mce);
                 }
+
             }
             else
             {
-                js = ToJs(expression);
+                script = ToJs(expression);
             }
 
             if (addComma)
@@ -2711,7 +2751,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 sb.Append(", ");
             }
 
-            sb.Append(name).Append(" : ").Append(js);
+            sb.Append(name).Append(" : ").Append(script);
+        }
+
+        private bool IsRawCall(MethodCallExpression mce)
+        {
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == "Raw";
         }
 
         private string ToJs(Expression expression, bool loadArg = false, JavascriptConversionExtensions.LoadSupport loadSupport = null)
