@@ -1,14 +1,15 @@
 using System;
+using System.Buffers;
 using System.IO;
 using Sparrow.Binary;
 
 namespace Raven.Server.Rachis.Remote
 {
-    public class RemoteReaderToStream : RemoteReader
+    public class RemoteToStreamSnapshotReader : RemoteSnapshotReader
     {
         private readonly Stream _stream;
 
-        public RemoteReaderToStream(RemoteConnection parent, Stream stream) 
+        public RemoteToStreamSnapshotReader(RemoteConnection parent, Stream stream) 
             : base(parent)
         {
             _stream = stream;
@@ -21,11 +22,11 @@ namespace Raven.Server.Rachis.Remote
         }
     }
         
-    public class StreamReader : Reader
+    public class StreamSnapshotReader : SnapshotReader
     {
         private readonly Stream _stream;
 
-        public StreamReader(Stream stream)
+        public StreamSnapshotReader(Stream stream)
         {
             _stream = stream;
         }
@@ -33,11 +34,11 @@ namespace Raven.Server.Rachis.Remote
         protected override int InternalRead(int offset, int count) => _stream.Read(Buffer, offset, count);
     }
         
-    public class RemoteReader : Reader
+    public class RemoteSnapshotReader : SnapshotReader
     {
         private readonly RemoteConnection _parent;
 
-        public RemoteReader(RemoteConnection parent)
+        public RemoteSnapshotReader(RemoteConnection parent)
         {
             _parent = parent;
         }
@@ -45,9 +46,14 @@ namespace Raven.Server.Rachis.Remote
         protected override int InternalRead(int offset, int count) => _parent.Read(Buffer, offset, count);
     }
     
-    public abstract class Reader
+    public abstract class SnapshotReader : IDisposable
     {
-        public byte[] Buffer { get; private set;} = new byte[1024];
+        public byte[] Buffer { get; private set;}
+
+        protected SnapshotReader()
+        {
+            Buffer = ArrayPool<byte>.Shared.Rent(1024);
+        }
         
         public int ReadInt32()
         {
@@ -64,7 +70,10 @@ namespace Raven.Server.Rachis.Remote
         public virtual void ReadExactly(int size)
         {
             if (Buffer.Length < size)
-                Buffer = new byte[Bits.PowerOf2(size)];
+            {
+                ArrayPool<byte>.Shared.Return(Buffer);
+                Buffer = ArrayPool<byte>.Shared.Rent(Bits.PowerOf2(size));
+            }
             var totalRead = 0;
             while (totalRead < size)
             {
@@ -76,5 +85,9 @@ namespace Raven.Server.Rachis.Remote
         }
             
         protected abstract int InternalRead(int offset, int count);
+        public void Dispose()
+        {
+            ArrayPool<byte>.Shared.Return(Buffer);
+        }
     }
 }

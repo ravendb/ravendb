@@ -22,7 +22,6 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
-using StreamReader = Raven.Server.Rachis.Remote.StreamReader;
 
 namespace Raven.Server.Rachis
 {
@@ -613,22 +612,25 @@ namespace Raven.Server.Rachis
 
             var fileName = $"snapshot.{Guid.NewGuid():N}";
             var filePath = context.Environment.Options.DataPager.Options.TempPath.Combine(fileName);
+            
             using (var temp = new StreamsTempFile(filePath.FullPath, context.Environment))
             using(var stream = temp.StartNewStream())
+            using(var remoteReader = _connection.CreateReaderToStream(stream))
             {
-                var remoteReader = _connection.CreateReaderToStream(stream);
-                if (ReadSnapshot(remoteReader, context, txw, dryRun:true, token) == false)
+                if (ReadSnapshot(remoteReader, context, txw, dryRun: true, token) == false)
                     return false;
 
                 stream.Seek(0, SeekOrigin.Begin);
-                var fileReader = new StreamReader(stream);
-                ReadSnapshot(fileReader, context, txw, dryRun: false, token);
+                using (var fileReader = new StreamSnapshotReader(stream))
+                {
+                    ReadSnapshot(fileReader, context, txw, dryRun: false, token);
+                }
             }
             
             return true;
         }
         
-        private unsafe bool ReadSnapshot(Reader reader, TransactionOperationContext context, Transaction txw, bool dryRun, CancellationToken token)
+        private unsafe bool ReadSnapshot(SnapshotReader reader, TransactionOperationContext context, Transaction txw, bool dryRun, CancellationToken token)
         {
             var type = reader.ReadInt32();
             if (type == -1)
