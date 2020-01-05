@@ -945,6 +945,7 @@ namespace Voron
                 CountOfTrees = countOfTrees,
                 CountOfTables = countOfTables,
                 Journals = Journal.Files.ToList(),
+                FlushedJournals = Journal.Applicator.JournalsToDelete,
                 TempPath = Options.TempPath,
                 JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath
             });
@@ -1008,6 +1009,7 @@ namespace Voron
                 NumberOfFreePages = numberOfFreePages,
                 NextPageNumber = NextPageNumber,
                 Journals = Journal.Files.ToList(),
+                FlushedJournals = Journal.Applicator.JournalsToDelete,
                 LastFlushedTransactionId = Journal.Applicator.LastFlushedTransactionId,
                 LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
                 TotalWrittenButUnsyncedBytes = Journal.Applicator.TotalWrittenButUnsyncedBytes,
