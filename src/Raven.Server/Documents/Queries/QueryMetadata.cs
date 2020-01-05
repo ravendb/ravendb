@@ -125,6 +125,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasTimeSeriesSelect { get; internal set; }
 
+        public bool HasTimeSeriesDeclarations { get; private set; }
+
         public bool IsCollectionQuery { get; private set; } = true;
 
         public Dictionary<string, DeclaredFunction> DeclaredFunctions { get; }
@@ -363,7 +365,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (function.Value.Type == DeclaredFunction.FunctionType.TimeSeries)
                 {
-                    HasTimeSeriesSelect = true;
+                    HasTimeSeriesDeclarations = true;
                     continue;
                 }
 

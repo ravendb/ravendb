@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var bufferSize = 3;
             var hasCounters = query.HasCounterSelect || query.CounterIncludes != null;
-            var hasTimeSeries = query.HasTimeSeriesSelect || query.TimeSeriesIncludes != null;
+            var hasTimeSeries = query.HasTimeSeriesSelect || query.HasTimeSeriesDeclarations || query.TimeSeriesIncludes != null;
 
             if (hasCounters)
                 bufferSize++;

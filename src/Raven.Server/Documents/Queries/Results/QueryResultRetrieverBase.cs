@@ -724,6 +724,34 @@ namespace Raven.Server.Documents.Queries.Results
 
                 foreach (var kvp in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
+                    if (kvp.Value.Type == DeclaredFunction.FunctionType.TimeSeries)
+                    {
+                        runner.AddTimeSeriesDeclaration(kvp.Value);
+
+                        var sb = new StringBuilder();
+                        sb.Append("function ").Append(kvp.Key).Append('(');
+                        
+                        //var parameters 
+
+                        var paramsBuilder = new StringBuilder();
+
+                        for (int i = 0; i < kvp.Value.Parameters.Count; i++)
+                        {
+                            if (i > 0)
+                                paramsBuilder.Append(", ");
+                            paramsBuilder.Append(((FieldExpression)kvp.Value.Parameters[i]).FieldValue);
+                        }
+
+                        sb.Append(paramsBuilder);
+                        sb.Append("){ return invokeTimeSeriesDeclaration(");
+                        sb.Append(paramsBuilder).Append(", '").Append(kvp.Key).Append("'); }");
+
+                        runner.AddScript(sb.ToString());
+
+                        continue;
+                    }
+
+
                     if (kvp.Value.Type != DeclaredFunction.FunctionType.JavaScript)
                         continue;
 

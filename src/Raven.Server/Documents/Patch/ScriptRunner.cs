@@ -16,6 +16,7 @@ using Jint.Runtime.Interop;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -44,6 +45,9 @@ namespace Raven.Server.Documents.Patch
         internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
         public readonly List<string> ScriptsSource = new List<string>();
+
+        internal readonly Dictionary<string, DeclaredFunction> TimeSeriesDeclaration = new Dictionary<string, DeclaredFunction>();
+
 
         private List<StringSegment> _rootAliases;
 
@@ -79,6 +83,11 @@ namespace Raven.Server.Documents.Patch
         public void AddScript(string script)
         {
             ScriptsSource.Add(script);
+        }
+
+        public void AddTimeSeriesDeclaration(DeclaredFunction func)
+        {
+            TimeSeriesDeclaration.Add(func.Name, func);
         }
 
         internal void RegisterRootAliases(List<StringSegment> rootAliases)
@@ -211,6 +220,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
 
                 ScriptEngine.SetValue("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", TimeSeries));
+
+                ScriptEngine.SetValue("invokeTimeSeriesDeclaration", new ClrFunctionInstance(ScriptEngine, "invokeTimeSeriesDeclaration", InvokeTimeSeriesDeclaration));
+
 
 
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
@@ -848,6 +860,70 @@ namespace Raven.Server.Documents.Patch
 
             }
 
+            private JsValue InvokeTimeSeriesDeclaration(JsValue self, JsValue[] args)
+            {
+                AssertValidDatabaseContext();
+                if (args.Length < 1)
+                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
+
+                var key = args[args.Length - 1];
+
+                if (key.IsString() == false)
+                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
+
+                if (_runner.TimeSeriesDeclaration.TryGetValue(key.AsString(), out var func) == false)
+                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
+
+                var tsFunctionArgs = new object[args.Length];
+
+                List<IDisposable> lazyIds = new List<IDisposable>();
+
+                for (var index = 0; index < args.Length - 1; index++)
+                {
+                    if (args[index].IsObject() && args[index].AsObject() is BlittableObjectInstance boi)
+                    {
+                        var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
+                        lazyIds.Add(lazyId);
+                        tsFunctionArgs[index] = new Document
+                        {
+                            Data = boi.Blittable,
+                            Id = lazyId
+                        };
+                    }
+
+                    else
+                    {
+                        tsFunctionArgs[index] = Translate(args[index], _jsonCtx);
+                    }
+                }
+
+                if (_args[0].IsObject() == false || !(_args[0].AsObject() is BlittableObjectInstance originalDoc))
+                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
+
+                var docId = originalDoc.DocumentId;
+
+                if (_args[_args.Length -1].IsObject() == false || !(_args[_args.Length - 1].AsObject() is BlittableObjectInstance parameters))
+                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
+
+                var queryParameters = parameters.Blittable;
+                tsFunctionArgs[tsFunctionArgs.Length - 1] = new Document
+                {
+                    Data = queryParameters
+                };
+
+                var retriever = new TimeSeriesRetriever(_database, _docsCtx, queryParameters, null);
+
+                var result = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs);
+
+                foreach (var id in lazyIds)
+                {
+                    id?.Dispose();
+                }
+
+                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, result);
+
+            }
+
             private static void ThrowInvalidIncrementCounterArgs(JsValue[] args)
             {
                 throw new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
@@ -1357,13 +1433,21 @@ namespace Raven.Server.Documents.Patch
 
             public object Translate(ScriptRunnerResult result, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
-                var val = result.RawJsValue;
+                return Translate(result.RawJsValue, context, modifier, usageMode);
+            }
+
+            internal object Translate(JsValue val, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            {
                 if (val.IsString())
                     return val.AsString();
                 if (val.IsBoolean())
                     return val.AsBoolean();
                 if (val.IsObject())
-                    return result.TranslateToObject(context, modifier, usageMode);
+                {
+                    if (val.IsNull())
+                        return null;
+                    return JsBlittableBridge.Translate(context, ScriptEngine, val.AsObject(), modifier, usageMode);
+                }
                 if (val.IsNumber())
                     return val.AsNumber();
                 if (val.IsNull() || val.IsUndefined())
