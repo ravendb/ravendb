@@ -17,6 +17,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private StringBuilder _selectFields;
         private string _src, _between, _where, _groupBy, _loadTag;
 
+        public string SourceAlias { get; private set; }
+
         public TimeSeriesQueryVisitor(RavenQueryProviderProcessor<T> processor)
         {
             _providerProcessor = processor;
@@ -163,13 +165,13 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
             else
             {
-                var srcAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
+                SourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
 
                 if (_providerProcessor.FromAlias == null)
-                    _providerProcessor.AddFromAlias(srcAlias);
+                    _providerProcessor.AddFromAlias(SourceAlias);
 
                 var name = GetNameFromArgument(mce.Arguments[1]);
-                _src = $"{srcAlias}.{name}";
+                _src = $"{SourceAlias}.{name}";
             }
         }
 
