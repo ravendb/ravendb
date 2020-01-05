@@ -15,7 +15,8 @@ namespace Raven.Client.Util
         private int _readTimeout;
         private bool _canBaseStreamTimeoutOnWrite;
         private bool _canBaseStreamTimeoutOnRead;
-        private CancellationTokenSource _cts;
+        private CancellationTokenSource _writeCts;
+        private CancellationTokenSource _readCts;
         public StreamWithTimeout(Stream stream, TimeSpan? writeTimeout = null, TimeSpan? readTimeout = null)
         {
             _stream = stream;
@@ -28,7 +29,22 @@ namespace Raven.Client.Util
             _canBaseStreamTimeoutOnRead = _stream.CanTimeout && _stream.ReadTimeout < int.MaxValue;
 
             if (_canBaseStreamTimeoutOnRead)
+            {
                 _readTimeout = (int?)readTimeout?.TotalMilliseconds ?? _stream.ReadTimeout;
+                if (_stream.ReadTimeout == _readTimeout)
+                    return;
+
+                try
+                {
+                    _stream.ReadTimeout = _readTimeout;
+                }
+                catch
+                {
+                    // not every stream support setting the timeout value
+                    // so we need to fall-back to the inner stream timeout
+                    _readTimeout = _stream.ReadTimeout;
+                }
+            }
             else
                 _readTimeout = (int)(readTimeout ?? DefaultReadTimeout).TotalMilliseconds;
         }
@@ -38,17 +54,40 @@ namespace Raven.Client.Util
             _canBaseStreamTimeoutOnWrite = _stream.CanTimeout && _stream.WriteTimeout < int.MaxValue;
 
             if (_canBaseStreamTimeoutOnWrite)
+            {
                 _writeTimeout = (int?)writeTimeout?.TotalMilliseconds ?? _stream.WriteTimeout;
+                if (_stream.WriteTimeout == _writeTimeout)
+                    return;
+
+                try
+                {
+                    _stream.WriteTimeout = _writeTimeout;
+                }
+                catch
+                {
+                    // not every stream support setting the timeout value
+                    // so we need to fall-back to the inner stream timeout
+                    _writeTimeout = _stream.WriteTimeout;
+                }
+            }
             else
                 _writeTimeout = (int)(writeTimeout ?? DefaultWriteTimeout).TotalMilliseconds;
         }
 
-        public override int ReadTimeout => _readTimeout;
+        public override int ReadTimeout
+        {
+            get => _readTimeout;
+            set => _readTimeout = value;
+        }
 
-        public override int WriteTimeout => _writeTimeout;
+        public override int WriteTimeout
+        {
+            get => _writeTimeout;
+            set => _writeTimeout = value;
+        }
 
         public override bool CanTimeout => true;
-
+        
         public override void Flush()
         {
             _stream.Flush();
@@ -72,11 +111,11 @@ namespace Raven.Client.Util
 
         private Task<int> ReadAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            _cts?.Dispose();
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _cts.CancelAfter(_readTimeout);
+            _readCts?.Dispose();
+            _readCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _readCts.CancelAfter(_readTimeout);
 
-            return _stream.ReadAsync(buffer, offset, count, _cts.Token);
+            return _stream.ReadAsync(buffer, offset, count, _readCts.Token);
         }
 
         
@@ -114,11 +153,11 @@ namespace Raven.Client.Util
 
         private Task WriteAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            _cts?.Dispose();
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _cts.CancelAfter(_writeTimeout);
+            _writeCts?.Dispose();
+            _writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _writeCts.CancelAfter(_writeTimeout);
 
-            return _stream.WriteAsync(buffer, offset, count, _cts.Token);
+            return _stream.WriteAsync(buffer, offset, count, _writeCts.Token);
         }
 
         public override bool CanRead => _stream.CanRead;
@@ -135,7 +174,8 @@ namespace Raven.Client.Util
         {
             base.Dispose(disposing);
             _stream.Dispose();
-            _cts?.Dispose();
+            _readCts?.Dispose();
+            _writeCts?.Dispose();
         }
     }
 }
