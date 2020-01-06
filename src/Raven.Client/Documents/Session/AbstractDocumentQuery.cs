@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Session
 
         protected readonly FromToken FromToken;
 
-        protected readonly DeclareToken DeclareToken;
+        protected readonly IEnumerable<DeclareToken> DeclareTokens;
 
         protected readonly List<LoadToken> LoadTokens;
 
@@ -171,7 +171,7 @@ namespace Raven.Client.Documents.Session
                                      string indexName,
                                      string collectionName,
                                      bool isGroupBy,
-                                     DeclareToken declareToken,
+                                     IEnumerable<DeclareToken> declareTokens,
                                      List<LoadToken> loadTokens,
                                      string fromAlias = null,
                                      bool? isProjectInto = false)
@@ -182,7 +182,7 @@ namespace Raven.Client.Documents.Session
 
             FromToken = FromToken.Create(indexName, collectionName, fromAlias);
 
-            DeclareToken = declareToken;
+            DeclareTokens = declareTokens;
 
             LoadTokens = loadTokens;
 
@@ -1450,7 +1450,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildDeclare(StringBuilder writer)
         {
-            DeclareToken?.WriteTo(writer);
+            if (DeclareTokens == null)
+                return;
+
+            foreach (var token in DeclareTokens)
+            {
+                token.WriteTo(writer);
+            }
         }
 
         private void BuildLoad(StringBuilder writer)

@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Queries
 
         public string FromAlias { get; set; }
 
-        public DeclareToken DeclareToken { get; set; }
+        public IEnumerable<DeclareToken> DeclareTokens { get; set; }
 
         public List<LoadToken> LoadTokens { get; set; }
 
@@ -28,12 +28,12 @@ namespace Raven.Client.Documents.Queries
 
         internal bool IsProjectInto { get; set; }
 
-        public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias = null, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, bool isCustomFunction = false)
+        public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias = null, IEnumerable<DeclareToken> declareTokens = null, List<LoadToken> loadTokens = null, bool isCustomFunction = false)
         {
             Fields = fields;
             Projections = projections;
             FromAlias = fromAlias;
-            DeclareToken = declareToken;
+            DeclareTokens = declareTokens;
             LoadTokens = loadTokens;
             IsCustomFunction = isCustomFunction;
         }

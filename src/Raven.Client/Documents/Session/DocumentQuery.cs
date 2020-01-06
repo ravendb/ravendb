@@ -26,8 +26,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
         /// </summary>
-        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, string fromAlias = null, bool? isProjectInto = false)
-            : base(session, indexName, collectionName, isGroupBy, declareToken, loadTokens, fromAlias, isProjectInto)
+        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, IEnumerable<DeclareToken> declareTokens = null, List<LoadToken> loadTokens = null, string fromAlias = null, bool? isProjectInto = false)
+            : base(session, indexName, collectionName, isGroupBy, declareTokens, loadTokens, fromAlias, isProjectInto)
         {
         }
 
@@ -1138,7 +1138,7 @@ namespace Raven.Client.Documents.Session
                 IndexName,
                 CollectionName,
                 IsGroupBy,
-                queryData?.DeclareToken,
+                queryData?.DeclareTokens,
                 queryData?.LoadTokens,
                 queryData?.FromAlias,
                 queryData?.IsProjectInto)

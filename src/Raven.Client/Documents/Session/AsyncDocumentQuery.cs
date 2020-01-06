@@ -29,8 +29,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
-        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, string fromAlias = null, bool? isProjectInfo = false)
-            : base(session, indexName, collectionName, isGroupBy, declareToken, loadTokens, fromAlias, isProjectInfo)
+        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, IEnumerable<DeclareToken> declareTokens = null, List<LoadToken> loadTokens = null, string fromAlias = null, bool? isProjectInfo = false)
+            : base(session, indexName, collectionName, isGroupBy, declareTokens, loadTokens, fromAlias, isProjectInfo)
         {
         }
 
@@ -1076,7 +1076,7 @@ namespace Raven.Client.Documents.Session
                 IndexName,
                 CollectionName,
                 IsGroupBy,
-                queryData?.DeclareToken,
+                queryData?.DeclareTokens,
                 queryData?.LoadTokens,
                 queryData?.FromAlias,
                 queryData?.IsProjectInto)
