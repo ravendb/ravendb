@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Linq
         private string _jsSelectBody;
         private List<string> _jsProjectionNames;
         private StringBuilder _declareBuilder;
-        private DeclareToken _declareToken;
+        private List<DeclareToken> _declareTokens;
         private List<LoadToken> _loadTokens;
         private HashSet<string> _loadAliases;
         private readonly HashSet<string> _loadAliasesMovedToOutputFunction;
@@ -2422,8 +2422,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
             }
 
-            _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
-            _jsSelectBody = $"output({_declareToken.Parameters})";
+            _declareTokens ??= new List<DeclareToken>();
+            var declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
+            _declareTokens.Add(declareToken);
+            _jsSelectBody = $"output({declareToken.Parameters})";
         }
 
         private void VisitLet(NewExpression expression)
@@ -2444,15 +2446,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _projectionParameters = new List<string>();
             }
 
-            if (IsRaw(expression, name))
+            if (IsRawOrTimeSeriesCall(expression.Arguments[1], out string script))
+            {
+                AppendLineToOutputFunction(name, script);
                 return;
+            }
 
             // if _declareBuilder != null then we already have an 'output' function
             // the load-argument might depend on previous statements inside the function body
             // use js load() method instead of a LoadToken
             var shouldUseLoadToken = _declareBuilder == null &&
                                      expression.Arguments[1].NodeType != ExpressionType.Conditional &&
-                                     (!(expression.Arguments[1] is MethodCallExpression mce) || mce.Method.Name == nameof(RavenQuery.Load));
+                                     (!(expression.Arguments[1] is MethodCallExpression methodCall) || methodCall.Method.Name == nameof(RavenQuery.Load));
 
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = shouldUseLoadToken };
             var js = ToJs(expression.Arguments[1], false, loadSupport);
@@ -2468,26 +2473,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private bool IsRaw(NewExpression expression, string name)
-        {
-            if (expression.Arguments[1] is MethodCallExpression mce
-                && mce.Method.DeclaringType == typeof(RavenQuery)
-                && mce.Method.Name == "Raw")
-            {
-                if (mce.Arguments.Count == 1)
-                {
-                    AppendLineToOutputFunction(name, (mce.Arguments[0] as ConstantExpression)?.Value.ToString());
-                }
-                else
-                {
-                    var path = ToJs(mce.Arguments[0]);
-                    var raw = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
-                    AppendLineToOutputFunction(name, $"{path}.{raw}");
-                }
-                return true;
-            }
-            return false;
-        }
 
         private void HandleLoad(NewExpression expression, JavascriptConversionExtensions.LoadSupport loadSupport, string name, string js)
         {
@@ -2699,49 +2684,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             _jsProjectionNames.Add(name);
 
-            string script;
-            if (expression is MethodCallExpression mce)
-            {
-                if (IsRawCall(mce))
-                {
-                    if (mce.Arguments.Count == 1)
-                    {
-                        script = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
-                    }
-                    else
-                    {
-                        var path = ToJs(mce.Arguments[0]);
-                        var raw = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
-
-                        script = $"{path}.{raw}";
-                    }
-                }
-                else if (LinqPathProvider.IsTimeSeriesCall(mce))
-                {
-                    var visitor = new TimeSeriesQueryVisitor<T>(this);
-                    var tsQueryText = visitor.Visit(mce);
-
-                    var parameter = DocumentQuery.ProjectionParameter(tsQueryText);
-
-                    var pathBuilder = new StringBuilder();
-                    pathBuilder.Append(Constants.TimeSeries.SelectFieldName).Append('(');
-                    
-                    if (FromAlias != null)
-                        pathBuilder.Append('\'').Append(FromAlias).Append('\'').Append(", ");
-                    if (visitor.SourceAlias != null && visitor.SourceAlias != FromAlias)
-                        pathBuilder.Append('\'').Append(visitor.SourceAlias).Append('\'').Append(", ");
-
-                    pathBuilder.Append(parameter).Append(')');
-
-                    script = pathBuilder.ToString();
-                }
-                else
-                {
-                    script = ToJs(mce);
-                }
-
-            }
-            else
+            if (IsRawOrTimeSeriesCall(expression, out string script) == false)
             {
                 script = ToJs(expression);
             }
@@ -2754,7 +2697,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             sb.Append(name).Append(" : ").Append(script);
         }
 
-        private bool IsRawCall(MethodCallExpression mce)
+        private static bool IsRawCall(MethodCallExpression mce)
         {
             return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == "Raw";
         }
@@ -2800,6 +2743,54 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_conventions)
             });
+        }
+
+        private bool IsRawOrTimeSeriesCall(Expression expression, out string script)
+        {
+            script = null;
+
+            if (!(expression is MethodCallExpression mce))
+                return false;
+
+            if (IsRawCall(mce))
+            {
+                if (mce.Arguments.Count == 1)
+                {
+                    script = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
+                }
+                else
+                {
+                    var path = ToJs(mce.Arguments[0]);
+                    var raw = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
+
+                    script = $"{path}.{raw}";
+                }
+
+            }
+            else if (LinqPathProvider.IsTimeSeriesCall(mce))
+            {
+                var visitor = new TimeSeriesQueryVisitor<T>(this);
+                var tsQueryText = visitor.Visit(mce);
+
+                var paramsBuilder = new StringBuilder();
+
+                if (FromAlias != null)
+                    paramsBuilder.Append(FromAlias);
+                if (visitor.SourceAlias != null && visitor.SourceAlias != FromAlias)
+                    paramsBuilder.Append(", ").Append(visitor.SourceAlias);
+
+                var parameters = paramsBuilder.ToString();
+
+                _declareTokens ??= new List<DeclareToken>();
+
+                var tsFunctionName = Constants.TimeSeries.QueryFunction + _declareTokens.Count;
+
+                _declareTokens.Add(DeclareToken.Create(tsFunctionName, tsQueryText, parameters, type: DeclareToken.DeclarationType.TimeSeries));
+
+                script = $"{tsFunctionName}({parameters})";
+            }
+
+            return script != null;
         }
 
         private static bool HasComputation(MemberExpression memberExpression)
@@ -3283,7 +3274,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return documentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareToken, _loadTokens, true));
+                return documentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareTokens, _loadTokens, true));
             }
 
             var (fields, projections) = GetProjections();
@@ -3332,7 +3323,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return asyncDocumentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareToken, _loadTokens, true));
+                return asyncDocumentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareTokens, _loadTokens, true));
             }
 
             var (fields, projections) = GetProjections();
@@ -3384,7 +3375,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             // used only for DocumentQuery
             var finalQuery = ((DocumentQuery<T>)DocumentQuery).CreateDocumentQueryInternal<TProjection>(
-                new QueryData(fields, projections, FromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null)
+                new QueryData(fields, projections, FromAlias, _declareTokens, _loadTokens, _declareTokens != null || _jsSelectBody != null)
                 {
                     IsProjectInto = _isProjectInto
                 });
