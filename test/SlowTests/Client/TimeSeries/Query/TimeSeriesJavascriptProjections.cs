@@ -218,9 +218,77 @@ select {
                 }
             }
         }
-
+       
         [Fact]
         public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 60,
+                        WorksAt = "companies/1"
+                    }, "people/1");
+
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "tags/1", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "tags/2", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var rawQuery = session.Advanced.RawQuery<CustomRawQueryResult4>(
+@"declare timeseries out(name) 
+{
+    from name between $start and $end
+    where Tag != 'tags/2'
+}
+from People as p
+select {
+    Heartrate: out('Heartrate')
+}")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddYears(1));
+
+                    var result = rawQuery.First();
+
+                    Assert.Equal(3, result.Heartrate.Count);
+
+                    Assert.Equal(new[] { 59d }, result.Heartrate.Results[0].Values);
+                    Assert.Equal("tags/1", result.Heartrate.Results[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(61), result.Heartrate.Results[0].Timestamp);
+
+                    Assert.Equal(new[] { 159d }, result.Heartrate.Results[1].Values);
+                    Assert.Equal("tags/1", result.Heartrate.Results[1].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), result.Heartrate.Results[1].Timestamp);
+
+                    Assert.Equal(new[] { 179d }, result.Heartrate.Results[2].Values);
+                    Assert.Equal("tags/1", result.Heartrate.Results[2].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Heartrate.Results[2].Timestamp);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction_MultipleSeries()
         {
             using (var store = GetDocumentStore())
             {
@@ -408,6 +476,69 @@ select out(p)")
                     Assert.Equal("tags/1", result.Stocks.Results[2].Tag);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Stocks.Results[2].Timestamp);
 
+                }
+            }
+        }
+
+        [Fact]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_MultipleValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 60
+                    }, "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 59d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 79d, 97d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 69d, 96d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d, 251d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d, 271d, 372d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var rawQuery = session.Advanced.RawQuery<CustomRawQueryResult3>(
+@"declare timeseries out(doc) 
+{
+    from doc.Stocks between $start and $end
+    where Values[1] != null and ( Values[0] > 70 OR Values[1] > 100 )
+}
+from People as p
+where p.Age > 49
+select {
+    Series: out(p)
+}")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddYears(1));
+
+                    var result = rawQuery.First();
+
+                    Assert.Equal(3, result.Series.Count);
+
+                    Assert.Equal(new[] { 79d, 97d }, result.Series.Results[0].Values);
+                    Assert.Equal("tags/2", result.Series.Results[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(62), result.Series.Results[0].Timestamp);
+
+                    Assert.Equal(new[] { 159d, 251d }, result.Series.Results[1].Values);
+                    Assert.Equal("tags/1", result.Series.Results[1].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), result.Series.Results[1].Timestamp);
+
+                    Assert.Equal(new[] { 179d, 271d, 372d }, result.Series.Results[2].Values);
+                    Assert.Equal("tags/1", result.Series.Results[2].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Series.Results[2].Timestamp);
                 }
             }
         }
@@ -784,6 +915,82 @@ select foo(heartrate(p))
         }
 
         [Fact]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_MultipleSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        LastName = "Ayende",
+                        Age = 30,
+                    }, "people/1");
+
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from p in session.Query<Person>()
+                                where p.Age > 21
+                                select new
+                                {
+                                    Name = p.Name + " " + p.LastName, // creates a js projection
+                                    Heartrate = RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
+                                        .Where(ts => ts.Values[0] > 100 && ts.Tag != "watches/fitbit")
+                                        .ToList(),
+                                    Stocks = RavenQuery.TimeSeries(p, "Stocks", baseline, baseline.AddMonths(2))
+                                        .Where(ts => ts.Tag == "tags/1" && ts.Values[0] < 600)
+                                        .ToList()
+                                };
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Oren Ayende", result[0].Name);
+
+                    var heartrate = result[0].Heartrate.Results;
+
+                    Assert.Equal(2, heartrate.Length);
+
+                    Assert.Equal(159, heartrate[0].Value);
+                    Assert.Equal(169, heartrate[1].Value);
+
+                    var stocks = result[0].Stocks.Results;
+
+                    Assert.Equal(2, stocks.Length);
+
+                    Assert.Equal(559, stocks[0].Value);
+                    Assert.Equal(579, stocks[1].Value);
+
+                }
+            }
+        }
+
+        [Fact]
         public void TimeSeriesAggregationInsideJsProjection_UsingLinq_CanDefineTmeSeriesInsideLet()
         {
             using (var store = GetDocumentStore())
@@ -1122,7 +1329,6 @@ select foo(heartrate(p))
                 }
             }
         }
-
 
     }
 }
