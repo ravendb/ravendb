@@ -652,14 +652,10 @@ namespace Raven.Server.Documents.Queries.Results
         private class QueryKey : ScriptRunnerCache.Key
         {
             private readonly Dictionary<string, DeclaredFunction> _functions;
-            private readonly List<StringSegment> _rootAliasPaths;
 
             private bool Equals(QueryKey other)
             {
                 if (_functions?.Count != other._functions?.Count)
-                    return false;
-
-                if (_rootAliasPaths?.Count != other._rootAliasPaths?.Count)
                     return false;
 
                 foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
@@ -667,12 +663,6 @@ namespace Raven.Server.Documents.Queries.Results
                     if (other._functions != null && 
                         (other._functions.TryGetValue(function.Key, out var otherVal) == false || 
                          function.Value.FunctionText != otherVal.FunctionText))
-                        return false;
-                }
-
-                for (var i = 0; i < _rootAliasPaths?.Count; i++)
-                {
-                    if (_rootAliasPaths[i] != other._rootAliasPaths[i])
                         return false;
                 }
 
@@ -700,53 +690,26 @@ namespace Raven.Server.Documents.Queries.Results
                         hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
                     }
 
-
-                    for (var i = 0; i < _rootAliasPaths?.Count; i++)
-                    {
-                        hashCode = (hashCode * 397) ^ (_rootAliasPaths[i].GetHashCode());
-                    }
-
                     return hashCode;
                 }
             }
 
-            public QueryKey(Dictionary<string, DeclaredFunction> functions,
-                List<StringSegment> rootAliasPaths)
+            public QueryKey(Dictionary<string, DeclaredFunction> functions)
             {
                 _functions = functions;
-                _rootAliasPaths = rootAliasPaths;
             }
 
             public override void GenerateScript(ScriptRunner runner)
             {
-                if (_rootAliasPaths != null)
-                    runner.RegisterRootAliases(_rootAliasPaths);
-
                 foreach (var kvp in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
                     if (kvp.Value.Type == DeclaredFunction.FunctionType.TimeSeries)
                     {
                         runner.AddTimeSeriesDeclaration(kvp.Value);
 
-                        var sb = new StringBuilder();
-                        sb.Append("function ").Append(kvp.Key).Append('(');
-                        
-                        //var parameters 
+                        var script = GenerateTimeSeriesInvocationCall(kvp.Key, kvp.Value.Parameters);
 
-                        var paramsBuilder = new StringBuilder();
-
-                        for (int i = 0; i < kvp.Value.Parameters.Count; i++)
-                        {
-                            if (i > 0)
-                                paramsBuilder.Append(", ");
-                            paramsBuilder.Append(((FieldExpression)kvp.Value.Parameters[i]).FieldValue);
-                        }
-
-                        sb.Append(paramsBuilder);
-                        sb.Append("){ return invokeTimeSeriesDeclaration(");
-                        sb.Append(paramsBuilder).Append(", '").Append(kvp.Key).Append("'); }");
-
-                        runner.AddScript(sb.ToString());
+                        runner.AddScript(script);
 
                         continue;
                     }
@@ -757,6 +720,32 @@ namespace Raven.Server.Documents.Queries.Results
 
                     runner.AddScript(kvp.Value.FunctionText);
                 }
+            }
+
+            private static string GenerateTimeSeriesInvocationCall(string name, List<QueryExpression> parameters)
+            {
+                var sb = new StringBuilder();
+
+                sb.Append("function ")
+                    .Append(name)
+                    .Append('(');
+
+                var paramsBuilder = new StringBuilder();
+
+                for (int i = 0; i < parameters.Count; i++)
+                {
+                    if (i > 0)
+                        paramsBuilder.Append(", ");
+                    paramsBuilder.Append(((FieldExpression)parameters[i]).FieldValue);
+                }
+
+                sb.Append(paramsBuilder)
+                    .Append("){ return invokeTimeSeriesFunction(")
+                    .Append(name).Append(", '")
+                    .Append(paramsBuilder)
+                    .Append("'); }");
+
+                return sb.ToString();
             }
         }
 
@@ -770,7 +759,7 @@ namespace Raven.Server.Documents.Queries.Results
                 return _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args);
             }
 
-            var key = new QueryKey(query.DeclaredFunctions, _query.Metadata.HasTimeSeriesSelect ? _query.Metadata.RootAliasPaths?.Keys.ToList() : null);
+            var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
             {

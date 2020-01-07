@@ -2600,14 +2600,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AppendLineToOutputFunction(string name, string js)
         {
-            if (_declareBuilder == null)
-            {
-                _declareBuilder = new StringBuilder();
-            }
+            _declareBuilder ??= new StringBuilder();
 
             name = RenameAliasIfReservedInJs(name);
 
-            _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);
+            _declareBuilder.Append('\t')
+                .Append("var ").Append(name)
+                .Append(" = ").Append(js).Append(';')
+                .Append(Environment.NewLine);
         }
 
         internal void AddFromAlias(string alias)

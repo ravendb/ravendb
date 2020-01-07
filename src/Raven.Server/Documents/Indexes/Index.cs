@@ -3258,7 +3258,7 @@ namespace Raven.Server.Documents.Indexes
             }
 
             var hasCounters = q.CounterIncludes != null || q.HasCounterSelect;
-            var hasTimeSeries = q.TimeSeriesIncludes != null || q.HasTimeSeriesSelect || q.HasTimeSeriesDeclarations;
+            var hasTimeSeries = q.TimeSeriesIncludes != null || q.HasTimeSeriesSelect;
             var hasCmpXchg = q.HasCmpXchg || q.HasCmpXchgSelect;
 
             if (hasCounters)
@@ -3308,7 +3308,7 @@ namespace Raven.Server.Documents.Indexes
             if (q.CounterIncludes != null || q.HasCounterSelect)
                 length += sizeof(long); // last counter etag
 
-            if (q.TimeSeriesIncludes != null || q.HasTimeSeriesSelect || q.HasTimeSeriesDeclarations)
+            if (q.TimeSeriesIncludes != null || q.HasTimeSeriesSelect)
                 length += sizeof(long); // last time series etag
 
             if (q.HasCmpXchg || q.HasCmpXchgSelect)

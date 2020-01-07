@@ -16,19 +16,16 @@ using Jint.Runtime.Interop;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
-using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Spatial4n.Core.Distance;
@@ -47,9 +44,6 @@ namespace Raven.Server.Documents.Patch
         public readonly List<string> ScriptsSource = new List<string>();
 
         internal readonly Dictionary<string, DeclaredFunction> TimeSeriesDeclaration = new Dictionary<string, DeclaredFunction>();
-
-
-        private List<StringSegment> _rootAliases;
 
         public long Runs;
         DateTime _lastRun;
@@ -88,11 +82,6 @@ namespace Raven.Server.Documents.Patch
         public void AddTimeSeriesDeclaration(DeclaredFunction func)
         {
             TimeSeriesDeclaration.Add(func.Name, func);
-        }
-
-        internal void RegisterRootAliases(List<StringSegment> rootAliases)
-        {
-            _rootAliases = rootAliases;
         }
 
         public ReturnRun GetRunner(out SingleRun run)
@@ -219,9 +208,7 @@ namespace Raven.Server.Documents.Patch
 
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
 
-                ScriptEngine.SetValue("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", TimeSeries));
-
-                ScriptEngine.SetValue("invokeTimeSeriesDeclaration", new ClrFunctionInstance(ScriptEngine, "invokeTimeSeriesDeclaration", InvokeTimeSeriesDeclaration));
+                ScriptEngine.SetValue("invokeTimeSeriesFunction", new ClrFunctionInstance(ScriptEngine, "invokeTimeSeriesFunction", InvokeTimeSeriesFunction));
 
 
 
@@ -774,111 +761,23 @@ namespace Raven.Server.Documents.Patch
                 return JsBoolean.True;
             }
 
-            private JsValue TimeSeries(JsValue self, JsValue[] args)
-            {
-                AssertValidDatabaseContext();
-                if (args.Length != 1)
-                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
-
-                if (args[0].IsString() == false)
-                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
-                var tsQueryText = args[0].AsString();
-
-                var parameters = new List<QueryExpression>();
-
-                foreach (var rootAlias in _runner._rootAliases)
-                {
-                    parameters.Add(new FieldExpression(new List<StringSegment> { rootAlias }));
-                }
-
-
-                //this._runner._cache.tr
-
-                var tsParser = new QueryParser();
-                tsParser.Init(tsQueryText);
-
-                var ts = tsParser.ParseTimeSeriesBody("time series select function");
-
-                var declaredFunction = new DeclaredFunction
-                {
-                    Type = DeclaredFunction.FunctionType.TimeSeries,
-                    FunctionText = tsQueryText,
-                    TimeSeries = ts,
-                    Parameters = parameters
-                };
-
-                string docId = default;
-                BlittableJsonReaderObject queryParameters = default;
-                var tsFunctionArgs = new object[_args.Length];
-
-                List<IDisposable> lazyIds = new List<IDisposable>();
-
-                for (var index = 0; index < _args.Length; index++)
-                {
-                    if (_args[index].IsObject() == false ||
-                        !(_args[index].AsObject() is BlittableObjectInstance boi))
-                    {
-                        tsFunctionArgs[index] = null;
-                        //todo aviv
-                        continue;
-                    }
-
-                    if (index == 0)
-                        docId = boi.DocumentId;
-                    
-                    if (index != _args.Length - 1)
-                    {
-                        var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
-                        lazyIds.Add(lazyId);
-                        tsFunctionArgs[index] = new Document
-                        {
-                            Data = boi.Blittable,
-                            Id = lazyId
-                        };
-                    }
-                    else
-                    {
-                        queryParameters = boi.Blittable;
-                        tsFunctionArgs[index] = new Document
-                        {
-                            Data = boi.Blittable,
-                        };
-                    }
-                }
-
-
-                var retriever = new TimeSeriesRetriever(_database, _docsCtx, queryParameters, null);
-
-                var result = retriever.InvokeTimeSeriesFunction(declaredFunction, docId, tsFunctionArgs);
-
-                foreach (var  id in lazyIds)
-                {
-                    id?.Dispose();
-                }
-
-                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, result);
-
-            }
-
-            private JsValue InvokeTimeSeriesDeclaration(JsValue self, JsValue[] args)
+            private JsValue InvokeTimeSeriesFunction(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
                 if (args.Length < 1)
                     throw new InvalidOperationException($"must be called with exactly 1 string argument");
 
-                var key = args[args.Length - 1];
-
-                if (key.IsString() == false)
+                if (args[0].IsString() == false)
                     throw new InvalidOperationException($"must be called with exactly 1 string argument");
 
-                if (_runner.TimeSeriesDeclaration.TryGetValue(key.AsString(), out var func) == false)
+                if (_runner.TimeSeriesDeclaration.TryGetValue(args[0].AsString(), out var func) == false)
                     throw new InvalidOperationException($"must be called with exactly 1 string argument");
 
                 var tsFunctionArgs = new object[args.Length];
 
                 List<IDisposable> lazyIds = new List<IDisposable>();
 
-                for (var index = 0; index < args.Length - 1; index++)
+                for (var index = 1; index < args.Length; index++)
                 {
                     if (args[index].IsObject() && args[index].AsObject() is BlittableObjectInstance boi)
                     {
