@@ -75,7 +75,8 @@ namespace SlowTests.Issues
                         now = DateTime.Now;
                     }
 
-                    Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+                    Assert.True(1 == server.ServerStore.IdleDatabases.Count, 
+                        $"1 == server.ServerStore.IdleDatabases.Count({server.ServerStore.IdleDatabases.Count}), finishedOnTime? {now < nextNow}, now = {now}, nextNow = {nextNow}");
 
                     if (first)
                     {
@@ -88,7 +89,6 @@ namespace SlowTests.Issues
                         var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
                         var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
                         Assert.NotNull(serverWideConfiguration);
-                        Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
 
                         // the configuration is applied to existing databases
                         var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -108,7 +108,8 @@ namespace SlowTests.Issues
                         now = DateTime.Now;
                     }
 
-                    Assert.Equal(0, server.ServerStore.IdleDatabases.Count);
+                    Assert.True(0 == server.ServerStore.IdleDatabases.Count,
+                        $"0 == server.ServerStore.IdleDatabases.Count({server.ServerStore.IdleDatabases.Count}), finishedOnTime? {now < nextNow}, now = {now}, nextNow = {nextNow}");
 
                     var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                     var value = WaitForValue(() =>
@@ -118,9 +119,9 @@ namespace SlowTests.Issues
                     }, 1);
                     Assert.Equal(1, value);
 
-                    Assert.True(2 == Directory.GetDirectories(backupPath).Length, "2 == Directory.GetDirectories(backupPath).Length");
-                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, "Test")).Length, @"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, ""Test"")).Length");
-                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length, "i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length");
+                    Assert.True(2 == Directory.GetDirectories(backupPath).Length, $"2 == Directory.GetDirectories(backupPath).Length({Directory.GetDirectories(backupPath).Length})");
+                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, "Test")).Length, $"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, 'Test')).Length({Directory.GetDirectories(Path.Combine(backupPath, "Test")).Length})");
+                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length, $"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length({Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length})");
                 }
             }
             finally
