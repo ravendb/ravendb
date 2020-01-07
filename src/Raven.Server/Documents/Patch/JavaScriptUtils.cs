@@ -107,16 +107,16 @@ namespace Raven.Server.Documents.Patch
             }
             if (o is Document doc)
             {
-                return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc.Id, doc.LastModified);
+                return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc.Id, doc.LastModified, doc.ChangeVector);
             }
             if (o is DocumentConflict dc)
             {
-                return new BlittableObjectInstance(engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified);
+                return new BlittableObjectInstance(engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector);
             }
 
             if (o is BlittableJsonReaderObject json)
             {
-                return new BlittableObjectInstance(engine, null, Clone(json, context), null, null);
+                return new BlittableObjectInstance(engine, null, Clone(json, context), null, null, null);
             }
 
             if (o == null)
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Patch
                 var args = new JsValue[1];
                 for (var i = 0; i < docList.Count; i++)
                 {
-                    args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i].Id, docList[i].LastModified);
+                    args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i].Id, docList[i].LastModified, docList[i].ChangeVector);
                     engine.Array.PrototypeObject.Push(jsArray, args);
                 }
                 return jsArray;

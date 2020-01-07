@@ -278,7 +278,7 @@ namespace Raven.Server.Documents.Patch
                         blittable.NoCache = true;
                         return new BlittableObjectInstance(owner.Engine,
                             owner,
-                            blittable, null, null);
+                            blittable, null, null, null);
                     case BlittableJsonToken.StartArray:
                         Changed = true;
                         _parent.MarkChanged();
@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.Patch
             BlittableJsonReaderObject blittable,
             string id,
             DateTime? lastModified,
-            string changeVector = null) : base(engine)
+            string changeVector) : base(engine)
         {
             _parent = parent;
             blittable.NoCache = true;
