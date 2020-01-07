@@ -741,9 +741,10 @@ namespace Raven.Server.Documents.Queries.Results
 
                 sb.Append(paramsBuilder)
                     .Append("){ return invokeTimeSeriesFunction(")
-                    .Append(name).Append(", '")
+                    .Append('\'')
+                    .Append(name).Append("', ")
                     .Append(paramsBuilder)
-                    .Append("'); }");
+                    .Append("); }");
 
                 return sb.ToString();
             }

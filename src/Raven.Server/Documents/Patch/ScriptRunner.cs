@@ -783,7 +783,7 @@ namespace Raven.Server.Documents.Patch
                     {
                         var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
                         lazyIds.Add(lazyId);
-                        tsFunctionArgs[index] = new Document
+                        tsFunctionArgs[index - 1] = new Document
                         {
                             Data = boi.Blittable,
                             Id = lazyId
@@ -792,7 +792,7 @@ namespace Raven.Server.Documents.Patch
 
                     else
                     {
-                        tsFunctionArgs[index] = Translate(args[index], _jsonCtx);
+                        tsFunctionArgs[index - 1] = Translate(args[index], _jsonCtx);
                     }
                 }
 
