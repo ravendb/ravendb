@@ -16,7 +16,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(5)]
         public async Task ServerWideBackupShouldBackupIdleDatabaseStress(int rounds)
         {
-            await using var stress = new SlowTests.Issues.RavenDB_14292(Output);
+            // ReSharper disable once UseAwaitUsing
+            using var stress = new SlowTests.Issues.RavenDB_14292(Output);
             await stress.ServerWideBackupShouldBackupIdleDatabase(rounds);
         }
     }
