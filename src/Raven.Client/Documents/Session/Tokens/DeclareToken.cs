@@ -38,14 +38,14 @@ namespace Raven.Client.Documents.Session.Tokens
                 .Append("declare ")
                 .Append(Type == DeclarationType.Function ? "function " : "timeseries ")
                 .Append(Name)
-                .Append("(")
+                .Append('(')
                 .Append(Parameters)
                 .Append(") ")
-                .Append("{")
+                .Append('{')
                 .Append(Environment.NewLine)
                 .Append(Body)
                 .Append(Environment.NewLine)
-                .Append("}")
+                .Append('}')
                 .Append(Environment.NewLine);
         }
     }
