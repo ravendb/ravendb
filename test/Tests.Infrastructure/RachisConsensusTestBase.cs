@@ -204,9 +204,10 @@ namespace Tests.Infrastructure
                 {
                     break;
                 }
-                var stream = tcpClient.GetStream();
+
                 try
                 {
+                    var stream = tcpClient.GetStream();
                     rachis.AcceptNewConnection(stream, () => tcpClient.Client.Disconnect(false), tcpClient.Client.RemoteEndPoint, hello =>
                     {
                         if (rachis.Url == null)
@@ -414,13 +415,31 @@ namespace Tests.Infrastructure
                     time = _parent.ElectionTimeout * (_parent.GetTopology(ctx).AllNodes.Count - 2);
                 }
                 var tcpClient = await TcpUtils.ConnectAsync(url, time);
-                return new RachisConnection
+                try
                 {
-                    Stream = tcpClient.GetStream(),
-
-                    SupportedFeatures = new TcpConnectionHeaderMessage.SupportedFeatures(TcpConnectionHeaderMessage.NoneBaseLine),
-                    Disconnect = () => tcpClient.Client.Disconnect(false)
-                };
+                    var stream = tcpClient.GetStream();
+                    var conn = new RachisConnection
+                    {
+                        Stream = stream,
+                        SupportedFeatures = new TcpConnectionHeaderMessage.SupportedFeatures(TcpConnectionHeaderMessage.NoneBaseLine),
+                        Disconnect = () =>
+                        {
+                            using (tcpClient)
+                            {
+                                tcpClient.Client.Disconnect(false);
+                            }
+                        }
+                    };
+                    return conn;
+                }
+                catch
+                {
+                    using (tcpClient)
+                    {
+                        tcpClient.Client.Disconnect(false);
+                    }
+                    throw;
+                }
             }
         }
 
