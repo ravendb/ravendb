@@ -31,8 +31,7 @@ using Raven.Server.ServerWide.Commands;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using System.Linq;
-using System.Reflection;
-using Voron.Data.BTrees;
+using Raven.Server.Rachis.Remote;
 
 namespace Raven.Server.Rachis
 {
@@ -1940,7 +1939,7 @@ namespace Raven.Server.Rachis
         {
             var leader = _currentLeader;
             if (leader == null)
-                throw new NotLeadingException("There is no leader, cannot accept commands. " + _lastStateChangeReason);
+                throw new NotLeadingException("I am not the leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
             while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, validateNotInTopology) == false)

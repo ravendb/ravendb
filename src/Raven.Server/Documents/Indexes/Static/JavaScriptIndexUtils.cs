@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 //This is the case for map-reduce
                 if (item is BlittableJsonReaderObject bjr)
                 {
-                    jsItem = new BlittableObjectInstance(engine, null, bjr, null, null);
+                    jsItem = new BlittableObjectInstance(engine, null, bjr, null, null, null);
                     return true;
                 }
                 return false;

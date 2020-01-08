@@ -90,13 +90,13 @@ namespace Raven.Server.Web
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected Stream RequestBodyStream()
         {
-            return GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers);
+            return new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected Stream GetBodyStream(MultipartSection section)
         {
-            return GetDecompressedStream(section.Body, section.Headers);
+            return new StreamWithTimeout(GetDecompressedStream(section.Body, section.Headers));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -246,7 +246,9 @@ namespace Raven.Server.Web
             }
         }
 
-        protected Stream ResponseBodyStream() => HttpContext.Response.Body;
+        private Stream _responseStream;
+
+        protected Stream ResponseBodyStream() => _responseStream ??= new StreamWithTimeout(HttpContext.Response.Body);
 
         protected bool IsWebsocketRequest()
         {

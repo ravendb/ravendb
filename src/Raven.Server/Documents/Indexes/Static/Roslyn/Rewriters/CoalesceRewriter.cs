@@ -17,7 +17,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (node.IsKind(SyntaxKind.CoalesceExpression) == false)
                 return base.VisitBinaryExpression(node);
 
-            return SyntaxFactory.ParseExpression($"{node.Left} != null ? {node.Left} : {node.Right}");
+            var result = SyntaxFactory.ParseExpression($"{node.Left} != null ? {node.Left} : {node.Right}");
+            return Visit(result);
         }
     }
 }

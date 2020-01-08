@@ -659,4 +659,4 @@ interface rawStackTraceResponseItem {
     StackTrace: string[];
 }
 
-type indexStatusFilter = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle";
+type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle";

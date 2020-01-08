@@ -10,6 +10,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
@@ -158,7 +159,7 @@ namespace RachisTests
         [InlineData(5)]
         public void MakeSureAllNodesAreRoundRobined(int clusterSize)
         {
-            var cluster = AsyncHelpers.RunSync(() => CreateRaftCluster(clusterSize));            
+            var cluster = AsyncHelpers.RunSync(() => CreateRaftCluster(clusterSize, shouldRunInMemory: false));
                         
             using (var store = GetDocumentStore(new Options
             {
@@ -466,6 +467,8 @@ namespace RachisTests
                     CustomSettings = settings,
                     PartialPath = dataDir                    
                 });
+
+                Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
             }
             else
             {

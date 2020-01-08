@@ -19,7 +19,6 @@ import indexProgress = require("models/database/index/indexProgress");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 import generalUtils = require("common/generalUtils");
 import shell = require("viewmodels/shell");
-import popoverUtils = require("common/popoverUtils");
 
 type indexGroup = {
     entityName: string;
@@ -35,7 +34,8 @@ class indexes extends viewModelBase {
     searchText = ko.observable<string>("");
     hasAnyStateFilter: KnockoutComputed<boolean>;
     autoRefresh = ko.observable<boolean>(true);
-    indexStatusFilter = ko.observableArray<indexStatusFilter>(["Normal", "ErrorOrFaulty", "Stale", "Paused", "Disabled", "Idle"]);
+    showOnlyIndexesWithIndexingErrors = ko.observable<boolean>(false);
+    indexStatusFilter = ko.observableArray<indexStatus>(["Normal", "ErrorOrFaulty", "Stale", "Paused", "Disabled", "Idle"]);
     lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
@@ -113,18 +113,30 @@ class indexes extends viewModelBase {
                     .filter(i => i.progress())
                     .map(i => i.progress().globalProgress().processedPerSecond()));
             });
-
-            const statusPart = this.indexStatusFilter().length === 6 
-                ? "" 
-                : ` with status <strong>${this.indexStatusFilter().map(x => this.mapIndexStatus(x)).join(", ")}</strong> `;
-            const refreshPart = `Auto refresh is <strong>${this.autoRefresh() ? "on" : "off"}</strong>`;
-            const namePart = this.searchText() ? `, where name contains <strong>${generalUtils.escapeHtml(this.searchText())}</strong>` : "";
+                        
+            if (!this.indexStatusFilter().length) {
+                return `All <strong>Index Status</strong> options are unchecked. Please select options under <strong>'Index Status'</strong> to view indexes list.`;
+            }
             
-            return `Displaying <strong>${indexesCount}</strong> ${this.pluralize(indexesCount, "index", "indexes", true)} ${statusPart} ${namePart}. ${refreshPart}. Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;
+            const indexingErrorsOnlyPart = this.showOnlyIndexesWithIndexingErrors() ? `, with <strong>indexing errors only</strong>,` : "";
+            
+            const firstPart = indexesCount
+                ? `Displaying <strong>${indexesCount}</strong> ${this.pluralize(indexesCount, "index", "indexes", true)}${indexingErrorsOnlyPart} that match Status Filter:`
+                : "No matching indexes for Status Filter:";
+           
+            const statusFilterPart = `<strong>${this.indexStatusFilter().map(x => this.mapIndexStatus(x)).join(", ")}</strong> `;
+            
+            const namePart = this.searchText() ? `, where name contains <strong>${generalUtils.escapeHtml(this.searchText())}</strong>` : "";
+
+            const refreshPart = `Auto refresh is <strong>${this.autoRefresh() ? "on" : "off"}</strong>`;
+            
+            const speedPart = `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;
+            
+            return `${firstPart} ${statusFilterPart} ${namePart}. ${refreshPart}. ${speedPart}`;
         });
     }
     
-    private mapIndexStatus(status: indexStatusFilter) {
+    private mapIndexStatus(status: indexStatus) {
         switch (status) {
             case "Normal":
             case "Disabled":
@@ -134,7 +146,6 @@ class indexes extends viewModelBase {
                 return status;
             case "ErrorOrFaulty":
                 return "Error, Faulty";
-                
         }
     }
 
@@ -159,6 +170,7 @@ class indexes extends viewModelBase {
     private initObservables() {
         this.searchText.throttle(200).subscribe(() => this.filterIndexes(false));
         this.indexStatusFilter.subscribe(() => this.filterIndexes(false));
+        this.showOnlyIndexesWithIndexingErrors.subscribe(() => this.filterIndexes(false));
         this.autoRefresh.subscribe(refresh => {
             if (refresh) {
                 this.filterIndexes(false);
@@ -168,7 +180,9 @@ class indexes extends viewModelBase {
         this.hasAnyStateFilter = ko.pureComputed(() => {
             const autoRefresh = this.autoRefresh();
             const filterCount = this.indexStatusFilter();
-            return !autoRefresh || filterCount.length !== 6;
+            const withIndexingErrorsOnly = this.showOnlyIndexesWithIndexingErrors();
+           
+            return !autoRefresh || filterCount.length !== 6 || withIndexingErrorsOnly;
         });
 
         this.sortedGroups = ko.pureComputed<indexGroup[]>(() => {
@@ -327,12 +341,13 @@ class indexes extends viewModelBase {
 
         const filterLower = this.searchText().toLowerCase();
         const typeFilter = this.indexStatusFilter();
+        const withIndexingErrorsOnly = this.showOnlyIndexesWithIndexingErrors();
         
         this.selectedIndexesName([]);
         this.indexGroups().forEach(indexGroup => {
             let hasAnyInGroup = false;
             indexGroup.indexes().forEach(index => {
-                const match = index.filter(filterLower, typeFilter);
+                const match = index.filter(filterLower, typeFilter, withIndexingErrorsOnly);
                 if (match) {
                     hasAnyInGroup = true;
                 }

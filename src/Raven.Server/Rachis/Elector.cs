@@ -1,6 +1,7 @@
 using System;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 

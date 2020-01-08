@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -125,7 +126,7 @@ namespace Raven.Client.Http
             if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
                 return ResponseDisposeHandling.Automatic;
 
-            using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+            using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
             {
                 if (ResponseType == RavenCommandResponseType.Object)
                 {
@@ -135,18 +136,22 @@ namespace Raven.Client.Http
 
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
-                    var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
-                    if (cache != null) //precaution
+                    using (var stream = new StreamWithTimeout(responseStream))
                     {
-                        CacheResponse(cache, url, response, json);
+                        var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
+                        if (cache != null) //precaution
+                        {
+                            CacheResponse(cache, url, response, json);
+                        }
+                        SetResponse(context, json, fromCache: false);
+                        return ResponseDisposeHandling.Automatic;
                     }
-                    SetResponse(context, json, fromCache: false);
-                    return ResponseDisposeHandling.Automatic;
                 }
 
                 // We do not cache the stream response.
-                using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
-                    SetResponseRaw(response, uncompressedStream, context);
+                using(var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
+                using(var stream = new StreamWithTimeout(uncompressedStream))
+                    SetResponseRaw(response, stream, context);
             }
             return ResponseDisposeHandling.Automatic;
         }

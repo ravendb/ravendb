@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
@@ -28,10 +29,12 @@ namespace Raven.Client.Documents.Commands
 
         public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
+            var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
             Result = new StreamResult
             {
                 Response = response,
-                Stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false)
+                Stream = new StreamWithTimeout(responseStream)
             };
 
             return ResponseDisposeHandling.Manually;
