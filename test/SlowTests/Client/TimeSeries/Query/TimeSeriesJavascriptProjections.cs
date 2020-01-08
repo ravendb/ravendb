@@ -1275,6 +1275,7 @@ select foo(heartrate(p))
 
                 using (var session = store.OpenSession())
                 {
+                    var series = "Heartrate";
                     var query = from person in session.Query<Person>()
                                 where person.Age > 18
                                 let customFunc = new Func<TimeSeriesRangeAggregation[], CustomJsFunctionResult2>(ranges => new CustomJsFunctionResult2
@@ -1284,7 +1285,7 @@ select foo(heartrate(p))
                                     AvgOfAvg = ranges.Average(range => range.Avg[0]) ?? double.NaN,
                                     MaxGroupSize = ranges.Max(r => r.Count[0])
                                 })
-                                let tsQuery = RavenQuery.TimeSeries(person, "Heartrate", baseline, baseline.AddMonths(2))
+                                let tsQuery = RavenQuery.TimeSeries(person, series, baseline, baseline.AddMonths(2))
                                     .LoadTag<Watch>()
                                     .Where((ts, watch) => ts.Values[0] > 70 && watch.Accuracy >= 2)
                                     .GroupBy(g => g.Months(1))
@@ -1325,6 +1326,85 @@ select foo(heartrate(p))
                     Assert.Equal(121.5d, custom.AvgOfAvg);
                     Assert.Equal(2, custom.MaxGroupSize);
 
+
+                }
+            }
+        }
+
+        [Fact]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WhenTsQueryExpressionIsNestedInsideAnotherExpression()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        LastName = "Ayende",
+                        Age = 30,
+                    }, "people/1");
+
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from p in session.Query<Person>()
+                                where p.Age > 21
+                                let tsFunc = new Func<string, TimeSeriesEntry[]>(name =>
+                                    RavenQuery.TimeSeries(p, name, baseline, baseline.AddMonths(2))
+                                        .Where(ts => ts.Values[0] > 100 && ts.Values[0] < 600)
+                                        .ToList()
+                                        .Results)
+                                select new
+                                {
+                                    Name = p.Name + " " + p.LastName,
+                                    Heartrate = tsFunc("Heartrate"),
+                                    Stocks = tsFunc("Stocks")
+                                };
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Oren Ayende", result[0].Name);
+
+                    var heartrate = result[0].Heartrate;
+
+                    Assert.Equal(3, heartrate.Length);
+
+                    Assert.Equal(159, heartrate[0].Value);
+                    Assert.Equal(179, heartrate[1].Value);
+                    Assert.Equal(169, heartrate[2].Value);
+
+                    var stocks = result[0].Stocks;
+
+                    Assert.Equal(3, stocks.Length);
+
+                    Assert.Equal(559, stocks[0].Value);
+                    Assert.Equal(579, stocks[1].Value);
+                    Assert.Equal(569, stocks[2].Value);
 
                 }
             }

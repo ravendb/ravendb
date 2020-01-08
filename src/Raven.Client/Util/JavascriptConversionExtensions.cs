@@ -2409,6 +2409,32 @@ namespace Raven.Client.Util
             }
         }
 
+        public class TimeSeriesSupport<T> : JavascriptConversionExtension
+        {
+            private readonly RavenQueryProviderProcessor<T> _queryProviderProcessor;
+
+            public TimeSeriesSupport(RavenQueryProviderProcessor<T> queryProviderProcessor)
+            {
+                _queryProviderProcessor = queryProviderProcessor;
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MethodCallExpression mce) || 
+                    LinqPathProvider.IsTimeSeriesCall(mce) == false)
+                    return;
+
+                var script = _queryProviderProcessor.GenerateTimeSeriesScript(mce);
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(mce))
+                {
+                    writer.Write(script);
+                }
+            }
+        }
+
         public static ParameterExpression GetParameter(MemberExpression expression)
         {
             return GetInnermostExpression(expression, out _, out _) as ParameterExpression;
