@@ -167,7 +167,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
             else
             {
-                Parameters = new List<string>();
+                Parameters ??= new List<string>();
 
                 var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
 
@@ -178,23 +178,24 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 }
                 else
                 {
-                    Parameters.Add(_providerProcessor.FromAlias);
-                    if (sourceAlias != _providerProcessor.FromAlias)
+                    if (mce.Arguments[0] is ParameterExpression)
                     {
                         Parameters.Add(sourceAlias);
                     }
+                    else
+                    {
+                        Parameters.Add(_providerProcessor.FromAlias);
+                        if (sourceAlias != _providerProcessor.FromAlias)
+                        {
+                            Parameters.Add(sourceAlias);
+                        }
+                    }
                 }
 
-                if (mce.Arguments[1] is ParameterExpression p)
-                {
-                    _src = p.Name;
-                    Parameters.Add(p.Name);
-                    return;
-                }
+                _src = GetNameFromArgument(mce.Arguments[1]);
 
-                var name = GetNameFromArgument(mce.Arguments[1]);
-
-                _src = $"{sourceAlias}.{name}";
+                if (mce.Arguments[1] is ParameterExpression == false) 
+                    _src = $"{sourceAlias}.{_src}";
             }
         }
 
@@ -210,7 +211,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
 
             if (argument is ParameterExpression p)
+            {
+                Parameters ??= new List<string>();
+                Parameters.Add(p.Name);
                 return p.Name;
+            }
 
             throw new InvalidOperationException("Invalid TimeSeries argument " + argument);
         }
@@ -220,10 +225,13 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             var from = GetDateValue(mce.Arguments[2]);
             var to = GetDateValue(mce.Arguments[3]);
 
-            var p1 = _providerProcessor.DocumentQuery.ProjectionParameter(from);
-            var p2 = _providerProcessor.DocumentQuery.ProjectionParameter(to);
+            if (!(mce.Arguments[2] is ParameterExpression))
+                from = _providerProcessor.DocumentQuery.ProjectionParameter(from);
 
-            _between = $" between {p1} and {p2}";
+            if (!(mce.Arguments[3] is ParameterExpression))
+                to = _providerProcessor.DocumentQuery.ProjectionParameter(to);
+
+            _between = $" between {from} and {to}";
         }
 
         private void WhereBinary(BinaryExpression expression)
