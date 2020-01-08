@@ -917,12 +917,31 @@ namespace Sparrow.Json.Parsing
             _unmanagedWriteBuffer.EnsureSingleChunk(out var buffer, out var size);
             if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(buffer, size), out double value, out var consumed) && size == consumed)
             {
-                // we do not support numeric values greater than double.MaxValue - RavenDB_10876.ShouldNotSupportRawNumbersBiggerThenDoubleMaxVal
                 if (double.IsInfinity(value) == false)
+                    return;
+                else if (size == "Infinity".Length && IsInfinity(buffer, 0))
+                    return;
+                else if (size == "-Infinity".Length && buffer[0] == '-' && IsInfinity(buffer, 1))
                     return;
             }
 
             ThrowException("Could not parse double: " + Encoding.UTF8.GetString(buffer, size));
+
+            bool IsInfinity(byte* buffer, int offset)
+            {
+                var n = offset;
+                if (buffer[n++] != 'I'
+                    || buffer[n++] != 'n'
+                    || buffer[n++] != 'f'
+                    || buffer[n++] != 'i'
+                    || buffer[n++] != 'n'
+                    || buffer[n++] != 'i'
+                    || buffer[n++] != 't'
+                    || buffer[n] != 'y')
+                    return false;
+
+                return true;
+            }
         }
 
 
