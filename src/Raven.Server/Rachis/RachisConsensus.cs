@@ -35,8 +35,6 @@ using Raven.Server.Rachis.Remote;
 
 namespace Raven.Server.Rachis
 {
-
-
     public class RachisConsensus<TStateMachine> : RachisConsensus
         where TStateMachine : RachisStateMachine, new()
     {
@@ -2073,7 +2071,7 @@ namespace Raven.Server.Rachis
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
                     _tag = newTag;
-        }
+                }
             };
         }
 
@@ -2129,6 +2127,12 @@ namespace Raven.Server.Rachis
 
             return e is OperationCanceledException ||
                    e is ObjectDisposedException;
+        }
+
+
+        internal static void DisconnectAction(Task<RachisConnection> connectionTask)
+        {
+            connectionTask.Result.Disconnect();
         }
     }
 

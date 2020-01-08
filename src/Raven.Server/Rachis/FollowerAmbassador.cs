@@ -141,6 +141,8 @@ namespace Raven.Server.Rachis
         /// it is responsible for talking to the remote follower and maintaining its state.
         /// This can never throw, and will run on its own thread.
         /// </summary>
+
+
         private unsafe void Run()
         {
             _engine.ForTestingPurposes?.BeforeNegotiatingWithFollower();
@@ -180,20 +182,13 @@ namespace Raven.Server.Rachis
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     _engine.RemoveAndDispose(_leader, _connection);
+
                                     var connectTask = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate);
+                                    
+                                    if (WaitForConnection(connectTask) == false) 
+                                        return;
 
-                                    while (connectTask.Wait(1000) == false)
-                                    {
-                                        if (_leader.Running == false)
-                                            return;
-
-                                        if (_running == false)
-                                            return;
-
-                                        _engine.ValidateTerm(_term);
-                                    }
-
-                                    var connection = connectTask.Result;
+                                    var connection = connectTask.Result; 
 
                                     var stream = connection.Stream;
                                     var disconnect = connection.Disconnect;
@@ -458,6 +453,32 @@ namespace Raven.Server.Rachis
                 _connection?.Dispose();
             }
         }
+
+        private bool WaitForConnection(Task<RachisConnection> connectTask)
+        {
+            try
+            {
+                while (connectTask.Wait(1000) == false)
+                {
+                    if (_leader.Running == false ||
+                        _running == false)
+                    {
+                        connectTask.ContinueWith(RachisConsensus.DisconnectAction, TaskContinuationOptions.ExecuteSynchronously);
+                        return false;
+                    }
+
+                    _engine.ValidateTerm(_term);
+                }
+            }
+            catch
+            {
+                connectTask.ContinueWith(RachisConsensus.DisconnectAction, TaskContinuationOptions.ExecuteSynchronously);
+                throw;
+            }
+
+            return true;
+        }
+
 
         private void NotifyOnException(ref bool hadConnectionFailure, string message, Exception e)
         {
