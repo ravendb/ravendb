@@ -26,9 +26,9 @@ namespace Tests.Infrastructure
 
         public int Port;
 
-        public ProxyServer(ref int port, int to , int delay = 0)
+        public ProxyServer(ref int port, int to, int delay = 0)
         {
-            this._to = to;
+            _to = to;
             var originPort = port;
 
             ConnectionDelay = delay;
@@ -77,7 +77,7 @@ namespace Tests.Infrastructure
         private async Task AcceptRequests(TcpClient src)
         {
             using (src)
-            using (var dst = new TcpClient())
+            using (var dst = new TcpClient(src.Client.AddressFamily))
             {
                 await dst.ConnectAsync(IPAddress.Loopback, _to).ConfigureAwait(false);
                 using (var srcStream = src.GetStream())
