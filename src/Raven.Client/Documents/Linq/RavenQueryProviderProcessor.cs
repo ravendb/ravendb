@@ -2708,6 +2708,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 new JavascriptConversionExtensions.DictionarySupport(),
                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
+                loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
+                JavascriptConversionExtensions.MetadataSupport.Instance,
+                JavascriptConversionExtensions.CompareExchangeSupport.Instance,
+                JavascriptConversionExtensions.CounterSupport.Instance,
                 new JavascriptConversionExtensions.WrappedConstantSupport<T>(DocumentQuery, _projectionParameters),
                 JavascriptConversionExtensions.MathSupport.Instance,
                 new JavascriptConversionExtensions.TransparentIdentifierSupport(),
@@ -2719,16 +2723,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.NestedConditionalSupport.Instance,
                 JavascriptConversionExtensions.StringSupport.Instance,
                 new JavascriptConversionExtensions.ConstSupport(DocumentQuery.Conventions),
-                JavascriptConversionExtensions.MetadataSupport.Instance,
-                JavascriptConversionExtensions.CompareExchangeSupport.Instance,
-                JavascriptConversionExtensions.CounterSupport.Instance,
                 JavascriptConversionExtensions.ValueTypeParseSupport.Instance,
                 JavascriptConversionExtensions.JsonPropertyAttributeSupport.Instance,
                 JavascriptConversionExtensions.NullComparisonSupport.Instance,
                 JavascriptConversionExtensions.NullableSupport.Instance,
                 JavascriptConversionExtensions.NewSupport.Instance,
                 JavascriptConversionExtensions.ListInitSupport.Instance,
-                loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
                 MemberInitAsJson.ForAllTypes,
                 new JavascriptConversionExtensions.TimeSeriesSupport<T>(this)
             };
