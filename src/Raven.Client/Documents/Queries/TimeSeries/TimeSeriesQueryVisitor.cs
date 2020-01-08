@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
@@ -17,7 +18,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private StringBuilder _selectFields;
         private string _src, _between, _where, _groupBy, _loadTag;
 
-        public string SourceAlias { get; private set; }
+        public List<string> Parameters { get; private set; }
 
         public TimeSeriesQueryVisitor(RavenQueryProviderProcessor<T> processor)
         {
@@ -159,19 +160,41 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void TimeSeriesName(MethodCallExpression mce)
         {
+
             if (mce.Arguments.Count == 1)
             {
                 _src = GetNameFromArgument(mce.Arguments[0]);
             }
             else
             {
-                SourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
+                Parameters = new List<string>();
+
+                var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
 
                 if (_providerProcessor.FromAlias == null)
-                    _providerProcessor.AddFromAlias(SourceAlias);
+                {
+                    _providerProcessor.AddFromAlias(sourceAlias);
+                    Parameters.Add(sourceAlias);
+                }
+                else
+                {
+                    Parameters.Add(_providerProcessor.FromAlias);
+                    if (sourceAlias != _providerProcessor.FromAlias)
+                    {
+                        Parameters.Add(sourceAlias);
+                    }
+                }
+
+                if (mce.Arguments[1] is ParameterExpression p)
+                {
+                    _src = p.Name;
+                    Parameters.Add(p.Name);
+                    return;
+                }
 
                 var name = GetNameFromArgument(mce.Arguments[1]);
-                _src = $"{SourceAlias}.{name}";
+
+                _src = $"{sourceAlias}.{name}";
             }
         }
 
@@ -185,6 +208,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 LinqPathProvider.GetValueFromExpressionWithoutConversion(argument, out var value);
                 return value.ToString();
             }
+
+            if (argument is ParameterExpression p)
+                return p.Name;
 
             throw new InvalidOperationException("Invalid TimeSeries argument " + argument);
         }
@@ -325,10 +351,17 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-        private static string GetDateValue(Expression exp)
+        private string GetDateValue(Expression exp)
         {
             if (exp is ConstantExpression constant)
                 return constant.Value.ToString();
+
+            if (exp is ParameterExpression p)
+            {
+                Parameters ??= new List<string>();
+                Parameters.Add(p.Name);
+                return p.Name;
+            }
 
             LinqPathProvider.GetValueFromExpressionWithoutConversion(exp, out var value);
 

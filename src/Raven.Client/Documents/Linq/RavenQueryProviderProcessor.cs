@@ -2729,7 +2729,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.NewSupport.Instance,
                 JavascriptConversionExtensions.ListInitSupport.Instance,
                 loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
-                MemberInitAsJson.ForAllTypes
+                MemberInitAsJson.ForAllTypes,
+                new JavascriptConversionExtensions.TimeSeriesSupport<T>(this)
             };
 
             if (loadArg == false)
@@ -2769,28 +2770,35 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
             else if (LinqPathProvider.IsTimeSeriesCall(mce))
             {
-                var visitor = new TimeSeriesQueryVisitor<T>(this);
-                var tsQueryText = visitor.Visit(mce);
-
-                var paramsBuilder = new StringBuilder();
-
-                if (FromAlias != null)
-                    paramsBuilder.Append(FromAlias);
-                if (visitor.SourceAlias != null && visitor.SourceAlias != FromAlias)
-                    paramsBuilder.Append(", ").Append(visitor.SourceAlias);
-
-                var parameters = paramsBuilder.ToString();
-
-                _declareTokens ??= new List<DeclareToken>();
-
-                var tsFunctionName = Constants.TimeSeries.QueryFunction + _declareTokens.Count;
-
-                _declareTokens.Add(DeclareToken.Create(tsFunctionName, tsQueryText, parameters, type: DeclareToken.DeclarationType.TimeSeries));
-
-                script = $"{tsFunctionName}({parameters})";
+                script = GenerateTimeSeriesScript(mce);
             }
 
             return script != null;
+        }
+
+        internal string GenerateTimeSeriesScript(MethodCallExpression mce)
+        {
+            var visitor = new TimeSeriesQueryVisitor<T>(this);
+            var tsQueryText = visitor.Visit(mce);
+
+            var paramsBuilder = new StringBuilder();
+
+            for (int i = 0; i < visitor.Parameters?.Count; i++)
+            {
+                if (i > 0)
+                    paramsBuilder.Append(", ");
+                paramsBuilder.Append(visitor.Parameters[i]);
+            }
+
+            var parameters = paramsBuilder.ToString();
+
+            _declareTokens ??= new List<DeclareToken>();
+
+            var tsFunctionName = Constants.TimeSeries.QueryFunction + _declareTokens.Count;
+
+            _declareTokens.Add(DeclareToken.Create(tsFunctionName, tsQueryText, parameters, type: DeclareToken.DeclarationType.TimeSeries));
+
+            return $"{tsFunctionName}({parameters})";
         }
 
         private static bool HasComputation(MemberExpression memberExpression)
