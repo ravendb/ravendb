@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -29,6 +30,32 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
+                var document = Database.DocumentsStorage.Get(context, documentId, DocumentFields.Data);
+                if (document == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+
+                var timeSeriesNames = new List<string>();
+
+                if (document.TryGetMetadata(out var metadata))
+                {
+                    if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeries) && timeSeries != null)
+                    {
+                        foreach (object name in timeSeries)
+                        {
+                            if (name == null)
+                                continue;
+
+                            if (name is string || name is LazyStringValue || name is LazyCompressedStringValue)
+                            {
+                                timeSeriesNames.Add(name.ToString());
+                            }
+                        }
+                    }
+                }
+                
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
@@ -41,10 +68,8 @@ namespace Raven.Server.Documents.Handlers
                     
                     writer.WriteStartArray();
                     
-                    var timeSeriesNames = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesLowerNamesForDocument(context, documentId);
-                    
                     var first = true;
-                    for (var i = 0; i < timeSeriesNames.Count; i++)
+                    foreach (var tsName in timeSeriesNames)
                     {
                         if (first == false)
                         {
@@ -52,7 +77,6 @@ namespace Raven.Server.Documents.Handlers
                         }
                         first = false;
                         
-                        var tsName = (string)timeSeriesNames.Items[i];
                         var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, documentId, tsName, DateTime.MinValue, DateTime.MaxValue);
                         var entries = reader.GetNumberOfEntries();
                         
