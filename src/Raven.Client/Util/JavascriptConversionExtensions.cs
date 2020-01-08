@@ -1101,18 +1101,23 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MemberExpression memberExpression) ||
+                var node = context.Node;
+                if (context.Node is MethodCallExpression mce && 
+                    mce.Object is MemberExpression innerMember)
+                    node = innerMember;
+                
+                if (!(node is MemberExpression memberExpression) ||
                     IsWrappedConstantExpression(memberExpression) == false)
                     return;
 
-                LinqPathProvider.GetValueFromExpressionWithoutConversion(memberExpression, out var value);
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(context.Node, out var value);
                 var parameter = _documentQuery.ProjectionParameter(value);
                 _projectionParameters?.Add(parameter);
 
                 var writer = context.GetWriter();
                 context.PreventDefault();
 
-                using (writer.Operation(memberExpression))
+                using (writer.Operation(context.Node))
                 {
                     writer.Write(parameter);
                 }
@@ -1498,6 +1503,34 @@ namespace Raven.Client.Util
 
                     return;                   
                 }
+
+                /*if (context.Node is MethodCallExpression mce && mce.Type == typeof(DateTime))
+                {
+                    switch (mce.Method.Name)
+                    {
+                        case "AddTicks":
+                            break;
+                        case "AddMilliseconds":
+                            break;
+                        case "AddMinutes":
+                            break;
+                        case "AddSeconds":
+                            break;
+                        case "AddHours":
+                            break;
+                        case "AddDays":
+                            break;
+
+                        case "AddMonths":
+                            break;
+                        case "AddYears":
+                            break;
+                        default:
+                            return;
+                    }
+
+                    return;
+                }*/
 
                 if (!(context.Node is MemberExpression node))
                     return;

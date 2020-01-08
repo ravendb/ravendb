@@ -3505,6 +3505,53 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
             }
         }
 
+        [Fact]
+        public void WrappedConstantSupportShouldKnowHowToHandleCallExpressionsOnWrappedConstantObject()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Jerry", 
+                        LastName = "Garcia", 
+                        Birthday = new DateTime(1942, 8, 1)
+                    });
+
+                    session.Store(new User
+                    {
+                        Name = "Bobby",
+                        LastName = "Weir",
+                        Birthday = DateTime.Today.AddYears(-30)
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var today = DateTime.Today;
+                    var query = from user in session.Query<User>()
+                        select new
+                        {
+                            Name = user.Name + ' ' + user.LastName, 
+                            OldTimer = user.Birthday < today.AddYears(-60)
+                        };
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal("Jerry Garcia", queryResult[0].Name);
+                    Assert.True(queryResult[0].OldTimer);
+
+                    Assert.Equal("Bobby Weir", queryResult[1].Name);
+                    Assert.False(queryResult[1].OldTimer);
+                }
+            }
+        }
+
 
         public class ProjectionParameters : RavenTestBase
         {
