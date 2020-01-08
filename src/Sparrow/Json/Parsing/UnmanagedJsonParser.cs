@@ -927,20 +927,9 @@ namespace Sparrow.Json.Parsing
 
             ThrowException("Could not parse double: " + Encoding.UTF8.GetString(buffer, size));
 
-            bool IsInfinity(byte* buffer, int offset)
+            static bool IsInfinity(byte* buffer, int offset)
             {
-                var n = offset;
-                if (buffer[n++] != 'I'
-                    || buffer[n++] != 'n'
-                    || buffer[n++] != 'f'
-                    || buffer[n++] != 'i'
-                    || buffer[n++] != 'n'
-                    || buffer[n++] != 'i'
-                    || buffer[n++] != 't'
-                    || buffer[n] != 'y')
-                    return false;
-
-                return true;
+                return *(long*)(buffer + offset) == 8751735898823355977;
             }
         }
 
