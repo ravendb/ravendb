@@ -774,7 +774,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException($"must be called with exactly 1 string argument");
 
                 var tsFunctionArgs = new object[args.Length];
-
+                string docId = null;
                 List<IDisposable> lazyIds = new List<IDisposable>();
 
                 for (var index = 1; index < args.Length; index++)
@@ -788,6 +788,13 @@ namespace Raven.Server.Documents.Patch
                             Data = boi.Blittable,
                             Id = lazyId
                         };
+
+                        if (index == 1)
+                        {
+                            // take the Id of the document to operate on
+                            // from the first argument (it can be a different document than the original doc)
+                            docId = boi.DocumentId;
+                        }
                     }
 
                     else
@@ -796,10 +803,15 @@ namespace Raven.Server.Documents.Patch
                     }
                 }
 
-                if (_args[0].IsObject() == false || !(_args[0].AsObject() is BlittableObjectInstance originalDoc))
-                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
+                if (docId == null)
+                {
+                    if (_args[0].IsObject() == false || 
+                        !(_args[0].AsObject() is BlittableObjectInstance originalDoc))
+                        throw new InvalidOperationException($"must be called with exactly 1 string argument");
 
-                var docId = originalDoc.DocumentId;
+                    docId = originalDoc.DocumentId;
+                }
+
 
                 if (_args[_args.Length -1].IsObject() == false || !(_args[_args.Length - 1].AsObject() is BlittableObjectInstance parameters))
                     throw new InvalidOperationException($"must be called with exactly 1 string argument");
