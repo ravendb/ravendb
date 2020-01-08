@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
@@ -25,7 +22,7 @@ namespace SlowTests.Issues
                 pull.ConnectionStringName = null;
                 var op = new UpdatePullReplicationAsSinkOperation(pull);
                 var ex = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(op));
-                Assert.StartsWith("Raven.Server.Rachis.RachisApplyException: Failed to update database record. ---> System.ArgumentNullException: Value cannot be null.", ex.Message);
+                RavenTestHelper.AssertStartsWithRespectingNewLines("Raven.Server.Rachis.RachisApplyException: Failed to update database record.\r\n ---> System.ArgumentNullException: Value cannot be null.", ex.Message);
             }
         }
     }
