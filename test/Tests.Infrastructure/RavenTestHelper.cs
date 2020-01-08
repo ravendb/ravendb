@@ -117,10 +117,16 @@ namespace FastTests
 
         public static void AssertEqualRespectingNewLines(string expected, string actual)
         {
-            var regex = new Regex("\r*\n");
-            var converted = regex.Replace(expected, Environment.NewLine);
+            var converted = ConvertRespectingNewLines(expected);
 
             Assert.Equal(converted, actual);
+        }
+
+        public static void AssertStartsWithRespectingNewLines(string expected, string actual)
+        {
+            var converted = ConvertRespectingNewLines(expected);
+
+            Assert.StartsWith(converted, actual);
         }
 
         public static void AreEquivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual)
@@ -132,6 +138,15 @@ namespace FastTests
                 forMonitor.Remove(e);
             });
             Assert.Empty(forMonitor);
+        }
+
+        private static string ConvertRespectingNewLines(string toConvert)
+        {
+            if (string.IsNullOrEmpty(toConvert))
+                return toConvert;
+
+            var regex = new Regex("\r*\n");
+            return regex.Replace(toConvert, Environment.NewLine);
         }
     }
 }
