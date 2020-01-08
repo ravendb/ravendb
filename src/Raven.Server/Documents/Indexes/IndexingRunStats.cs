@@ -67,12 +67,12 @@ namespace Raven.Server.Documents.Indexes
 
         public void AddWriteError(IndexWriteException exception)
         {
-            AddError(null, $"Write exception occurred: {exception.Message}", "Write");
+            AddError(null, $"Write exception occurred: {exception}", "Write");
         }
 
         public void AddAnalyzerError(IndexAnalyzerException exception)
         {
-            AddError(null, $"Could not create analyzer: {exception.Message}", "Analyzer");
+            AddError(null, $"Could not create analyzer: {exception}", "Analyzer");
         }
 
         public void AddUnexpectedError(Exception exception)

@@ -8,6 +8,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
+using Raven.Server.Rachis.Remote;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Raven.Server.Web;

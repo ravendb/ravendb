@@ -60,6 +60,7 @@ namespace Voron.Debugging
         public long AllocatedSpaceInBytes { get; set; }
         public long Available4Kbs { get; set; }
         public long LastTransaction { get; set; }
+        public bool Flushed { get; set; }
     }
 
     public class TempBufferReport

@@ -675,6 +675,21 @@ namespace Raven.Server.Documents
             }
         }
 
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public ManualResetEventSlim DelayDocumentLoad;
+        }
+
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, int start, int take, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
@@ -784,6 +799,9 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
+
+                _forTestingPurposes?.DelayDocumentLoad?.Wait(DocumentDatabase.DatabaseShutdown);
+
                 yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
@@ -1138,7 +1156,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
+        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
         {
             var document = ParseDocument(context, ref tvr, fields);
 #if DEBUG

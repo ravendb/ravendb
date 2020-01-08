@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents;
+using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -16,6 +19,7 @@ using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 
@@ -500,16 +504,16 @@ namespace Raven.Server.Rachis
             var timeToWait = (int)(_engine.ElectionTimeout.TotalMilliseconds / 4);
 
 
-                while (task.Wait(timeToWait) == false)
+            while (task.Wait(timeToWait) == false)
+            {
+                using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    {
-                        // this may take a while, so we let the other side know that
-                        // we are still processing, and we reset our own timer while
-                        // this is happening
-                        MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
-                    }
+                    // this may take a while, so we let the other side know that
+                    // we are still processing, and we reset our own timer while
+                    // this is happening
+                    MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
                 }
+            }
 
             if (task.IsFaulted)
             {
@@ -602,16 +606,39 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private unsafe bool InstallSnapshot(TransactionOperationContext context, CancellationToken token)
+        private bool InstallSnapshot(TransactionOperationContext context, CancellationToken token)
         {
             var txw = context.Transaction.InnerTransaction;
-            var reader = _connection.CreateReader();
+
+            var fileName = $"snapshot.{Guid.NewGuid():N}";
+            var filePath = context.Environment.Options.DataPager.Options.TempPath.Combine(fileName);
+            
+            using (var temp = new StreamsTempFile(filePath.FullPath, context.Environment))
+            using(var stream = temp.StartNewStream())
+            using(var remoteReader = _connection.CreateReaderToStream(stream))
+            {
+                if (ReadSnapshot(remoteReader, context, txw, dryRun: true, token) == false)
+                    return false;
+
+                stream.Seek(0, SeekOrigin.Begin);
+                using (var fileReader = new StreamSnapshotReader(stream))
+                {
+                    ReadSnapshot(fileReader, context, txw, dryRun: false, token);
+                }
+            }
+            
+            return true;
+        }
+        
+        private unsafe bool ReadSnapshot(SnapshotReader reader, TransactionOperationContext context, Transaction txw, bool dryRun, CancellationToken token)
+        {
+            var type = reader.ReadInt32();
+            if (type == -1)
+                return false;
+            
             while (true)
             {
                 token.ThrowIfCancellationRequested();
-                var type = reader.ReadInt32();
-                if (type == -1)
-                    return false;
 
                 int size;
                 long entries;
@@ -620,13 +647,16 @@ namespace Raven.Server.Rachis
                     case RootObjectType.None:
                         return true;
                     case RootObjectType.VariableSizeTree:
-
                         size = reader.ReadInt32();
                         reader.ReadExactly(size);
-                        Slice treeName;// will be freed on context close
-                        Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out treeName);
-                        txw.DeleteTree(treeName);
-                        var tree = txw.CreateTree(treeName);
+
+                        Tree tree = null;
+                        if (dryRun == false)
+                        {
+                            Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice treeName); // The Slice will be freed on context close
+                            txw.DeleteTree(treeName);
+                            tree = txw.CreateTree(treeName);
+                        }
 
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
@@ -639,46 +669,51 @@ namespace Raven.Server.Rachis
                                 size = reader.ReadInt32();
                                 reader.ReadExactly(size);
 
-                                using (tree.DirectAdd(valKey, size, out byte* ptr))
+                                if (dryRun == false)
                                 {
-                                    fixed (byte* pBuffer = reader.Buffer)
+                                    using (tree.DirectAdd(valKey, size, out byte* ptr))
                                     {
-                                        Memory.Copy(ptr, pBuffer, size);
+                                        fixed (byte* pBuffer = reader.Buffer)
+                                        {
+                                            Memory.Copy(ptr, pBuffer, size);
+                                        }
                                     }
                                 }
                             }
                         }
-
-
                         break;
                     case RootObjectType.Table:
 
                         size = reader.ReadInt32();
                         reader.ReadExactly(size);
-                        Slice tableName;// will be freed on context close
-                        Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
-                            out tableName);
-                        var tableTree = txw.ReadTree(tableName, RootObjectType.Table);
 
-                        // Get the table schema
-                        var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
-                        var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
-                        if (schemaPtr == null)
-                            throw new InvalidOperationException(
-                                "When trying to install snapshot, found missing table " + tableName);
-
-                        var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
-
-                        var table = txw.OpenTable(schema, tableName);
-
-                        // delete the table
                         TableValueReader tvr;
-                        while (true)
+                        Table table = null;
+                        if (dryRun == false)
                         {
-                            token.ThrowIfCancellationRequested();
-                            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out tvr) == false)
-                                break;
-                            table.Delete(tvr.Id);
+                            Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
+                                out Slice tableName);//The Slice will be freed on context close
+                            var tableTree = txw.ReadTree(tableName, RootObjectType.Table);
+
+                            // Get the table schema
+                            var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                            var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+                            if (schemaPtr == null)
+                                throw new InvalidOperationException(
+                                    "When trying to install snapshot, found missing table " + tableName);
+
+                            var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
+
+                            table = txw.OpenTable(schema, tableName);
+
+                            // delete the table
+                            while (true)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out tvr) == false)
+                                    break;
+                                table.Delete(tvr.Id);
+                            }
                         }
 
                         entries = reader.ReadInt64();
@@ -687,16 +722,22 @@ namespace Raven.Server.Rachis
                             token.ThrowIfCancellationRequested();
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
-                            fixed (byte* pBuffer = reader.Buffer)
+
+                            if (dryRun == false)
                             {
-                                tvr = new TableValueReader(pBuffer, size);
-                                table.Insert(ref tvr);
+                                fixed (byte* pBuffer = reader.Buffer)
+                                {
+                                    tvr = new TableValueReader(pBuffer, size);
+                                    table.Insert(ref tvr);
+                                }
                             }
                         }
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
                 }
+                
+                type = reader.ReadInt32();
             }
         }
 

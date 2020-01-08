@@ -3,20 +3,21 @@ using System.IO;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Utils;
+using Voron;
 
 namespace Raven.Server.Documents
 {
     public class StreamsTempFile : IDisposable
     {
         private readonly string _tempFile;
-        private readonly DocumentDatabase _database;
+        private readonly StorageEnvironment _environment;
         private readonly FileStream _file;
         private bool _reading;
         private Stream _previousInstance;
-        public StreamsTempFile(string tempFile, DocumentDatabase database)
+        public StreamsTempFile(string tempFile, StorageEnvironment environment)
         {
             _tempFile = tempFile;
-            _database = database;
+            _environment = environment;
 
             _file = SafeFileStream.Create(_tempFile, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
         }
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents
                 throw new NotSupportedException("The temp file was already moved to reading mode");
 
             _previousInstance?.Flush();
-            if (_database.DocumentsStorage.Environment.Options.EncryptionEnabled)
+            if (_environment.Options.EncryptionEnabled)
             {
                 _previousInstance = new TempCryptoStream(_file);
             }

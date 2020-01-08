@@ -26,6 +26,8 @@ namespace Voron.Debugging
     public class ReportInput
     {
         public List<JournalFile> Journals;
+        public JournalFile[] FlushedJournals { get; set; }
+
         public long NumberOfAllocatedPages { get; set; }
         public int NumberOfFreePages { get; set; }
         public long NextPageNumber { get; set; }
@@ -43,6 +45,7 @@ namespace Voron.Debugging
         public List<Tree> Trees;
         public List<FixedSizeTree> FixedSizeTrees;
         public List<JournalFile> Journals;
+        public JournalFile[] FlushedJournals { get; set; }
         public List<Table> Tables;
         public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
         public bool IncludeDetails { get; set; }
@@ -67,7 +70,7 @@ namespace Voron.Debugging
         {
             var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
 
-            var journals = GenerateJournalsReport(input.Journals);
+            var journals = GenerateJournalsReport(input.Journals, input.FlushedJournals);
 
             var tempBuffers = GenerateTempBuffersReport(input.TempPath, input.JournalPath);
 
@@ -110,7 +113,7 @@ namespace Voron.Debugging
 
             var journals = new JournalsReport
             {
-                Journals = GenerateJournalsReport(input.Journals),
+                Journals = GenerateJournalsReport(input.Journals, input.FlushedJournals),
                 LastFlushedJournal = input.LastFlushedJournalId,
                 LastFlushedTransaction = input.LastFlushedTransactionId,
                 TotalWrittenButUnsyncedBytes = input.TotalWrittenButUnsyncedBytes
@@ -143,19 +146,33 @@ namespace Voron.Debugging
             };
         }
 
-        private List<JournalReport> GenerateJournalsReport(List<JournalFile> journals)
+        private List<JournalReport> GenerateJournalsReport(List<JournalFile> journals, JournalFile[] flushedJournals)
         {
-            return journals.Select(journal =>
+            var journalReports = journals.Select(journal =>
             {
                 var snapshot = journal.GetSnapshot();
                 return new JournalReport
                 {
+                    Flushed = false,
                     Number = journal.Number,
                     AllocatedSpaceInBytes = (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
                     Available4Kbs = snapshot.Available4Kbs,
                     LastTransaction = snapshot.LastTransaction,
                 };
-            }).ToList();
+            });
+            var flushedJournalReports = flushedJournals.Select(journal =>
+            {
+                var snapshot = journal.GetSnapshot();
+                return new JournalReport
+                {
+                    Flushed = true,
+                    Number = journal.Number,
+                    AllocatedSpaceInBytes = (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
+                    Available4Kbs = snapshot.Available4Kbs,
+                    LastTransaction = snapshot.LastTransaction,
+                };
+            });
+            return journalReports.Concat(flushedJournalReports).ToList();
         }
 
         public static List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath, VoronPathSetting journalPath)
