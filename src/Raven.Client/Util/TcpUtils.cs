@@ -132,7 +132,7 @@ namespace Raven.Client.Util
             }
             else
             {
-                tcpClient = new TcpClient();
+                tcpClient = new TcpClient(AddressFamily.InterNetwork);
             }
             
             tcpClient.NoDelay = true;            
