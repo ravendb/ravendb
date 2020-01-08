@@ -1410,5 +1410,268 @@ select foo(heartrate(p))
             }
         }
 
+        [Fact]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        LastName = "Ayende",
+                        Age = 30
+                    }, "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), "watches/apple", new[] { 269d });
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(61), "tags/2", new[] { 459d });
+                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(62), "tags/1", new[] { 479d });
+                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(63), "tags/2", new[] { 469d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from p in session.Query<Person>()
+                                where p.Age > 21
+                                let tsFunc = new Func<object, string, DateTime, DateTime, TimeSeriesEntry[]>((o, name, f, t) =>
+                                    RavenQuery.TimeSeries(o, name, f, t)
+                                        .Where(ts => ts.Values[0] > 100 && ts.Values[0] < 600)
+                                        .ToList()
+                                        .Results)
+                                select new
+                                {
+                                    Name = p.Name + " " + p.LastName,
+                                    Heartrate = tsFunc(p, "Heartrate", baseline, baseline.AddMonths(2)),
+                                    Stocks = tsFunc(p, "Stocks", baseline, baseline.AddMonths(4))
+
+                                };
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Oren Ayende", result[0].Name);
+
+                    var heartrate = result[0].Heartrate;
+
+                    Assert.Equal(3, heartrate.Length);
+
+                    Assert.Equal(159, heartrate[0].Value);
+                    Assert.Equal(179, heartrate[1].Value);
+                    Assert.Equal(169, heartrate[2].Value);
+
+                    var stocks = result[0].Stocks;
+
+                    Assert.Equal(6, stocks.Length);
+
+                    Assert.Equal(559, stocks[0].Value);
+                    Assert.Equal(579, stocks[1].Value);
+                    Assert.Equal(569, stocks[2].Value);
+                    Assert.Equal(459, stocks[3].Value);
+                    Assert.Equal(479, stocks[4].Value);
+                    Assert.Equal(469, stocks[5].Value);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_InvokeOnDifferentObjectInstances()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        LastName = "Ayende",
+                        Age = 30,
+                        WorksAt = "companies/1"
+                    }, "people/1");
+
+                    session.Store(new Company(), "companies/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), "watches/apple", new[] { 269d });
+
+                    tsf = session.TimeSeriesFor("companies/1");
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from p in session.Query<Person>()
+                                where p.Age > 21
+                                let tsFunc = new Func<object, string, TimeSeriesEntry[]>((o, name) =>
+                                    RavenQuery.TimeSeries(o, name, baseline, baseline.AddMonths(2))
+                                        .Where(ts => ts.Values[0] > 100 && ts.Values[0] < 600)
+                                        .ToList()
+                                        .Results)
+                                select new
+                                {
+                                    Name = p.Name + " " + p.LastName,
+                                    Heartrate = tsFunc(p, "Heartrate"),
+                                    Stocks = tsFunc(RavenQuery.Load<Company>(p.WorksAt), "Stocks")
+
+                                };
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Oren Ayende", result[0].Name);
+
+                    var heartrate = result[0].Heartrate;
+
+                    Assert.Equal(3, heartrate.Length);
+
+                    Assert.Equal(159, heartrate[0].Value);
+                    Assert.Equal(179, heartrate[1].Value);
+                    Assert.Equal(169, heartrate[2].Value);
+
+                    var stocks = result[0].Stocks;
+
+                    Assert.Equal(3, stocks.Length);
+
+                    Assert.Equal(559, stocks[0].Value);
+                    Assert.Equal(579, stocks[1].Value);
+                    Assert.Equal(569, stocks[2].Value);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_TimeSeriesCallWithJustNameParameter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        LastName = "Ayende",
+                        Age = 30
+                    }, "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(61), "tags/2", new[] { 459d });
+                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(62), "tags/1", new[] { 479d });
+                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(63), "tags/2", new[] { 469d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from p in session.Query<Person>()
+                                where p.Age > 21
+                                let tsFunc = new Func<string, TimeSeriesEntry[]>(name =>
+                                    RavenQuery.TimeSeries(name)
+                                        .Where(ts => ts.Values[0] > 100 && ts.Values[0] < 600)
+                                        .ToList()
+                                        .Results)
+                                select new
+                                {
+                                    Name = p.Name + " " + p.LastName,
+                                    Heartrate = tsFunc("Heartrate"),
+                                    Stocks = tsFunc("Stocks")
+
+                                };
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Oren Ayende", result[0].Name);
+
+                    var heartrate = result[0].Heartrate;
+
+                    Assert.Equal(3, heartrate.Length);
+
+                    Assert.Equal(159, heartrate[0].Value);
+                    Assert.Equal(179, heartrate[1].Value);
+                    Assert.Equal(169, heartrate[2].Value);
+
+                    var stocks = result[0].Stocks;
+
+                    Assert.Equal(6, stocks.Length);
+
+                    Assert.Equal(559, stocks[0].Value);
+                    Assert.Equal(579, stocks[1].Value);
+                    Assert.Equal(569, stocks[2].Value);
+                    Assert.Equal(459, stocks[3].Value);
+                    Assert.Equal(479, stocks[4].Value);
+                    Assert.Equal(469, stocks[5].Value);
+
+                }
+            }
+        }
+
     }
 }
