@@ -52,11 +52,7 @@ namespace Raven.Server.Https
                     return sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors ||
                            sslPolicyErrors == SslPolicyErrors.None;
                 };
-
-                o.OnAuthenticate = (context, authenticationOptions) =>
-                {
-                    authenticationOptions.ServerCertificate = _serverCertificate;
-                };
+                o.ServerCertificateSelector = (_, __) => _serverCertificate;
             });
         }
 
