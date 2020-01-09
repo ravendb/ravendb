@@ -123,22 +123,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
             }
         }
 
-        private static string ExtractName(ElementAccessExpressionSyntax indexer, string name)
-        {
-            if (indexer.ArgumentList.Arguments.Count != 1)
-                throw new NotSupportedException($"You can only pass one {name} name to the indexer.");
-
-            if (indexer.ArgumentList.Arguments[0].Expression is LiteralExpressionSyntax les)
-                return les.Token.ValueText;
-
-            throw new NotSupportedException($"Could not exptract {name} name from: {indexer}");
-        }
-
-        private static string ExtractName(MemberAccessExpressionSyntax member)
-        {
-            return member.Name.Identifier.ValueText;
-        }
-
         private class QuerySyntaxRewriter : TimeSeriesCollectionNameRetriever
         {
             public override SyntaxNode VisitFromClause(FromClauseSyntax node)
@@ -178,32 +162,50 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 
                         return node.WithExpression(identifierNameSyntax);
                     }
-                }
-
-                /*
-                if (node.Expression is ElementAccessExpressionSyntax indexer)
-                {
-                    var list = new List<string>();
-                    foreach (ArgumentSyntax item in indexer.ArgumentList.Arguments)
+                    else if (timeSeriesExpression.Expression is ElementAccessExpressionSyntax collectionNameIndexer) // from ts in timeSeries[@""].HeartRate
                     {
-                        if (item.Expression is LiteralExpressionSyntax les)
+                        Collections = new HashSet<Collection>
                         {
-                            list.Add(les.Token.ValueText);
-                        }
+                            { new Collection(ExtractName(collectionNameIndexer, "collection"), ExtractName(timeSeriesExpression)) }
+                        };
+
+                        return node.WithExpression(collectionNameIndexer.Expression);
                     }
-
-                    CollectionNames = list.ToArray();
-
-                    return node.WithExpression(indexer.Expression);
                 }
-                */
+                else if (node.Expression is ElementAccessExpressionSyntax indexer)
+                {
+                    if (indexer.Expression is ElementAccessExpressionSyntax collectionNameIndexer) // from ts in timeSeries[@""][@""]
+                    {
+                        Collections = new HashSet<Collection>
+                        {
+                            { new Collection(ExtractName(collectionNameIndexer, "collection"), ExtractName(indexer, "TimeSeries")) }
+                        };
 
-                // from ts in timeSeries.Companies.HeartRate.Where(x => true)
-                var invocationExpression = node.Expression as InvocationExpressionSyntax;
-                if (invocationExpression != null)
+                        return node.WithExpression(collectionNameIndexer.Expression);
+                    }
+                    else if (indexer.Expression is MemberAccessExpressionSyntax collectionName) // from ts in timeSeries.Companies[@""]
+                    {
+                        Collections = new HashSet<Collection>
+                        {
+                            { new Collection(ExtractName(collectionName), ExtractName(indexer, "TimeSeries")) }
+                        };
+
+                        return node.WithExpression(collectionName.Expression);
+                    }
+                    else if (indexer.Expression is IdentifierNameSyntax) // from ts in timeSeries[@""]
+                    {
+                        Collections = new HashSet<Collection>
+                        {
+                            { new Collection(ExtractName(indexer, "collection"), null) }
+                        };
+
+                        return node.WithExpression(indexer.Expression);
+                    }
+                }
+                else if (node.Expression is InvocationExpressionSyntax invocation) // from ts in timeSeries.Companies.HeartRate.Where(x => true)
                 {
                     var methodSyntax = MethodSyntax;
-                    var newExpression = (ExpressionSyntax)methodSyntax.VisitInvocationExpression(invocationExpression);
+                    var newExpression = (ExpressionSyntax)methodSyntax.VisitInvocationExpression(invocation);
                     Collections = methodSyntax.Collections;
 
                     return node.WithExpression(newExpression);
@@ -211,6 +213,22 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 
                 throw new NotImplementedException("Not supported syntax exception. This might be a bug.");
             }
+        }
+
+        private static string ExtractName(ElementAccessExpressionSyntax indexer, string name)
+        {
+            if (indexer.ArgumentList.Arguments.Count != 1)
+                throw new NotSupportedException($"You can only pass one {name} name to the indexer.");
+
+            if (indexer.ArgumentList.Arguments[0].Expression is LiteralExpressionSyntax les)
+                return les.Token.ValueText;
+
+            throw new NotSupportedException($"Could not exptract {name} name from: {indexer}");
+        }
+
+        private static string ExtractName(MemberAccessExpressionSyntax member)
+        {
+            return member.Name.Identifier.ValueText;
         }
 
         public class Collection
