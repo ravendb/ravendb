@@ -269,7 +269,9 @@ namespace Raven.Server.Documents.Replication
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
-            var current = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
+            var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
+                (_, val) => val.IsDisposed ? newIncoming : val);
+
             if (current == newIncoming)
             {
                 newIncoming.Start();
@@ -466,11 +468,7 @@ namespace Raven.Server.Documents.Replication
 
                 IncomingReplicationRemoved?.Invoke(value);
 
-                if (_incoming.TryRemove(connectionInfo.SourceDatabaseId, out var valueToDispose))
-                {
-                    if (valueToDispose == value)
-                        valueToDispose.Dispose();
-                }
+                value.Dispose();
             }
         }
 
