@@ -57,18 +57,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation
         {
             var sortHandle = PosixHelper.Instance.GetSortHandle(_cultureInfo.CompareInfo);
 
-            var length = PosixNativeMethods.GetSortKey(sortHandle, text, text.Length, null, 0, CompareOptions.None);
-            if (length == 0)
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to GetSortKey for text=" + text);
-
-            var sortKey = new byte[length];
-
-            fixed (byte* pSortKey = sortKey)
+            fixed (char* pText = text)
             {
-                length = PosixNativeMethods.GetSortKey(sortHandle, text, text.Length, pSortKey, sortKey.Length, CompareOptions.None);
+                var length = PosixNativeMethods.GetSortKey(sortHandle, pText, text.Length, null, 0, CompareOptions.None);
                 if (length == 0)
                     throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to GetSortKey for text=" + text);
-                return sortKey;
+
+                var sortKey = new byte[length];
+
+                fixed (byte* pSortKey = sortKey)
+                {
+                    length = PosixNativeMethods.GetSortKey(sortHandle, pText, text.Length, pSortKey, sortKey.Length, CompareOptions.None);
+                    if (length == 0)
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to GetSortKey for text=" + text);
+                    return sortKey;
+                }
             }
         }
 
@@ -111,12 +114,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation
         {
             [SecurityCritical]
             [DllImport("System.Globalization.Native", CharSet = CharSet.Unicode, EntryPoint = "GlobalizationNative_GetSortKey")]
-            public static extern unsafe int GetSortKey(SafeHandle sortHandle, string str, int strLength, byte* sortKey, int sortKeyLength, CompareOptions options);
+            public static extern unsafe int GetSortKey(IntPtr sortHandle, char* str, int strLength, byte* sortKey, int sortKeyLength, CompareOptions options);
         }
 
         private sealed class PosixHelper
         {
-            public delegate SafeHandle GetSortHandleDelegate(CompareInfo value);
+            public delegate IntPtr GetSortHandleDelegate(CompareInfo value);
 
             public static readonly PosixHelper Instance = new PosixHelper();
 
