@@ -1470,7 +1470,7 @@ namespace Raven.Server.Documents
         }
 
         // Note: Make sure to call this with a separator, so you won't delete "users/11" for "users/1"
-        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, long take = long.MaxValue)
+        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, long maxDocsToDelete = long.MaxValue)
         {
             var deleteResults = new List<DeleteOperationResult>();
 
@@ -1478,23 +1478,19 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, prefix, out Slice prefixSlice))
             {
-                var hasMore = true;
-                while (hasMore)
+                while (true)
                 {
-                    hasMore = false;
+                    if (table.SeekOnePrimaryKeyPrefix(prefixSlice, out var reader) == false)
+                        break;
 
-                    foreach (var holder in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
-                    {
-                        hasMore = true;
-                        var id = TableValueToId(context, (int)DocumentsTable.Id, ref holder.Value.Reader);
+                    var id = TableValueToId(context, (int)DocumentsTable.Id, ref reader);
 
-                        var deleteOperationResult = Delete(context, id, null);
-                        if (deleteOperationResult != null)
-                            deleteResults.Add(deleteOperationResult.Value);
+                    var deleteOperationResult = Delete(context, id, null);
+                    if (deleteOperationResult != null)
+                        deleteResults.Add(deleteOperationResult.Value);
 
-                        if (--take < 0)
-                            break;
-                    }
+                    if (--maxDocsToDelete <= 0)
+                        break;
                 }
             }
 
