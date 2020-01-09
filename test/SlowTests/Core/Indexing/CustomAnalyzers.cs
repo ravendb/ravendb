@@ -44,11 +44,14 @@ namespace SlowTests.Core.Indexing
                     session.Store(new Company { Name = "d" });
                     session.Store(new Company { Name = "b" });
                     session.SaveChanges();
+
                     WaitForIndexing(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
 
                     var companies = session.Query<Company, Companies_SortByName>()
                         .OrderBy(c => c.Name)
                         .ToArray();
+
                     Assert.Equal(10, companies.Length);
                     Assert.Equal("a", companies[0].Name);
                     Assert.Equal("A", companies[1].Name);
@@ -271,7 +274,7 @@ namespace SlowTests.Core.Indexing
                     var expected = new Dictionary<string, string>
                     {
                         {
-                            "companies/1", 
+                            "companies/1",
                             "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com 123432."
                         },
                         {

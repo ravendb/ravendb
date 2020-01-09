@@ -87,6 +87,9 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
+                WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
                 using (var session = store.OpenSession())
                 {
                     QueryStatistics stats;

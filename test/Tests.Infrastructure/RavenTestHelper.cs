@@ -15,6 +15,7 @@ using Sparrow.Collections;
 using Sparrow.Platform;
 using Sparrow.Utils;
 using Xunit;
+using System.Text;
 
 namespace FastTests
 {
@@ -111,8 +112,27 @@ namespace FastTests
         public static void AssertNoIndexErrors(IDocumentStore store, string databaseName = null)
         {
             var errors = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexErrorsOperation());
+            StringBuilder sb = null;
+            foreach (var indexErrors in errors)
+            {
+                if (indexErrors == null || indexErrors.Errors == null || indexErrors.Errors.Length == 0)
+                    continue;
 
-            Assert.Empty(errors.SelectMany(x => x.Errors));
+                if (sb == null)
+                    sb = new StringBuilder();
+
+                sb.AppendLine($"Index Errors for '{indexErrors.Name}' ({indexErrors.Errors.Length})");
+                foreach (var indexError in indexErrors.Errors)
+                {
+                    sb.AppendLine($"- {indexError}");
+                }
+                sb.AppendLine();
+            }
+
+            if (sb == null)
+                return;
+
+            throw new InvalidOperationException(sb.ToString());
         }
 
         public static void AssertEqualRespectingNewLines(string expected, string actual)
