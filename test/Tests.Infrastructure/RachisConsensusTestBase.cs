@@ -160,7 +160,7 @@ namespace Tests.Infrastructure
                 ch = (char)(65 + Interlocked.Increment(ref _count));
             }
 
-            var url = $"tcp://{tcpListener.LocalEndpoint}/?{caller}#{ch}";
+            var url = $"tcp://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}/?{caller}#{ch}";
 
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
 
@@ -168,7 +168,7 @@ namespace Tests.Infrastructure
             var configuration = RavenConfiguration.CreateForServer(caller);
             configuration.Initialize();
             configuration.Core.RunInMemory = true;
-            configuration.Core.PublicServerUrl = new UriSetting($"http://{tcpListener.LocalEndpoint}");
+            configuration.Core.PublicServerUrl = new UriSetting($"http://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}");
             configuration.Cluster.ElectionTimeout = new TimeSetting(electionTimeout, TimeUnit.Milliseconds);
             var serverStore = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true }.ServerStore;
             serverStore.Initialize();
