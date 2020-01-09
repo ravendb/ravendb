@@ -633,7 +633,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (compound.Count == 1)
                 {
                     var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
-                    if (paramIndex == declaredFunction.Parameters.Count) //not found
+                    if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) //not found
                         return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValue;
                     if (!(args[paramIndex] is string s))
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
@@ -657,7 +657,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 else
                 {
-                    if (index == declaredFunction.Parameters.Count) // not found
+                    if (index == -1 || index == declaredFunction.Parameters.Count) // not found
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"'{compound[0]}' is unknown, and no matching argument was provided to time series function '{declaredFunction.Name}'.");
                     
@@ -706,11 +706,14 @@ namespace Raven.Server.Documents.Queries.Results
 
         private static int GetParameterIndex(DeclaredFunction declaredFunction, StringSegment str)
         {
+            if (declaredFunction.Parameters == null)
+                return -1;
+
             for (int i = 0; i < declaredFunction.Parameters.Count; i++)
             {
                 var parameter = declaredFunction.Parameters[i];
 
-                if (str == ((FieldExpression)parameter).FieldValue)
+                if (str == ((FieldExpression)parameter)?.FieldValue)
                     return i;
             }
 
