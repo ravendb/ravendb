@@ -161,12 +161,6 @@ namespace Raven.Server
             Exception exception = null;
             Stopwatch sp = null;
 
-            var syncIOFeature = context.Features.Get<IHttpBodyControlFeature>();
-            if (syncIOFeature != null)
-            {
-                syncIOFeature.AllowSynchronousIO = true;
-            }
-
             try
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
