@@ -1674,7 +1674,177 @@ select foo(heartrate(p))
         }
 
         [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithOrderByOnTimeSeriesResults()
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnRawResult()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        LastName = "Ayende",
+                        Age = 30
+                    }, "people/1");
+
+                    session.Store(new Watch(), "watches/fitbit");
+                    session.Store(new Watch(), "watches/apple");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), null, new[] { 992d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(61), "watches/apple", new[] { 559d });
+                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(62), "watches/fitbit", new[] { 579d });
+                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(63), "watches/apple", new[] { 569d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(61), "watches/apple", new[] { 459d });
+                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(62), "watches/fitbit", new[] { 479d });
+                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(63), "watches/sony", new[] { 999d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(61), "watches/apple", new[] { 359d });
+                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(62), "watches/fitbit", new[] { 379d });
+                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(63), "watches/apple", new[] { 369d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query =
+                        from p in session.Query<Person>()
+                        where p.Age > 21
+                        let tsFunc = new Func<string, DateTime, DateTime, double?>((name, f, t) =>
+                            RavenQuery.TimeSeries(p, name, f, t)
+                                .LoadTag<Watch>()
+                                .Where((ts, src) => ts.Values[0] < 500 && src != null)
+                                .ToList()
+                                .Results
+                                .Max(entry => entry.Values[0]))
+                        select new
+                        {
+                            Name = p.Name + " " + p.LastName,
+                            TotalMax = tsFunc("Heartrate", baseline, baseline.AddYears(1))
+                        };
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Oren Ayende", result[0].Name);
+
+                    Assert.Equal(479d, result[0].TotalMax);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnAggregatedResult()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        LastName = "Ayende",
+                        Age = 30
+                    }, "people/1");
+
+                    session.Store(new Watch(), "watches/fitbit");
+                    session.Store(new Watch(), "watches/apple");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), null, new[] { 992d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(61), "watches/apple", new[] { 559d });
+                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(62), "watches/fitbit", new[] { 579d });
+                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(63), "watches/apple", new[] { 569d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(61), "watches/apple", new[] { 459d });
+                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(62), "watches/fitbit", new[] { 479d });
+                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(63), "watches/sony", new[] { 999d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(61), "watches/apple", new[] { 359d });
+                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(62), "watches/fitbit", new[] { 379d });
+                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(63), "watches/apple", new[] { 369d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var estimatedAvg = 250.456;
+                    var query =
+                        from p in session.Query<Person>()
+                        where p.Age > 21
+                        let tsFunc = new Func<string, DateTime, DateTime, IEnumerable<TimeSeriesRangeAggregation>>((name, f, t) =>
+                            RavenQuery.TimeSeries(p, name, f, t)
+                                .LoadTag<Watch>()
+                                .Where((ts, src) => ts.Values[0] < 500 && src != null)
+                                .GroupBy(g => g.Months(1))
+                                .Select(x => new {Max = x.Max(), Avg = x.Average()})
+                                .ToList()
+                                .Results
+                                .Where(range => range.Avg[0] > estimatedAvg))
+                        select new
+                        {
+                            Name = p.Name + " " + p.LastName,
+                            Series = tsFunc("Heartrate", baseline, baseline.AddYears(1))
+                                .Select(r => new
+                                {
+                                    Max = r.Max[0], 
+                                    Avg = r.Avg[0]
+                                })
+                                .ToList()
+                        };
+
+                    var result = query.First();
+
+                    Assert.Equal("Oren Ayende", result.Name);
+
+                    Assert.Equal(3, result.Series.Count);
+                    Assert.Equal(279, result.Series[0].Max);
+                    Assert.Equal(269, result.Series[0].Avg);
+
+                    Assert.Equal(479, result.Series[1].Max);
+                    Assert.Equal(469, result.Series[1].Avg);
+
+                    Assert.Equal(379, result.Series[2].Max);
+                    Assert.Equal(369, result.Series[2].Avg);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithOrderByOnTimeSeriesResultValues()
         {
             using (var store = GetDocumentStore())
             {
@@ -1755,6 +1925,80 @@ select foo(heartrate(p))
                     Assert.Equal(479d, result.TotalMax);
                     Assert.Equal("watches/fitbit", result.TagOfMax);
                     Assert.Equal(2.5, result.SourceMax?.Accuracy);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnValueField()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        LastName = "Ayende",
+                        Age = 30
+                    }, "people/1");
+
+                    session.Store(new Watch(), "watches/fitbit");
+                    session.Store(new Watch(), "watches/apple");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), null, new[] { 992d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(61), "watches/apple", new[] { 559d });
+                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(62), "watches/fitbit", new[] { 579d });
+                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(63), "watches/apple", new[] { 569d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(61), "watches/apple", new[] { 459d });
+                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(62), "watches/fitbit", new[] { 479d });
+                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(63), "watches/sony", new[] { 999d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(61), "watches/apple", new[] { 359d });
+                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(62), "watches/fitbit", new[] { 379d });
+                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(63), "watches/apple", new[] { 369d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query =
+                        from p in session.Query<Person>()
+                        where p.Age > 21
+                        let tsQuery = 
+                            RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddYears(1))
+                                .Where(ts => ts.Value < 500)
+                                .ToList()
+                        let last = tsQuery.Results
+                            .OrderBy(entry => entry.Value)
+                            .Last()
+                        select new
+                        {
+                            Max = last.Value,
+                            TagOfMax = last.Tag
+                        };
+
+                    var result = query.First();
+
+                    Assert.Equal(479d, result.Max);
+                    Assert.Equal("watches/fitbit", result.TagOfMax);
                 }
             }
         }

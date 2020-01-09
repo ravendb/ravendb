@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
 using Lucene.Net.Store;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Queries.AST;
@@ -124,9 +125,10 @@ namespace Raven.Server.Documents.Queries.Results
 
                     array.Add(new DynamicJsonValue
                     {
-                        ["Tag"] = singleResult.Tag.ToString(),
-                        ["Timestamp"] = singleResult.Timestamp,
-                        ["Values"] = vals
+                        [nameof(TimeSeriesEntry.Tag)] = singleResult.Tag.ToString(),
+                        [nameof(TimeSeriesEntry.Timestamp)] = singleResult.Timestamp,
+                        [nameof(TimeSeriesEntry.Values)] = vals,
+                        [nameof(TimeSeriesEntry.Value)] = singleResult.Values.Span[0]
                     });
 
                     count++;
@@ -591,6 +593,13 @@ namespace Raven.Server.Documents.Queries.Results
                                 return null;
 
                             return singleResult.Values.Span[index];
+                        case "VALUE":
+                        case "Value":
+                        case "value":
+                            if (fe.Compound.Count > 1)
+                                throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
+
+                            return singleResult.Values.Span[0];
                         case "TIMESTAMP":
                         case "TimeStamp":
                         case "Timestamp":
@@ -674,7 +683,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private static object GetValueFromArgument(DeclaredFunction declaredFunction, object[] args, FieldExpression fe)
         {
-            if (args == null)
+            if (args == null || declaredFunction.Parameters == null)
                 throw new InvalidQueryException($"Unable to get the value of '{fe}'. '{fe.Compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
             
             if (args.Length < declaredFunction.Parameters.Count)

@@ -763,6 +763,8 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue InvokeTimeSeriesFunction(JsValue self, JsValue[] args)
             {
+                // todo aviv : write meaningful error messages
+
                 AssertValidDatabaseContext();
                 if (args.Length < 1)
                     throw new InvalidOperationException($"must be called with exactly 1 string argument");
