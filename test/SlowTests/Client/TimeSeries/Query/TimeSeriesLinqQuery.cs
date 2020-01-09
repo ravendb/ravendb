@@ -2097,7 +2097,57 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
+        [Fact]
+        public void CanQueryTimeSeriesRaw_WhereOnValue()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
 
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Age = 25
+                    }, "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Where(p => p.Age > 21)
+                        .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
+                            .Where(ts => ts.Value > 75 && ts.Value < 175)
+                            .ToList());
+
+                    var result = query.First();
+                    Assert.Equal(3, result.Count);
+
+                    var timeSeriesValues = result.Results;
+
+                    Assert.Equal(79, timeSeriesValues[0].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(62), timeSeriesValues[0].Timestamp);
+
+                    Assert.Equal(159, timeSeriesValues[1].Values[0]);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), timeSeriesValues[1].Timestamp);
+
+                    Assert.Equal(169, timeSeriesValues[2].Values[0]);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[2].Timestamp);
+                }
+            }
+        }
 
     }
 }
