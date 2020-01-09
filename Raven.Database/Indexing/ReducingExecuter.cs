@@ -61,6 +61,11 @@ namespace Raven.Database.Indexing
 			{
 				operationCanceled = true;
 			}
+            catch (ObjectDisposedException)
+            {
+                // index was disposed, we can ignore this
+                operationCanceled = true;
+            }
 			finally
 			{
 				if (operationCanceled == false)
