@@ -12,6 +12,7 @@ using Sparrow.Extensions;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using System.Collections.Generic;
 
 namespace SlowTests.Client.Indexing.TimeSeries
 {
@@ -28,6 +29,23 @@ namespace SlowTests.Client.Indexing.TimeSeries
             {
                 AddMap(
                     "HeartRate",
+                    timeSeries => from ts in timeSeries
+                                  from entry in ts.Entries
+                                  select new
+                                  {
+                                      HeartBeat = entry.Values[0],
+                                      entry.Timestamp.Date,
+                                      User = ts.DocumentId
+                                  });
+            }
+        }
+
+        private class MyTsIndex_WithSpace : AbstractTimeSeriesIndexCreationTask<Company>
+        {
+            public MyTsIndex_WithSpace()
+            {
+                AddMap(
+                    "Heart Rate",
                     timeSeries => from ts in timeSeries
                                   from entry in ts.Entries
                                   select new
@@ -1280,6 +1298,146 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                     Assert.Equal(3, results.Count);
                 }
+            }
+        }
+
+        [Fact]
+        public void SupportForEscapedCollectionAndTimeSeriesNames()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.FindCollectionName = t =>
+                {
+                    if (t == typeof(Company))
+                        return "Companies With Space";
+
+                    return null;
+                }
+            }))
+            {
+                var timeSeriesIndex = new MyTsIndex_WithSpace();
+                timeSeriesIndex.Conventions = store.Conventions;
+                var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
+                RavenTestHelper.AssertEqualRespectingNewLines("timeSeries[@ \"Companies With Space\"][@ \"Heart Rate\"].SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Values[0],\r\n    Date = entry.Timestamp.Date,\r\n    User = ts.DocumentId\r\n})", indexDefinition.Maps.First());
+
+                AssertIndex(store, indexDefinition, "Heart Rate");
+            }
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.FindCollectionName = t =>
+                {
+                    if (t == typeof(Company))
+                        return "Companies With Space";
+
+                    return null;
+                }
+            }))
+            {
+                var timeSeriesIndex = new MyTsIndex_WithSpace();
+                timeSeriesIndex.Conventions = store.Conventions;
+                var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
+
+                indexDefinition.Maps = new HashSet<string> {
+                    "timeSeries[@ \"Companies With Space\"].HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Values[0],\r\n    Date = entry.Timestamp.Date,\r\n    User = ts.DocumentId\r\n})"
+                };
+
+                AssertIndex(store, indexDefinition, "HeartRate");
+
+                indexDefinition.Maps = new HashSet<string> {
+                    "timeSeries[@ \"Companies With Space\"].SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Values[0],\r\n    Date = entry.Timestamp.Date,\r\n    User = ts.DocumentId\r\n})"
+                };
+
+                AssertIndex(store, indexDefinition, "HeartRate");
+            }
+
+            using (var store = GetDocumentStore())
+            {
+                var timeSeriesIndex = new MyTsIndex_WithSpace();
+                timeSeriesIndex.Conventions = store.Conventions;
+                var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
+
+                indexDefinition.Maps = new HashSet<string> {
+                    "timeSeries.Companies[@ \"Heart Rate\"].SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Values[0],\r\n    Date = entry.Timestamp.Date,\r\n    User = ts.DocumentId\r\n})"
+                };
+
+                AssertIndex(store, indexDefinition, "Heart Rate");
+            }
+
+            static void AssertIndex(IDocumentStore store, IndexDefinition definition, string timeSeriesName)
+            {
+                var now1 = DateTime.Now;
+                var now2 = now1.AddSeconds(1);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+                    session.TimeSeriesFor(company).Append(timeSeriesName, now1, "tag", new double[] { 7 });
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                store.Maintenance.Send(new PutIndexesOperation(definition));
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
+                Assert.False(staleness.IsStale);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.TimeSeriesFor(company).Append(timeSeriesName, now2, "tag", new double[] { 3 });
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
+                Assert.False(staleness.IsStale);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("companies/1");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
+                Assert.False(staleness.IsStale);
+
+                store.Maintenance.Send(new DeleteIndexOperation(definition.Name));
             }
         }
 
