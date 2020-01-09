@@ -14,6 +14,8 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -224,7 +226,7 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task CleanTombstonesInTheClusterWithExternalReplication()
         {
-            var cluster = await CreateRaftCluster(3);
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
             await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
             var external = GetDatabaseName();
@@ -236,6 +238,7 @@ namespace SlowTests.Server.Replication
             }))
             {
                 var replication = new ExternalReplication(external, "Connection");
+
                 await AddWatcherToReplicationTopology(store, replication);
 
                 using (var session = store.OpenSession())
@@ -284,10 +287,31 @@ namespace SlowTests.Server.Replication
 
                 using (var externalSession = store.OpenSession(external))
                 {
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)externalSession, "marker2", (m) => m.Id == "marker2", TimeSpan.FromSeconds(15));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)externalSession, "marker2", (m) => m.Id == "marker2", TimeSpan.FromSeconds(15)));
                 }
 
-                total = 0L;
+              
+
+                var updateIndex = 0L;
+                var haveUpdateExternalReplicationStateCommand = false;
+                using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var entry in cluster.Leader.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
+                    {
+                        var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
+                        if (type == nameof(UpdateExternalReplicationStateCommand))
+                        {
+                            haveUpdateExternalReplicationStateCommand = true;
+                            Assert.True(long.TryParse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString(), out updateIndex));
+                        }
+                    }
+                }
+
+                Assert.True(haveUpdateExternalReplicationStateCommand);
+
+                await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
+
                 foreach (var server in cluster.Nodes)
                 {
                     var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -295,10 +319,9 @@ namespace SlowTests.Server.Replication
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        total += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                        Assert.True(storage.DocumentsStorage.GetNumberOfTombstones(context) == 0);
                     }
                 }
-                Assert.Equal(0, total);
             }
         }
 

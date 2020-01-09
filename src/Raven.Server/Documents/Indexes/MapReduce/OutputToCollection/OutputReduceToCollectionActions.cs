@@ -7,6 +7,7 @@ using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         internal static Slice PrefixesOfReduceOutputDocumentsToDeleteKey;
         internal static Slice ReduceOutputsIdsToPatternReferenceIdsTree;
 
-        private HashSet<string> _prefixesOfReduceOutputDocumentsToDelete;
+        private ConcurrentSet<string> _prefixesOfReduceOutputDocumentsToDelete;
         private readonly string _collectionOfReduceOutputs;
         private readonly long? _reduceOutputVersion;
         private readonly OutputReferencesPattern _patternForOutputReduceToCollectionReferences;
@@ -66,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 if (it.Seek(Slices.BeforeAllKeys))
                 {
-                    _prefixesOfReduceOutputDocumentsToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    _prefixesOfReduceOutputDocumentsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
                     do
                     {
@@ -116,7 +117,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         public void AddPrefixesOfDocumentsToDelete(HashSet<string> prefixes)
         {
             if (_prefixesOfReduceOutputDocumentsToDelete == null)
-                _prefixesOfReduceOutputDocumentsToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                _prefixesOfReduceOutputDocumentsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
             using (_index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -140,7 +141,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
-        public HashSet<string> GetPrefixesOfDocumentsToDelete()
+        public ConcurrentSet<string> GetPrefixesOfDocumentsToDelete()
         {
             return _prefixesOfReduceOutputDocumentsToDelete;
         }
@@ -220,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             reduceOutputsTree.MultiDelete(PrefixesOfReduceOutputDocumentsToDeleteKey, prefix);
 
-            _prefixesOfReduceOutputDocumentsToDelete.Remove(prefix);
+            _prefixesOfReduceOutputDocumentsToDelete.TryRemove(prefix);
         }
     }
 }
