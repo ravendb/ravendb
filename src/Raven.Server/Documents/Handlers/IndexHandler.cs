@@ -810,13 +810,18 @@ namespace Raven.Server.Documents.Handlers
                     {
                         foreach (var collection in index.Collections)
                         {
-                            // TODO [ppekrol]
-                            var etag = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
-                            var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, 1, DocumentFields.LastModified).FirstOrDefault();
-                            if (document != null)
+                            switch (index.SourceType)
                             {
-                                if (document.LastModified > baseLine)
-                                    baseLine = document.LastModified;
+                                case IndexSourceType.Documents:
+                                    var etag = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
+                                    var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, 1, DocumentFields.LastModified).FirstOrDefault();
+                                    if (document != null && document.LastModified > baseLine)
+                                        baseLine = document.LastModified;
+                                    break;
+                                case IndexSourceType.TimeSeries:
+                                    break;
+                                default:
+                                    throw new NotSupportedException($"Index with source type '{index.SourceType}' is not supported.");
                             }
                         }
                     }
