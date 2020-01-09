@@ -75,6 +75,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             private int _addedFields;
 
             public string Pattern => _pattern;
+
+            public Dictionary<string, int>.KeyCollection PatternFields => _fieldToFormatPosition.Keys;
             
             public DocumentIdBuilder(string pattern, string formattedPattern, Dictionary<string, int> fieldToFormatPosition)
             {
