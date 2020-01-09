@@ -704,21 +704,22 @@ namespace Raven.Client.Util
                     string path = null;
                     var isNumber = false;
                     if (methodCallExpression.Arguments.Count == 2 &&
-                        methodCallExpression.Arguments[1] is LambdaExpression lambda &&
-                        lambda.Body is MemberExpression memberExpression)
+                        methodCallExpression.Arguments[1] is LambdaExpression lambda)
                     {
-                        path = memberExpression.Member.Name;
-
-                        if (memberExpression.Expression is ParameterExpression == false)
+                        if (lambda.Body is MemberExpression memberExpression)
                         {
-                            GetInnermostExpression(memberExpression, out var nestedPath, out _);
-                            if (nestedPath != string.Empty)
-                            {
-                                path = $"{nestedPath}.{path}";
-                            }
-                        }
+                            path = GetMemberPath(memberExpression);
 
-                        isNumber = _numericTypes.Contains(memberExpression.Type);
+                            isNumber = _numericTypes.Contains(memberExpression.Type);
+                        }
+                        else if (lambda.Body is BinaryExpression be && be.NodeType == ExpressionType.ArrayIndex && 
+                                 be.Right is ConstantExpression ce && be.Left is MemberExpression member)
+                        {
+                            // e.g. entry.Values[0]
+                            var memberPath = GetMemberPath(member);
+                            path = $"{memberPath}[{ce.Value}]";
+                            isNumber = _numericTypes.Contains(be.Type);
+                        }
                     }
 
                     writer.Write(".sort(");
@@ -743,6 +744,18 @@ namespace Raven.Client.Util
                     }
                     writer.Write(")");
                 }
+            }
+
+            private static string GetMemberPath(MemberExpression memberExpression)
+            {
+                if (memberExpression.Expression is ParameterExpression) 
+                    return memberExpression.Member.Name;
+
+                GetInnermostExpression(memberExpression, out var nestedPath, out _);
+
+                return nestedPath != string.Empty 
+                    ? $"{nestedPath}.{memberExpression.Member.Name}" 
+                    : memberExpression.Member.Name;
             }
 
             private static void HandleMaxOrMin(JavascriptConversionContext context, MethodCallExpression methodCallExpression, bool max = false)
@@ -1503,34 +1516,6 @@ namespace Raven.Client.Util
 
                     return;                   
                 }
-
-                /*if (context.Node is MethodCallExpression mce && mce.Type == typeof(DateTime))
-                {
-                    switch (mce.Method.Name)
-                    {
-                        case "AddTicks":
-                            break;
-                        case "AddMilliseconds":
-                            break;
-                        case "AddMinutes":
-                            break;
-                        case "AddSeconds":
-                            break;
-                        case "AddHours":
-                            break;
-                        case "AddDays":
-                            break;
-
-                        case "AddMonths":
-                            break;
-                        case "AddYears":
-                            break;
-                        default:
-                            return;
-                    }
-
-                    return;
-                }*/
 
                 if (!(context.Node is MemberExpression node))
                     return;

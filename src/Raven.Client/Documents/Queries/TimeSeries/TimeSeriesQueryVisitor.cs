@@ -160,43 +160,40 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void TimeSeriesName(MethodCallExpression mce)
         {
-
             if (mce.Arguments.Count == 1)
             {
                 _src = GetNameFromArgument(mce.Arguments[0]);
+                return;
+            }
+
+            var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
+            Parameters ??= new List<string>();
+
+            if (_providerProcessor.FromAlias == null)
+            {
+                _providerProcessor.AddFromAlias(sourceAlias);
+                Parameters.Add(sourceAlias);
             }
             else
             {
-                Parameters ??= new List<string>();
-
-                var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
-
-                if (_providerProcessor.FromAlias == null)
+                if (mce.Arguments[0] is ParameterExpression)
                 {
-                    _providerProcessor.AddFromAlias(sourceAlias);
                     Parameters.Add(sourceAlias);
                 }
                 else
                 {
-                    if (mce.Arguments[0] is ParameterExpression)
+                    Parameters.Add(_providerProcessor.FromAlias);
+                    if (sourceAlias != _providerProcessor.FromAlias)
                     {
                         Parameters.Add(sourceAlias);
                     }
-                    else
-                    {
-                        Parameters.Add(_providerProcessor.FromAlias);
-                        if (sourceAlias != _providerProcessor.FromAlias)
-                        {
-                            Parameters.Add(sourceAlias);
-                        }
-                    }
                 }
-
-                _src = GetNameFromArgument(mce.Arguments[1]);
-
-                if (mce.Arguments[1] is ParameterExpression == false) 
-                    _src = $"{sourceAlias}.{_src}";
             }
+
+            _src = GetNameFromArgument(mce.Arguments[1]);
+
+            if (mce.Arguments[1] is ParameterExpression == false) 
+                _src = $"{sourceAlias}.{_src}";
         }
 
         private string GetNameFromArgument(Expression argument)
