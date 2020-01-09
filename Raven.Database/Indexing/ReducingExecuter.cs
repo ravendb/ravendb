@@ -66,6 +66,10 @@ namespace Raven.Database.Indexing
                 // index was disposed, we can ignore this
                 operationCanceled = true;
             }
+            catch (Exception e)
+            {
+                Log.WarnException("Failed to index " + indexToWorkOn.IndexName, e);
+			}
 			finally
 			{
 				if (operationCanceled == false)

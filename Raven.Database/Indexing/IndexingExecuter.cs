@@ -184,7 +184,7 @@ namespace Raven.Database.Indexing
 			}
 			catch (Exception e)
 			{
-				Log.Warn("Failed to index " + batchForIndex.IndexName, e);
+				Log.WarnException("Failed to index " + batchForIndex.IndexName, e);
 			}
 			finally
 			{
