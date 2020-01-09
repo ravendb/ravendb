@@ -33,16 +33,42 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                 if (nodePartsLength < 2 || nodePartsLength > 4)
                     throw new NotImplementedException("Not supported syntax exception. This might be a bug.");
 
-                if (nodePartsLength == 2) // from ts in timeSeries.SelectMany
-                    return node;
+                var toRemove = 0;
 
-                var collectionName = nodeParts[1];
-                var timeSeriesNameLength = 0;
-
-                if (nodePartsLength == 4) // from ts in timeSeries.Companies.HeartRate.SelectMany
+                if (nodePartsLength == 2) // from ts in timeSeries.SelectMany 
                 {
+                    if (nodeToCheck.Expression is MemberAccessExpressionSyntax expr)
+                    {
+                        if (expr.Expression is ElementAccessExpressionSyntax timeSeriesNameIndexer // from ts in timeSeries[@""][@""].SelectMany
+                            && timeSeriesNameIndexer.Expression is ElementAccessExpressionSyntax collectionNameIndexer1)
+                        {
+                            Collections = new HashSet<Collection>
+                            {
+                                { new Collection(ExtractName(collectionNameIndexer1, "collection"), ExtractName(timeSeriesNameIndexer, "TimeSeries")) }
+                            };
+                        }
+                        else if (expr.Expression is ElementAccessExpressionSyntax collectionNameIndexer2)
+                        {
+                            Collections = new HashSet<Collection>
+                            {
+                                { new Collection(ExtractName(collectionNameIndexer2, "collection"), null) }
+                            };
+                        }
+
+                        toRemove = expr.Expression.ToString().Length - "timeSeries".Length;
+                    }
+                    else
+                    {
+                        return node;
+                    }
+                }
+                else if (nodePartsLength == 4) // from ts in timeSeries.Companies.HeartRate.SelectMany
+                {
+                    var collectionName = nodeParts[1];
+                    toRemove += collectionName.Length + 1;
+
                     var timeSeriesName = nodeParts[2];
-                    timeSeriesNameLength = timeSeriesName.Length + 1;
+                    toRemove += timeSeriesName.Length + 1;
 
                     Collections = new HashSet<Collection>
                     {
@@ -51,23 +77,66 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                 }
                 else if (nodePartsLength == 3) // from ts in timeSeries.Companies.SelectMany
                 {
-                    Collections = new HashSet<Collection>
+                    if (nodeToCheck.Expression is MemberAccessExpressionSyntax expr)
                     {
-                        { new Collection(collectionName, null) }
-                    };
+                        if (expr.Expression is ElementAccessExpressionSyntax timeSeriesNameIndexer
+                            && timeSeriesNameIndexer.Expression is MemberAccessExpressionSyntax collectionName1) // from ts in timeSeries.Companies[@""].SelectMany
+                        {
+                            Collections = new HashSet<Collection>
+                            {
+                                { new Collection(ExtractName(collectionName1), ExtractName(timeSeriesNameIndexer, "TimeSeries")) }
+                            };
+
+                            toRemove = expr.Expression.ToString().Length - "timeSeries".Length;
+                        }
+                        else if (expr.Expression is MemberAccessExpressionSyntax timeSeriesName
+                            && timeSeriesName.Expression is ElementAccessExpressionSyntax collectionNameIndexer) // from ts in timeSeries[@""].HeartRate.SelectMany
+                        {
+                            Collections = new HashSet<Collection>
+                            {
+                                { new Collection(ExtractName(collectionNameIndexer, "collection"), ExtractName(timeSeriesName)) }
+                            };
+
+                            toRemove = expr.Expression.ToString().Length - "timeSeries".Length;
+                        }
+                        else
+                        {
+                            var collectionName2 = nodeParts[1];
+                            toRemove += collectionName2.Length + 1;
+
+                            Collections = new HashSet<Collection>
+                            {
+                                { new Collection(collectionName2, null) }
+                            };
+                        }
+                    }
                 }
 
                 if (nodeToCheck != node)
                     nodeAsString = node.Expression.ToString();
 
-                var collectionIndex = nodeAsString.IndexOf(collectionName, nodePrefix.Length, StringComparison.OrdinalIgnoreCase);
                 // removing collection name: "timeSeries.Users.HeartRate.Select" => "timeSeries.Select"
-
-                nodeAsString = nodeAsString.Remove(collectionIndex - 1, collectionName.Length + 1 + timeSeriesNameLength);
+                nodeAsString = nodeAsString.Remove("timeSeries".Length, toRemove);
 
                 var newExpression = SyntaxFactory.ParseExpression(nodeAsString);
                 return node.WithExpression(newExpression);
             }
+        }
+
+        private static string ExtractName(ElementAccessExpressionSyntax indexer, string name)
+        {
+            if (indexer.ArgumentList.Arguments.Count != 1)
+                throw new NotSupportedException($"You can only pass one {name} name to the indexer.");
+
+            if (indexer.ArgumentList.Arguments[0].Expression is LiteralExpressionSyntax les)
+                return les.Token.ValueText;
+
+            throw new NotSupportedException($"Could not exptract {name} name from: {indexer}");
+        }
+
+        private static string ExtractName(MemberAccessExpressionSyntax member)
+        {
+            return member.Name.Identifier.ValueText;
         }
 
         private class QuerySyntaxRewriter : TimeSeriesCollectionNameRetriever
