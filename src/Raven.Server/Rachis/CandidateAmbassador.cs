@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis.Remote;
@@ -91,6 +92,7 @@ namespace Raven.Server.Rachis
             }
         }
 
+
         /// <summary>
         /// This method may run for a long while, as we are trying to get agreement 
         /// from a majority of the cluster
@@ -109,18 +111,14 @@ namespace Raven.Server.Rachis
                         try
                         {
                             var connectTask = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate);
-                            while (connectTask.Wait(1000) == false)
-                            {
-                                if (_candidate.Running == false)
-                                    return; // election is over
-                            }
 
+                            if (WaitForConnection(connectTask) == false) 
+                                return;
+                                
                             var connection = connectTask.Result;
+
                             stream = connection.Stream;
                             disconnect = connection.Disconnect;
-
-                            if (_candidate.Running == false)
-                                return;
                         }
                         catch (Exception e)
                         {
@@ -355,7 +353,30 @@ namespace Raven.Server.Rachis
                 _connection?.Dispose();
             }
         }
-        
+
+
+        private bool WaitForConnection(Task<RachisConnection> connectTask)
+        {
+            try
+            {
+                while (connectTask.Wait(1000) == false)
+                {
+                    if (_candidate.Running)
+                        continue;
+
+                    connectTask.ContinueWith(RachisConsensus.DisconnectAction, TaskContinuationOptions.ExecuteSynchronously);
+                    return false;
+                }
+            }
+            catch
+            {
+                connectTask.ContinueWith(RachisConsensus.DisconnectAction, TaskContinuationOptions.ExecuteSynchronously);
+                throw;
+            }
+
+            return true;
+        }
+
         public bool TryGetPublishedConnection(out RemoteConnection connection)
         {
             var copy = _publishedConnection;

@@ -375,17 +375,14 @@ namespace Raven.Server.Documents.Indexes
                     {
                         if (replacementIndex is MapReduceIndex replacementMapReduceIndex && replacementMapReduceIndex.OutputReduceToCollection != null)
                         {
-                            if (replacementMapReduceIndex.Definition.ReduceOutputIndex != null)
+                            if (replacementMapReduceIndex.Definition.ReduceOutputIndex != null &&
+                                currentIndex is MapReduceIndex currentMapReduceIndex)
                             {
                                 var prefix = OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
                                     definition.OutputReduceToCollection, replacementMapReduceIndex.Definition.ReduceOutputIndex.Value);
 
-                                if (currentIndex is MapReduceIndex currentMapReduceIndex)
-                                {
-                                    // original index needs to delete docs created by side-by-side indexing
-
-                                    currentMapReduceIndex.OutputReduceToCollection?.AddPrefixesOfDocumentsToDelete(new HashSet<string> { prefix });
-                                }
+                                // original index needs to delete docs created by side-by-side indexing
+                                currentMapReduceIndex.OutputReduceToCollection?.AddPrefixesOfDocumentsToDelete(new HashSet<string> {prefix});
                             }
                         }
 
