@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -166,9 +167,20 @@ namespace Raven.Database.Indexing
 
 		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)
 		{
-			try
-			{
-				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex.IndexName, batchForIndex.Batch));
+            var wasOperationCanceled = false;
+
+            try
+            {
+                transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex.IndexName, batchForIndex.Batch));
+            }
+            catch (IndexDoesNotExistsException)
+            {
+                wasOperationCanceled = true;
+            }
+            catch (ObjectDisposedException e)
+            {
+                wasOperationCanceled = true;
+                Log.WarnException("Failed to index because index was disposed", e);
 			}
 			catch (Exception e)
 			{
@@ -176,18 +188,21 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-				if (Log.IsDebugEnabled)
-				{
-					Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
-							  batchForIndex.Batch.Docs.Count,
-							  lastEtag,
-							  batchForIndex.IndexName);
-				}
+                if (wasOperationCanceled == false)
+                {
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
+                            batchForIndex.Batch.Docs.Count,
+                            lastEtag,
+                            batchForIndex.IndexName);
+                    }
 
-				transactionalStorage.Batch(actions =>
-					// whatever we succeeded in indexing or not, we have to update this
-					// because otherwise we keep trying to re-index failed documents
-										   actions.Indexing.UpdateLastIndexed(batchForIndex.IndexName, lastEtag, lastModified));
+                    transactionalStorage.Batch(actions =>
+                        // whatever we succeeded in indexing or not, we have to update this
+                        // because otherwise we keep trying to re-index failed documents
+                        actions.Indexing.UpdateLastIndexed(batchForIndex.IndexName, lastEtag, lastModified));
+                }
 			}
 		}
 
@@ -312,6 +327,7 @@ namespace Raven.Database.Indexing
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
 			if (viewGenerator == null)
 				return; // index was deleted, probably
+
 			try
 			{
 				if (Log.IsDebugEnabled)
@@ -335,8 +351,12 @@ namespace Raven.Database.Indexing
 			}
 			catch (Exception e)
 			{
-				if (actions.IsWriteConflict(e))
-					return;
+                if (actions.IsWriteConflict(e))
+                {
+                    Log.Debug(string.Format("Write conflict encountered for index {0}. Will retry on the next indexing batch.", index));
+					throw new OperationCanceledException();
+				}
+
 				Log.WarnException(string.Format("Failed to index documents for index: {0}", index), e);
 			}
 		}
