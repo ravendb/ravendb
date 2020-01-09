@@ -65,6 +65,7 @@ namespace Raven.Server.Documents.Replication
         public readonly string PullReplicationName;
 
         public bool PullReplication => PullReplicationName != null;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
@@ -73,6 +74,8 @@ namespace Raven.Server.Documents.Replication
             JsonOperationContext.ManagedPinnedBuffer bufferToCopy,
             string pullReplicationName)
         {
+            _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
+
             _connectionOptions = options;
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
 
@@ -1097,13 +1100,15 @@ namespace Raven.Server.Documents.Replication
                 _lastReplicationStats.TryDequeue(out stats);
         }
 
-        private readonly MultipleUseFlag _disposed = new MultipleUseFlag();
+        public bool IsDisposed => _disposeOnce.Disposed;
 
         public void Dispose()
         {
-            if (_disposed.Raise() == false)
-                return; // already disposed
+            _disposeOnce.Dispose();
+        }
 
+        private void DisposeInternal()
+        {
             var releaser = _copiedBuffer.ReleaseBuffer;
             try
             {
