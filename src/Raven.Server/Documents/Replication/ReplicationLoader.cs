@@ -269,15 +269,21 @@ namespace Raven.Server.Documents.Replication
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
-            var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
-            if (newConnection == newIncoming)
+            var current = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
+            if (current == newIncoming)
             {
                 newIncoming.Start();
                 IncomingReplicationAdded?.Invoke(newIncoming);
                 ForceTryReconnectAll();
             }
             else
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
+                }
                 newIncoming.Dispose();
+            }
 
             return newIncoming;
         }
@@ -423,7 +429,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private static readonly TimeSpan MaxInactiveTime = TimeSpan.FromMinutes(1);
+        internal static readonly TimeSpan MaxInactiveTime = TimeSpan.FromSeconds(60);
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
         {
@@ -460,7 +466,11 @@ namespace Raven.Server.Documents.Replication
 
                 IncomingReplicationRemoved?.Invoke(value);
 
-                value.Dispose();
+                if (_incoming.TryRemove(connectionInfo.SourceDatabaseId, out var valueToDispose))
+                {
+                    if (valueToDispose == value)
+                        valueToDispose.Dispose();
+                }
             }
         }
 

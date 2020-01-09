@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Esprima.Ast;
 using FastTests.Server.Replication;
@@ -926,5 +927,40 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(connection1 ^ connection2, $"connection 1 disposed={connection1}, connection 2 disposed={connection2}");
             }
         }
+
+        [Fact]
+        public async Task RavenDB_14435()
+        {
+            using (var src = GetDocumentStore())
+            using (var dst = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(src);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "foo/bar");
+                    session.SaveChanges();
+                }
+                
+                var mre = database.ReplicationLoader.DebugWaitAndRunReplicationOnce = new ManualResetEventSlim(true);
+
+                var databaseWatcher1 = new ExternalReplication(dst.Database, $"ConnectionString-{src.Identifier}_1");
+                await AddWatcherToReplicationTopology(src, databaseWatcher1, src.Urls);
+                
+                Assert.NotNull(WaitForDocumentToReplicate<User>(dst, "foo/bar", 10_000));
+                await Task.Delay(ReplicationLoader.MaxInactiveTime.Add(TimeSpan.FromSeconds(10)));
+
+                var databaseWatcher2 = new ExternalReplication(dst.Database, $"ConnectionString-{src.Identifier}_2");
+                await AddWatcherToReplicationTopology(src, databaseWatcher2, src.Urls);
+
+                await Task.Delay(TimeSpan.FromSeconds(5));
+
+                database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                mre.Set();
+
+                EnsureReplicating(src, dst);
+            }
+        }
+
     }
 }
