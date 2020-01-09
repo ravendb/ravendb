@@ -607,7 +607,7 @@ namespace Tests.Infrastructure
             }
 
             var currentServers = Servers.Where(s => s.Disposed == false &&
-                                                    urls.Contains(s.WebUrl, StringComparer.CurrentCultureIgnoreCase)).ToArray();
+                                                    databaseResult.NodesAddedTo.Contains(s.WebUrl, StringComparer.CurrentCultureIgnoreCase)).ToArray();
             int numberOfInstances = 0;
             foreach (var server in currentServers)
             {
@@ -624,7 +624,7 @@ namespace Tests.Infrastructure
             if (numberOfInstances != replicationFactor)
                 throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances} 
                                                     out of {replicationFactor}{Environment.NewLine}
-                                                    Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster urls are : {string.Join(",", urls)}; The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",", currentServers.Select(x => x.WebUrl))}");
+                                                    Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster (members) urls are : {string.Join(",", urls)}; The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",", currentServers.Select(x => x.WebUrl))}");
             return (databaseResult, relevantServers.ToList());
         }
 
