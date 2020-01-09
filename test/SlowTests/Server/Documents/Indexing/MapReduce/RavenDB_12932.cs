@@ -253,6 +253,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 await store.ExecuteIndexAsync(new Replacement.Orders_ProfitByProductAndOrderedAt());
 
+                WaitForUserToContinueTheTest(store);
+
                 WaitForIndexing(store);
 
                 using (var session = store.OpenSession())

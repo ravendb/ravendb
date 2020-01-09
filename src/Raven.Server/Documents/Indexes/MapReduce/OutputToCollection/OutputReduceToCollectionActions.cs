@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 foreach (var prefix in _prefixesOfReduceOutputDocumentsToDelete)
                 {
-                    var command = new DeleteReduceOutputDocumentsCommand(database, prefix, deleteBatchSize);
+                    var command = new DeleteReduceOutputDocumentsCommand(database, prefix, deleteBatchSize, _patternForOutputReduceToCollectionReferences);
 
                     var enqueue = database.TxMerger.Enqueue(command);
 

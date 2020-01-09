@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -286,7 +285,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
-        private class OutputReduceToCollectionReferencesCommand
+        public class OutputReduceToCollectionReferencesCommand
         {
             private readonly MapReduceIndex _index;
             private readonly string _outputReduceToCollection;
@@ -353,6 +352,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         {
                             Debug.Assert(ids.All(x => idsToRemove.Contains(x.ToString())), $"Found ID in {nameof(idsToRemove)} that aren't in {nameof(ids)}");
 
+                            foreach (object deletedId in ids)
+                            {
+                                _index.OutputReduceToCollection.DeletePatternGeneratedIdForReduceOutput(indexWriteTransaction, deletedId.ToString());
+                            }
+
                             _database.DocumentsStorage.Delete(context, referenceDocument.Id, null);
                             continue;
                         }
@@ -382,7 +386,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         {
                             _database.DocumentsStorage.Put(context, referenceDocument.Id, null, doc);
 
-                            _index.OutputReduceToCollection.DeletePatternGeneratedIdForReduceOutput(indexWriteTransaction, referenceDocument.Id);
+                            foreach (var idToRemove in idsToRemove)
+                            {
+                                _index.OutputReduceToCollection.DeletePatternGeneratedIdForReduceOutput(indexWriteTransaction, idToRemove);
+                            }
                         }
                     }
                 }
@@ -391,24 +398,54 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                 foreach (var referencesOfReduceOutput in _referencesOfReduceOutputs)
                 {
-                    var referenceDoc = new DynamicJsonValue
+                    using (var existingReferenceDocument = _database.DocumentsStorage.Get(context, referencesOfReduceOutput.Key))
                     {
-                        [nameof(OutputReduceToCollectionReference.ReduceOutputs)] = new DynamicJsonArray(referencesOfReduceOutput.Value),
-                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        if (existingReferenceDocument == null)
                         {
-                            [Constants.Documents.Metadata.Collection] = $"{_outputReduceToCollection}/References"
-                        }
-                    };
+                            var referenceDoc = new DynamicJsonValue
+                            {
+                                [nameof(OutputReduceToCollectionReference.ReduceOutputs)] = new DynamicJsonArray(referencesOfReduceOutput.Value),
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Documents.Metadata.Collection] = $"{_outputReduceToCollection}/References"
+                                }
+                            };
 
-                    using (var referenceJson = context.ReadObject(referenceDoc, "reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                            using (var referenceJson = context.ReadObject(referenceDoc, "reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                            {
+                                PutReferenceDocument(referencesOfReduceOutput, referenceJson);
+                            }
+                        }
+                        else
+                        {
+                            if (existingReferenceDocument.Data.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray ids) == false)
+                                ThrowIdsPropertyNotFound(existingReferenceDocument.Id);
+
+                            if (ids.Modifications == null)
+                                ids.Modifications = new DynamicJsonArray();
+
+                            foreach (var reduceOutputId in referencesOfReduceOutput.Value)
+                            {
+                                ids.Modifications.Add(reduceOutputId);
+                            }
+
+                            using (var referenceJson = context.ReadObject(existingReferenceDocument.Data, "existing-reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                            {
+                                PutReferenceDocument(referencesOfReduceOutput, referenceJson);
+                            }
+                        }
+                    }
+                }
+
+                void PutReferenceDocument(KeyValuePair<string, HashSet<string>> referencesOfReduceOutput, BlittableJsonReaderObject referenceJson)
+                {
+                    _database.DocumentsStorage.Put(context, referencesOfReduceOutput.Key, null, referenceJson,
+                        flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+
+                    foreach (var reduceOutputId in referencesOfReduceOutput.Value)
                     {
-                        _database.DocumentsStorage.Put(context, referencesOfReduceOutput.Key, null, referenceJson,
-                            flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
-
-                        foreach (var reduceOutputId in referencesOfReduceOutput.Value)
-                        {
-                            _index.OutputReduceToCollection.AddPatternGeneratedIdForReduceOutput(indexWriteTransaction, reduceOutputId, referencesOfReduceOutput.Key);
-                        }
+                        _index.OutputReduceToCollection.AddPatternGeneratedIdForReduceOutput(indexWriteTransaction, reduceOutputId,
+                            referencesOfReduceOutput.Key);
                     }
                 }
             }
