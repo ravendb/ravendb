@@ -31,6 +31,7 @@ using Raven.Server.ServerWide;
 using Sparrow.Server;
 using Size = Sparrow.Size;
 using Raven.Client.Extensions;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -1096,8 +1097,13 @@ namespace Raven.Server.Documents.Replication
                 _lastReplicationStats.TryDequeue(out stats);
         }
 
+        private readonly MultipleUseFlag _disposed = new MultipleUseFlag();
+
         public void Dispose()
         {
+            if (_disposed.Raise() == false)
+                return; // already disposed
+
             var releaser = _copiedBuffer.ReleaseBuffer;
             try
             {
