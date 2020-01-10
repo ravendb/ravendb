@@ -17,6 +17,10 @@ class legendColumn<T> implements virtualColumn {
         public width: string) {
     }
     
+    canHandle(actionId: string): boolean {
+        return false;
+    }
+
     get headerTitle() {
         return this.header;
     }

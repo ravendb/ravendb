@@ -618,12 +618,9 @@ class virtualGrid<T> {
         if (e.target) {
             const $target = this.normalizeTarget($(e.target));
             const actionValue = $target.attr("data-action");
-            const linkActionValue = $target.attr("data-link-action");
 
             if (actionValue) {
                 this.handleAction(actionValue, this.findRowForCell($target), e);
-            } else if (linkActionValue) {
-                this.handleLinkAction(linkActionValue, e, this.findRowForCell($target));
             } else if ($target.hasClass("checked-column-header")) {
                 // If we clicked the the checked column header, toggle select all.
                 this.handleSelectAllClicked();
@@ -840,22 +837,14 @@ class virtualGrid<T> {
         this.shiftSelection.lastShiftIndex(newShiftStartIndex);
     }
 
+    
     private handleAction(actionId: string, row: virtualRow, event: JQueryEventObject) {
-        const handler = this.columns().find(x => x instanceof actionColumn && x.canHandle(actionId)) as actionColumn<T>;
+        const handler = this.columns().find(x => x.canHandle(actionId)) as actionColumn<T>;
         if (!handler) {
             throw new Error("Unable to find handler for: " + actionId + " at index: " + row.index);
         }
 
-        handler.handle(row, event);
-    }
-
-    private handleLinkAction(actionId: string, event: JQueryEventObject, row: virtualRow) {
-        const handler = this.columns().find(x => x instanceof hyperlinkColumn && x.canHandle(actionId)) as hyperlinkColumn<T>;
-        if (!handler) {
-            throw new Error("Unable to find handler for link action: " + actionId + " at index: " + row.index);
-        }
-
-        handler.handle(row, event);
+        handler.handle(row, event, actionId);
     }
 
     private handleSelectAllClicked() {

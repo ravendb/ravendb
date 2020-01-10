@@ -42,7 +42,7 @@ class hyperlinkColumn<T> extends textColumn<T> {
                 extraCssClasses += ' sorted';
             }
             
-            const customAction = this.customHandler ? `data-link-action="${this.linkActionUniqueId}"` : "";
+            const customAction = this.customHandler ? `data-action="${this.linkActionUniqueId}"` : "";
 
             return `<div ${extraHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}"><a href="${hyperlinkValue}" ${customAction}>${preparedValue.rawText}</a></div>`;
         } else {

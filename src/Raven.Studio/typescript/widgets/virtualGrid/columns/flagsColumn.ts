@@ -8,6 +8,10 @@ class flagsColumn implements virtualColumn {
     constructor(protected gridController: virtualGridController<any>) {
     }
 
+    canHandle(actionId: string): boolean {
+        return false;
+    }
+    
     get sortable() {
         return false;
     }

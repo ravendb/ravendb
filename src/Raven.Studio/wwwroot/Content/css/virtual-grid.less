@@ -317,6 +317,27 @@
             }
         }
     }
+    
+    .ts-group-property {
+        margin-top: 14px;
+        padding-top: 2px;
+        display: inline-block;
+        position: relative;
+        font-size: 14px;
+        min-width: 46px;
+        line-height: 14px;
+
+        &:before {
+            color: @text-muted;
+            position: absolute;
+            left: 0;
+            top: -14px;
+            line-height: 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+            content: attr(data-label);
+        }
+    }
 }
 
 .resizable {

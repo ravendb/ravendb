@@ -30,6 +30,10 @@ class textColumn<T> implements virtualColumn {
         return this.opts && !!this.opts.sortable;
     }
 
+    canHandle(actionId: string) {
+        return false;
+    }
+
     sortProvider(mode: sortMode): (array: Array<any>) => Array<any> {
         if (this.opts && this.opts.sortable) {
             
