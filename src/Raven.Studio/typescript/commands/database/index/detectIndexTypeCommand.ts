@@ -8,14 +8,14 @@ class detectIndexTypeCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Documents.Indexes.IndexType> {
+    execute(): JQueryPromise<Raven.Server.Web.Studio.StudioIndexHandler.IndexTypeInfo> {
         const url = endpoints.databases.studioIndex.studioIndexType;
         
-        const task = $.Deferred<Raven.Client.Documents.Indexes.IndexType>();
+        const task = $.Deferred<Raven.Server.Web.Studio.StudioIndexHandler.IndexTypeInfo>();
         
         this.post(url, JSON.stringify(this.index), this.db)
-            .done((result: { IndexType: Raven.Client.Documents.Indexes.IndexType}) => {
-                task.resolve(result.IndexType);
+            .done((result: Raven.Server.Web.Studio.StudioIndexHandler.IndexTypeInfo) => {
+                task.resolve(result);
             }).fail((response: JQueryXHR) => {
                 this.reportError("Failed to detect index type", response.responseText, response.statusText);
                 task.reject(response);

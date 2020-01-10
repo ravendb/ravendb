@@ -24,33 +24,15 @@ namespace Raven.Server.Web.Studio
                     var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
 
                     var indexType = indexDefinition.DetectStaticIndexType();
-
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("IndexType");
-                        writer.WriteString(indexType.ToString());
-                        writer.WriteEndObject();
-                    }
-                }
-            }
-        }
-        
-        [RavenAction("/databases/*/studio/index-source-type", "POST", AuthorizationStatus.ValidUser)]
-        public async Task PostIndexSourceType()
-        {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                using (var json = await context.ReadForMemoryAsync(RequestBodyStream(), "map"))
-                {
-                    var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
-
                     var indexSourceType = indexDefinition.DetectStaticIndexSourceType();
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
-                        writer.WritePropertyName("IndexSourceType");
+                        writer.WritePropertyName(nameof(IndexTypeInfo.IndexType));
+                        writer.WriteString(indexType.ToString());
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(IndexTypeInfo.IndexSourceType));
                         writer.WriteString(indexSourceType.ToString());
                         writer.WriteEndObject();
                     }
@@ -58,6 +40,12 @@ namespace Raven.Server.Web.Studio
             }
         }
 
+        public class IndexTypeInfo
+        {
+            public IndexType IndexType { get; set; }
+            public IndexSourceType IndexSourceType { get; set; }
+        }
+        
         [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostIndexFields()
         {

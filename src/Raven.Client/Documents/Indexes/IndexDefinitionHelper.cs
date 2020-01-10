@@ -235,7 +235,7 @@ namespace Raven.Client.Documents.Indexes
             map = UnifyWhiteSpace(map);
 
             // detect first supported syntax: timeseries.Companies.HeartRate.Where
-            if (map.StartsWith("timeSeries"))
+            if (map.StartsWith("timeSeries", StringComparison.OrdinalIgnoreCase))
             {
                 return IndexSourceType.TimeSeries;
             }
@@ -245,7 +245,7 @@ namespace Raven.Client.Documents.Indexes
                 // detect `from ts in timeseries` or `from ts in timeseries.Users.HeartRate`
                 
                 var tokens = map.Split(new [] {' '}, 4, StringSplitOptions.RemoveEmptyEntries);
-                if (tokens.Length >= 4 && tokens[2] == "in" && tokens[3].StartsWith("timeSeries"))
+                if (tokens.Length >= 4 && tokens[2] == "in" && tokens[3].StartsWith("timeSeries", StringComparison.OrdinalIgnoreCase))
                 {
                     return IndexSourceType.TimeSeries;
                 }

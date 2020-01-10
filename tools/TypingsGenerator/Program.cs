@@ -231,6 +231,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexesProgress));
             scripter.AddType(typeof(IndexErrors));
             scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
+            scripter.AddType(typeof(StudioIndexHandler.IndexTypeInfo));
 
             // cluster 
             scripter.AddType(typeof(ClusterTopology));

@@ -1,4 +1,4 @@
-<div class="flex-window stretch query content-margin" id="queryContainer">
+<div class="flex-window stretch query content-margin margin-bottom margin-bottom-sm" id="queryContainer">
     <div class="flex-window-head" data-bind="visible: !resultsExpanded()">
         <div class="row">
         </div>
@@ -175,7 +175,7 @@
                 </div>
             </div>
             <div class="scroll-stretch">
-                <div class="panel-body" data-bind="visible: currentTab() !== 'timings' && currentTab() !== 'graph'">
+                <div class="panel-body" data-bind="visible: showVirtualTable()">
                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
                 </div>
                 <div class="panel-body js-timings-container timings absolute-fill" data-bind="visible: currentTab() === 'timings'">
@@ -194,7 +194,9 @@
                     </div>
                 </div>
                 <div class="panel-body js-graph-container graph-container absolute-fill" data-bind="visible: currentTab() === 'graph'">
-                    
+                </div>
+                <div class="panel-body absolute-fill js-time-series-graph-container" data-bind="if: showTimeSeriesGraph(), visible: showTimeSeriesGraph()">
+                    <div class="absolute-fill" data-bind="compose: $root.currentTab"></div>
                 </div>
             </div>
         </div>
@@ -222,6 +224,11 @@
             <button type="button" class="btn btn-sm" data-bind="click: $root.goToGraphTab, css: { active: currentTab() === 'graph' }, visible: isGraphQuery">
                 Graph
             </button>
+            <!-- ko foreach: timeSeriesGraphs -->
+                <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }">
+                    <span data-bind="text: 'Time Series'"></span> &nbsp; <span class="label label-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
+                </button>
+            <!-- /ko -->
         </div>
     </div>
     <div class="hidden">
