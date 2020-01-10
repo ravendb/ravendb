@@ -155,25 +155,30 @@
         <div data-bind="attr: { class: 'state ' + badgeClass(), 'data-state-text' : badgeText() }"></div>
         <div class="row">
             <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
-                <div class="checkbox">
-                    <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name">
-                    <label></label>
+                <div class="flex-horizontal">
+                    <div class="checkbox">
+                        <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name" />
+                        <label></label>
+                    </div>
+                    <h3 class="index-name flex-grow"> 
+                        <a href="#" data-bind="text: name, attr: { href: editUrl(), title: 'Index: ' + name }"></a>
+                    </h3>
+                    <i class="icon-timeseries" data-bind="visible: sourceType() === 'TimeSeries'" title="Index source: Time Series"></i>
+                    <i class="icon-documents" data-bind="visible: sourceType() === 'Documents'" title="Index source: Documents"></i>
                 </div>
-                <h3 class="index-name">
-                    <a href="#" data-bind="text: name, attr: { href: editUrl(), title: 'Index: ' + name }"></a>
-                </h3>
-                    <div class="flex-horizontal clear-left index-info">
-                        <div class="index-type-icon" data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="tooltipText: mapReduceIndexInfoTooltip">
-                            <span data-bind="if: reduceOutputCollectionName() && !hasPatternForReduceOutputCollection()"><i class="icon-output-collection"></i></span>
-                            <span data-bind="if: hasPatternForReduceOutputCollection"><i class="icon-reference-pattern"></i></span>
-                        </div>
+               
+                <div class="flex-horizontal clear-left index-info nospacing">
+                    <div class="index-type-icon" data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="tooltipText: mapReduceIndexInfoTooltip">
+                        <span data-bind="if: reduceOutputCollectionName() && !hasPatternForReduceOutputCollection()"><i class="icon-output-collection"></i></span>
+                        <span data-bind="if: hasPatternForReduceOutputCollection"><i class="icon-reference-pattern"></i></span>
+                    </div>
                     <div class="index-type">
                         <span data-bind="text: typeForUI"></span>
                         <!--<span data-bind="visible: isTestIndex">&nbsp; <span class="label label-warning">TEST INDEX</span></span>-->
                         <span data-bind="visible: replacement" class="margin-left margin-left-sm"><span class="label label-warning">OLD</span></span>
                         <span data-bind="visible: parent" class="margin-left margin-left-sm"><span class="label label-warning">NEW</span></span>
-                        </div>
                     </div>
+                </div>
             </div>
             <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" data-bind="if: !isFaulty()">
                 <div class="properties-item state-selector">

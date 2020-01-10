@@ -137,6 +137,8 @@ namespace Raven.Client.Documents.Indexes
         public int EntriesCount { get; set; }
 
         public int ErrorsCount { get; set; }
+        
+        public IndexSourceType SourceType { get; set; }
 
 #if FEATURE_TEST_INDEX
         /// <summary>

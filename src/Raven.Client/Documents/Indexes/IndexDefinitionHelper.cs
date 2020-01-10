@@ -226,22 +226,42 @@ namespace Raven.Client.Documents.Indexes
             return $"{source}[@\"{collectionName.Replace("\"", "\"\"")}\"]";
         }
 
+        internal static IndexSourceType DetectStaticIndexSourceType(string map)
+        {
+            if (string.IsNullOrWhiteSpace(map))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(map));
+
+            map = StripComments(map);
+            map = UnifyWhiteSpace(map);
+
+            // detect first supported syntax: timeseries.Companies.HeartRate.Where
+            if (map.StartsWith("timeSeries"))
+            {
+                return IndexSourceType.TimeSeries;
+            }
+            
+            if (map.StartsWith("from"))
+            {
+                // detect `from ts in timeseries` or `from ts in timeseries.Users.HeartRate`
+                
+                var tokens = map.Split(new [] {' '}, 4, StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length >= 4 && tokens[2] == "in" && tokens[3].StartsWith("timeSeries"))
+                {
+                    return IndexSourceType.TimeSeries;
+                }
+            }
+
+            // fallback to documents based index
+            return IndexSourceType.Documents;
+        }
+        
         internal static IndexType DetectStaticIndexType(string map, string reduce)
         {
             if (string.IsNullOrWhiteSpace(map))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(map));
 
-            while (true)
-            {
-                // strip whitespace, comments, etc
-                var m = CommentsStripper.Match(map);
-                if (m.Success == false || m.Index != 0)
-                    break;
-
-                map = map.Substring(m.Length);
-            }
-
-            map = map.Trim();
+            map = StripComments(map);
+            map = UnifyWhiteSpace(map);
 
             if (map.StartsWith("from") || map.StartsWith("docs") || map.StartsWith("timeSeries", StringComparison.OrdinalIgnoreCase))
             {
@@ -257,6 +277,26 @@ namespace Raven.Client.Documents.Indexes
                 return IndexType.JavaScriptMap;
 
             return IndexType.JavaScriptMapReduce;
+        }
+
+        private static string StripComments(string input)
+        {
+            while (true)
+            {
+                // strip whitespace, comments, etc
+                var m = CommentsStripper.Match(input);
+                if (m.Success == false || m.Index != 0)
+                    break;
+
+                input = input.Substring(m.Length);
+            }
+
+            return input.Trim();
+        }
+
+        private static string UnifyWhiteSpace(string input)
+        {
+            return Regex.Replace(input, @"\s+", " ");
         }
     }
 }
