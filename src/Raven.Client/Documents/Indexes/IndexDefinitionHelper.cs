@@ -243,7 +243,7 @@ namespace Raven.Client.Documents.Indexes
 
             map = map.Trim();
 
-            if (map.StartsWith("from") || map.StartsWith("docs") || map.StartsWith("timeSeries"))
+            if (map.StartsWith("from") || map.StartsWith("docs") || map.StartsWith("timeSeries", StringComparison.OrdinalIgnoreCase))
             {
                 // C# indexes must start with "from" for query syntax or
                 // "docs" for method syntax

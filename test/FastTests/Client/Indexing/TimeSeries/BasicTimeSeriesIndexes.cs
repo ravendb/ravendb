@@ -44,7 +44,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 {
                     Name = "MyTsIndex",
                     Maps = {
-                    "from ts in timeSeries.Companies.HeartRate " +
+                    "from ts in timeseries.Companies.HeartRate " +
                     "from entry in ts.Entries " +
                     "select new { " +
                     "   HeartBeat = entry.Values[0], " +
