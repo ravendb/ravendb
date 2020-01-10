@@ -31,7 +31,6 @@ import mapReduceIndexSyntax = require("viewmodels/database/indexes/mapReduceInde
 import additionalSourceSyntax = require("viewmodels/database/indexes/additionalSourceSyntax");
 import fileImporter = require("common/fileImporter");
 import popoverUtils = require("common/popoverUtils");
-import detectIndexSourceTypeCommand = require("commands/database/index/detectIndexSourceTypeCommand");
 
 class editIndex extends viewModelBase {
 
@@ -518,25 +517,21 @@ class editIndex extends viewModelBase {
         
         return new detectIndexTypeCommand(indexDto, db)
             .execute()
-            .then((indexType) => {
-                return new detectIndexSourceTypeCommand(indexDto, db)
+            .then((typeInfo) => {
+                indexDto.SourceType = typeInfo.IndexSourceType;
+                return new saveIndexDefinitionCommand(indexDto, typeInfo.IndexType === "JavaScriptMap" || typeInfo.IndexType === "JavaScriptMapReduce", db)
                     .execute()
-                    .then(indexSourceType => {
-                        indexDto.SourceType = indexSourceType;
-                        return new saveIndexDefinitionCommand(indexDto, indexType === "JavaScriptMap" || indexType === "JavaScriptMapReduce", db)
-                            .execute()
-                            .done((savedIndexName) => {
-                                this.resetDirtyFlag();
+                    .done((savedIndexName) => {
+                        this.resetDirtyFlag();
 
-                                this.editedIndex().name.valueHasMutated();
+                        this.editedIndex().name.valueHasMutated();
 
-                                if (!this.isEditingExistingIndex()) {
-                                    this.isEditingExistingIndex(true);
-                                    this.editExistingIndex(savedIndexName);
-                                }
+                        if (!this.isEditingExistingIndex()) {
+                            this.isEditingExistingIndex(true);
+                            this.editExistingIndex(savedIndexName);
+                        }
 
-                                this.updateUrl(savedIndexName);
-                            });
+                        this.updateUrl(savedIndexName);
                     });
             });
     }

@@ -35,6 +35,7 @@ import graphQueryResults = require("common/query/graphQueryResults");
 import debugGraphOutputCommand = require("commands/database/query/debugGraphOutputCommand");
 import generalUtils = require("common/generalUtils");
 import timeSeriesColumn = require("widgets/virtualGrid/columns/timeSeriesColumn");
+import timeSeriesDetails = require("viewmodels/common/timeSeriesDetails");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph";
 
@@ -148,7 +149,7 @@ class query extends viewModelBase {
     fromCache = ko.observable<boolean>(false);
     originalRequestTime = ko.observable<number>();
     dirtyResult = ko.observable<boolean>();
-    currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes>("results");
+    currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes | timeSeriesDetails>("results");
     totalResultsForUi = ko.observable<number>(0);
     hasMoreUnboundedResults = ko.observable<boolean>(false);
     graphTabIsDirty = ko.observable<boolean>(true);
@@ -165,6 +166,11 @@ class query extends viewModelBase {
     isGraphQuery: KnockoutComputed<boolean>;
     isDynamicQuery: KnockoutComputed<boolean>;
     isAutoIndex: KnockoutComputed<boolean>;
+    
+    showVirtualTable: KnockoutComputed<boolean>;
+    showTimeSeriesGraph: KnockoutComputed<boolean>;
+    
+    timeSeriesGraphs = ko.observableArray<timeSeriesDetails>([]);
 
     private columnPreview = new columnPreviewPlugin<document>();
 
@@ -226,7 +232,8 @@ class query extends viewModelBase {
         this.initValidation();
 
         this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", 
-            "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults");
+            "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults", "goToTimeSeriesTab",
+            "closeTimeSeriesTab");
     }
 
     private initObservables() {
@@ -391,7 +398,16 @@ class query extends viewModelBase {
             if (newTab !== "graph") {
                 this.graphQueryResults.stopSimulation();
             }
-        })
+        });
+
+        this.showTimeSeriesGraph = ko.pureComputed(() => {
+            return this.currentTab() instanceof timeSeriesDetails;
+        });
+        
+        this.showVirtualTable = ko.pureComputed(() => {
+            const currentTab = this.currentTab();
+            return currentTab !== 'timings' && currentTab !== 'graph' && !this.showTimeSeriesGraph(); 
+        });
     }
 
     private initValidation() {
@@ -461,9 +477,14 @@ class query extends viewModelBase {
 
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             enableInlinePreview: true,
-            detectTimeSeries: false, //TODO: revert to TRUE
-            timeSeriesActionHandler: (type, document1, path, event) => {
-                console.log("type = ", type, "document ", document, "path =" , path); //TODO:
+            detectTimeSeries: false, //TODO
+            timeSeriesActionHandler: (type, document, path, event) => {
+                const chart = new timeSeriesDetails([{
+                    document,
+                    path
+                }], type === "plot" ? "plot" : "table");
+                this.timeSeriesGraphs.push(chart);
+                this.goToTimeSeriesTab(chart);
             }
         });
 
@@ -606,6 +627,8 @@ class query extends viewModelBase {
         if (!this.isValid(this.criteria().validationGroup)) {
             return;
         }
+        
+        this.timeSeriesGraphs([]);
         
         this.graphTabIsDirty(true);
         this.columnsSelector.reset();
@@ -1129,6 +1152,19 @@ class query extends viewModelBase {
                     this.graphQueryResults.draw(result);
                 });    
         }
+    }
+
+    goToTimeSeriesTab(graph: timeSeriesDetails) {
+        this.currentTab(graph);
+        this.resultsExpanded(true);
+    }
+
+    closeTimeSeriesTab(graph: timeSeriesDetails) {
+        if (this.currentTab() === graph) {
+            this.goToResultsTab();    
+        }
+        
+        this.timeSeriesGraphs.remove(graph);
     }
 
     toggleResults() {
