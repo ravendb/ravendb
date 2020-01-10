@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
 
                 var nodeAsString = nodeToCheck.Expression.ToString();
                 const string nodePrefix = "timeSeries";
-                if (nodeAsString.StartsWith(nodePrefix) == false)
+                if (nodeAsString.StartsWith(nodePrefix, StringComparison.OrdinalIgnoreCase) == false)
                     return node;
 
                 var nodeParts = nodeAsString.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
@@ -115,8 +115,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                 if (nodeToCheck != node)
                     nodeAsString = node.Expression.ToString();
 
-                // removing collection name: "timeSeries.Users.HeartRate.Select" => "timeSeries.Select"
-                nodeAsString = nodeAsString.Remove("timeSeries".Length, toRemove);
+                // removing collection name: "timeSeries.Users.HeartRate.Select" => ".Select"
+                nodeAsString = nodeAsString.Remove(0, toRemove + nodePrefix.Length);
+                nodeAsString = nodePrefix + nodeAsString; // .Select => timeSeries.Select (normalizing timeSeries which could be lowercased)
 
                 var newExpression = SyntaxFactory.ParseExpression(nodeAsString);
                 return node.WithExpression(newExpression);
@@ -133,7 +134,16 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                 var nodeAsString = node.Expression.ToString();
                 const string nodePrefix = "timeSeries";
                 if (nodeAsString.StartsWith(nodePrefix) == false)
-                    return node;
+                {
+                    if (nodeAsString.StartsWith(nodePrefix, StringComparison.OrdinalIgnoreCase) == false)
+                        return node;
+
+                    nodeAsString = nodeAsString.Substring(nodePrefix.Length);
+                    nodeAsString = nodePrefix + nodeAsString;
+
+                    var newExpression = SyntaxFactory.ParseExpression(nodeAsString); // normalizing timeSeries which could be lowercased
+                    node = node.WithExpression(newExpression);
+                }
 
                 if (node.Expression is IdentifierNameSyntax) // from ts in timeSeries
                     return node;
@@ -143,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries
                     if (timeSeriesExpression.Expression is MemberAccessExpressionSyntax collectionExpression) // from ts in timeSeries.Companies.HeartRate
                     {
                         var timeSeriesIdentifier = collectionExpression.Expression as IdentifierNameSyntax;
-                        if (string.Equals(timeSeriesIdentifier?.Identifier.Text, "timeSeries", StringComparison.OrdinalIgnoreCase) == false)
+                        if (string.Equals(timeSeriesIdentifier?.Identifier.Text, nodePrefix, StringComparison.OrdinalIgnoreCase) == false)
                             return node;
 
                         Collections = new HashSet<Collection>

@@ -59,7 +59,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 {
                     Name = "MyTsIndex",
                     Maps = {
-                    "timeSeries.Companies.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {" +
+                    "timeseries.Companies.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {" +
                     "   HeartBeat = entry.Values[0], " +
                     "   Date = entry.Timestamp.Date, " +
                     "   User = ts.DocumentId " +
