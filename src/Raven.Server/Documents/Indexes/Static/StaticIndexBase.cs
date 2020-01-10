@@ -45,6 +45,165 @@ namespace Raven.Server.Documents.Indexes.Static
             return null;
         }
 
+        public dynamic MetadataFor(dynamic doc)
+        {
+            if (doc is DynamicBlittableJson json)
+            {
+                json.EnsureMetadata();
+                return doc[Constants.Documents.Metadata.Key];
+            }
+
+            if (doc is DynamicNullObject)
+                return doc;
+
+            ThrowInvalidDocType(doc, nameof(MetadataFor));
+
+            // never hit
+            return null;
+        }
+
+        public dynamic AsJson(dynamic doc)
+        {
+            if (doc is DynamicBlittableJson json)
+            {
+                json.EnsureMetadata();
+                return json;
+            }
+
+            if (doc is DynamicNullObject)
+                return doc;
+
+            ThrowInvalidDocType(doc, nameof(AsJson));
+
+            // never hit
+            return null;
+        }
+
+        public dynamic AttachmentsFor(dynamic doc)
+        {
+            var metadata = MetadataFor(doc);
+            var attachments = metadata is DynamicNullObject
+                ? null : metadata[Constants.Documents.Metadata.Attachments];
+
+            return attachments != null
+                ? attachments
+                : new DynamicArray(Enumerable.Empty<object>());
+        }
+
+        public dynamic CounterNamesFor(dynamic doc)
+        {
+            var metadata = MetadataFor(doc);
+            var counters = metadata is DynamicNullObject
+                ? null : metadata[Constants.Documents.Metadata.Counters];
+
+            return counters != null
+                ? counters
+                : new DynamicArray(Enumerable.Empty<object>());
+        }
+
+        public dynamic TimeSeriesNamesFor(dynamic doc)
+        {
+            var metadata = MetadataFor(doc);
+            var timeSeries = metadata is DynamicNullObject
+                ? null : metadata[Constants.Documents.Metadata.TimeSeries];
+
+            return timeSeries != null
+                ? timeSeries
+                : new DynamicArray(Enumerable.Empty<object>());
+        }
+
+        private static void ThrowInvalidDocType(dynamic doc, string funcName)
+        {
+            throw new InvalidOperationException(
+                $"{funcName} may only be called with a document, " +
+                $"but was called with a parameter of type {doc?.GetType().FullName}: {doc}");
+        }
+    }
+
+    public abstract class AbstractStaticIndexBase
+    {
+        protected readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
+
+        public readonly Dictionary<string, Dictionary<string, List<IndexingFunc>>> Maps = new Dictionary<string, Dictionary<string, List<IndexingFunc>>>();
+
+        public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>();
+
+        public bool HasDynamicFields { get; set; }
+
+        public bool HasBoostedFields { get; set; }
+
+        public string Source;
+
+        public IndexingFunc Reduce;
+
+        public string[] OutputFields;
+
+        public CompiledIndexField[] GroupByFields;
+
+        public void AddReferencedCollection(string collection, string referencedCollection)
+        {
+            if (_collectionsCache.TryGetValue(referencedCollection, out CollectionName referencedCollectionName) == false)
+                _collectionsCache[referencedCollection] = referencedCollectionName = new CollectionName(referencedCollection);
+
+            if (ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> set) == false)
+                ReferencedCollections[collection] = set = new HashSet<CollectionName>();
+
+            set.Add(referencedCollectionName);
+        }
+
+        protected void AddMapInternal(string collection, string subCollecction, IndexingFunc map)
+        {
+            if (Maps.TryGetValue(collection, out Dictionary<string, List<IndexingFunc>> collections) == false)
+                Maps[collection] = collections = new Dictionary<string, List<IndexingFunc>>();
+
+            if (collections.TryGetValue(subCollecction, out var funcs) == false)
+                collections[subCollecction] = funcs = new List<IndexingFunc>();
+
+            funcs.Add(map);
+        }
+
+        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
+        {
+            return LoadDocument(keyOrEnumerable, collectionName);
+        }
+
+        public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException(
+                    "Indexing scope was not initialized. Key: " + keyOrEnumerable);
+
+            if (keyOrEnumerable is LazyStringValue keyLazy)
+                return CurrentIndexingScope.Current.LoadDocument(keyLazy, null, collectionName);
+
+            if (keyOrEnumerable is string keyString)
+                return CurrentIndexingScope.Current.LoadDocument(null, keyString, collectionName);
+
+            if (keyOrEnumerable is DynamicNullObject)
+                return DynamicNullObject.Null;
+
+            if (keyOrEnumerable is IEnumerable enumerable)
+            {
+                var enumerator = enumerable.GetEnumerator();
+                using (enumerable as IDisposable)
+                {
+                    var items = new List<dynamic>();
+                    while (enumerator.MoveNext())
+                    {
+                        items.Add(LoadDocument(enumerator.Current, collectionName));
+                    }
+                    if (items.Count == 0)
+                        return DynamicNullObject.Null;
+
+                    return new DynamicArray(items);
+                }
+            }
+
+            throw new InvalidOperationException(
+                "LoadDocument may only be called with a string or an enumerable, but was called with a parameter of type " +
+                keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
+        }
+
         public IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
         {
             return new RecursiveFunction(item, func).Execute();
@@ -153,81 +312,17 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException("Indexing scope was not initialized.");
 
             return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);
-            ;
         }
 
-        public dynamic MetadataFor(dynamic doc)
+        private static double? ConvertToDouble(object value)
         {
-            if (doc is DynamicBlittableJson json)
-            {
-                json.EnsureMetadata();
-                return doc[Constants.Documents.Metadata.Key];
-            }
+            if (value == null || value is DynamicNullObject)
+                return null;
 
-            if (doc is DynamicNullObject)
-                return doc;
+            if (value is LazyNumberValue lnv)
+                return lnv.ToDouble(CultureInfo.InvariantCulture);
 
-            ThrowInvalidDocType(doc, nameof(MetadataFor));
-
-            // never hit
-            return null;
-        }
-
-        public dynamic AsJson(dynamic doc)
-        {
-            if (doc is DynamicBlittableJson json)
-            {
-                json.EnsureMetadata();
-                return json;
-            }
-
-            if (doc is DynamicNullObject)
-                return doc;
-
-            ThrowInvalidDocType(doc, nameof(AsJson));
-
-            // never hit
-            return null;
-        }
-
-        public dynamic AttachmentsFor(dynamic doc)
-        {
-            var metadata = MetadataFor(doc);
-            var attachments = metadata is DynamicNullObject
-                ? null : metadata[Constants.Documents.Metadata.Attachments];
-
-            return attachments != null
-                ? attachments
-                : new DynamicArray(Enumerable.Empty<object>());
-        }
-
-        public dynamic CounterNamesFor(dynamic doc)
-        {
-            var metadata = MetadataFor(doc);
-            var counters = metadata is DynamicNullObject
-                ? null : metadata[Constants.Documents.Metadata.Counters];
-
-            return counters != null
-                ? counters
-                : new DynamicArray(Enumerable.Empty<object>());
-        }
-
-        public dynamic TimeSeriesNamesFor(dynamic doc)
-        {
-            var metadata = MetadataFor(doc);
-            var timeSeries = metadata is DynamicNullObject
-                ? null : metadata[Constants.Documents.Metadata.TimeSeries];
-
-            return timeSeries != null
-                ? timeSeries
-                : new DynamicArray(Enumerable.Empty<object>());
-        }
-
-        private static void ThrowInvalidDocType(dynamic doc, string funcName)
-        {
-            throw new InvalidOperationException(
-                $"{funcName} may only be called with a document, " +
-                $"but was called with a parameter of type {doc?.GetType().FullName}: {doc}");
+            return Convert.ToDouble(value);
         }
 
         private struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
@@ -250,102 +345,6 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 throw new NotImplementedException();
             }
-        }
-
-        private static double? ConvertToDouble(object value)
-        {
-            if (value == null || value is DynamicNullObject)
-                return null;
-
-            if (value is LazyNumberValue lnv)
-                return lnv.ToDouble(CultureInfo.InvariantCulture);
-
-            return Convert.ToDouble(value);
-        }
-    }
-
-    public abstract class AbstractStaticIndexBase
-    {
-        protected readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
-
-        public readonly Dictionary<string, Dictionary<string, List<IndexingFunc>>> Maps = new Dictionary<string, Dictionary<string, List<IndexingFunc>>>();
-
-        public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>();
-
-        public bool HasDynamicFields { get; set; }
-
-        public bool HasBoostedFields { get; set; }
-
-        public string Source;
-
-        public IndexingFunc Reduce;
-
-        public string[] OutputFields;
-
-        public CompiledIndexField[] GroupByFields;
-
-        public void AddReferencedCollection(string collection, string referencedCollection)
-        {
-            if (_collectionsCache.TryGetValue(referencedCollection, out CollectionName referencedCollectionName) == false)
-                _collectionsCache[referencedCollection] = referencedCollectionName = new CollectionName(referencedCollection);
-
-            if (ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> set) == false)
-                ReferencedCollections[collection] = set = new HashSet<CollectionName>();
-
-            set.Add(referencedCollectionName);
-        }
-
-        protected void AddMapInternal(string collection, string subCollecction, IndexingFunc map)
-        {
-            if (Maps.TryGetValue(collection, out Dictionary<string, List<IndexingFunc>> collections) == false)
-                Maps[collection] = collections = new Dictionary<string, List<IndexingFunc>>();
-
-            if (collections.TryGetValue(subCollecction, out var funcs) == false)
-                collections[subCollecction] = funcs = new List<IndexingFunc>();
-
-            funcs.Add(map);
-        }
-
-        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
-        {
-            return LoadDocument(keyOrEnumerable, collectionName);
-        }
-
-        public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
-        {
-            if (CurrentIndexingScope.Current == null)
-                throw new InvalidOperationException(
-                    "Indexing scope was not initialized. Key: " + keyOrEnumerable);
-
-            if (keyOrEnumerable is LazyStringValue keyLazy)
-                return CurrentIndexingScope.Current.LoadDocument(keyLazy, null, collectionName);
-
-            if (keyOrEnumerable is string keyString)
-                return CurrentIndexingScope.Current.LoadDocument(null, keyString, collectionName);
-
-            if (keyOrEnumerable is DynamicNullObject)
-                return DynamicNullObject.Null;
-
-            if (keyOrEnumerable is IEnumerable enumerable)
-            {
-                var enumerator = enumerable.GetEnumerator();
-                using (enumerable as IDisposable)
-                {
-                    var items = new List<dynamic>();
-                    while (enumerator.MoveNext())
-                    {
-                        items.Add(LoadDocument(enumerator.Current, collectionName));
-                    }
-                    if (items.Count == 0)
-                        return DynamicNullObject.Null;
-
-                    return new DynamicArray(items);
-                }
-            }
-
-            throw new InvalidOperationException(
-                "LoadDocument may only be called with a string or an enumerable, but was called with a parameter of type " +
-                keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
         }
     }
 }
