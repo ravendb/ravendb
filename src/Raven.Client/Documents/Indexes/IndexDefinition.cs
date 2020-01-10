@@ -341,7 +341,14 @@ namespace Raven.Client.Documents.Indexes
                 Fields.Remove(key);
         }
 
+        public IndexSourceType DetectStaticIndexSourceType()
+        {
+            var firstMap = Maps.FirstOrDefault();
+            if (firstMap == null)
+                throw new ArgumentNullException("Index definitions contains no Maps");
 
+            return IndexDefinitionHelper.DetectStaticIndexSourceType(firstMap);
+        }
 
         public IndexType DetectStaticIndexType()
         {

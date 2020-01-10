@@ -41,6 +41,8 @@ class index {
     
     type = ko.observable<Raven.Client.Documents.Indexes.IndexType>();
     typeForUI: KnockoutComputed<string>;
+    
+    sourceType = ko.observable<Raven.Client.Documents.Indexes.IndexSourceType>();
 
     filteredOut = ko.observable<boolean>(false); //UI only property
     badgeClass: KnockoutComputed<string>;
@@ -98,6 +100,7 @@ class index {
         this.reduceOutputCollectionName(dto.ReduceOutputCollection);
         this.hasPatternForReduceOutputCollection(!!dto.ReduceOutputReferencePattern);
         this.type(dto.Type);
+        this.sourceType(dto.SourceType);
         this.state(dto.State);
         this.globalIndexingStatus = globalIndexingStatus;
         this.status(dto.Status); 
@@ -291,6 +294,7 @@ class index {
         this.collectionNames(incomingData.collectionNames());
         
         this.type(incomingData.type());
+        this.sourceType(incomingData.sourceType());
         this.priority(incomingData.priority());
         this.state(incomingData.state());
         this.status(incomingData.status());
@@ -345,7 +349,6 @@ class index {
     }
 
     private matchesAnyStatus(status: indexStatus[]) {
-
         if (status.length === 0) {
             return false;
         }
@@ -359,6 +362,7 @@ class index {
         {
            return true;
         }
+        return false;
     }
 }
 

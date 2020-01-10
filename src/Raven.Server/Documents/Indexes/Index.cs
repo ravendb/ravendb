@@ -2249,6 +2249,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         Name = Name,
                         Type = Type,
+                        SourceType = SourceType,
                         LockMode = Definition?.LockMode ?? IndexLockMode.Unlock,
                         Priority = Definition?.Priority ?? IndexPriority.Normal,
                         State = State,
@@ -2267,6 +2268,7 @@ namespace Raven.Server.Documents.Indexes
                     var stats = _indexStorage.ReadStats(tx);
 
                     stats.Name = Name;
+                    stats.SourceType = SourceType;
                     stats.Type = Type;
                     stats.EntriesCount = reader.EntriesCount();
                     stats.LockMode = Definition.LockMode;

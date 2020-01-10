@@ -31,7 +31,28 @@ namespace Raven.Server.Web.Studio
                         writer.WritePropertyName("IndexType");
                         writer.WriteString(indexType.ToString());
                         writer.WriteEndObject();
-                        ;
+                    }
+                }
+            }
+        }
+        
+        [RavenAction("/databases/*/studio/index-source-type", "POST", AuthorizationStatus.ValidUser)]
+        public async Task PostIndexSourceType()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (var json = await context.ReadForMemoryAsync(RequestBodyStream(), "map"))
+                {
+                    var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
+
+                    var indexSourceType = indexDefinition.DetectStaticIndexSourceType();
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("IndexSourceType");
+                        writer.WriteString(indexSourceType.ToString());
+                        writer.WriteEndObject();
                     }
                 }
             }
