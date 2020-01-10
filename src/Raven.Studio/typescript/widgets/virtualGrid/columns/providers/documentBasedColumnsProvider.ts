@@ -6,6 +6,7 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import customColumn = require("widgets/virtualGrid/columns/customColumn");
 import flagsColumn = require("widgets/virtualGrid/columns/flagsColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import timeSeriesColumn = require("widgets/virtualGrid/columns/timeSeriesColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
@@ -30,6 +31,8 @@ type documentBasedColumnsProviderOpts = {
     createHyperlinks?: boolean;
     columnOptions?: columnOptionsDto;
     showFlags?: boolean; // revisions, counters, attachments
+    detectTimeSeries?: boolean;
+    timeSeriesActionHandler?: (type: timeSeriesColumnEventType, document: document, path: string, event: JQueryEventObject) => void;
 }
 
 class documentBasedColumnsProvider {
@@ -42,11 +45,13 @@ class documentBasedColumnsProvider {
     private readonly enableInlinePreview: boolean;
     private readonly createHyperlinks: boolean;
     private readonly showFlags: boolean;
+    private readonly detectTimeSeries: boolean;
     private readonly showSelectAllCheckbox: boolean;
     private readonly columnOptions: columnOptionsDto;
     private readonly customInlinePreview: (doc: document) => void;
     private readonly collectionTracker: collectionsTracker;
     private readonly customColumnProvider: () => virtualColumn[];
+    private readonly timeSeriesActionHandler: (type: timeSeriesColumnEventType, document: document, path: string, event: JQueryEventObject) => void;
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
@@ -61,6 +66,8 @@ class documentBasedColumnsProvider {
         this.customInlinePreview = opts.customInlinePreview || documentBasedColumnsProvider.showPreview;
         this.collectionTracker = collectionsTracker.default;
         this.showFlags = !!opts.showFlags;
+        this.detectTimeSeries = opts.detectTimeSeries || false;
+        this.timeSeriesActionHandler = opts.timeSeriesActionHandler;
     }
 
     findColumns(viewportWidth: number, results: pagedResult<document>, prioritizedColumns?: string[]): virtualColumn[] {
@@ -78,6 +85,7 @@ class documentBasedColumnsProvider {
         }
         
         const columnNames = this.findColumnNames(results, Math.floor(viewportWidth / documentBasedColumnsProvider.minColumnWidth), prioritizedColumns);
+        const timeSeriesColumns = this.findTimeSeriesColumns(results);
 
         // Insert the row selection checkbox column as necessary.
         const initialColumns: virtualColumn[] = [];
@@ -107,6 +115,14 @@ class documentBasedColumnsProvider {
         const columnWidth = Math.floor(remainingSpaceForOtherColumns / columnNames.length) + "px";
 
         const finalColumns = initialColumns.concat(columnNames.map(p => {
+            if (_.includes(timeSeriesColumns, p)) {
+                const tsOptions = {
+                    ...this.columnOptions,
+                    handler: this.timeSeriesActionHandler
+                } as timeSeriesColumnOpts<any>;
+                return new timeSeriesColumn(this.gridController, p, generalUtils.escapeHtml(p), columnWidth, tsOptions);
+            }
+            
             if (this.createHyperlinks) {
                 if (p === "__metadata") {
                     return new hyperlinkColumn(this.gridController, document.createDocumentIdProvider(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth, this.columnOptions);
@@ -175,6 +191,25 @@ class documentBasedColumnsProvider {
         return Array.from(uniquePropertyNames);
     }
 
+    private findTimeSeriesColumns(results: pagedResult<document>): Array<string> {
+        if (!this.detectTimeSeries) {
+            return [];
+        }
+
+        if (results.items.length === 0) {
+            return [];
+        }
+
+        // duck type for now
+        const firstItem = results.items[0];
+        return Object.keys(firstItem).filter((x: keyof typeof firstItem) => this.quacksLikeTimeSeries(firstItem[x]));
+    }
+    
+    private quacksLikeTimeSeries(value: any) {
+        const keys = Object.keys(value);
+        return keys.length === 2 && "Count" in value && "Results" in value;
+    }
+    
     private findColumnNames(results: pagedResult<document>, limit: number, prioritizedColumns?: string[]): string[] {
         const columnNames = documentBasedColumnsProvider.extractUniquePropertyNames(results);
 

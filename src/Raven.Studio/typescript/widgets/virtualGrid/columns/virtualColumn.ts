@@ -31,6 +31,11 @@ interface virtualColumn {
      * Returns true if column is sortable
      */
     sortable: boolean;
+
+    /**
+     * Check if row can handle action
+     */
+    canHandle(actionId: string): boolean;
 }
 
 export = virtualColumn;

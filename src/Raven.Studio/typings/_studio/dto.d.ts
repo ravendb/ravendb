@@ -575,8 +575,14 @@ interface hypertextColumnOpts<T> extends textColumnOpts<T> {
     handler?: (item: T, event: JQueryEventObject) => void;
 }
 
+type timeSeriesColumnEventType = "plot" | "preview";
+
+interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {
+    handler?: (type: timeSeriesColumnEventType, document: T, path: string, event: JQueryEventObject) => void;
+}
+
 interface virtualColumnDto {
-    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom"
+    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries"
     width: string;
     header: string;
     serializedValue: string;
@@ -660,3 +666,22 @@ interface rawStackTraceResponseItem {
 }
 
 type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle";
+
+type timeSeriesResultType = "grouped" | "raw";
+
+interface timeSeriesQueryResultDto {
+    Count: number;
+    Results: Array<timeSeriesQueryGroupedItemResultDto> | Array<timeSeriesRawItemResultDto>;
+}
+
+interface timeSeriesQueryGroupedItemResultDto {
+    From: string;
+    To: string;
+    [column: string]: Array<number>;
+}
+
+interface timeSeriesRawItemResultDto {
+    Tag: string;
+    Timestamp: string;
+    Values: number[];
+}

@@ -34,6 +34,7 @@ import timingsChart = require("common/timingsChart");
 import graphQueryResults = require("common/query/graphQueryResults");
 import debugGraphOutputCommand = require("commands/database/query/debugGraphOutputCommand");
 import generalUtils = require("common/generalUtils");
+import timeSeriesColumn = require("widgets/virtualGrid/columns/timeSeriesColumn");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph";
 
@@ -459,7 +460,11 @@ class query extends viewModelBase {
         const grid = this.gridController();
 
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
-            enableInlinePreview: true
+            enableInlinePreview: true,
+            detectTimeSeries: true,
+            timeSeriesActionHandler: (type, document1, path, event) => {
+                console.log("type = ", type, "document ", document, "path =" , path); //TODO:
+            }
         });
 
         const highlightingProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
@@ -507,7 +512,7 @@ class query extends viewModelBase {
                 return;
             } 
             
-            if (column instanceof textColumn) {
+            if (column instanceof textColumn && !(column instanceof timeSeriesColumn)) {
                 const value = column.getCellValue(doc);
                 if (!_.isUndefined(value)) {
                     const json = JSON.stringify(value, null, 4);

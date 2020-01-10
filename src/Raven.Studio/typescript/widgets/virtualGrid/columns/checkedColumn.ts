@@ -16,6 +16,10 @@ class checkedColumn implements virtualColumn {
     constructor(withSelectAll: boolean) {
         this.withSelectAll = withSelectAll;
     }
+    
+    canHandle(actionId: string): boolean {
+        return false;
+    }
 
     get sortable() {
         return false;
