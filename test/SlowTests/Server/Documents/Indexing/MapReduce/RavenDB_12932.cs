@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
+using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -293,6 +294,22 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     Assert.NotNull(output);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanPersistPatternForOutputReduceToCollectionReferences()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var indexToCreate = new Orders_ProfitByProductAndOrderedAt();
+                indexToCreate.Execute(store);
+
+                var database = await GetDatabase(store.Database);
+                var index = database.IndexStore.GetIndexes().First();
+
+                var definition = MapIndexDefinition.Load(index._environment);
+                Assert.NotNull(definition.PatternForOutputReduceToCollectionReferences);
             }
         }
 
