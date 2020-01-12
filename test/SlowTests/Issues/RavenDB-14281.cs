@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -110,6 +112,84 @@ namespace SlowTests.Issues
 
             public string CountryPrefix { get; set; }
             public string Value { get; set; }
+        }
+
+        private class DictionaryString<T> : Dictionary<string, T>
+        {
+            public DictionaryString()
+                : base(StringComparer.OrdinalIgnoreCase)
+            {
+
+            }
+        }
+
+        private class Invoice
+        {
+            public class VAT
+            {
+                public decimal Price { get; set; }
+                public string VATRateId { get; set; }
+                public string VATCode { get; set; }
+                public decimal Percentage { get; set; }
+            }
+
+            public string Id { get; set; }
+
+            public DictionaryString<VAT> VATTotals { get; set; }
+        }
+
+        private class VATRate
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        private class VATTotalProjection
+        {
+            public decimal Price { get; internal set; }
+            public decimal Percentage { get; internal set; }
+            public string VATName { get; internal set; }
+        }
+
+        [Fact]
+        public async Task BoolOrderTest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Invoice()
+                    {
+                        VATTotals = new DictionaryString<Invoice.VAT>()
+                        {
+                            {"vatrates/1", new Invoice.VAT() {Price = 100, VATRateId = "vatrates/1", VATCode = "VAT Low", Percentage = 9}},
+                            {"vatrates/2", new Invoice.VAT() {Price = 100, VATRateId = "vatrates/2", VATCode = "VAT High", Percentage = 21}}
+                        }
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = from invoice in session.Query<Invoice>()
+                        let vat = invoice.VATTotals
+                        select new
+                        {
+                            Id = invoice.Id,
+                            VATTotals = vat.Select(b => new VATTotalProjection()
+                            {
+                                Price = b.Value.Price,
+                                Percentage = b.Value.Percentage,
+                                VATName = RavenQuery.Load<VATRate>(b.Value.VATRateId).Name
+                            })
+                        };
+
+
+                    var result = await query.ToListAsync();
+                    Assert.Equal(1, result.Count);
+                }
+            }
         }
     }
 }
