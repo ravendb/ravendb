@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations
         private readonly DocumentConventions _conventions;
         private readonly Task _additionalTask;
         private readonly long _id;
-        private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
         public Action<IOperationProgress> OnProgressChanged;
@@ -55,6 +55,8 @@ namespace Raven.Client.Documents.Operations
 
         private async Task Initialize()
         {
+            _result = _result.Task.IsCompleted ? new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously) : _result;
+
             try
             {
                 await Process().ConfigureAwait(false);
