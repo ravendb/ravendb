@@ -213,6 +213,10 @@ namespace Raven.Client.Documents.Session.Operations
                         {
                             return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch[0], session, bjra);
                         }
+                        else if (inner == null)
+                        {
+                            return default;
+                        }
                     }
                 }
             }
