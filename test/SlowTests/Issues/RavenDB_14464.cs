@@ -83,8 +83,8 @@ namespace SlowTests.Issues
                         {
                             if (serverToggled == false)
                             {
-                                Assert.True(e.GetType() == typeof(TimeoutException));
-                                Assert.True(e.Message.Contains("did not get a reply for operation"));
+                                Assert.True(e.GetType() == typeof(TimeoutException), "e.GetType() == typeof(TimeoutException)");
+                                Assert.True(e.Message.Contains("did not get a reply for operation"), "e.Message.Contains('did not get a reply for operation')");
                                 while (server.Disposed == false)
                                 {
                                     await Task.Delay(500);
@@ -92,8 +92,8 @@ namespace SlowTests.Issues
                                 serverToggled = true;
                             }
 
-                            Assert.True(e.GetType() == typeof(InvalidOperationException));
-                            Assert.True(e.Message.StartsWith("Could not fetch state of operation"));
+                            Assert.True(e.GetType() == typeof(InvalidOperationException), "e.GetType() == typeof(InvalidOperationException)");
+                            Assert.True(e.Message.StartsWith("Could not fetch state of operation"), "e.Message.StartsWith('Could not fetch state of operation')");
                             await Task.Delay(1000);
                         }
                     }
