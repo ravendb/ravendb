@@ -74,7 +74,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact (Skip = "RavenDB-14426")]
+        [Fact]
         public async Task MergeReInsertedTimeSeriesEntryOnConflict()
         {
             using (var storeA = GetDocumentStore())
@@ -92,7 +92,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     await session.SaveChangesAsync();
                 }
-
 
                 using (var session = storeA.OpenAsyncSession())
                 {
@@ -155,13 +154,27 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 EnsureReplicating(storeA, storeB);
 
-                using (var session = storeB.OpenAsyncSession())
+                await SetupReplicationAsync(storeB, storeA);
+                EnsureReplicating(storeB, storeA);
+
+                using (var sessionB = storeB.OpenAsyncSession())
+                using (var sessionA = storeA.OpenAsyncSession())
                 {
-                    // the re-inserted entry should be replicated to B
+                    var allFromA = (await sessionA.TimeSeriesFor("users/1").GetAsync("heartbeat", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                    var allFromB = (await sessionB.TimeSeriesFor("users/1").GetAsync("heartbeat", DateTime.MinValue, DateTime.MaxValue)).ToList();
 
-                    var all = (await session.TimeSeriesFor("users/1").GetAsync("heartbeat", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                    Assert.Equal(allFromB.Count, allFromA.Count);
 
-                    Assert.Equal(3, all.Count); // fails here
+                    for (int i = 0; i < allFromA.Count; i++)
+                    {
+                        var fromA = allFromA[i];
+                        var fromB = allFromB[i];
+
+                        Assert.Equal(fromA.Tag,fromB.Tag);
+                        Assert.Equal(fromA.Timestamp, fromB.Timestamp);
+                        Assert.Equal(fromA.Value,fromB.Value);
+                        Assert.Equal(fromA.Values,fromB.Values);
+                    }
                 }
             }
         }
