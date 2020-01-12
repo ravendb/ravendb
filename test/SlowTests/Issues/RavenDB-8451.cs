@@ -25,7 +25,28 @@ namespace SlowTests.Issues
         [Fact64Bit]
         public async Task CanRecoverEncryptedDatabase()
         {
+            await CanRecoverEncryptedDatabaseInternal();
+        }
+
+        [Fact64Bit]
+        public async Task RecoveryOfEncryptedDatabaseWithoutMasterKeyShouldThrow()
+        {
+            try
+            {
+                await CanRecoverEncryptedDatabaseInternal(true);
+            }
+            catch (InvalidOperationException ioe)
+            {
+            }
+        }
+        public async Task CanRecoverEncryptedDatabaseInternal(bool nullifyMasterKey = false)
+        {
             string dbName = SetupEncryptedDatabase(out var certificates, out var masterKey);
+            
+            if (nullifyMasterKey)
+            {
+                masterKey = null;
+            }
 
             var dbPath = NewDataPath(prefix: Guid.NewGuid().ToString());
             var recoveryExportPath = NewDataPath(prefix: Guid.NewGuid().ToString());
@@ -52,7 +73,8 @@ namespace SlowTests.Issues
                 DataFileDirectory = dbPath,
                 PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
                 OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
-                MasterKey = masterKey
+                MasterKey = masterKey,
+                DisableCopyOnWriteMode = nullifyMasterKey
             }))
             {
                 recovery.Execute(TextWriter.Null, CancellationToken.None);

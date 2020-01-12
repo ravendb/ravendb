@@ -66,7 +66,7 @@ namespace Voron.Recovery
                 var disableCopyOnWriteModeArg = cmd.Option("--DisableCopyOnWriteMode", "Default is false.", CommandOptionType.SingleValue);
                 var ignoreInvalidJournalErrorsArg = cmd.Option("--IgnoreInvalidJournalErrors", "Default is false.", CommandOptionType.SingleValue);
                 var ignoreDataIntegrityErrorsOfAlreadySyncedTransactionsArg = cmd.Option("--IgnoreInvalidDataErrorsOfAlreadySyncedTransactions", "Default is false.", CommandOptionType.SingleValue);
-
+                var ignoreInvalidPagesInARawArg = cmd.Option("--IgnoreInvalidPagesInARaw", "Default is false.", CommandOptionType.SingleValue);
 
                 var loggingModeArg = cmd.Option("--LoggingMode", "Logging mode: Operations or Information.", CommandOptionType.SingleValue);
 
@@ -163,6 +163,15 @@ namespace Voron.Recovery
                             return ExitWithError($"{nameof(config.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions)} argument value ({value}) is invalid", cmd);
 
                         config.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = ignoreDataIntegrityErrorsOfAlreadySyncedTransactions;
+                    }
+                    
+                    if (ignoreInvalidPagesInARawArg.HasValue())
+                    {
+                        var value = ignoreInvalidPagesInARawArg.Value();
+                        if (bool.TryParse(value, out var ignoreInvalidPagesInARaw) == false)
+                            return ExitWithError($"{nameof(config.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions)} argument value ({value}) is invalid", cmd);
+
+                        config.IgnoreInvalidPagesInARaw = ignoreInvalidPagesInARaw;
                     }
 
                     if (loggingModeArg.HasValue())

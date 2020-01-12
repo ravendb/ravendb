@@ -58,6 +58,7 @@ namespace Voron.Recovery
             if(config.LoggingMode != LogMode.None)
                 LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName), TimeSpan.FromDays(3), long.MaxValue, false);
             _logger = LoggingSource.Instance.GetLogger<Recovery>("Voron Recovery");
+            _shouldIgnoreInvalidPagesInARaw = config.IgnoreInvalidPagesInARaw;
         }
 
         private StorageEnvironmentOptions CreateOptions()
@@ -167,10 +168,18 @@ namespace Voron.Recovery
                         _option.OwnsPagers = optionOwnsPagers;
                     }
                 }
+
                 if (mem == null)
                 {
                     //for encrypted database the pointer points to the buffer and this is not what we want.
-                    mem = se.Options.DataPager.PagerState.MapBase;
+                    if (se == null /*journal recovery failed or copy on write is set to false*/)
+                    {
+                        mem = _option.DataPager.PagerState.MapBase;
+                    }
+                    else
+                    {
+                        mem = se.Options.DataPager.PagerState.MapBase;
+                    }
                 }
                 long startOffset = (long)mem;
                 var fi = new FileInfo(_datafile);
@@ -205,7 +214,7 @@ namespace Voron.Recovery
                     while (mem < eof)
                     {
                         try
-                        {                    
+                        {
                             var page = DecryptPageIfNeeded(mem, startOffset, ref tx, maybePulseTransaction: true);
 
                             if (ct.IsCancellationRequested)
@@ -215,6 +224,7 @@ namespace Voron.Recovery
                                 _cancellationRequested = true;
                                 break;
                             }
+
                             var now = DateTime.UtcNow;
                             if ((now - lastProgressReport).TotalSeconds >= _progressIntervalInSec)
                             {
@@ -222,6 +232,7 @@ namespace Voron.Recovery
                                 {
                                     writer.WriteLine("Press 'q' to quit the recovery process");
                                 }
+
                                 lastProgressReport = now;
                                 PrintRecoveryProgress(startOffset, mem, eof, now);
                             }
@@ -231,7 +242,7 @@ namespace Voron.Recovery
                             //this page is not raw data section move on
                             if ((pageHeader->Flags).HasFlag(PageFlags.RawData) == false && pageHeader->Flags.HasFlag(PageFlags.Stream) == false)
                             {
-                                mem += _pageSize;                                
+                                mem += _pageSize;
                                 continue;
                             }
 
@@ -243,6 +254,7 @@ namespace Voron.Recovery
                                 mem = PrintErrorAndAdvanceMem(message, mem);
                                 continue;
                             }
+
                             //overflow page
                             ulong checksum;
                             if (pageHeader->Flags.HasFlag(PageFlags.Overflow))
@@ -272,10 +284,12 @@ namespace Voron.Recovery
                                         if (rc != 0)
                                         {
                                             if (_logger.IsOperationsEnabled)
-                                                _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to initialize Sodium for hash computation will skip this page.");
+                                                _logger.Operations(
+                                                    $"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to initialize Sodium for hash computation will skip this page.");
                                             mem += numberOfPages * _pageSize;
                                             continue;
                                         }
+
                                         // write document header, including size
                                         PageHeader* nextPage = pageHeader;
 
@@ -291,6 +305,7 @@ namespace Voron.Recovery
                                                 ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
                                                 break;
                                             }
+
                                             totalSize += streamPageHeader->ChunkSize;
                                             var dataStart = (byte*)nextPage + PageHeader.SizeOf;
                                             _attachmentChunks.Add(((IntPtr)dataStart, (int)streamPageHeader->ChunkSize));
@@ -298,10 +313,12 @@ namespace Voron.Recovery
                                             if (rc != 0)
                                             {
                                                 if (_logger.IsOperationsEnabled)
-                                                    _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute chunk hash, will skip it.");
+                                                    _logger.Operations(
+                                                        $"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute chunk hash, will skip it.");
                                                 valid = false;
                                                 break;
                                             }
+
                                             if (streamPageHeader->StreamNextPageNumber == 0)
                                             {
                                                 ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
@@ -316,12 +333,13 @@ namespace Voron.Recovery
                                             {
                                                 valid = false;
                                                 if (_logger.IsOperationsEnabled)
-                                                    _logger.Operations($"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunk but isn't marked as Overflow | Stream");
+                                                    _logger.Operations(
+                                                        $"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunk but isn't marked as Overflow | Stream");
                                                 break;
                                             }
-                                            
+
                                             valid = ValidateOverflowPage(nextPage, eof, startOffset, ref mem);
-                                            
+
                                             //we already advance the pointer inside the validation
                                             if (valid == false)
                                             {
@@ -329,6 +347,7 @@ namespace Voron.Recovery
                                             }
 
                                         }
+
                                         if (valid == false)
                                         {
                                             //The first page was valid so we can skip the entire overflow
@@ -340,10 +359,12 @@ namespace Voron.Recovery
                                         if (rc != 0)
                                         {
                                             if (_logger.IsOperationsEnabled)
-                                                _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute attachment hash, will skip it.");
+                                                _logger.Operations(
+                                                    $"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute attachment hash, will skip it.");
                                             mem += numberOfPages * _pageSize;
                                             continue;
                                         }
+
                                         var hash = new string(' ', 44);
                                         fixed (char* p = hash)
                                         {
@@ -353,6 +374,7 @@ namespace Voron.Recovery
 
                                         WriteAttachment(documentsWriter, totalSize, hash, tag);
                                     }
+
                                     mem += numberOfPages * _pageSize;
                                 }
 
@@ -366,8 +388,10 @@ namespace Voron.Recovery
                                 {
                                     mem += _pageSize;
                                 }
+
                                 continue;
                             }
+
                             //We don't have checksum for encrypted pages
                             if (IsEncrypted == false)
                             {
@@ -375,11 +399,14 @@ namespace Voron.Recovery
 
                                 if (checksum != pageHeader->Checksum)
                                 {
+                                    CheckInvalidPagesInARaw(pageHeader, mem);
                                     var message =
                                         $"Invalid checksum for page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
                                     mem = PrintErrorAndAdvanceMem(message, mem);
                                     continue;
                                 }
+
+                                _InvalidChecksumWithNoneZeroMac = 0;
                             }
 
                             // small raw data section 
@@ -391,6 +418,7 @@ namespace Voron.Recovery
                                 mem += _pageSize;
                                 continue;
                             }
+
                             if (rawHeader->NextAllocation > _pageSize)
                             {
                                 var message =
@@ -412,6 +440,7 @@ namespace Voron.Recovery
                                     //we can't retrieve entries past the invalid entry
                                     break;
                                 }
+
                                 //Allocated size of entry exceed the bound of the page next allocation
                                 if (entry->AllocatedSize + pos + sizeof(RawDataSection.RawDataEntrySizes) >
                                     rawHeader->NextAllocation)
@@ -423,6 +452,7 @@ namespace Voron.Recovery
                                     //we can't retrieve entries past the invalid entry
                                     break;
                                 }
+
                                 if (entry->UsedSize > entry->AllocatedSize)
                                 {
                                     var message =
@@ -432,6 +462,7 @@ namespace Voron.Recovery
                                     //we can't retrieve entries past the invalid entry
                                     break;
                                 }
+
                                 pos += entry->AllocatedSize + sizeof(RawDataSection.RawDataEntrySizes);
                                 if (entry->AllocatedSize == 0 || entry->UsedSize == -1)
                                     continue;
@@ -440,7 +471,12 @@ namespace Voron.Recovery
                                         conflictsWriter, countersWriter, context, startOffset, ((RawDataSmallPageHeader*)page)->TableType) == false)
                                     break;
                             }
+
                             mem += _pageSize;
+                        }
+                        catch (InvalidOperationException ioe) when (ioe.Message.Contains("pages in a raw that had invalid checksum and none zero MAC"))
+                        {
+                            throw;
                         }
                         catch (Exception e)
                         {
@@ -491,6 +527,24 @@ namespace Voron.Recovery
                 se?.Dispose();
                 if(_config.LoggingMode != LogMode.None)
                     LoggingSource.Instance.EndLogging();
+            }
+        }
+
+        private void CheckInvalidPagesInARaw(PageHeader* pageHeader, byte* mem)
+        {
+            if(_shouldIgnoreInvalidPagesInARaw)
+                return;
+
+            if (*(short*)pageHeader->Mac != 0)
+            {
+                if (MaxNumberOfInvalidChecksumWithNoneZeroMac <= _InvalidChecksumWithNoneZeroMac++)
+                {
+                    var error =
+                        $"Found {_InvalidChecksumWithNoneZeroMac} pages in a raw that had invalid checksum and none zero MAC " +
+                        $"this is a strong indication that you're recovering an encrypted database and didn't provide the 'Master Key'";
+                    PrintErrorAndAdvanceMem(error, mem);
+                    throw new InvalidOperationException(error);
+                }
             }
         }
 
@@ -908,11 +962,14 @@ namespace Voron.Recovery
 
                 if (checksum != pageHeader->Checksum)
                 {
+                    CheckInvalidPagesInARaw(pageHeader, mem);
                     var message =
                         $"Invalid checksum for overflow page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
                     mem = PrintErrorAndAdvanceMem(message, mem);
                     return false;
                 }
+
+                _InvalidChecksumWithNoneZeroMac = 0;
             }
 
             return true;
@@ -1247,6 +1304,9 @@ namespace Voron.Recovery
         private (string hash, long size, string tag)? _lastAttachmentInfo;
         private Logger _logger;
         private readonly byte[] _masterKey;
+        private int _InvalidChecksumWithNoneZeroMac;
+        private bool _shouldIgnoreInvalidPagesInARaw;
+        private const int MaxNumberOfInvalidChecksumWithNoneZeroMac = 128;
 
         public bool IsEncrypted => _masterKey != null;
         public enum RecoveryStatus
