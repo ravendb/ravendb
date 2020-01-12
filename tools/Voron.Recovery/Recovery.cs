@@ -121,23 +121,21 @@ namespace Voron.Recovery
                                 se = new StorageEnvironment(_option);
                                 break;
                             }
-                            catch (Exception e)
+                            catch (IncreasingDataFileInCopyOnWriteModeException ex)
                             {
-                                if (e is IncreasingDataFileInCopyOnWriteModeException ex)
+                                _option.Dispose();
+
+                                using (var file = File.Open(ex.DataFilePath, FileMode.Open))
                                 {
-                                    _option.Dispose();
-
-                                    using (var file = File.Open(ex.DataFilePath, FileMode.Open))
-                                    {
-                                        file.SetLength(ex.RequestedSize);
-                                    }
-
-                                    _option = CreateOptions();
+                                    file.SetLength(ex.RequestedSize);
                                 }
-                                else if (e is OutOfMemoryException && e.InnerException is Win32Exception)
-                                {
+
+                                _option = CreateOptions();
+                            }
+                            catch (OutOfMemoryException e)  
+                            {
+                                if (e.InnerException is Win32Exception)
                                     throw;
-                                }
                             }
                         }
                         
