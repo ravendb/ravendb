@@ -1115,10 +1115,18 @@ namespace Raven.Client.Util
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var node = context.Node;
-                if (context.Node is MethodCallExpression mce && 
-                    mce.Object is MemberExpression innerMember)
-                    node = innerMember;
-                
+                if (context.Node is MethodCallExpression mce &&
+                    mce.Object is MemberExpression)
+                {
+                    foreach (var arg in mce.Arguments)
+                    {
+                        if (arg.NodeType == ExpressionType.Parameter)
+                            return;
+                    }
+
+                    node = mce.Object;
+                }
+
                 if (!(node is MemberExpression memberExpression) ||
                     IsWrappedConstantExpression(memberExpression) == false)
                     return;
