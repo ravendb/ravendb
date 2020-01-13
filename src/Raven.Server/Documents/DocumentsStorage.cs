@@ -1217,8 +1217,7 @@ namespace Raven.Server.Documents
             if (fields.Contain(DocumentFields.LastModified))
                 result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
 
-            if (fields.Contain(DocumentFields.Flags))
-                result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+            result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
 
             if (fields.Contain(DocumentFields.TransactionMarker))
                 result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);

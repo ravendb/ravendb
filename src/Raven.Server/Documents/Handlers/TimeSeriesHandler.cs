@@ -292,6 +292,21 @@ namespace Raven.Server.Documents.Handlers
 
                     var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
+                    if (operation?.Removals != null)
+                    {
+                        foreach (var removal in operation.Removals)
+                        {
+                            LastChangeVector = tss.RemoveTimestampRange(context,
+                                operation.DocumentId,
+                                docCollection,
+                                removal.Name,
+                                removal.From,
+                                removal.To
+                            );
+                            changes++;
+                        }
+                    }
+
                     if (_appendDictionary != null)
                     {
                         foreach (var kvp in _appendDictionary)
@@ -322,20 +337,6 @@ namespace Raven.Server.Documents.Handlers
                         changes++;
                     }
 
-                    if (operation?.Removals != null)
-                    {
-                        foreach (var removal in operation.Removals)
-                        {
-                            LastChangeVector = tss.RemoveTimestampRange(context,
-                                operation.DocumentId,
-                                docCollection,
-                                removal.Name,
-                                removal.From,
-                                removal.To
-                            );
-                            changes++;
-                        }
-                    }
                 }
 
                 return changes;
