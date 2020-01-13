@@ -110,8 +110,26 @@ class indexes extends viewModelBase {
                 indexesCount += indexesInGroup.length;
 
                 totalProcessedPerSecond += _.sum(indexesInGroup
-                    .filter(i => i.progress())
-                    .map(i => i.progress().globalProgress().processedPerSecond()));
+                    .filter(i => i.progress() || (i.replacement() && i.replacement().progress()))
+                    .map(i => {
+                        let sum = 0;
+
+                        const progress = i.progress();
+                        if (progress) {
+                            sum += progress.globalProgress().processedPerSecond();
+                        }
+
+                        const replacement = i.replacement();
+                        if (replacement) {
+                            const replacementProgress = replacement.progress();
+                            if (replacementProgress) {
+                                sum += replacementProgress.globalProgress().processedPerSecond();
+                            }
+                        }
+
+                        console.log(sum);
+                        return sum;
+                    }));
             });
                         
             if (!this.indexStatusFilter().length) {
