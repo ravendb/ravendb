@@ -459,7 +459,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
-                await store.ExecuteIndexAsync(new Replacement_AverageFieldAdded.DailyInvoicesIndex());
+                await store.ExecuteIndexAsync(new Replacement_DifferentOutputReduceToCollection.DailyInvoicesIndex());
 
                 var db = await GetDatabase(store.Database);
 
@@ -475,7 +475,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 // original index needs to delete docs created by replacement index
 
                 Assert.Equal(1, originalIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().Count);
-                Assert.Equal($"DailyInvoices/{replacementIndexReduceOutputIndex}/", originalIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().First().Key);
+                Assert.Equal($"MyDailyInvoices/{replacementIndexReduceOutputIndex}/", originalIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().First().Key);
 
 
                 using (var session = store.OpenAsyncSession())
