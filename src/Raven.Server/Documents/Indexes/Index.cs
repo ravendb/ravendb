@@ -2070,10 +2070,13 @@ namespace Raven.Server.Documents.Indexes
 
         private void UpdateIndexProgress(DocumentsOperationContext documentsContext, IndexProgress progress, IndexStats stats)
         {
-            var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
-            if (indexingPerformance?.DurationInMs > 0)
+            if (progress.IndexRunningStatus == IndexRunningStatus.Running)
             {
-                progress.ProcessedPerSecond = indexingPerformance.InputCount / (indexingPerformance.DurationInMs / 1000);
+                var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
+                if (indexingPerformance?.DurationInMs > 0)
+                {
+                    progress.ProcessedPerSecond = indexingPerformance.InputCount / (indexingPerformance.DurationInMs / 1000);
+                }
             }
 
             foreach (var collection in GetCollections(documentsContext, out var isAllDocs))
