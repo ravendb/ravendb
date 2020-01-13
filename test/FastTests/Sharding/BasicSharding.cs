@@ -4,11 +4,16 @@ using Raven.Client.Http;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sharding
 {
     public class BasicSharding : ShardedTestBase
     {
+        public BasicSharding(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class User
         {
             public string Name;
