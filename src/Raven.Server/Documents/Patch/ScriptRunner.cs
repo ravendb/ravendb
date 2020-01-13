@@ -208,11 +208,9 @@ namespace Raven.Server.Documents.Patch
 
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
 
-                ScriptEngine.SetValue("invokeTimeSeriesFunction", new ClrFunctionInstance(ScriptEngine, "invokeTimeSeriesFunction", InvokeTimeSeriesFunction));
-
-
 
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
+
 
                 foreach (var script in scriptsSource)
                 {
@@ -224,6 +222,11 @@ namespace Raven.Server.Documents.Patch
                     {
                         throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
                     }
+                }
+
+                foreach (var ts in runner.TimeSeriesDeclaration)
+                {
+                    ScriptEngine.SetValue(ts.Key, NamedInvokeTimeSeriesFunction(ts.Key));
                 }
             }
 
@@ -392,7 +395,6 @@ namespace Raven.Server.Documents.Patch
 
                 return result;
             }
-
 
             private JsValue OutputDebug(JsValue self, JsValue[] args)
             {
@@ -761,37 +763,38 @@ namespace Raven.Server.Documents.Patch
                 return JsBoolean.True;
             }
 
-            private JsValue InvokeTimeSeriesFunction(JsValue self, JsValue[] args)
+            private ClrFunctionInstance NamedInvokeTimeSeriesFunction(string name)
+            {
+                return new ClrFunctionInstance(ScriptEngine, name,
+                    (self, args) => InvokeTimeSeriesFunction(name, args));
+            }
+
+            private JsValue InvokeTimeSeriesFunction(string name, JsValue[] args)
             {
                 // todo aviv : write meaningful error messages
 
                 AssertValidDatabaseContext();
-                if (args.Length < 1)
-                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
 
-                if (args[0].IsString() == false)
-                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
+                if (_runner.TimeSeriesDeclaration.TryGetValue(name, out var func) == false)
+                    throw new InvalidOperationException($"Unknown time series function '{name}'.");
 
-                if (_runner.TimeSeriesDeclaration.TryGetValue(args[0].AsString(), out var func) == false)
-                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
-
-                var tsFunctionArgs = new object[args.Length];
+                var tsFunctionArgs = new object[args.Length + 1];
                 string docId = null;
                 List<IDisposable> lazyIds = new List<IDisposable>();
 
-                for (var index = 1; index < args.Length; index++)
+                for (var index = 0; index < args.Length; index++)
                 {
                     if (args[index].IsObject() && args[index].AsObject() is BlittableObjectInstance boi)
                     {
                         var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
                         lazyIds.Add(lazyId);
-                        tsFunctionArgs[index - 1] = new Document
+                        tsFunctionArgs[index] = new Document
                         {
                             Data = boi.Blittable,
                             Id = lazyId
                         };
 
-                        if (index == 1)
+                        if (index == 0)
                         {
                             // take the Id of the document to operate on
                             // from the first argument (it can be a different document than the original doc)
@@ -801,7 +804,7 @@ namespace Raven.Server.Documents.Patch
 
                     else
                     {
-                        tsFunctionArgs[index - 1] = Translate(args[index], _jsonCtx);
+                        tsFunctionArgs[index] = Translate(args[index], _jsonCtx);
                     }
                 }
 
@@ -1292,7 +1295,6 @@ namespace Raven.Server.Documents.Patch
                     _refResolver.ExplodeArgsOn(null, boi);
                 }
             }
-
 
             private static JsonOperationContext ThrowArgumentNull()
             {

@@ -706,11 +706,6 @@ namespace Raven.Server.Documents.Queries.Results
                     if (kvp.Value.Type == DeclaredFunction.FunctionType.TimeSeries)
                     {
                         runner.AddTimeSeriesDeclaration(kvp.Value);
-
-                        var script = GenerateTimeSeriesInvocationCall(kvp.Key, kvp.Value.Parameters);
-
-                        runner.AddScript(script);
-
                         continue;
                     }
 
@@ -722,32 +717,6 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            private static string GenerateTimeSeriesInvocationCall(string name, List<QueryExpression> parameters)
-            {
-                var sb = new StringBuilder();
-
-                sb.Append("function ")
-                    .Append(name)
-                    .Append('(');
-
-                var paramsBuilder = new StringBuilder();
-
-                for (int i = 0; i < parameters.Count; i++)
-                {
-                    if (i > 0)
-                        paramsBuilder.Append(", ");
-                    paramsBuilder.Append(((FieldExpression)parameters[i]).FieldValue);
-                }
-
-                sb.Append(paramsBuilder)
-                    .Append("){ return invokeTimeSeriesFunction(")
-                    .Append('\'')
-                    .Append(name).Append("', ")
-                    .Append(paramsBuilder)
-                    .Append("); }");
-
-                return sb.ToString();
-            }
         }
 
         public object InvokeFunction(FieldsToFetch.FieldToFetch fieldToFetch, string methodName, Query query, string documentId, object[] args)
