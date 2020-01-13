@@ -84,6 +84,10 @@ namespace Raven.Server.Documents.Indexes
                 using (Slice.External(context.Allocator, (byte*)&typeInt, sizeof(int), out Slice tmpSlice))
                     statsTree.Add(IndexSchema.TypeSlice, tmpSlice);
 
+                var sourceTypeInt = (int)_index.SourceType;
+                using (Slice.External(context.Allocator, (byte*)&sourceTypeInt, sizeof(int), out Slice tmpSlice))
+                    statsTree.Add(IndexSchema.SourceTypeSlice, tmpSlice);
+
                 if (statsTree.Read(IndexSchema.CreatedTimestampSlice) == null)
                 {
                     var binaryDate = SystemTime.UtcNow.ToBinary();
@@ -488,6 +492,22 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public static IndexSourceType ReadIndexSourceType(string name, StorageEnvironment environment)
+        {
+            using (var tx = environment.ReadTransaction())
+            {
+                var statsTree = tx.ReadTree(IndexSchema.StatsTree);
+                if (statsTree == null)
+                    throw new InvalidOperationException($"Index '{name}' does not contain 'Stats' tree.");
+
+                var result = statsTree.Read(IndexSchema.SourceTypeSlice);
+                if (result == null)
+                    return IndexSourceType.Documents; // backward compatibility
+
+                return (IndexSourceType)result.Reader.ReadLittleEndianInt32();
+            }
+        }
+
         public IEnumerable<Slice> GetItemKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
         {
             var collectionTree = tx.InnerTransaction.ReadTree("#" + collection);
@@ -682,6 +702,8 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice TypeSlice;
 
+            public static readonly Slice SourceTypeSlice;
+
             public static readonly Slice CreatedTimestampSlice;
 
             public static readonly Slice MapAttemptsSlice;
@@ -715,6 +737,7 @@ namespace Raven.Server.Documents.Indexes
                 using (StorageEnvironment.GetStaticContext(out var ctx))
                 {
                     Slice.From(ctx, "Type", ByteStringType.Immutable, out TypeSlice);
+                    Slice.From(ctx, "SourceType", ByteStringType.Immutable, out SourceTypeSlice);
                     Slice.From(ctx, "CreatedTimestamp", ByteStringType.Immutable, out CreatedTimestampSlice);
                     Slice.From(ctx, "MapAttempts", ByteStringType.Immutable, out MapAttemptsSlice);
                     Slice.From(ctx, "MapReferencedAttempts", ByteStringType.Immutable, out MapReferencedAttemptsSlice);
