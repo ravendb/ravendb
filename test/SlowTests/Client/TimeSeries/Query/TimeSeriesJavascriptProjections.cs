@@ -218,7 +218,112 @@ select {
                 }
             }
         }
-       
+
+        [Fact]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_TagAsParameter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 60,
+                        WorksAt = "companies/1"
+                    }, "people/1");
+
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 59d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 79d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+
+                    tsf = session.TimeSeriesFor("companies/1");
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 579d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/3", new[] { 569d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 659d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var rawQuery = session.Advanced.RawQuery<CustomRawQueryResult3>(
+@"declare timeseries out(d, t) 
+{
+    from d.Stocks between $start and $end
+    where Tag != t
+}
+from People as p
+where p.Age > 49
+load p.WorksAt as Company
+select {
+    Series: out(p, 'tags/2'),
+    Series2: out(Company, 'tags/3')
+}")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddYears(1));
+
+                    var result = rawQuery.First();
+
+                    Assert.Equal(3, result.Series.Count);
+
+                    Assert.Equal(new[] { 59d }, result.Series.Results[0].Values);
+                    Assert.Equal("tags/1", result.Series.Results[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(61), result.Series.Results[0].Timestamp);
+
+                    Assert.Equal(new[] { 159d }, result.Series.Results[1].Values);
+                    Assert.Equal("tags/1", result.Series.Results[1].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), result.Series.Results[1].Timestamp);
+
+                    Assert.Equal(new[] { 179d }, result.Series.Results[2].Values);
+                    Assert.Equal("tags/1", result.Series.Results[2].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Series.Results[2].Timestamp);
+
+                    Assert.Equal(5, result.Series2.Count);
+
+                    Assert.Equal(new[] { 559d }, result.Series2.Results[0].Values);
+                    Assert.Equal("tags/1", result.Series2.Results[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(61), result.Series2.Results[0].Timestamp);
+
+                    Assert.Equal(new[] { 579d }, result.Series2.Results[1].Values);
+                    Assert.Equal("tags/2", result.Series2.Results[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(62), result.Series2.Results[1].Timestamp);
+
+                    Assert.Equal(new[] { 659d }, result.Series2.Results[2].Values);
+                    Assert.Equal("tags/1", result.Series2.Results[2].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), result.Series2.Results[2].Timestamp);
+
+                    Assert.Equal(new[] { 679d }, result.Series2.Results[3].Values);
+                    Assert.Equal("tags/1", result.Series2.Results[3].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Series2.Results[3].Timestamp);
+
+                    Assert.Equal(new[] { 669d }, result.Series2.Results[4].Values);
+                    Assert.Equal("tags/2", result.Series2.Results[4].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(63), result.Series2.Results[4].Timestamp);
+
+                }
+            }
+        }
+
+
         [Fact]
         public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction()
         {
@@ -475,6 +580,136 @@ select out(p)")
                     Assert.Equal(new[] { 679d }, result.Stocks.Results[2].Values);
                     Assert.Equal("tags/1", result.Stocks.Results[2].Tag);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Stocks.Results[2].Timestamp);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction_DifferentRanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 60,
+                        WorksAt = "companies/1"
+                    }, "people/1");
+
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "tags/1", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "tags/2", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "tags/1", new[] { 259d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "tags/1", new[] { 279d });
+                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), "tags/2", new[] { 269d });
+
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 579d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 659d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(61), "tags/1", new[] { 759d });
+                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(62), "tags/1", new[] { 779d });
+                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(63), "tags/2", new[] { 769d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var rawQuery = session.Advanced.RawQuery<CustomRawQueryResult4>(
+@"declare timeseries ts(name, start, end) 
+{
+    from name between start and end
+    where Tag != 'tags/2'
+}
+declare function out(d) 
+{
+    var result = {};
+    var allTsNames = d['@metadata']['@timeseries'];
+    for (var i = 0; i < allTsNames.length; i++){
+        var name = allTsNames[i];
+        var range = $ranges[i % 3];
+        result[name] = ts(name, range.Start, range.End);
+    }
+    return result;    
+}
+from People as p
+where p.Age > 49
+select out(p)")
+                        .AddParameter("ranges", new object[3]
+                        {
+                            new 
+                            {
+                                Start = baseline,
+                                End = baseline.AddMonths(2)
+                            },
+                            new
+                            {
+                                Start = baseline.AddMonths(1),
+                                End = baseline.AddMonths(6)
+                            },
+                            new
+                            {
+                                Start = baseline,
+                                End = baseline.AddYears(1)
+                            }
+                        });
+
+                    var result = rawQuery.First();
+
+                    Assert.Equal(3, result.Heartrate.Count);
+
+                    Assert.Equal(new[] { 59d }, result.Heartrate.Results[0].Values);
+                    Assert.Equal("tags/1", result.Heartrate.Results[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(61), result.Heartrate.Results[0].Timestamp);
+
+                    Assert.Equal(new[] { 159d }, result.Heartrate.Results[1].Values);
+                    Assert.Equal("tags/1", result.Heartrate.Results[1].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), result.Heartrate.Results[1].Timestamp);
+
+                    Assert.Equal(new[] { 179d }, result.Heartrate.Results[2].Values);
+                    Assert.Equal("tags/1", result.Heartrate.Results[2].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Heartrate.Results[2].Timestamp);
+
+                    Assert.Equal(4, result.Stocks.Count);
+
+                    Assert.Equal(new[] { 659d }, result.Stocks.Results[0].Values);
+                    Assert.Equal("tags/1", result.Stocks.Results[0].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), result.Stocks.Results[0].Timestamp);
+
+                    Assert.Equal(new[] { 679d }, result.Stocks.Results[1].Values);
+                    Assert.Equal("tags/1", result.Stocks.Results[1].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Stocks.Results[1].Timestamp);
+
+                    Assert.Equal(new[] { 759d }, result.Stocks.Results[2].Values);
+                    Assert.Equal("tags/1", result.Stocks.Results[2].Tag);
+                    Assert.Equal(baseline.AddMonths(3).AddMinutes(61), result.Stocks.Results[2].Timestamp);
+
+                    Assert.Equal(new[] { 779d }, result.Stocks.Results[3].Values);
+                    Assert.Equal("tags/1", result.Stocks.Results[3].Tag);
+                    Assert.Equal(baseline.AddMonths(3).AddMinutes(62), result.Stocks.Results[3].Timestamp);
 
                 }
             }
@@ -2003,6 +2238,105 @@ select foo(heartrate(p))
             }
         }
 
+        [Fact]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_UsingLinq_TagAsParameter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 60,
+                        WorksAt = "companies/1"
+                    }, "people/1");
+
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("HeartRate", baseline.AddMinutes(61), "tags/1", new[] { 59d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(62), "tags/2", new[] { 79d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+
+                    tsf = session.TimeSeriesFor("companies/1");
+
+                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
+                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 579d });
+                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/3", new[] { 569d });
+
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 659d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
+                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from p in session.Query<Person>()
+                        let ts = new Func<object, string, string, TimeSeriesRawResult>((o, name, t) =>
+                            RavenQuery.TimeSeries(o, name, baseline, baseline.AddYears(1))
+                                .Where(entry => entry.Tag != t)
+                                .ToList())
+                        let company = RavenQuery.Load<Company>(p.WorksAt)
+                        select new
+                        {
+                            Series = ts(p, "HeartRate", "tags/2"), 
+                            Series2 = ts(company,"Stocks", "tags/3")
+                        };
+
+                    var result = query.First();
+
+                    Assert.Equal(3, result.Series.Count);
+
+                    Assert.Equal(new[] { 59d }, result.Series.Results[0].Values);
+                    Assert.Equal("tags/1", result.Series.Results[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(61), result.Series.Results[0].Timestamp);
+
+                    Assert.Equal(new[] { 159d }, result.Series.Results[1].Values);
+                    Assert.Equal("tags/1", result.Series.Results[1].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), result.Series.Results[1].Timestamp);
+
+                    Assert.Equal(new[] { 179d }, result.Series.Results[2].Values);
+                    Assert.Equal("tags/1", result.Series.Results[2].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Series.Results[2].Timestamp);
+
+                    Assert.Equal(5, result.Series2.Count);
+
+                    Assert.Equal(new[] { 559d }, result.Series2.Results[0].Values);
+                    Assert.Equal("tags/1", result.Series2.Results[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(61), result.Series2.Results[0].Timestamp);
+
+                    Assert.Equal(new[] { 579d }, result.Series2.Results[1].Values);
+                    Assert.Equal("tags/2", result.Series2.Results[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(62), result.Series2.Results[1].Timestamp);
+
+                    Assert.Equal(new[] { 659d }, result.Series2.Results[2].Values);
+                    Assert.Equal("tags/1", result.Series2.Results[2].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), result.Series2.Results[2].Timestamp);
+
+                    Assert.Equal(new[] { 679d }, result.Series2.Results[3].Values);
+                    Assert.Equal("tags/1", result.Series2.Results[3].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(62), result.Series2.Results[3].Timestamp);
+
+                    Assert.Equal(new[] { 669d }, result.Series2.Results[4].Values);
+                    Assert.Equal("tags/2", result.Series2.Results[4].Tag);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(63), result.Series2.Results[4].Timestamp);
+
+                }
+            }
+        }
 
     }
 }
