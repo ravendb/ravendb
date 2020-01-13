@@ -167,7 +167,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             else
             {
                 var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
-                Parameters ??= new List<string>();
+                Parameters = new List<string>();
 
                 if (_providerProcessor.FromAlias == null)
                 {
@@ -199,11 +199,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     Between(mce);
             }
 
-            if (_whereVisitor.Parameters != null)
-            {
-                Parameters ??= new List<string>();
-                Parameters.AddRange(_whereVisitor.Parameters);
-            }
+            if (_whereVisitor?.Parameters == null) 
+                return;
+
+            Parameters ??= new List<string>();
+            Parameters.AddRange(_whereVisitor.Parameters);
 
         }
 
