@@ -106,7 +106,7 @@ namespace Raven.Server.Documents
     [Flags]
     public enum DocumentFields
     {
-        None = 0,
+        Default = 0,
         Id = 1 << 0,
         LowerId = 1 << 1,
         Data = 1 << 4,
