@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         protected IEnumerable<Reference> GetItemReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, int start, int pageSize)
         {
             return _documentsStorage
-                .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, DocumentFields.Id | DocumentFields.Etag)
+                .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, DocumentFields.Id)
                 .Select(document =>
                 {
                     _reference.Key = document.Id;

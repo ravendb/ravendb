@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
                     ids.Clear();
                     using (context.OpenReadTransaction())
                     {
-                        foreach (var document in GetDocuments(context, collectionName, startEtag, internalQueryOperationStart, OperationBatchSize, isAllDocs, DocumentFields.Id | DocumentFields.Etag))
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, internalQueryOperationStart, OperationBatchSize, isAllDocs, DocumentFields.Id))
                         {
                             internalQueryOperationStart++;
 
