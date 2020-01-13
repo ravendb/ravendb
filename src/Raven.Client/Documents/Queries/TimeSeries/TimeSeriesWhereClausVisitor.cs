@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
@@ -5,24 +6,27 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
-    internal class TimeSeriesWhereClauseModifier<T> : ExpressionVisitor
+    internal class TimeSeriesWhereClausVisitor<T> : ExpressionVisitor
     {
-        private readonly string _parameter;
+        private readonly string _alias;
 
         private readonly IAbstractDocumentQuery<T> _documentQuery;
 
         private bool _arrayIndex;
 
-        public TimeSeriesWhereClauseModifier(string parameter, IAbstractDocumentQuery<T> documentQuery)
+        internal List<string> Parameters;
+
+        public TimeSeriesWhereClausVisitor(string alias, IAbstractDocumentQuery<T> documentQuery)
         {
-            _parameter = parameter;
+            _alias = alias;
             _documentQuery = documentQuery;
         }
 
-        public Expression Modify(Expression expression)
+        public Expression VisitWhere(Expression expression)
         {
             // - removes the lambda parameter from filter expression (e.g. 'ts.Tag' => 'Tag')
             // - turns constant expressions into query parameters 
+            // - adds parameter expressions to Parameters
 
             return Visit(expression);
         }
@@ -39,9 +43,17 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return expression;
         }
 
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            Parameters ??= new List<string>();
+            Parameters.Add(node.Name);
+
+            return base.VisitParameter(node);
+        }
+
         protected override Expression VisitMember(MemberExpression node)
         {
-            if (node.Expression is ParameterExpression p && p.Name == _parameter)
+            if (node.Expression is ParameterExpression p && p.Name == _alias)
                 return Expression.Parameter(node.Type, node.Member.Name);
 
             if (JavascriptConversionExtensions.IsWrappedConstantExpression(node))

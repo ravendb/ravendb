@@ -14,11 +14,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     internal class TimeSeriesQueryVisitor<T>
     {
         private readonly RavenQueryProviderProcessor<T> _providerProcessor;
-        private TimeSeriesWhereClauseModifier<T> _modifier;
+        private TimeSeriesWhereClausVisitor<T> _whereVisitor;
         private StringBuilder _selectFields;
         private string _src, _between, _where, _groupBy, _loadTag;
 
-        public List<string> Parameters { get; private set; }
+        public List<string> Parameters { get; internal set; }
 
         public TimeSeriesQueryVisitor(RavenQueryProviderProcessor<T> processor)
         {
@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                   unary.Operand is LambdaExpression lambda))
                 throw new NotSupportedException("Unsupported expression in Where clause " + expression);
 
-            _modifier = new TimeSeriesWhereClauseModifier<T>(lambda.Parameters[0].Name, _providerProcessor.DocumentQuery);
+            _whereVisitor = new TimeSeriesWhereClausVisitor<T>(lambda.Parameters[0].Name, _providerProcessor.DocumentQuery);
 
             if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
                 LoadTag(lambda.Parameters[1].Name);
@@ -158,42 +158,53 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-        private void TimeSeriesName(MethodCallExpression mce)
+        private void TimeSeriesCall(MethodCallExpression mce)
         {
             if (mce.Arguments.Count == 1)
             {
                 _src = GetNameFromArgument(mce.Arguments[0]);
-                return;
-            }
-
-            var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
-            Parameters ??= new List<string>();
-
-            if (_providerProcessor.FromAlias == null)
-            {
-                _providerProcessor.AddFromAlias(sourceAlias);
-                Parameters.Add(sourceAlias);
             }
             else
             {
-                if (mce.Arguments[0] is ParameterExpression)
+                var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
+                Parameters ??= new List<string>();
+
+                if (_providerProcessor.FromAlias == null)
                 {
+                    _providerProcessor.AddFromAlias(sourceAlias);
                     Parameters.Add(sourceAlias);
                 }
                 else
                 {
-                    Parameters.Add(_providerProcessor.FromAlias);
-                    if (sourceAlias != _providerProcessor.FromAlias)
+                    if (mce.Arguments[0] is ParameterExpression)
                     {
                         Parameters.Add(sourceAlias);
                     }
+                    else
+                    {
+                        Parameters.Add(_providerProcessor.FromAlias);
+                        if (sourceAlias != _providerProcessor.FromAlias)
+                        {
+                            Parameters.Add(sourceAlias);
+                        }
+                    }
                 }
+
+                _src = GetNameFromArgument(mce.Arguments[1]);
+
+                if (mce.Arguments[1] is ParameterExpression == false)
+                    _src = $"{sourceAlias}.{_src}";
+
+                if (mce.Arguments.Count == 4)
+                    Between(mce);
             }
 
-            _src = GetNameFromArgument(mce.Arguments[1]);
+            if (_whereVisitor.Parameters != null)
+            {
+                Parameters ??= new List<string>();
+                Parameters.AddRange(_whereVisitor.Parameters);
+            }
 
-            if (mce.Arguments[1] is ParameterExpression == false) 
-                _src = $"{sourceAlias}.{_src}";
         }
 
         private string GetNameFromArgument(Expression argument)
@@ -233,7 +244,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void WhereBinary(BinaryExpression expression)
         {
-            Debug.Assert(_modifier != null);
+            Debug.Assert(_whereVisitor != null);
 
             var filterExpression = ModifyExpression(expression);
 
@@ -252,14 +263,14 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 return $"{left} {op} {right}";
             }
 
-            return _modifier.Modify(expression).ToString();
+            return _whereVisitor.VisitWhere(expression).ToString();
         }
 
         private void WhereIn(MethodCallExpression mce)
         {
-            Debug.Assert(_modifier != null);
+            Debug.Assert(_whereVisitor != null);
 
-            var exp = _modifier.Modify(mce.Arguments[0]);
+            var exp = _whereVisitor.VisitWhere(mce.Arguments[0]);
 
             string path = exp is ParameterExpression p 
                 ? p.Name 
@@ -300,10 +311,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     continue;
                 }
 
-                TimeSeriesName(callExpression);
-
-                if (callExpression.Arguments.Count == 4)
-                    Between(callExpression);
+                TimeSeriesCall(callExpression);
 
                 break;
             }
