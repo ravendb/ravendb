@@ -76,7 +76,7 @@ namespace Voron.Recovery
 
         private readonly byte[] _streamHashState = new byte[(int)Sodium.crypto_generichash_statebytes()];
         private readonly byte[] _streamHashResult = new byte[(int)Sodium.crypto_generichash_bytes()];
-        private readonly IntPtr _zeroMac = Marshal.AllocHGlobal(SizeOfMacInBytes);
+
         private const int SizeOfMacInBytes = 16;
         private readonly List<(IntPtr Ptr, int Size)> _attachmentChunks = new List<(IntPtr Ptr, int Size)>();
         private readonly VoronRecoveryConfiguration _config;
@@ -526,7 +526,6 @@ namespace Voron.Recovery
             }
             finally
             {
-                Marshal.FreeHGlobal(_zeroMac);
                 tx?.Dispose();
                 se?.Dispose();
                 if(_config.LoggingMode != LogMode.None)
@@ -555,7 +554,8 @@ namespace Voron.Recovery
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool MacNotZero(PageHeader* pageHeader)
         {
-            return Sparrow.Memory.Compare((byte*)_zeroMac, pageHeader->Mac, SizeOfMacInBytes) != 0;
+            byte* zeroes = stackalloc byte[SizeOfMacInBytes];
+            return Sparrow.Memory.Compare(zeroes, pageHeader->Mac, SizeOfMacInBytes) != 0;
         }
 
         private Size _maxTransactionSize = new Size(64,SizeUnit.Megabytes);
