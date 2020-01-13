@@ -61,12 +61,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public void Initialize(RavenTransaction tx)
         {
+            var tree = tx.InnerTransaction.CreateTree(PrefixesOfReduceOutputDocumentsToDeleteTree);
+
             if (tx.InnerTransaction.ReadTree(Legacy.LegacyReduceOutputsTreeName) != null)
                 Legacy.ConvertLegacyPrefixesToDeleteTree(tx);
 
             _prefixesOfReduceOutputDocumentsToDelete = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-            var tree = tx.InnerTransaction.CreateTree(PrefixesOfReduceOutputDocumentsToDeleteTree);
 
             using (var it = tree.Iterate(false))
             {
@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     }
                 }
 
-                var tree = tx.InnerTransaction.ReadTree(PrefixesOfReduceOutputDocumentsToDeleteTree);
+                var tree = tx.InnerTransaction.CreateTree(PrefixesOfReduceOutputDocumentsToDeleteTree);
 
                 foreach (string prefix in prefixesToDelete)
                 {
