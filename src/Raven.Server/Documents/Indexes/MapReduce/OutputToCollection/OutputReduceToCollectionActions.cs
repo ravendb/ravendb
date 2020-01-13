@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Exceptions;
@@ -12,6 +11,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
@@ -74,18 +74,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 {
                     do
                     {
-                        var prefix = it.CurrentKey.ToString();
+                        var toDelete = GetPrefixToDeleteAndOriginalPatternFromCurrent(it);
 
-                        var patternValue = it.CreateReaderForCurrent();
-
-                        string pattern = null;
-
-                        if (patternValue.Length > 0)
-                            pattern = patternValue.ReadString(patternValue.Length);
-
-                        if (_prefixesOfReduceOutputDocumentsToDelete.TryAdd(prefix, pattern) == false)
-                            throw new InvalidOperationException($"Could not add '{prefix}' prefix to list of items to delete (pattern - '{pattern}')");
-
+                        if (_prefixesOfReduceOutputDocumentsToDelete.TryAdd(toDelete.Prefix, toDelete.OriginalPattern) == false)
+                            throw new InvalidOperationException($"Could not add '{toDelete.Prefix}' prefix to list of items to delete (pattern - '{toDelete.OriginalPattern}')");
                     } while (it.MoveNext());
                 }
             }
@@ -159,11 +151,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             return _prefixesOfReduceOutputDocumentsToDelete;
         }
 
-        public bool HasDocumentsToDelete()
-        {
-            return _prefixesOfReduceOutputDocumentsToDelete != null && _prefixesOfReduceOutputDocumentsToDelete.Count > 0;
-        }
-
         public bool HasDocumentsToDelete(TransactionOperationContext indexContext)
         {
             var prefixesToDeleteTree = indexContext.Transaction.InnerTransaction.ReadTree(PrefixesOfReduceOutputDocumentsToDeleteTree);
@@ -189,26 +176,37 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             using (stats.For(IndexingOperation.Reduce.DeleteOutputDocuments))
             {
-                foreach (var prefix in _prefixesOfReduceOutputDocumentsToDelete)
+                var tree = indexContext.Transaction.InnerTransaction.CreateTree(PrefixesOfReduceOutputDocumentsToDeleteTree);
+
+                using (var it = tree.Iterate(false))
                 {
-                    var command = new DeleteReduceOutputDocumentsCommand(database, prefix.Key, prefix.Value, deleteBatchSize);
-
-                    var enqueue = database.TxMerger.Enqueue(command);
-
-                    try
+                    if (it.Seek(Slices.BeforeAllKeys))
                     {
-                        enqueue.GetAwaiter().GetResult();
-                    }
-                    catch (Exception e)
-                    {
-                        throw new IndexWriteException("Failed to delete output reduce documents", e);
-                    }
+                        do
+                        {
+                            var toDelete = GetPrefixToDeleteAndOriginalPatternFromCurrent(it);
 
-                    if (command.DeleteCount < deleteBatchSize)
-                        prefixesToDelete.Add(prefix.Key);
+                            var command = new DeleteReduceOutputDocumentsCommand(database, toDelete.Prefix, toDelete.OriginalPattern, deleteBatchSize);
 
-                    if (command.DeleteCount > 0)
-                        deleted = true;
+                            var enqueue = database.TxMerger.Enqueue(command);
+
+                            try
+                            {
+                                enqueue.GetAwaiter().GetResult();
+                            }
+                            catch (Exception e)
+                            {
+                                throw new IndexWriteException("Failed to delete output reduce documents", e);
+                            }
+
+                            if (command.DeleteCount < deleteBatchSize)
+                                prefixesToDelete.Add(toDelete.Prefix);
+
+                            if (command.DeleteCount > 0)
+                                deleted = true;
+
+                        } while (it.MoveNext());
+                    }
                 }
 
                 foreach (var prefix in prefixesToDelete)
@@ -226,7 +224,25 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             reduceOutputsTree.Delete(prefix);
 
-            _prefixesOfReduceOutputDocumentsToDelete.TryRemove(prefix, out _);
+            indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+            {
+                 // ensure that we delete it from in-memory state only after successful commit
+                _prefixesOfReduceOutputDocumentsToDelete.TryRemove(prefix, out _);
+            };
+        }
+
+        private static (string Prefix, string OriginalPattern) GetPrefixToDeleteAndOriginalPatternFromCurrent(TreeIterator it)
+        {
+            var prefix = it.CurrentKey.ToString();
+
+            var patternValue = it.CreateReaderForCurrent();
+
+            string pattern = null;
+
+            if (patternValue.Length > 0)
+                pattern = patternValue.ReadString(patternValue.Length);
+
+            return (prefix, pattern);
         }
 
         private static class Legacy
