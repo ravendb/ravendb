@@ -415,7 +415,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                         var referenceDoc = new DynamicJsonValue
                         {
-                            [nameof(OutputReduceToCollectionReference.ReduceOutputs)] = new DynamicJsonArray(referencesOfReduceOutput.Value),
+                            [nameof(OutputReduceToCollectionReference.ReduceOutputs)] = new DynamicJsonArray(uniqueIds),
                             [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
                                 [Constants.Documents.Metadata.Collection] = $"{_outputReduceToCollection}/References"
