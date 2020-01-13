@@ -3,11 +3,18 @@ using System.Runtime.CompilerServices;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sharding
 {
+    [Trait("Category", "Sharding")]
     public abstract class ShardedTestBase : RavenTestBase
     {
+        protected ShardedTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected IDocumentStore GetShardedDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             var name = GetDatabaseName(caller);
