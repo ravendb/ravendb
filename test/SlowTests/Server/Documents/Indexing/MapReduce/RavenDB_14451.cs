@@ -5,6 +5,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.MapReduce;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -219,6 +220,53 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                         Assert.NotNull(output);
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldEnsureThatIdsAreUniqueAfterIndexReset()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(
+                        new Order()
+                        {
+                            OrderedAt = new DateTime(2019, 10, 26),
+                            Lines = new List<OrderLine>() { new OrderLine() { Product = "products/1", }, new OrderLine() { Product = "products/2", } }
+                        }, "orders/1");
+
+                    session.SaveChanges();
+                }
+
+                var index = new Orders_ProfitByProductAndOrderedAt();
+                index.Execute(store);
+
+                WaitForIndexing(store);
+
+                store.Maintenance.Send(new ResetIndexOperation(index.IndexName));
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    // 2019-10-26
+                    var doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
+
+                    Assert.Equal(2, doc.ReduceOutputs.Count);
+
+                    Orders_ProfitByProductAndOrderedAt.Result output;
+
+                    foreach (var docReduceOutput in doc.ReduceOutputs)
+                    {
+                        output = session.Load<Orders_ProfitByProductAndOrderedAt.Result>(docReduceOutput);
+
+                        Assert.NotNull(output);
+                    }
+
+                    Assert.Equal(new HashSet<string>(doc.ReduceOutputs).Count, doc.ReduceOutputs.Count);
                 }
             }
         }
