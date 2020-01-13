@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Operations.Attachments;
@@ -75,8 +76,15 @@ namespace Voron.Recovery
 
         private readonly byte[] _streamHashState = new byte[(int)Sodium.crypto_generichash_statebytes()];
         private readonly byte[] _streamHashResult = new byte[(int)Sodium.crypto_generichash_bytes()];
+        private static byte* _zeroMac;
+        private const int SizeOfMacInBytes = 16;
         private readonly List<(IntPtr Ptr, int Size)> _attachmentChunks = new List<(IntPtr Ptr, int Size)>();
         private readonly VoronRecoveryConfiguration _config;
+        static Recovery()
+        {
+            _zeroMac = (byte*)Marshal.AllocHGlobal(SizeOfMacInBytes).ToPointer();
+            Sparrow.Memory.Set(_zeroMac,0, SizeOfMacInBytes);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long GetFilePosition(long offset, byte* position)
@@ -406,7 +414,7 @@ namespace Voron.Recovery
                                     continue;
                                 }
 
-                                _InvalidChecksumWithNoneZeroMac = 0;
+                                _shouldIgnoreInvalidPagesInARaw = true;
                             }
 
                             // small raw data section 
@@ -535,17 +543,23 @@ namespace Voron.Recovery
             if(_shouldIgnoreInvalidPagesInARaw)
                 return;
 
-            if (*(short*)pageHeader->Mac != 0)
+            if (MacNotZero(pageHeader))
             {
                 if (MaxNumberOfInvalidChecksumWithNoneZeroMac <= _InvalidChecksumWithNoneZeroMac++)
                 {
                     var error =
-                        $"Found {_InvalidChecksumWithNoneZeroMac} pages in a raw that had invalid checksum and none zero MAC " +
-                        $"this is a strong indication that you're recovering an encrypted database and didn't provide the 'Master Key'";
+                        $"this is a strong indication that you're recovering an encrypted database and didn't" +
+                        $" provide the encryption key using the  '--MasterKey=<KEY>' command line flag";
                     PrintErrorAndAdvanceMem(error, mem);
                     throw new InvalidOperationException(error);
                 }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool MacNotZero(PageHeader* pageHeader)
+        {
+            return Sparrow.Memory.Compare(_zeroMac, pageHeader->Mac, SizeOfMacInBytes) != 0;
         }
 
         private Size _maxTransactionSize = new Size(64,SizeUnit.Megabytes);
@@ -969,7 +983,7 @@ namespace Voron.Recovery
                     return false;
                 }
 
-                _InvalidChecksumWithNoneZeroMac = 0;
+                _shouldIgnoreInvalidPagesInARaw = true;
             }
 
             return true;
