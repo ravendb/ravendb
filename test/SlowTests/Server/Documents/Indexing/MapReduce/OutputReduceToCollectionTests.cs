@@ -408,7 +408,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 // original index needs to delete docs created by replacement index
 
                 Assert.Equal(1, originalIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().Count);
-                Assert.Equal($"DailyInvoices/{replacementIndexReduceOutputIndex}/", originalIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().First());
+                Assert.Equal($"DailyInvoices/{replacementIndexReduceOutputIndex}/", originalIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().First().Key);
 
 
                 using (var session = store.OpenAsyncSession())

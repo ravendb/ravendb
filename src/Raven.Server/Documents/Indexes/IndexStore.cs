@@ -377,10 +377,13 @@ namespace Raven.Server.Documents.Indexes
                                 currentIndex is MapReduceIndex currentMapReduceIndex)
                             {
                                 var prefix = OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
-                                    definition.OutputReduceToCollection, replacementMapReduceIndex.Definition.ReduceOutputIndex.Value);
+                                    replacementMapReduceIndex.Definition.OutputReduceToCollection, replacementMapReduceIndex.Definition.ReduceOutputIndex.Value);
 
                                 // original index needs to delete docs created by side-by-side indexing
-                                currentMapReduceIndex.OutputReduceToCollection?.AddPrefixesOfDocumentsToDelete(new HashSet<string> {prefix});
+                                currentMapReduceIndex.OutputReduceToCollection?.AddPrefixesOfDocumentsToDelete(new Dictionary<string, string>
+                                {
+                                    {prefix, replacementMapReduceIndex.Definition.PatternForOutputReduceToCollectionReferences}
+                                });
                             }
                         }
 
@@ -406,7 +409,7 @@ namespace Raven.Server.Documents.Indexes
 
                 UpdateStaticIndexLockModeAndPriority(definition, currentIndex, currentDifferences);
 
-                var prefixesOfDocumentsToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var prefixesOfDocumentsToDelete = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                 if (creationOptions == IndexCreationOptions.Update)
                 {
@@ -468,7 +471,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static void CollectPrefixesOfDocumentsToDelete(MapReduceIndex mapReduceIndex, ref HashSet<string> prefixesOfDocumentsToDelete)
+        private static void CollectPrefixesOfDocumentsToDelete(MapReduceIndex mapReduceIndex, ref Dictionary<string, string> prefixesOfDocumentsToDelete)
         {
             var definition = mapReduceIndex.Definition;
 
@@ -477,7 +480,7 @@ namespace Raven.Server.Documents.Indexes
                 var prefix = OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
                     definition.OutputReduceToCollection, definition.ReduceOutputIndex.Value);
 
-                prefixesOfDocumentsToDelete.Add(prefix);
+                prefixesOfDocumentsToDelete.Add(prefix, mapReduceIndex.Definition.PatternForOutputReduceToCollectionReferences);
             }
 
             var toDelete = mapReduceIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete();
@@ -486,7 +489,10 @@ namespace Raven.Server.Documents.Indexes
             {
                 foreach (var prefix in toDelete)
                 {
-                    prefixesOfDocumentsToDelete.Add(prefix);
+                    if (prefixesOfDocumentsToDelete.ContainsKey(prefix.Key))
+                        continue;
+
+                    prefixesOfDocumentsToDelete.Add(prefix.Key, prefix.Value);
                 }
             }
         }
