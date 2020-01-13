@@ -13,10 +13,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private readonly DocumentDatabase _database;
         private readonly string _documentsPrefix;
         private readonly int _batchSize;
-        private readonly OutputReferencesPattern _patternForReduceOutputReferences;
+        private readonly string _originalPattern = null;
+        private readonly OutputReferencesPattern _originalPatternForReduceOutputReferences = null;
 
-        public DeleteReduceOutputDocumentsCommand(DocumentDatabase database, string documentsPrefix, int batchSize,
-            OutputReferencesPattern patternForReduceOutputReferences)
+        public DeleteReduceOutputDocumentsCommand(DocumentDatabase database, string documentsPrefix, string originalPattern, int batchSize)
         {
             if (OutputReduceToCollectionCommand.IsOutputDocumentPrefix(documentsPrefix) == false)
                 throw new ArgumentException($"Invalid prefix to delete: {documentsPrefix}", nameof(documentsPrefix));
@@ -24,7 +24,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             _database = database;
             _documentsPrefix = documentsPrefix;
             _batchSize = batchSize;
-            _patternForReduceOutputReferences = patternForReduceOutputReferences;
+
+            if (string.IsNullOrEmpty(originalPattern) == false)
+            {
+                _originalPattern = originalPattern;
+                _originalPatternForReduceOutputReferences = new OutputReferencesPattern(originalPattern);
+            }
         }
 
         public long DeleteCount { get; set; }
@@ -34,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             List<DocumentsStorage.DeleteOperationResult> deleteResults;
             Dictionary<string, HashSet<string>> idsToDeleteByReferenceDocumentId = null;
 
-            if (_patternForReduceOutputReferences == null)
+            if (_originalPatternForReduceOutputReferences == null)
             {
                 deleteResults = _database.DocumentsStorage.DeleteDocumentsStartingWith(context, _documentsPrefix, _batchSize);
             }
@@ -56,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         private void RetrieveReferenceDocumentsToCleanup(Document doc, Dictionary<string, HashSet<string>> idsToDeleteByReferenceDocumentId)
         {
-            using (_patternForReduceOutputReferences.BuildReferenceDocumentId(out var referenceDocIdBuilder))
+            using (_originalPatternForReduceOutputReferences.BuildReferenceDocumentId(out var referenceDocIdBuilder))
             {
                 foreach (string field in referenceDocIdBuilder.PatternFields)
                 {
@@ -117,7 +122,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                     using (var doc = context.ReadObject(referenceDocument.Data, referenceDocument.Id))
                     {
-                        _database.DocumentsStorage.Put(context, referenceDocument.Id, null, doc);
+                        if (doc.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray updatedIds) == false)
+                            ThrowIdsPropertyNotFound(referenceDocument.Id);
+
+                        if (updatedIds.Length == 0)
+                            _database.DocumentsStorage.Delete(context, referenceDocument.Id, null);
+                        else
+                            _database.DocumentsStorage.Put(context, referenceDocument.Id, null, doc);
                     }
                 }
             }
@@ -129,6 +140,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 DocumentsPrefix = _documentsPrefix,
                 BatchSize = _batchSize,
+                OriginalPattern = _originalPattern
             };
         }
 
@@ -141,11 +153,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
     public class DeleteReduceOutputDocumentsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<DeleteReduceOutputDocumentsCommand>
     {
         public string DocumentsPrefix;
+        public string OriginalPattern;
         public int BatchSize;
 
         public DeleteReduceOutputDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new DeleteReduceOutputDocumentsCommand(database, DocumentsPrefix, BatchSize, null);
+            var command = new DeleteReduceOutputDocumentsCommand(database, DocumentsPrefix, OriginalPattern, BatchSize);
 
             return command;
         }
