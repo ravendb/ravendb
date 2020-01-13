@@ -13,7 +13,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace StressTests.Issues
 {
     public class RavenDB_14464 : ClusterTestBase
     {
@@ -83,8 +83,8 @@ namespace SlowTests.Issues
                         {
                             if (serverToggled == false)
                             {
-                                Assert.True(e.GetType() == typeof(TimeoutException), "e.GetType() == typeof(TimeoutException)");
-                                Assert.True(e.Message.Contains("did not get a reply for operation"), "e.Message.Contains('did not get a reply for operation')");
+                                Assert.Equal(typeof(TimeoutException), e.GetType());
+                                Assert.Contains(e.Message, "did not get a reply for operation");
                                 while (server.Disposed == false)
                                 {
                                     await Task.Delay(500);
@@ -92,8 +92,8 @@ namespace SlowTests.Issues
                                 serverToggled = true;
                             }
 
-                            Assert.True(e.GetType() == typeof(InvalidOperationException), "e.GetType() == typeof(InvalidOperationException)");
-                            Assert.True(e.Message.StartsWith("Could not fetch state of operation"), "e.Message.StartsWith('Could not fetch state of operation')");
+                            Assert.Equal(typeof(InvalidOperationException), e.GetType());
+                            Assert.StartsWith(e.Message, "Could not fetch state of operation");
                             await Task.Delay(1000);
                         }
                     }
