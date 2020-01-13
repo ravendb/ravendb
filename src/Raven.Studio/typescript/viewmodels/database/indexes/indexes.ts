@@ -127,7 +127,6 @@ class indexes extends viewModelBase {
                             }
                         }
 
-                        console.log(sum);
                         return sum;
                     }));
             });
