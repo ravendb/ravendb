@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 if (_indexSourceType == null || _indexSourceType.Value == IndexSourceType.None)
                 {
-                    _indexSourceType = IndexSourceType.Documents; // TODO arek - do we really need this for backward compatibility?
+                    _indexSourceType = DetectStaticIndexSourceType();
                 }
 
                 return _indexSourceType.Value;

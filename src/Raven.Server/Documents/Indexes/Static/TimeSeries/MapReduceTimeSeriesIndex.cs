@@ -13,6 +13,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -123,6 +124,18 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 return;
 
             _mre.Set();
+        }
+
+        public new static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        {
+            var definition = MapIndexDefinition.Load(environment);
+            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
+
+            instance.Initialize(environment, documentDatabase,
+                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
+                documentDatabase.Configuration.PerformanceHints);
+
+            return instance;
         }
 
         public static MapReduceTimeSeriesIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)

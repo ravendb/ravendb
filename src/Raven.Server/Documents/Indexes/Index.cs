@@ -28,6 +28,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -329,9 +330,11 @@ namespace Raven.Server.Documents.Indexes
                 environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index);
 
                 IndexType type;
+                IndexSourceType sourceType;
                 try
                 {
                     type = IndexStorage.ReadIndexType(name, environment);
+                    sourceType = IndexStorage.ReadIndexSourceType(name, environment);
                 }
                 catch (Exception e)
                 {
@@ -381,21 +384,40 @@ namespace Raven.Server.Documents.Indexes
                         e);
                 }
 
-                switch (type)
+                switch (sourceType)
                 {
-                    case IndexType.AutoMap:
-                        return AutoMapIndex.Open(environment, documentDatabase);
-                    case IndexType.AutoMapReduce:
-                        return AutoMapReduceIndex.Open(environment, documentDatabase);
-                    case IndexType.Map:
-                    case IndexType.JavaScriptMap:
-                        return MapIndex.Open(environment, documentDatabase);
-                    case IndexType.MapReduce:
-                    case IndexType.JavaScriptMapReduce:
-                        return MapReduceIndex.Open(environment, documentDatabase);
+                    case IndexSourceType.Documents:
+                        switch (type)
+                        {
+                            case IndexType.AutoMap:
+                                return AutoMapIndex.Open(environment, documentDatabase);
+                            case IndexType.AutoMapReduce:
+                                return AutoMapReduceIndex.Open(environment, documentDatabase);
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                return MapIndex.Open(environment, documentDatabase);
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                return MapReduceIndex.Open(environment, documentDatabase);
+                            default:
+                                throw new ArgumentException($"Unknown index type {type} for index {name}");
+                        }
+                    case IndexSourceType.TimeSeries:
+                        switch (type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                return MapTimeSeriesIndex.Open(environment, documentDatabase);
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                return MapReduceTimeSeriesIndex.Open(environment, documentDatabase);
+                            default:
+                                throw new ArgumentException($"Unknown index type {type} for index {name}");
+                        }
                     default:
-                        throw new ArgumentException($"Unknown index type {type} for index {name}");
+                        throw new ArgumentException($"Unknown index source type {sourceType} for index {name}");
                 }
+
             }
             catch (Exception e)
             {
