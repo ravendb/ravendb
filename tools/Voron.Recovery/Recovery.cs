@@ -76,15 +76,10 @@ namespace Voron.Recovery
 
         private readonly byte[] _streamHashState = new byte[(int)Sodium.crypto_generichash_statebytes()];
         private readonly byte[] _streamHashResult = new byte[(int)Sodium.crypto_generichash_bytes()];
-        private static byte* _zeroMac;
+        private readonly IntPtr _zeroMac = Marshal.AllocHGlobal(SizeOfMacInBytes);
         private const int SizeOfMacInBytes = 16;
         private readonly List<(IntPtr Ptr, int Size)> _attachmentChunks = new List<(IntPtr Ptr, int Size)>();
         private readonly VoronRecoveryConfiguration _config;
-        static Recovery()
-        {
-            _zeroMac = (byte*)Marshal.AllocHGlobal(SizeOfMacInBytes).ToPointer();
-            Sparrow.Memory.Set(_zeroMac,0, SizeOfMacInBytes);
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long GetFilePosition(long offset, byte* position)
@@ -482,7 +477,7 @@ namespace Voron.Recovery
 
                             mem += _pageSize;
                         }
-                        catch (InvalidOperationException ioe) when (ioe.Message.Contains("pages in a raw that had invalid checksum and none zero MAC"))
+                        catch (InvalidOperationException ioe) when (ioe.Message.Contains("this is a strong indication that you're"))
                         {
                             throw;
                         }
@@ -531,6 +526,7 @@ namespace Voron.Recovery
             }
             finally
             {
+                Marshal.FreeHGlobal(_zeroMac);
                 tx?.Dispose();
                 se?.Dispose();
                 if(_config.LoggingMode != LogMode.None)
@@ -559,7 +555,7 @@ namespace Voron.Recovery
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool MacNotZero(PageHeader* pageHeader)
         {
-            return Sparrow.Memory.Compare(_zeroMac, pageHeader->Mac, SizeOfMacInBytes) != 0;
+            return Sparrow.Memory.Compare((byte*)_zeroMac, pageHeader->Mac, SizeOfMacInBytes) != 0;
         }
 
         private Size _maxTransactionSize = new Size(64,SizeUnit.Megabytes);
