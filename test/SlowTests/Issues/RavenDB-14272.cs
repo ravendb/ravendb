@@ -339,6 +339,7 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
         public void Streaming_Document_Query_Projection()
         {
             using (var store = GetDocumentStore())

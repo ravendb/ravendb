@@ -160,6 +160,7 @@ namespace Raven.Client.Documents.Conventions
 
             var httpCacheSizeInMb = PlatformDetails.Is32Bits ? 32 : 128;
             MaxHttpCacheSize = new Size(httpCacheSizeInMb, SizeUnit.Megabytes);
+            HttpVersion = System.Net.HttpVersion.Version11;
 
             OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;
 
@@ -201,7 +202,7 @@ namespace Raven.Client.Documents.Conventions
         private TimeSpan _firstBroadcastAttemptTimeout;
 
         private ReadBalanceBehavior _readBalanceBehavior;
-        private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;        
+        private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
         private bool? _useCompression;
@@ -209,6 +210,18 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
+        private Version _httpVersion;
+
+        public Version HttpVersion
+        {
+            get => _httpVersion;
+            set
+            {
+                AssertNotFrozen();
+                _httpVersion = value;
+            }
+        }
+
         public Func<MemberInfo, string> PropertyNameConverter
         {
             get => _propertyNameConverter;
@@ -334,7 +347,7 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-        
+
 
         /// <summary>
         ///     By default, the field 'Id' field will be added to dynamic objects, this allows to disable this behavior.
@@ -861,7 +874,7 @@ namespace Raven.Client.Documents.Conventions
             CustomizeJsonSerializer(jsonSerializer);
             CustomizeJsonDeserializer(jsonSerializer);
             PostJsonSerializerInitiation(jsonSerializer);
-            return jsonSerializer;            
+            return jsonSerializer;
         }
 
         /// <summary>
