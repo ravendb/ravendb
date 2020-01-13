@@ -13,13 +13,14 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly InMemoryDocumentSessionOperations _session;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadOperation>("Client");
 
-        private string[] _ids ;
+        private string[] _ids;
         private string[] _includes;
         private string[] _countersToInclude;
         private bool _includeAllCounters;
         private IEnumerable<TimeSeriesRange> _timeSeriesToInclude;
 
-        private GetDocumentsResult _currentLoadResults;
+        private bool _resultsSet;
+        private GetDocumentsResult _results;
 
         public LoadOperation(InMemoryDocumentSessionOperations session)
         {
@@ -47,7 +48,7 @@ namespace Raven.Client.Documents.Session.Operations
                 return this;
 
             if (_ids == null)
-                _ids = new[] {id};
+                _ids = new[] { id };
 
             return this;
         }
@@ -94,10 +95,13 @@ namespace Raven.Client.Documents.Session.Operations
         {
             if (_session.NoTracking)
             {
-                if (_currentLoadResults == null)
+                if (_resultsSet == false)
                     throw new InvalidOperationException($"Cannot execute '{nameof(GetDocument)}' before operation execution.");
 
-                var document = _currentLoadResults.Results[0] as BlittableJsonReaderObject;
+                if (_results == null || _results.Results == null || _results.Results.Length == 0)
+                    return default;
+
+                var document = _results.Results[0] as BlittableJsonReaderObject;
                 if (document == null)
                     return default;
 
@@ -131,7 +135,7 @@ namespace Raven.Client.Documents.Session.Operations
             var finalResults = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
             if (_session.NoTracking)
             {
-                if (_currentLoadResults == null)
+                if (_resultsSet == false)
                     throw new InvalidOperationException($"Cannot execute '{nameof(GetDocuments)}' before operation execution.");
 
                 foreach (var id in _ids)
@@ -142,7 +146,10 @@ namespace Raven.Client.Documents.Session.Operations
                     finalResults[id] = default;
                 }
 
-                foreach (var document in GetDocumentsFromResult(_currentLoadResults))
+                if (_results == null || _results.Results == null || _results.Results.Length == 0)
+                    return finalResults;
+
+                foreach (var document in GetDocumentsFromResult(_results))
                     finalResults[document.Id] = _session.TrackEntity<T>(document);
 
                 return finalResults;
@@ -159,12 +166,14 @@ namespace Raven.Client.Documents.Session.Operations
 
         public void SetResult(GetDocumentsResult result)
         {
+            _resultsSet = true;
+
             if (result == null)
                 return;
 
             if (_session.NoTracking)
             {
-                _currentLoadResults = result;
+                _results = result;
                 return;
             }
 

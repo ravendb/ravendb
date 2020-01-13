@@ -19,7 +19,9 @@ namespace Raven.Client.Documents.Session.Operations
         private string _startAfter;
 
         private readonly List<string> _returnedIds = new List<string>();
-        private GetDocumentsResult _currentLoadResults;
+
+        private bool _resultsSet;
+        private GetDocumentsResult _results;
 
         public LoadStartingWithOperation(InMemoryDocumentSessionOperations session)
         {
@@ -48,9 +50,11 @@ namespace Raven.Client.Documents.Session.Operations
 
         public void SetResult(GetDocumentsResult result)
         {
+            _resultsSet = true;
+
             if (_session.NoTracking)
             {
-                _currentLoadResults = result;
+                _results = result;
                 return;
             }
 
@@ -68,11 +72,14 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (_session.NoTracking)
             {
-                if (_currentLoadResults == null)
+                if (_resultsSet == false)
                     throw new InvalidOperationException($"Cannot execute '{nameof(GetDocuments)}' before operation execution.");
 
-                finalResults = new T[_currentLoadResults.Results.Length];
-                foreach (var document in GetDocumentsFromResult(_currentLoadResults))
+                if (_results == null || _results.Results == null || _results.Results.Length == 0)
+                    return Array.Empty<T>();
+
+                finalResults = new T[_results.Results.Length];
+                foreach (var document in GetDocumentsFromResult(_results))
                     finalResults[i++] = _session.TrackEntity<T>(document);
             }
             else

@@ -14,8 +14,10 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -290,27 +292,7 @@ namespace SlowTests.Server.Replication
                     Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)externalSession, "marker2", (m) => m.Id == "marker2", TimeSpan.FromSeconds(15)));
                 }
 
-              
-
-                var updateIndex = 0L;
-                var haveUpdateExternalReplicationStateCommand = false;
-                using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    foreach (var entry in cluster.Leader.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
-                    {
-                        var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
-                        if (type == nameof(UpdateExternalReplicationStateCommand))
-                        {
-                            haveUpdateExternalReplicationStateCommand = true;
-                            Assert.True(long.TryParse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString(), out updateIndex));
-                        }
-                    }
-                }
-
-                Assert.True(haveUpdateExternalReplicationStateCommand);
-
-                await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
+                await WaitForRaftCommandToBeAppliedInCluster(cluster.Leader, nameof(UpdateExternalReplicationStateCommand));
 
                 foreach (var server in cluster.Nodes)
                 {
@@ -425,6 +407,8 @@ namespace SlowTests.Server.Replication
                 {
                     Assert.Null(session.Load<User>("foo/bar"));
                 }
+
+                await ActionWithLeader((l) => WaitForRaftCommandToBeAppliedInCluster(l, nameof(UpdateEtlProcessStateCommand)));
 
                 total = 0;
                 foreach (var server in cluster.Nodes)

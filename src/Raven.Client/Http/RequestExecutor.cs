@@ -812,7 +812,7 @@ namespace Raven.Client.Http
             {
                 if (cachedChangeVector != null)
                 {
-                    if (TryGetFromCache(context, command, cachedItem, cachedValue)) 
+                    if (TryGetFromCache(context, command, cachedItem, cachedValue))
                         return;
                 }
 
@@ -884,10 +884,10 @@ namespace Raven.Client.Http
 
                 tasks[0] = refreshTopology
                     ? UpdateTopologyAsync(new ServerNode
-                        {
-                            Url = chosenNode.Url, 
-                            Database = _databaseName
-                        }, 0,
+                    {
+                        Url = chosenNode.Url,
+                        Database = _databaseName
+                    }, 0,
                         debugTag: refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null)
                     : Task.CompletedTask;
 
@@ -902,14 +902,14 @@ namespace Raven.Client.Http
         }
 
         private async Task<HttpResponseMessage> SendRequestToServer<TResult>(
-            ServerNode chosenNode, 
-            int? nodeIndex, 
-            JsonOperationContext context, 
-            RavenCommand<TResult> command, 
-            bool shouldRetry, 
-            SessionInfo sessionInfo, 
-            HttpRequestMessage request, 
-            string url, 
+            ServerNode chosenNode,
+            int? nodeIndex,
+            JsonOperationContext context,
+            RavenCommand<TResult> command,
+            bool shouldRetry,
+            SessionInfo sessionInfo,
+            HttpRequestMessage request,
+            string url,
             CancellationToken token)
         {
             try
@@ -1007,10 +1007,10 @@ namespace Raven.Client.Http
         }
 
         private async Task<HttpResponseMessage> SendAsync<TResult>(
-            ServerNode chosenNode, 
-            RavenCommand<TResult> command, 
-            SessionInfo sessionInfo, 
-            HttpRequestMessage request, 
+            ServerNode chosenNode,
+            RavenCommand<TResult> command,
+            SessionInfo sessionInfo,
+            HttpRequestMessage request,
             CancellationToken token)
         {
             var preferredTask = command.SendAsync(HttpClient, request, token);
@@ -1039,7 +1039,7 @@ namespace Raven.Client.Http
                             "since this command dependent on a cluster transaction which this node doesn't support");
                     }
                 }
-                    
+
             }
 
             return response;
@@ -1172,7 +1172,7 @@ namespace Raven.Client.Http
                    selector.Topology?.Nodes?.Count > 1 &&
                    command.IsReadRequest &&
                    command.ResponseType == RavenCommandResponseType.Object &&
-                   chosenNode != null && 
+                   chosenNode != null &&
                    command is IBroadcast == false;
         }
 
@@ -1200,7 +1200,7 @@ namespace Raven.Client.Http
                     disposable = ContextPool.AllocateOperationContext(out var tmpCtx);
                     var request = CreateRequest(tmpCtx, nodes[i], command, out _);
                     SetRequestHeaders(null, null, request);
-                    
+
                     Interlocked.Increment(ref NumberOfServerRequests);
 
                     var copy = disposable;
@@ -1299,7 +1299,10 @@ namespace Raven.Client.Http
             {
                 command.SetTimeout(command.Timeout ?? _firstBroadcastAttemptTimeout);
             }
-            
+
+            if (Conventions.HttpVersion != null)
+                request.Version = Conventions.HttpVersion;
+
             request.RequestUri = builder.Uri;
 
             return request;
@@ -1461,7 +1464,7 @@ namespace Raven.Client.Http
             if (command is IBroadcast == false)
                 return false;
 
-            if (TopologyNodes == null || 
+            if (TopologyNodes == null ||
                 TopologyNodes.Count < 2)
                 return false;
 
@@ -1499,7 +1502,7 @@ namespace Raven.Client.Http
                     foreach (var broadcastState in broadcastTasks)
                     {
                         // we can't dispose it right away, we need for the task to be completed in order not to have a concurrent usage of the context.
-                        broadcastState.Key?.ContinueWith(_=> broadcastState.Value.ReturnContext.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                        broadcastState.Key?.ContinueWith(_ => broadcastState.Value.ReturnContext.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
                     }
                 }
             }
@@ -1516,7 +1519,7 @@ namespace Raven.Client.Http
                     var node = _nodeSelector.Topology.Nodes[failed.Index];
 
                     command.FailedNodes[node] = completed.Exception?.ExtractSingleInnerException() ?? new UnsuccessfulRequestException(failed.Node.Url);
-                    
+
                     _nodeSelector.OnFailedRequest(failed.Index);
 
                     tasks.Remove(completed);

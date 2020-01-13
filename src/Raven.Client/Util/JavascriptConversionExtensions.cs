@@ -807,7 +807,8 @@ namespace Raven.Client.Util
                 if (type.GetGenericArguments().Length == 0)
                     return type == typeof(Dictionary<,>) || type == typeof(IDictionary<,>);
 
-                return typeof(Dictionary<,>).IsAssignableFrom(type.GetGenericTypeDefinition()) ||
+                return typeof(IDictionary).IsAssignableFrom(type) ||
+                       typeof(Dictionary<,>).IsAssignableFrom(type.GetGenericTypeDefinition()) ||
                        typeof(IDictionary<,>).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
         }
