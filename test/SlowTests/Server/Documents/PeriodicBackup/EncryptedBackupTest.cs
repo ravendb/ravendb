@@ -722,6 +722,103 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public async Task snapshot_encrypted_db__with_incremental_and_restore_to_encrypted_DB()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            var key = EncryptedServer(out var certificates, out string dbName);
+
+            const string key1 = "users/1";
+            const string key2 = "users/2";
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, key1);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "grisha"
+                    }, key2);
+                    await session.SaveChangesAsync();
+                }
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 2);
+                Assert.Equal(2, value);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    EncryptionKey = key,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>(new List<string>
+                        {
+                            key1, key2
+                        });
+
+                        Assert.Equal(2, users.Count);
+                        Assert.NotNull(users[key1]);
+                        Assert.Equal("oren", users[key1].Name);
+                        Assert.NotNull(users[key2]);
+                        Assert.Equal("grisha", users[key2].Name);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
