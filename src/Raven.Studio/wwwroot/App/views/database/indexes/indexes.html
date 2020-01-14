@@ -388,7 +388,7 @@
                 <div class="collections-container">
                     <!-- ko foreach: collections -->
                     <div class="panel collection-progress">
-                        <div class="collection-name" data-bind="text: name"></div>
+                        <div class="collection-name" data-bind="text: name, attr: { title: name }"></div>
                         <div class="documents">
                             <div class="clearfix" data-bind="with: documentsProgress">
                                 <small class="name">Documents</small>
