@@ -17,6 +17,6 @@ namespace Voron.Recovery
         public LogMode LoggingMode { get; set; } = LogMode.Operations;
 
         public byte[] MasterKey { get; set; }
-        public bool IgnoreInvalidPagesInARaw { get; set; } 
+        public bool IgnoreInvalidPagesInARow { get; set; } 
     }
 }

@@ -59,7 +59,7 @@ namespace Voron.Recovery
             if(config.LoggingMode != LogMode.None)
                 LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName), TimeSpan.FromDays(3), long.MaxValue, false);
             _logger = LoggingSource.Instance.GetLogger<Recovery>("Voron Recovery");
-            _shouldIgnoreInvalidPagesInARaw = config.IgnoreInvalidPagesInARaw;
+            _shouldIgnoreInvalidPagesInARaw = config.IgnoreInvalidPagesInARow;
         }
 
         private StorageEnvironmentOptions CreateOptions()
@@ -477,7 +477,7 @@ namespace Voron.Recovery
 
                             mem += _pageSize;
                         }
-                        catch (InvalidOperationException ioe) when (ioe.Message.Contains("this is a strong indication that you're"))
+                        catch (InvalidOperationException ioe) when (ioe.Message == EncryptedDatabaseWithoutMasterkeyErrorMessage)
                         {
                             throw;
                         }
@@ -542,14 +542,15 @@ namespace Voron.Recovery
             {
                 if (MaxNumberOfInvalidChecksumWithNoneZeroMac <= _InvalidChecksumWithNoneZeroMac++)
                 {
-                    var error =
-                        $"this is a strong indication that you're recovering an encrypted database and didn't" +
-                        $" provide the encryption key using the  '--MasterKey=<KEY>' command line flag";
-                    PrintErrorAndAdvanceMem(error, mem);
-                    throw new InvalidOperationException(error);
+                    PrintErrorAndAdvanceMem(EncryptedDatabaseWithoutMasterkeyErrorMessage, mem);
+                    throw new InvalidOperationException(EncryptedDatabaseWithoutMasterkeyErrorMessage);
                 }
             }
         }
+
+        private const string EncryptedDatabaseWithoutMasterkeyErrorMessage =
+            "this is a strong indication that you're recovering an encrypted database and didn't" +
+            " provide the encryption key using the  '--MasterKey=<KEY>' command line flag";
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool MacNotZero(PageHeader* pageHeader)
