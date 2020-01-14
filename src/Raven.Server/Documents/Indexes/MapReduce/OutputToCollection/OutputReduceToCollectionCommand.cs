@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                             continue;
 
                         if (referenceDocument.Data.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray ids) == false)
-                            ThrowIdsPropertyNotFound(referenceDocument.Id);
+                            ThrowReduceOutputsPropertyNotFound(referenceDocument.Id);
 
                         var idsToRemove = reduceReferenceIdToReduceOutputIds.Value;
 
@@ -405,7 +405,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         if (existingReferenceDocument != null)
                         {
                             if (existingReferenceDocument.Data.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray existingIds) == false)
-                                ThrowIdsPropertyNotFound(existingReferenceDocument.Id);
+                                ThrowReduceOutputsPropertyNotFound(existingReferenceDocument.Id);
 
                             foreach (object id in existingIds)
                             {
@@ -437,7 +437,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 }
             }
 
-            private static void ThrowIdsPropertyNotFound(string id)
+            private static void ThrowReduceOutputsPropertyNotFound(string id)
             {
                 throw new InvalidOperationException($"Property {nameof(OutputReduceToCollectionReference.ReduceOutputs)} was not found in document: {id}");
             }
