@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -79,6 +78,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     DatabaseName = databaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = key
                     }
                 }))
@@ -127,7 +127,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 };
 
@@ -150,6 +150,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     DatabaseName = databaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = key
                     }
                 }))
@@ -289,6 +290,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = key
                     }
                 }))
@@ -337,7 +339,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 };
 
@@ -361,6 +363,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = key
                     }
                 }))
@@ -433,8 +436,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
                 }))
                 {
@@ -1264,6 +1267,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     DatabaseName = restoredDatabaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
                 }))
@@ -1350,6 +1354,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         DatabaseName = databaseName,
                         BackupEncryptionSettings = new BackupEncryptionSettings
                         {
+                            EncryptionMode = EncryptionMode.UseProvidedKey,
                             Key = Convert.ToBase64String(key)
                         }
                     }))
@@ -1672,8 +1677,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = key,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
-                        Key = key
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 }))
                 {
