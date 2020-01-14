@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 if (_entries == null)
                 {
                     var context = CurrentIndexingScope.Current.IndexContext;
-                    var entries = _segmentEntry.Segment.YieldAllValues(context, context.Allocator, _segmentEntry.Baseline, tombstones: false);
+                    var entries = _segmentEntry.Segment.YieldAllValues(context, context.Allocator, _segmentEntry.Baseline, includeDead: false);
                     var enumerable = new DynamicTimeSeriesEnumerable(entries);
 
                     _entries = new DynamicArray(enumerable);
