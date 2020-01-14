@@ -105,7 +105,8 @@ namespace Voron.Impl.Paging
             }
 
             var amountToMapInBytes = NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
-            MapPages(state, allocationStartPosition, amountToMapInBytes);
+            var numOfAllocatedInBytes = (tx.Environment.Journal.CurrentFile.JournalWriter.NumberOfAllocated4Kb / 4) *1024;
+            MapPages(state, allocationStartPosition, amountToMapInBytes > numOfAllocatedInBytes ? numOfAllocatedInBytes : amountToMapInBytes);
             return true;
         }
 
