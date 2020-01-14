@@ -25,6 +25,7 @@ namespace Sparrow.Server.Utils
 
         // Default underlying mechanism for BlockingCollection is ConcurrentQueue<T>, which is what we want
         private readonly BlockingCollection<byte[]> _buffers;
+
         private int _maxQueueDepth = 10;
 
         private byte[] m_buffer;
@@ -93,10 +94,7 @@ namespace Sparrow.Server.Utils
         // we override the xxxxAsync functions because the default base class shares state between ReadAsync and WriteAsync, which causes a hang if both are called at once
         public new Task<int> ReadAsync(byte[] buffer, int offset, int count)
         {
-            return Task.Run(() =>
-            {
-                return Read(buffer, offset, count);
-            });
+            return Task.Run(() => Read(buffer, offset, count));
         }
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -183,7 +181,7 @@ namespace Sparrow.Server.Utils
             if (task == null)
                 throw new ArgumentNullException(nameof(task));
 
-            _task = task;
+            _task = task.ContinueWith(_ => _buffers.CompleteAdding());
         }
 
         public override int ReadByte()
