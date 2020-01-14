@@ -163,9 +163,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public bool DeleteDocuments(IndexingStatsScope stats, TransactionOperationContext indexContext)
         {
-            if (_prefixesOfReduceOutputDocumentsToDelete == null || _prefixesOfReduceOutputDocumentsToDelete.Count == 0)
-                return false;
-
             var database = _index.DocumentDatabase;
 
             const int deleteBatchSize = 1024;
