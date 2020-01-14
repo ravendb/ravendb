@@ -636,7 +636,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
             using (var fileStream = await GetStream(filePath))
-            using (var inputStream = GetInputStream(fileStream))
+            using (var inputStream = GetInputStream(fileStream, database))
             using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
             using (var source = new StreamSource(gzipStream, context, database))
             {
@@ -692,9 +692,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private Stream GetInputStream(Stream fileStream)
+        private Stream GetInputStream(Stream fileStream, DocumentDatabase database)
         {
-            return RestoreFromConfiguration.BackupEncryptionSettings?.Key != null ? new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(RestoreFromConfiguration.BackupEncryptionSettings.Key)) : fileStream;
+            if (RestoreFromConfiguration.BackupEncryptionSettings == null)
+                return fileStream;
+
+            var encryptionKey = RestoreFromConfiguration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseDatabaseKey
+                ? database.MasterKey
+                : Convert.FromBase64String(RestoreFromConfiguration.BackupEncryptionSettings.Key);
+
+            return new DecryptingXChaCha20Oly1305Stream(fileStream, encryptionKey);
         }
 
         private Stream GetSnapshotInputStream(Stream fileStream, string database)
