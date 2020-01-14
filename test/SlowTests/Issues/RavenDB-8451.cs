@@ -31,13 +31,9 @@ namespace SlowTests.Issues
         [Fact64Bit]
         public async Task RecoveryOfEncryptedDatabaseWithoutMasterKeyShouldThrow()
         {
-            try
-            {
-                await CanRecoverEncryptedDatabaseInternal(true);
-            }
-            catch (InvalidOperationException ioe)
-            {
-            }
+            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                await CanRecoverEncryptedDatabaseInternal(true));
+
         }
         public async Task CanRecoverEncryptedDatabaseInternal(bool nullifyMasterKey = false)
         {
