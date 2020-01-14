@@ -403,7 +403,7 @@ namespace Raven.Server.Documents.TimeSeries
             return context.GetLazyStringValue(tagPointer.Pointer);
         }
 
-        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(JsonOperationContext context, ByteStringContext allocator, DateTime baseline, bool tombstones = true)
+        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(JsonOperationContext context, ByteStringContext allocator, DateTime baseline, bool includeDead = true)
         {
             var result = new TimeSeriesStorage.Reader.SingleResult();
             var values = new double[NumberOfValues];
@@ -414,7 +414,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 while (enumerator.MoveNext(out int ts, values, states, ref tagPointer, out var status))
                 {
-                    if (status == Dead && tombstones == false)
+                    if (status == Dead && includeDead == false)
                         continue;
 
                     var cur = baseline.AddMilliseconds(ts);
@@ -490,6 +490,11 @@ namespace Raven.Server.Documents.TimeSeries
 
             public Span<byte> AsSpan()
             {
+                if (Pointer == null || Size == 0)
+                {
+                    return Slices.Empty.AsSpan();
+                }
+
                 return new Span<byte>(Pointer, Length);
             }
         }
