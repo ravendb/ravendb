@@ -89,6 +89,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
             }
 
+            var backupEncryptionSettings = RestoreFromConfiguration.BackupEncryptionSettings;
+            if (backupEncryptionSettings != null)
+            {
+                if (backupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey && 
+                    backupEncryptionSettings.Key == null)
+                {
+                    throw new InvalidOperationException($"{nameof(BackupEncryptionSettings.EncryptionMode)} is set to {nameof(EncryptionMode.UseProvidedKey)} but an encryption key wasn't provided");
+                }
+
+
+                if (backupEncryptionSettings.EncryptionMode != EncryptionMode.UseProvidedKey &&
+                    backupEncryptionSettings.Key != null)
+                {
+                    throw new InvalidOperationException($"{nameof(BackupEncryptionSettings.EncryptionMode)} is set to {backupEncryptionSettings.EncryptionMode} but an encryption key was provided");
+                }
+            }
+
             var hasRestoreDataDirectory = string.IsNullOrWhiteSpace(RestoreFromConfiguration.DataDirectory) == false;
             if (hasRestoreDataDirectory &&
                 HasFilesOrDirectories(dataDirectoryThatWillBeUsed))

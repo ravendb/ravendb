@@ -1366,6 +1366,90 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public void encryption_settings_validation()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "oren" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 100);
+                    session.SaveChanges();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = key
+                    }
+                };
+
+                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
+                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 4);
+                Assert.Equal(4, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                var e = Assert.Throws<RavenException>(() =>
+                {
+                    RestoreDatabaseInternal(EncryptionMode.UseProvidedKey, null);
+                });
+
+                Assert.IsType<InvalidOperationException>(e.InnerException);
+                Assert.Contains("EncryptionMode is set to UseProvidedKey but an encryption key wasn't provided", e.Message);
+
+                e = Assert.Throws<RavenException>(() =>
+                {
+                    RestoreDatabaseInternal(EncryptionMode.None, key);
+                });
+
+                Assert.IsType<InvalidOperationException>(e.InnerException);
+                Assert.Contains("EncryptionMode is set to None but an encryption key was provided", e.Message);
+
+                e = Assert.Throws<RavenException>(() =>
+                {
+                    RestoreDatabaseInternal(EncryptionMode.UseDatabaseKey, key);
+                });
+
+                Assert.IsType<InvalidOperationException>(e.InnerException);
+                Assert.Contains("EncryptionMode is set to UseDatabaseKey but an encryption key was provided", e.Message);
+
+                void RestoreDatabaseInternal(EncryptionMode encryptionMode, string encryptionKey)
+                {
+                    using (RestoreDatabase(store, new RestoreBackupConfiguration
+                    {
+                        BackupLocation = Directory.GetDirectories(backupPath).First(),
+                        DatabaseName = databaseName,
+                        BackupEncryptionSettings = new BackupEncryptionSettings
+                        {
+                            EncryptionMode = encryptionMode,
+                            Key = encryptionKey
+                        }
+                    }))
+                    {
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
