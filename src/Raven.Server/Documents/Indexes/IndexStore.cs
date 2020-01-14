@@ -458,7 +458,7 @@ namespace Raven.Server.Documents.Indexes
                                 break;
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
-                                var mapReduceIndex = MapReduceIndex.CreateNew(definition, _documentDatabase);
+                                var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceIndex>(definition, _documentDatabase);
 
                                 if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
                                     mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
@@ -478,7 +478,7 @@ namespace Raven.Server.Documents.Indexes
                                 break;
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
-                                var mapReduceIndex = MapReduceTimeSeriesIndex.CreateNew(definition, _documentDatabase);
+                                var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(definition, _documentDatabase);
 
                                 if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
                                     mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
@@ -1206,21 +1206,42 @@ namespace Raven.Server.Documents.Indexes
                     else
                     {
                         var staticIndexDefinition = index.Definition.GetOrCreateIndexDefinitionInternal();
-                        switch (staticIndexDefinition.Type)
+                        switch (staticIndexDefinition.SourceType)
                         {
-                            case IndexType.Map:
-                            case IndexType.JavaScriptMap:
-                                index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                            case IndexSourceType.Documents:
+                                switch (staticIndexDefinition.Type)
+                                {
+                                    case IndexType.Map:
+                                    case IndexType.JavaScriptMap:
+                                        index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                                        break;
+                                    case IndexType.MapReduce:
+                                    case IndexType.JavaScriptMapReduce:
+                                        index = MapReduceIndex.CreateNew<MapReduceIndex>(staticIndexDefinition, _documentDatabase, isIndexReset: true);
+                                        break;
+                                    default:
+                                        throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
+                                }
                                 break;
-                            case IndexType.MapReduce:
-                            case IndexType.JavaScriptMapReduce:
-                                index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase, isIndexReset: true);
+                            case IndexSourceType.TimeSeries:
+                                switch (staticIndexDefinition.Type)
+                                {
+                                    case IndexType.Map:
+                                    case IndexType.JavaScriptMap:
+                                        index = MapTimeSeriesIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                                        break;
+                                    case IndexType.MapReduce:
+                                    case IndexType.JavaScriptMapReduce:
+                                        index = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(staticIndexDefinition, _documentDatabase, isIndexReset: true);
+                                        break;
+                                    default:
+                                        throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
+                                }
                                 break;
                             default:
-                                throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
+                                throw new ArgumentException($"Unknown index source type {staticIndexDefinition.SourceType} for index {staticIndexDefinition.Name}");
                         }
                     }
-
 
                     StartIndex(index);
 

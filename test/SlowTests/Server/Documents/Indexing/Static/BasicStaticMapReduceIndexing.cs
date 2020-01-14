@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
+                using (var index = MapReduceIndex.CreateNew<MapReduceIndex>(new IndexDefinition()
                 {
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { @"from order in docs.Orders

@@ -125,38 +125,5 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             _mre.Set();
         }
-
-        public new static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
-        {
-            var definition = MapIndexDefinition.Load(environment);
-            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
-
-            instance.Initialize(environment, documentDatabase,
-                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
-                documentDatabase.Configuration.PerformanceHints);
-
-            return instance;
-        }
-
-        public static MapReduceTimeSeriesIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
-        {
-            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
-            instance.Initialize(documentDatabase,
-                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
-                documentDatabase.Configuration.PerformanceHints);
-
-            return instance;
-        }
-
-        private static MapReduceTimeSeriesIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
-        {
-            var staticIndex = (StaticTimeSeriesIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
-
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
-                staticIndex.GroupByFields, staticIndex.HasDynamicFields);
-            var instance = new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex);
-
-            return instance;
-        }
     }
 }

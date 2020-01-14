@@ -369,7 +369,7 @@ namespace Raven.Server.Documents.Indexes
                                             return MapIndex.CreateNew(staticDef, documentDatabase);
                                         case IndexType.MapReduce:
                                         case IndexType.JavaScriptMapReduce:
-                                            return MapReduceIndex.CreateNew(staticDef, documentDatabase);
+                                            return MapReduceIndex.CreateNew<MapReduceIndex>(staticDef, documentDatabase);
                                     }
                                     break;
                                 case IndexSourceType.TimeSeries:
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Indexes
                                             return MapTimeSeriesIndex.CreateNew(staticDef, documentDatabase);
                                         case IndexType.MapReduce:
                                         case IndexType.JavaScriptMapReduce:
-                                            return MapReduceTimeSeriesIndex.CreateNew(staticDef, documentDatabase);
+                                            return MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(staticDef, documentDatabase);
                                     }
                                     break;
                                 default:
@@ -417,7 +417,7 @@ namespace Raven.Server.Documents.Indexes
                                 return MapIndex.Open(environment, documentDatabase);
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
-                                return MapReduceIndex.Open(environment, documentDatabase);
+                                return MapReduceIndex.Open<MapReduceIndex>(environment, documentDatabase);
                             default:
                                 throw new ArgumentException($"Unknown index type {type} for index {name}");
                         }
@@ -429,7 +429,7 @@ namespace Raven.Server.Documents.Indexes
                                 return MapTimeSeriesIndex.Open(environment, documentDatabase);
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
-                                return MapReduceTimeSeriesIndex.Open(environment, documentDatabase);
+                                return MapReduceIndex.Open<MapReduceTimeSeriesIndex>(environment, documentDatabase);
                             default:
                                 throw new ArgumentException($"Unknown index type {type} for index {name}");
                         }

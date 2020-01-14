@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
+                using (var index = MapReduceIndex.CreateNew<MapReduceIndex>(new IndexDefinition()
                 {
                     Name = "Users_ByLocation",
                     Maps = { @"from user in docs.Users

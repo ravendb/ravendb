@@ -32,7 +32,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
             var outputToCollectionName = "Locations";
 
             using (var database = CreateDocumentDatabase())
-            using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
+            using (var index = MapReduceIndex.CreateNew<MapReduceIndex>(new IndexDefinition()
             {
                 Name = "Users_ByCount_GroupByLocation",
                 Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
