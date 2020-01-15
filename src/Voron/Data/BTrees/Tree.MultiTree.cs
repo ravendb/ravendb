@@ -217,20 +217,6 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public void MultiDelete(ByteStringContext context, string key)
-        {
-            while (true)
-            {
-                using (var it = MultiRead(key))
-                {
-                    if (it.Seek(Slices.BeforeAllKeys) == false)
-                        return;
-
-                    MultiDelete(key, it.CurrentKey);
-                }
-            }
-        }
-
         public void MultiDelete(Slice key, Slice value)
         {
             State.IsModified = true;
