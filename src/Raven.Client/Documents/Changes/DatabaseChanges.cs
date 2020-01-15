@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Changes
 
         private readonly ConcurrentDictionary<int, TaskCompletionSource<object>> _confirmations = new ConcurrentDictionary<int, TaskCompletionSource<object>>();
 
-        private readonly ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState> _counters = new ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState>(DatabaseChangesOptionsComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState> _counters = new ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState>();
         private int _immediateConnection;
 
         private ServerNode _serverNode;

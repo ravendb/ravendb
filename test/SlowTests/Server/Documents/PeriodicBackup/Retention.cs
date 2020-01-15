@@ -21,8 +21,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         private static readonly SemaphoreSlim Locker = new SemaphoreSlim(1, 1);
 
         [Theory]
-        [InlineData(7, 3)]
-        public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate)
+        [InlineData(7, 3, false)]
+        [InlineData(7, 3, true)]
+        public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             await Locker.WaitAsync();
 
@@ -45,7 +46,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             .Where(x => Directory.GetFiles(x).Any(BackupUtils.IsFullBackupOrSnapshot));
 
                         return Task.FromResult(directories.Count());
-                    }, timeout: 15000);
+                    }, timeout: 15000, checkIncremental);
             }
             finally
             {
@@ -55,8 +56,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Theory(Skip = "Requires Amazon AWS Credentials")]
-        [InlineData(7, 3)]
-        public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate)
+        [InlineData(7, 3, false)]
+        [InlineData(7, 3, true)]
+        public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             await Locker.WaitAsync();
 
@@ -76,7 +78,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             var folders = await client.ListObjects($"{client.RemoteFolderName}/", "/", listFolders: true);
                             return folders.FileInfoDetails.Count;
                         }
-                    }, timeout: 120000);
+                    }, timeout: 120000, checkIncremental);
             }
             finally
             {
@@ -124,7 +126,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             int numberOfBackupsToCreate,
             Action<PeriodicBackupConfiguration, string> modifyConfiguration,
             Func<string, Task<int>> getDirectoriesCount,
-            int timeout)
+            int timeout, bool checkIncremental = false)
         {
             var minimumBackupAgeToKeep = TimeSpan.FromSeconds(backupAgeInSeconds);
 
@@ -144,9 +146,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
 
                 var lastEtag = 0L;
+                var userId = "";
                 for (var i = 0; i < numberOfBackupsToCreate; i++)
                 {
-                    string userId;
 
                     using (var session = store.OpenAsyncSession())
                     {
@@ -172,6 +174,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await Task.Delay(minimumBackupAgeToKeep + TimeSpan.FromSeconds(5));
 
+                if (checkIncremental)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>(userId);
+                        user.Name = "Egor";
+                        user.Age = 322;
+                        await session.SaveChangesAsync();
+                    }
+
+                    // create incremental backup with retention policy
+                    lastEtag = await CreateBackup(store, false, backupTaskId, lastEtag, timeout);
+                }
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Grisha" });
@@ -180,7 +196,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await CreateBackup(store, true, backupTaskId, lastEtag, timeout);
 
                 var directoriesCount = await getDirectoriesCount(store.Database);
-                var expectedNumberOfDirectories = 1;
+                var expectedNumberOfDirectories = checkIncremental ? 2 : 1;
                 Assert.Equal(expectedNumberOfDirectories, directoriesCount);
             }
         }

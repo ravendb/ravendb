@@ -380,7 +380,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     tvb.Add(cv);
                     tvb.Add(data.BasePointer, data.Size);
                     tvb.Add(collectionSlice);
-                    tvb.Add(context.TransactionMarkerOffset);
+                    tvb.Add(context.GetTransactionMarker());
 
                     table.Set(tvb);
                 }
@@ -454,7 +454,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 tvb.Add(cv);
                                 tvb.Add(data.BasePointer, data.Size);
                                 tvb.Add(collectionSlice);
-                                tvb.Add(context.TransactionMarkerOffset);
+                                tvb.Add(context.GetTransactionMarker());
 
                                 table.Set(tvb);
                             }

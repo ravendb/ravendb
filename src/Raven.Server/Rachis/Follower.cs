@@ -887,10 +887,22 @@ namespace Raven.Server.Rachis
                     return false;
 
                 // start the binary search again with those boundaries
-                minIndex = Math.Max(minIndex, _engine.GetFirstEntryIndex(context));
+                minIndex = Math.Min(midpointIndex, _engine.GetFirstEntryIndex(context));
                 maxIndex = midpointIndex;
                 midpointIndex = (minIndex + maxIndex) / 2;
                 midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
+
+                if (maxIndex < minIndex)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"{ToString()}: Got minIndex: {minIndex} bigger than maxIndex: {maxIndex} will request the entire snapshot. " +
+                                         $"midpointIndex: {midpointIndex}, midpointTerm: {midpointTerm}.");
+                    }
+
+                    Debug.Assert(false, "This is a safeguard against any potential bug here, so in worst case we request the entire snapshot");
+                    return false;
+                }
 
                 if (minIndex == maxIndex && midpointTerm != negotiation.PrevLogTerm)
                     return false;

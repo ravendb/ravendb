@@ -722,6 +722,11 @@ namespace Voron.Data.Tables
                             _activeDataSmallSection.DataMoved += OnDataMoved;
                             if (_activeDataSmallSection.TryAllocate(size, out id))
                             {
+                                var candidatePage = _activeDataSmallSection.PageNumber;
+                                using (Slice.External(_tx.Allocator, (byte*)&candidatePage, sizeof(long), out Slice pageNumber))
+                                {
+                                    _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
+                                }
                                 ActiveCandidateSection.Delete(sectionPageNumber);
                                 return id;
                             }

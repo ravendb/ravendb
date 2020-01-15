@@ -26,7 +26,7 @@ namespace Raven.Client.Documents
     /// </summary>
     public class DocumentStore : DocumentStoreBase
     {
-        private readonly ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges> _databaseChanges = new ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges>(DatabaseChangesOptionsComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges> _databaseChanges = new ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges>();
 
         private readonly ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>> _aggressiveCacheChanges = new ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>>();
 

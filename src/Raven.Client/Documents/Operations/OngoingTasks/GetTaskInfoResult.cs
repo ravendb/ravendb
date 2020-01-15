@@ -267,6 +267,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public DateTime? LastIncrementalBackup { get; set; }
         public RunningBackup OnGoingBackup { get; set; }
         public NextBackup NextBackup { get; set; }
+        public RetentionPolicy RetentionPolicy { get; set; }
 
         public OngoingTaskBackup()
         {
@@ -282,6 +283,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(LastIncrementalBackup)] = LastIncrementalBackup;
             json[nameof(OnGoingBackup)] = OnGoingBackup?.ToJson();
             json[nameof(NextBackup)] = NextBackup?.ToJson();
+            json[nameof(RetentionPolicy)] = RetentionPolicy?.ToJson();
             return json;
         }
     }

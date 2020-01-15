@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -164,13 +165,26 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
+        /// Converts a BlittableJsonReaderObject to an entity.        
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="id">The id.</param>
+        /// <param name="document">The document found.</param>
+        /// <returns>The converted entity</returns>
+        [Obsolete("Use different ConvertToEntity overload")]
+        public object ConvertToEntity(Type entityType, string id, ref BlittableJsonReaderObject document)
+        {
+            return ConvertToEntity(entityType, id, ref document, true);
+        }
+
+        /// <summary>
         /// Converts a BlittableJsonReaderObject to an entity.
         /// </summary>
         /// <param name="entityType"></param>
         /// <param name="id">The id.</param>
         /// <param name="document">The document found.</param>
         /// <returns>The converted entity</returns>
-        public object ConvertToEntity(Type entityType, string id, ref BlittableJsonReaderObject document)
+        public object ConvertToEntity(Type entityType, string id, ref BlittableJsonReaderObject document, bool trackEntity)
         {
             try
             {
@@ -184,7 +198,13 @@ namespace Raven.Client.Documents.Session
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(entityType);
                 var entity = defaultValue;
 
-                using (DefaultRavenContractResolver.RegisterExtensionDataSetter(RegisterMissingProperties))
+                ExtensionDataSetter dataSetter = null;
+                if (trackEntity)
+                {
+                    dataSetter = RegisterMissingProperties;
+                }
+
+                using (DefaultRavenContractResolver.RegisterExtensionDataSetter(dataSetter))
                 {
                     var documentType = _session.Conventions.GetClrType(id, document);
                     if (documentType != null)
@@ -400,6 +420,16 @@ namespace Raven.Client.Documents.Session
 
             }
             return ConvertEntityToBlittable(value, documentInfo: null);
+        }
+
+        internal void RemoveFromMissing(object entity)
+        {
+            _missingDictionary.Remove(entity);
+        }
+
+        internal void Clear()
+        {
+            _missingDictionary.Clear();
         }
     }
 }

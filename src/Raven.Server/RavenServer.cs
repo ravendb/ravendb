@@ -328,7 +328,14 @@ namespace Raven.Server
             public double MaxCredits;
             public double BackgroundTasksThreshold;
             public double FailoverThreshold;
-            public double RemainingCpuCredits;
+            private double _remainingCpuCredits;
+
+            public double RemainingCpuCredits
+            {
+                get => Interlocked.CompareExchange(ref _remainingCpuCredits, 0, 0); //atomic read of double
+                set => Interlocked.Exchange(ref _remainingCpuCredits, value);
+            }
+
             public double BackgroundTasksThresholdReleaseValue;
             public double FailoverThresholdReleaseValue;
             public double CreditsGainedPerSecond;
@@ -788,10 +795,10 @@ namespace Raven.Server
                 return null;
             }
 
-            if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate && forceRenew == false)
+            if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate == false && forceRenew == false)
             {
                 var msg =
-                    "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
+                    "It's time to renew your Let's Encrypt server certificate but automatic renewal is not supported by your license. Go to the certificate page in the studio and trigger the renewal manually.";
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,

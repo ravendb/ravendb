@@ -9,13 +9,11 @@ import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import changeVectorUtils = require("common/changeVectorUtils");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
-
 import notificationCenter = require("common/notifications/notificationCenter");
-
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import getDocumentsWithMetadataCommand = require("commands/database/documents/getDocumentsWithMetadataCommand");
-
+import deleteCollectionCommand = require("commands/database/documents/deleteCollectionCommand");
 import eventsCollector = require("common/eventsCollector");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
@@ -300,32 +298,37 @@ class documents extends viewModelBase {
             // exclusive
             const excludedIds = selection.excluded.map(x => x.getId());
 
-            const deleteCollectionDialog = new deleteCollection(this.currentCollection().name, this.activeDatabase(), selection.count, excludedIds);
-           
+            const deleteCollectionDialog = new deleteCollection(this.currentCollection().name, selection.count);
             app.showBootstrapDialog(deleteCollectionDialog)
-                .done((deletionStarted: boolean) => {
-                    if (deletionStarted) {
+                .done((deleteWasRequested: boolean) => {
+                    if (deleteWasRequested) {
                         this.spinners.delete(true);
 
-                        deleteCollectionDialog.operationIdTask.done((operationId: operationIdDto) => {
-                            notificationCenter.instance.databaseOperationsWatch.monitorOperation(operationId.OperationId)
-                                .done(() => {
-                                    if (excludedIds.length === 0) {
-                                        messagePublisher.reportSuccess(`Deleted collection ${this.currentCollection().name}`);
-                                    } else {
-                                        messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.currentCollection().name}`);
-                                    }
+                        const collectionName = this.currentCollection().name === collection.allDocumentsCollectionName ? "@all_docs" : this.currentCollection().name;                        
+                        new deleteCollectionCommand(collectionName, this.activeDatabase(), excludedIds)
+                            .execute()
+                            .done((result: operationIdDto) => {
+                                // Show progress details with the 'Delete by Collection' dialog
+                                notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), result.OperationId); 
 
-                                    if (excludedIds.length === 0) {
-                                        // deleted entire collection to go all documents
-                                        const allDocsCollection = this.tracker.getAllDocumentsCollection();
-                                        if (this.currentCollection() !== allDocsCollection) {
-                                            this.currentCollection(allDocsCollection);
+                                notificationCenter.instance.databaseOperationsWatch.monitorOperation(result.OperationId)
+                                    .done(() => {
+                                        if (excludedIds.length === 0) {
+                                            messagePublisher.reportSuccess(`Deleted collection ${this.currentCollection().name}`);
+                                        } else {
+                                            messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.currentCollection().name}`);
                                         }
-                                    }
-                                })
-                                .always(() => this.onDeleteCompleted());
-                        });
+
+                                        if (excludedIds.length === 0) {
+                                            // if entire collection was deleted then go to 'all documents'
+                                            const allDocsCollection = this.tracker.getAllDocumentsCollection();
+                                            if (this.currentCollection() !== allDocsCollection) {
+                                                this.currentCollection(allDocsCollection);
+                                            }
+                                        }
+                                    })
+                                    .always(() => this.onDeleteCompleted());
+                            });
                     }
                 });
         }

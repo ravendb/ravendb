@@ -9,7 +9,7 @@ import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOp
 import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import retentionPolicy = require("models/database/tasks/periodicBackup//retentionPolicy");
+import retentionPolicy = require("models/database/tasks/periodicBackup/retentionPolicy");
 import encryptionSettings = require("models/database/tasks/periodicBackup/encryptionSettings");
 import googleCloudSettings = require("models/database/tasks/periodicBackup/googleCloudSettings");
 import generalUtils = require("common/generalUtils");
@@ -24,11 +24,17 @@ class periodicBackupConfiguration {
     name = ko.observable<string>();
     backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();
 
+    manualChooseMentor = ko.observable<boolean>(false);
+    mentorNode = ko.observable<string>();
+
     fullBackupEnabled = ko.observable<boolean>(false);
     fullBackupFrequency = ko.observable<string>();
     
     incrementalBackupEnabled = ko.observable<boolean>(false);
     incrementalBackupFrequency = ko.observable<string>();
+
+    retentionPolicy = ko.observable<retentionPolicy>();
+    encryptionSettings = ko.observable<encryptionSettings>();
     
     localSettings = ko.observable<localSettings>();
     s3Settings = ko.observable<s3Settings>();
@@ -36,12 +42,7 @@ class periodicBackupConfiguration {
     azureSettings = ko.observable<azureSettings>();
     googleCloudSettings = ko.observable<googleCloudSettings>();
     ftpSettings = ko.observable<ftpSettings>();
-    retentionPolicy = ko.observable<retentionPolicy>();
-    encryptionSettings = ko.observable<encryptionSettings>();
     
-    manualChooseMentor = ko.observable<boolean>(false);
-    mentorNode = ko.observable<string>();
-
     validationGroup: KnockoutValidationGroup;
     backupOptions = ["Backup", "Snapshot"];
 
@@ -83,8 +84,11 @@ class periodicBackupConfiguration {
         this.retentionPolicy(!dto.RetentionPolicy ? retentionPolicy.empty() : new retentionPolicy(dto.RetentionPolicy));
         this.encryptionSettings(new encryptionSettings(encryptedDatabase, this.backupType, dto.BackupEncryptionSettings));
 
+        this.initObservables();
         this.initValidation();
-
+    }
+    
+    private initObservables() {
         const anyBackupTypeIsDirty = ko.pureComputed(() => {
             let anyDirty = false;
             const backupTypes = [this.localSettings(), this.s3Settings(), this.glacierSettings(), this.azureSettings(), this.googleCloudSettings(), this.ftpSettings()] as backupSettings[];
@@ -94,14 +98,6 @@ class periodicBackupConfiguration {
                     anyDirty = true;
                 }
             });
-
-            if (this.retentionPolicy().dirtyFlag().isDirty()) {
-                anyDirty = true;
-            }
-
-            if (this.encryptionSettings().dirtyFlag().isDirty()) {
-                anyDirty = true;
-            }
 
             return anyDirty;
         });
@@ -126,36 +122,10 @@ class periodicBackupConfiguration {
             this.incrementalBackupEnabled,
             this.manualChooseMentor,
             this.mentorNode,
+            this.retentionPolicy().dirtyFlag().isDirty,
+            this.encryptionSettings().dirtyFlag().isDirty,
             anyBackupTypeIsDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
-    }
-
-    private updateBackupLocationInfo(path: string) {
-        const task = new getBackupLocationCommand(path, activeDatabaseTracker.default.database())
-            .execute()
-            .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => {
-                if (this.localSettings().folderPath() !== path) {
-                    // the path has changed
-                    return;
-                }
-
-                this.backupLocationInfo(result.List);
-            });
-        
-        generalUtils.delayedSpinner(this.spinners.backupLocationInfoLoading, task);
-    }
-
-    private updateFolderPathOptions(path: string) {
-        getFolderPathOptionsCommand.forServerLocal(path, true)
-            .execute()
-            .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
-                if (this.localSettings().folderPath() !== path) {
-                    // the path has changed
-                    return;
-                }
-
-                this.folderPathOptions(result.List);
-            });
     }
 
     initValidation() {
@@ -196,9 +166,38 @@ class periodicBackupConfiguration {
             fullBackupEnabled: this.fullBackupEnabled,
             incrementalBackupFrequency: this.incrementalBackupFrequency,
             incrementalBackupEnabled: this.incrementalBackupEnabled,
-            mentorNode: this.mentorNode
+            mentorNode: this.mentorNode,
+            minimumBackupAgeToKeep: this.retentionPolicy().minimumBackupAgeToKeep
         });
+    }    
+    
+    private updateBackupLocationInfo(path: string) {
+        const task = new getBackupLocationCommand(path, activeDatabaseTracker.default.database())
+            .execute()
+            .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => {
+                if (this.localSettings().folderPath() !== path) {
+                    // the path has changed
+                    return;
+                }
+
+                this.backupLocationInfo(result.List);
+            });
+        
+        generalUtils.delayedSpinner(this.spinners.backupLocationInfoLoading, task);
     }
+
+    private updateFolderPathOptions(path: string) {
+        getFolderPathOptionsCommand.forServerLocal(path, true)
+            .execute()
+            .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
+                if (this.localSettings().folderPath() !== path) {
+                    // the path has changed
+                    return;
+                }
+
+                this.folderPathOptions(result.List);
+            });
+    }   
 
     private static isEmpty(str: string): boolean {
         if (!str) {

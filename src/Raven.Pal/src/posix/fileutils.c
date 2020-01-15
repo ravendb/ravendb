@@ -60,6 +60,7 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
 
         switch (result)
         {
+        case EBADF: /* aufs do not support fallocate (azure shares) */
         case EINVAL:
         case EFBIG: /* can occure on >4GB allocation on fs such as ntfs-3g, W95 FAT32, etc.*/
             /* fallocate is not supported, we'll use lseek instead */

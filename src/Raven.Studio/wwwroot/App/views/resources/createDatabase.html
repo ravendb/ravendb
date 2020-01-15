@@ -529,7 +529,7 @@
             <small class="toggle-caption" data-bind="visible: $root.enforceManualNodeSelection">Encryption was enabled. Please choose replication nodes manually.</small>
         </div>
       
-        <div class="panel panel-info padding no-margin" data-bind="visible: manualMode()">
+        <div class="bg-info padding no-margin" data-bind="visible: manualMode()">
             <small>Available nodes</small>
             <div class="checkbox">
                 <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">

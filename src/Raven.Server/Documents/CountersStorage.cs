@@ -239,9 +239,9 @@ namespace Raven.Server.Documents
                 ChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvh.Reader),
                 Values = data,
                 Collection = TableValueToId(context, (int)CountersTable.Collection, ref tvh.Reader),
-                Etag = TableValueToEtag((int)CountersTable.Etag, ref tvh.Reader)
+                Etag = TableValueToEtag((int)CountersTable.Etag, ref tvh.Reader),
+                TransactionMarker = TableValueToShort((int)CountersTable.TransactionMarker, nameof(CountersTable.TransactionMarker), ref tvh.Reader)
             };
-
         }
 
         public string IncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta, out bool exists)
@@ -366,7 +366,7 @@ namespace Raven.Server.Documents
                             tvb.Add(cv);
                             tvb.Add(data.BasePointer, data.Size);
                             tvb.Add(collectionSlice);
-                            tvb.Add(context.TransactionMarkerOffset);
+                            tvb.Add(context.GetTransactionMarker());
 
                             if (existing.Pointer == null)
                             {
@@ -426,7 +426,7 @@ namespace Raven.Server.Documents
                     tvb.Add(cv);
                     tvb.Add(fst.BasePointer, fst.Size);
                     tvb.Add(collectionSlice);
-                    tvb.Add(context.TransactionMarkerOffset);
+                    tvb.Add(context.GetTransactionMarker());
                     table.Set(tvb);
                 }
 
@@ -454,7 +454,7 @@ namespace Raven.Server.Documents
                     tvb.Add(cv);
                     tvb.Add(snd.BasePointer, snd.Size);
                     tvb.Add(collectionSlice);
-                    tvb.Add(context.TransactionMarkerOffset);
+                    tvb.Add(context.GetTransactionMarker());
                     table.Insert(tvb);
                 }
             }
@@ -690,7 +690,7 @@ namespace Raven.Server.Documents
                             tvb.Add(cv);
                             tvb.Add(data.BasePointer, data.Size);
                             tvb.Add(collectionSlice);
-                            tvb.Add(context.TransactionMarkerOffset);
+                            tvb.Add(context.GetTransactionMarker());
 
                             table.Set(tvb);
                         }
@@ -836,7 +836,7 @@ namespace Raven.Server.Documents
                                 tvb.Add(cv);
                                 tvb.Add(currentData.BasePointer, currentData.Size);
                                 tvb.Add(collectionSlice);
-                                tvb.Add(context.TransactionMarkerOffset);
+                                tvb.Add(context.GetTransactionMarker());
 
                                 table.Set(tvb);
                             }
@@ -1374,7 +1374,7 @@ namespace Raven.Server.Documents
                     tvb.Add(cv);
                     tvb.Add(data.BasePointer, data.Size);
                     tvb.Add(collectionSlice);
-                    tvb.Add(context.TransactionMarkerOffset);
+                    tvb.Add(context.GetTransactionMarker());
 
                     table.Set(tvb);
                 }

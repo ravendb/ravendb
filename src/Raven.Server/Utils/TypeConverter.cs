@@ -35,6 +35,8 @@ namespace Raven.Server.Utils
 
         private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
 
+        private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorForMapReduceOutputCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
+
         public static bool IsSupportedType(object value)
         {
             if (value == null || value is DynamicNullObject)
@@ -603,7 +605,7 @@ namespace Raven.Server.Utils
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries
                 return PropertyAccessor.Create(type, value);
 
-            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
+            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
         }
 
         public static bool ShouldTreatAsEnumerable(object item)

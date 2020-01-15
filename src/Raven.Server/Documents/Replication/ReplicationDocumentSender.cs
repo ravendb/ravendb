@@ -27,7 +27,6 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
         private readonly Dictionary<Slice, ReplicationBatchItem> _replicaAttachmentStreams = new Dictionary<Slice, ReplicationBatchItem>();
-        private readonly List<ReplicationBatchItem> _countersToReplicate = new List<ReplicationBatchItem>();
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
@@ -279,10 +278,20 @@ namespace Raven.Server.Documents.Replication
                                 continue;
                             }
 
-                            if (item.Data != null)
-                                size += item.Data.Size;
-                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
-                                size += item.Stream.Length;
+                            switch (item.Type)
+                            {
+                                case ReplicationBatchItem.ReplicationItemType.Attachment:
+                                    size += item.Stream.Length;
+                                    break;
+
+                                case ReplicationBatchItem.ReplicationItemType.CounterGroup:
+                                    size += item.Values.Size;
+                                    break;
+
+                                default:
+                                    size += item.Data?.Size ?? 0;
+                                    break;
+                            }
 
                             numberOfItemsSent++;
                         }
@@ -310,7 +319,7 @@ namespace Raven.Server.Documents.Replication
                         _log.Info(msg);
                     }
 
-                    if (_orderedReplicaItems.Count == 0 && _countersToReplicate.Count == 0)
+                    if (_orderedReplicaItems.Count == 0)
                     {
                         var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
 
@@ -361,20 +370,25 @@ namespace Raven.Server.Documents.Replication
                     }
                     _orderedReplicaItems.Clear();
                     _replicaAttachmentStreams.Clear();
-                    _countersToReplicate.Clear();
                 }
             }
         }
 
         private void DisposeReplicationItem(ReplicationBatchItem item)
         {
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+            switch (item.Type)
             {
-                item.Stream.Dispose();
-            }
-            else
-            {
-                item.Data?.Dispose(); //item.Value.Data is null if tombstone
+                case ReplicationBatchItem.ReplicationItemType.Attachment:
+                    item.Stream.Dispose();
+                    break;
+
+                case ReplicationBatchItem.ReplicationItemType.CounterGroup:
+                    item.Values.Dispose();
+                    break;
+
+                default:
+                    item.Data?.Dispose();
+                    break;
             }
         }
 
@@ -530,11 +544,6 @@ namespace Raven.Server.Documents.Replication
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                 _replicaAttachmentStreams[item.Base64Hash] = item;
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
-            {
-                _countersToReplicate.Add(item);
-                return true;
-            }
 
             Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
             _orderedReplicaItems.Add(item.Etag, item);
@@ -551,21 +560,13 @@ namespace Raven.Server.Documents.Replication
             {
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
-                [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count + _countersToReplicate.Count,
+                [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count,
                 [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicaAttachmentStreams.Count
             };
 
             stats.RecordLastEtag(_lastEtag);
 
             _parent.WriteToServer(headerJson);
-
-            foreach (var item in _countersToReplicate)
-            {
-                WriteCountersToServer(documentsContext, item);
-
-                item.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
-                stats.RecordCountersOutput(counters?.Count ?? 0); 
-            }
 
             foreach (var item in _orderedReplicaItems)
             {
@@ -628,6 +629,14 @@ namespace Raven.Server.Documents.Replication
             {
                 WriteDocumentToServer(context, item);
                 stats.RecordDocumentTombstoneOutput();
+                return;
+            }
+
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
+            {
+                item.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
+                stats.RecordCountersOutput(counters?.Count ?? 0);
+                WriteCountersToServer(context, item);
                 return;
             }
 

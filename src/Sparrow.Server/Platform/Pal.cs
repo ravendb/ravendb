@@ -9,7 +9,7 @@ namespace Sparrow.Server.Platform
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42010; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42012; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -166,6 +166,7 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_allocate_more_space(
+            Int32 mapAfterAllocationFlag,
             Int64 newLengthAfterAdjustment,
             SafeMmapHandle handle,
             out void* newAddress,
@@ -230,7 +231,7 @@ namespace Sparrow.Server.Platform
         );
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_discard_virtual_memory(
+        public static extern PalFlags.FailCodes rvn_discard_virtual_memory(
             void* address,
             Int64 size,
             out Int32 errorCode);
@@ -245,5 +246,38 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int64 rvn_get_current_thread_id();
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_mmap_file(
+            Int64 size,
+            PalFlags.MmapOptions flags,
+            SafeMmapHandle handle,
+            Int64 offset,
+            out void* address,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_remap(
+            void* baseAddress,
+            out void* newAddress,
+            SafeMmapHandle handle,
+            Int64 size,
+            PalFlags.MmapOptions flags,
+            Int64 offset,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_flush_file(
+            SafeMmapHandle handle,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_create_file(
+            string path,
+            Int64 initialFileSize,
+            PalFlags.MmapOptions flags,
+            out SafeMmapHandle handle,
+            out Int64 actualFileSize,
+            out Int32 errorCode);
     }
 }

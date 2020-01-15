@@ -8,9 +8,7 @@ using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
-using Voron.Exceptions;
 using Voron.Global;
-using Voron.Platform;
 using Voron.Util.Settings;
 using static Sparrow.Server.Platform.Pal;
 using static Sparrow.Server.Platform.PalDefinitions;
@@ -184,7 +182,7 @@ namespace Voron.Impl.Paging
             if (newLengthAfterAdjustment <= _totalAllocationSize)
                 return null;
 
-            var rc = rvn_allocate_more_space(newLengthAfterAdjustment, _handle, out var newAddress, out var errorCode);
+            var rc = rvn_allocate_more_space(mapAfterAllocationFlag: 1, newLengthAfterAdjustment, _handle, out var newAddress, out var errorCode);
 
             if (rc != FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode, $"can't allocate more pages (rc={rc}) for '{FileName.FullPath}'. Requested {newLength} (adjusted to {newLengthAfterAdjustment})");

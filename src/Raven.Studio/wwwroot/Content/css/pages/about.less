@@ -156,11 +156,11 @@
             }
 
             .icon-checkmark {
-                color: @brand-success-light;
+                color: @brand-success;
             }
 
             .icon-cancel {
-                color: @gray-base;
+                color: fadeout(@gray-base, 30%);
             }
         }
     }
@@ -175,10 +175,9 @@
         grid-template-columns: 1fr 1fr 1fr;
         grid-template-rows: auto 1fr 1fr 1fr auto;
         font-size: 12px;
-        text-align: center;
-        //max-width: 400px;
+        text-align: center;        
         line-height: 13px;
-        height: 100%;
+        
 
         & > div > i {
             font-size: 24px;
@@ -307,7 +306,7 @@
         }
 
         &.dev-only, &.no-support {
-            color: @gray-lighter;
+            color: @text-color;
         }
 
 

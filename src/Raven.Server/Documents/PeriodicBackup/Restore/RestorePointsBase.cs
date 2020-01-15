@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new ParsedBackupFolderName();
         }
 
-        protected bool TryExtractDateFromFileName(string filePath, out DateTime lastModified)
+        public static bool TryExtractDateFromFileName(string filePath, out DateTime lastModified)
         {
             // file name format: 2017-06-01-00-00-00
             // legacy incremental backup format: 2017-06-01-00-00-00-0

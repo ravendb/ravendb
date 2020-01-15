@@ -1,9 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Server.Utils;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -35,16 +36,26 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return Path.GetFileName(folderPath);
         }
 
-        protected override Task<string> GetFirstFileInFolder(string folder)
+        protected override Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
+        {
+            return GetBackupFilesInFolderInternal(folder);
+        }
+
+        private static Task<GetBackupFolderFilesResult> GetBackupFilesInFolderInternal(string folder)
         {
             try
             {
-                var firstFile = Directory.GetFiles(folder).AsEnumerable().OrderBackups().FirstOrDefault();
-                return Task.FromResult(firstFile);
+                var orderedBackups = Directory.GetFiles(folder).AsEnumerable().OrderBackups();
+                var backupFiles = new GetBackupFolderFilesResult
+                {
+                    FirstFile = orderedBackups.FirstOrDefault(),
+                    LastFile = orderedBackups.LastOrDefault()
+                };
+                return Task.FromResult(backupFiles);
             }
             catch (DirectoryNotFoundException)
             {
-                return Task.FromResult((string)null);
+                return Task.FromResult((GetBackupFolderFilesResult)null);
             }
         }
 

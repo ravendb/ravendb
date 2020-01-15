@@ -28,6 +28,8 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     lastFullBackup = ko.observable<string>();
     lastIncrementalBackup = ko.observable<string>();
     onGoingBackup = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.RunningBackup>();
+    retentionPolicyPeriod = ko.observable<string>();
+    retentionPolicyDisabled = ko.observable<boolean>();
 
     textClass = ko.observable<string>();
 
@@ -39,18 +41,29 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     neverBackedUp = ko.observable<boolean>(false);
     fullBackupTypeName: KnockoutComputed<string>;
 
+    backupDestinationsHumanized: KnockoutComputed<string>;
     lastFullBackupHumanized: KnockoutComputed<string>;
     lastIncrementalBackupHumanized: KnockoutComputed<string>;
     nextBackupHumanized: KnockoutComputed<string>;
     onGoingBackupHumanized: KnockoutComputed<string>;
+    retentionPolicyHumanized: KnockoutComputed<string>;
+    
     isServerWide: KnockoutComputed<boolean>;
 
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, watchProvider: (task: ongoingTaskBackupListModel) => void) {
         super();
+        
         this.watchProvider = watchProvider;
-
         this.update(dto);
+        
         this.initializeObservables();
+    }
+
+    initializeObservables() {
+        super.initializeObservables();
+
+        const urls = appUrl.forCurrentDatabase();
+        this.editUrl = urls.editPeriodicBackupTask(this.taskId);
 
         this.isBackupNowEnabled = ko.pureComputed(() => {
             if (this.nextBackupHumanized() === "N/A") {
@@ -124,6 +137,14 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             return `${fromDuration} ago (${this.getBackupType(this.backupType(), onGoingBackup.IsFull)})`;
         });
 
+        this.retentionPolicyHumanized = ko.pureComputed(() => {
+            return this.retentionPolicyDisabled() ? "No backups will be removed" : generalUtils.formatTimeSpan(this.retentionPolicyPeriod(), true);
+        });
+        
+        this.backupDestinationsHumanized =  ko.pureComputed(() => {
+            return this.backupDestinations().length ? this.backupDestinations().join(', ') : "No destinations defined";
+        });
+
         this.isRunningOnAnotherNode = ko.pureComputed(() => {
             const responsibleNode = this.responsibleNode();
             if (!responsibleNode || !responsibleNode.NodeTag) {
@@ -147,15 +168,8 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         this.fullBackupTypeName = ko.pureComputed(() => this.getBackupType(this.backupType(), true));
         
         this.isServerWide = ko.pureComputed(() => {
-           return this.taskName().startsWith(ongoingTaskBackupListModel.namePrefix); 
+            return this.taskName().startsWith(ongoingTaskBackupListModel.namePrefix);
         });
-    }
-
-    initializeObservables() {
-        super.initializeObservables();
-
-        const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editPeriodicBackupTask(this.taskId); 
     }
 
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) {
@@ -169,7 +183,11 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         this.lastIncrementalBackup(dto.LastIncrementalBackup);
         this.nextBackup(dto.NextBackup);
         this.onGoingBackup(dto.OnGoingBackup);
-
+        
+        // Check backward compatibility
+        this.retentionPolicyDisabled(dto.RetentionPolicy ? dto.RetentionPolicy.Disabled : true);
+        this.retentionPolicyPeriod(dto.RetentionPolicy ? dto.RetentionPolicy.MinimumBackupAgeToKeep : "0.0:00:00");
+        
         if (this.onGoingBackup()) {
             this.watchProvider(this);
         }

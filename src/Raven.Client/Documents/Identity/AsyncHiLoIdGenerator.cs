@@ -67,7 +67,7 @@ namespace Raven.Client.Documents.Identity
             }
         }
 
-        private Lazy<Task> _nextRangeTask;
+        private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
         protected string ServerTag;
 
         /// <summary>
@@ -85,24 +85,43 @@ namespace Raven.Client.Documents.Identity
         {
             while (true)
             {
-                //local range is not exhausted yet
+                var current = _nextRangeTask;
+
+                // local range is not exhausted yet
                 var range = Range;
                 var id = Interlocked.Increment(ref range.Current);
                 if (id <= range.Max)
                     return id;
 
-                //local range is exhausted , need to get a new range
-                var maybeNextTask = new Lazy<Task>(GetNextRangeAsync);
-
-                var nextTask = Interlocked.CompareExchange(ref _nextRangeTask,
-                                   maybeNextTask, null) ?? maybeNextTask;
                 try
                 {
+                    // let's try to call the existing task for next range
+                    await current.Value.ConfigureAwait(false);
+                    if (range != Range)
+                        continue;
+                }
+                catch
+                {
+                    // previous task was faulted, we will try to replace it
+                }
+
+                // local range is exhausted , need to get a new range
+                var maybeNextTask = new Lazy<Task>(GetNextRangeAsync);
+                var nextTask = Interlocked.CompareExchange(ref _nextRangeTask, maybeNextTask, current);
+                if (nextTask == current) // replace was successful
+                {
+                    await maybeNextTask.Value.ConfigureAwait(false);
+                    continue;
+                }
+
+                try
+                {
+                    // failed to replace, let's wait on the previous task
                     await nextTask.Value.ConfigureAwait(false);
                 }
-                finally
+                catch
                 {
-                    Interlocked.CompareExchange(ref _nextRangeTask, null, nextTask);
+                    // previous task was faulted, we will try again
                 }
             }
         }

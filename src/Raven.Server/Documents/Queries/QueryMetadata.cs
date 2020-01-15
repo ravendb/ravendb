@@ -727,7 +727,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 var array = false;
-                if (alias.EndsWith("[]", StringComparison.InvariantCulture))
+                if (alias.EndsWith("[]", StringComparison.Ordinal))
                 {
                     array = true;
                     alias = alias.Subsegment(0, alias.Length - 2);

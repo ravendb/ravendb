@@ -12,14 +12,14 @@ class deleteCollectionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        const args = {
-            name: this.collectionName
-        };
+        const args = { name: this.collectionName };
         const url = endpoints.databases.studioCollections.studioCollectionsDocs + this.urlEncodeArgs(args);
-        const payload = {
-            ExcludeIds: this.excludedIds
-        }
-        return this.del(url, JSON.stringify(payload), this.db);
+        const payload = { ExcludeIds: this.excludedIds };
+
+        return this.del<operationIdDto>(url, JSON.stringify(payload), this.db)            
+            .fail((response: JQueryXHR) => {
+                this.reportError(`Request to delete documents from collection: ${this.collectionName} failed`, response.responseText, response.statusText);
+            });
     }
 }
 

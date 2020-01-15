@@ -614,7 +614,9 @@ namespace Voron.Impl
                     pageFromScratchBuffer.PositionInScratchBuffer, numberOfPages);
 
                 if (zeroPage)
+                {
                     Memory.Set(newPagePointer, 0, Constants.Storage.PageSize * numberOfPages);
+                }
 
                 var newPage = new Page(newPagePointer)
                 {

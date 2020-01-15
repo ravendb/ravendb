@@ -207,14 +207,22 @@ namespace Voron
 
             ShouldUseKeyPrefix = name => false;
 
-            MaxLogFileSize = ((sizeof(int) == IntPtr.Size ? 32 : 256) * Constants.Size.Megabyte);
+            var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
+            
+            bool result;
+            if (bool.TryParse(shouldForceEnvVar, out result))
+                ForceUsing32BitsPager = result;
+
+
+            bool shouldConfigPagersRunInlimitedMemoryEnvironment = (sizeof(int) == IntPtr.Size || ForceUsing32BitsPager);
+            MaxLogFileSize = ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 4 : 256) * Constants.Size.Megabyte);            
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = ((sizeof(int) == IntPtr.Size ? 32 : 256) * Constants.Size.Megabyte);
+            MaxScratchBufferSize = ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 32 : 256) * Constants.Size.Megabyte);
 
             MaxNumberOfPagesInJournalBeforeFlush =
-                ((sizeof(int) == IntPtr.Size ? 4 : 32) * Constants.Size.Megabyte) / Constants.Storage.PageSize;
+                ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 4 : 32) * Constants.Size.Megabyte) / Constants.Storage.PageSize;
 
             IdleFlushTimeout = 5000; // 5 seconds
 
@@ -232,14 +240,11 @@ namespace Voron
                     _log.Operations($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
             });
 
-            var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
 
-            bool result;
-            if (bool.TryParse(shouldForceEnvVar, out result))
-                ForceUsing32BitsPager = result;
+            
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
-            PrefetchResetThreshold = 8 * (long)Constants.Size.Gigabyte;
+            PrefetchResetThreshold = shouldConfigPagersRunInlimitedMemoryEnvironment?256*(long)Constants.Size.Megabyte: 8 * (long)Constants.Size.Gigabyte;
             SyncJournalsCountThreshold = 2;
 
             ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
@@ -781,7 +786,7 @@ namespace Voron
                 {
                     if (RunningOn32Bits)
                     {
-                        return new Posix32BitsMemoryMapPager(options, file, initialSize,
+                        return new Rvn32BitsMemoryMapPager(options, file, initialSize,
                             usePageProtection: usePageProtection)
                         {
                             DeleteOnClose = deleteOnClose
@@ -817,7 +822,7 @@ namespace Voron
                 if (RunningOnPosix)
                 {
                     if (RunningOn32Bits)
-                        return new Posix32BitsMemoryMapPager(this, path);
+                        return new Rvn32BitsMemoryMapPager(this, path);
                     return new RvnMemoryMapPager(this, path);
                 }
 
@@ -1050,7 +1055,7 @@ namespace Voron
                 if (RunningOnPosix)
                 {
                     if (RunningOn32Bits)
-                        return new Posix32BitsMemoryMapPager(this, filename);
+                        return new Rvn32BitsMemoryMapPager(this, filename);
                     return new RvnMemoryMapPager(this, filename);
                 }
 

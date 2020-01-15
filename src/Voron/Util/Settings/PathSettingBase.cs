@@ -23,9 +23,9 @@ namespace Voron.Util.Settings
         public static void ValidatePath(string path)
         {
             if (path!= null && 
-                (path.StartsWith("appdrive:", StringComparison.InvariantCultureIgnoreCase) || 
+                (path.StartsWith("appdrive:", StringComparison.OrdinalIgnoreCase) || 
                 path.StartsWith("~") || 
-                path.StartsWith("$home", StringComparison.InvariantCultureIgnoreCase)))
+                path.StartsWith("$home", StringComparison.OrdinalIgnoreCase)))
             {
                 throw new ArgumentException($"The path '{path}' is illegal! Paths in RavenDB can't start with 'appdrive:', '~' or '$home'");
             }
