@@ -94,27 +94,38 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
 
             var pendingDeletion = context.Transaction.InnerTransaction.CreateTree(PendingDeletionSegments);
-
-            using (context.Allocator.From(Bits.SwapBytes(upto), out var slice))
-            using (var it = pendingDeletion.MultiRead(collectionName.Name))
+            var deleted = new List<Slice>();
+            var hasMore = true;
+            
+            while (hasMore)
             {
-                if (it.Seek(new Slice(slice)) == false)
+                using (var it = pendingDeletion.MultiRead(collectionName.Name))
                 {
-                    if (it.Seek(Slices.AfterAllKeys) == false)
+                    if (it.Seek(Slices.BeforeAllKeys) == false)
                         return;
+
+                    do
+                    {
+                        var etag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+                        if (etag > upto)
+                            break;
+
+                        if (table.DeleteByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag))
+                        {
+                            deleted.Add(it.CurrentKey.Clone(context.Allocator));
+                        }
+
+                        hasMore = it.MoveNext();
+                    } while (hasMore && deleted.Count < 1000);
                 }
 
-                do
+                foreach (var etagSlice in deleted)
                 {
-                    var etag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
-                    if (etag > upto)
-                        continue;
+                    pendingDeletion.MultiDelete(collectionName.Name, etagSlice);
+                }
 
-                    table.DeleteByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag);
-                } while (it.MovePrev());
+                deleted.Clear();
             }
-
-            pendingDeletion.MultiDelete(context.Allocator, collectionName.Name);
         }
 
         public string RemoveTimestampRange(DocumentsOperationContext context, string documentId, string collection, string name, DateTime from, DateTime to)
@@ -914,11 +925,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (newValueSegment.SegmentValues.Span[0].Count == 0)
                     // maybe optimize here, and compact it if we have a low population ratio
                 {
-                    var pendingDeletion = _context.Transaction.InnerTransaction.CreateTree(PendingDeletionSegments);
-                    using (_context.Allocator.From(Bits.SwapBytes(_currentEtag), out var etagSlice))
-                    {
-                        pendingDeletion.MultiAdd(_collection.Name, new Slice(etagSlice));
-                    }
+                    MarkSegmentAsPendingDeletion(_currentEtag);
                 }
 
                 // the key came from the existing value, have to clone it
@@ -938,6 +945,15 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context, null);
+            }
+
+            private void MarkSegmentAsPendingDeletion(long etag)
+            {
+                var pendingDeletion = _context.Transaction.InnerTransaction.CreateTree(PendingDeletionSegments);
+                using (_context.Allocator.From(Bits.SwapBytes(etag), out var etagSlice))
+                {
+                    pendingDeletion.MultiAdd(_collection.Name, new Slice(etagSlice));
+                }
             }
 
             public void AppendToNewSegment(ByteString buffer, Slice key, Span<double> valuesCopy, Span<byte> tag, ulong status)
