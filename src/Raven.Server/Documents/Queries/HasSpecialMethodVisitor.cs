@@ -3,13 +3,11 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class HasLoadIncludeCounterOrCmpXcngVisitor : EsprimaVisitor
+    public class HasSpecialMethodVisitor : EsprimaVisitor
     {
         private readonly QueryMetadata _queryMetadata;
 
-        //todo aviv : change class name 
-
-        public HasLoadIncludeCounterOrCmpXcngVisitor(QueryMetadata queryMetadata)
+        public HasSpecialMethodVisitor(QueryMetadata queryMetadata)
         {
             _queryMetadata = queryMetadata;
         }
@@ -20,7 +18,7 @@ namespace Raven.Server.Documents.Queries
                 _queryMetadata.HasCmpXchgSelect && _queryMetadata.HasTimeSeriesSelect)
                 return;
 
-            if (callExpression.Callee is Identifier id )
+            if (callExpression.Callee is Identifier id)
             {
                 switch (id.Name)
                 {

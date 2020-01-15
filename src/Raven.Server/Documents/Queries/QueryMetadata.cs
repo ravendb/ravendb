@@ -582,7 +582,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 Query.SelectFunctionBody.Program = ValidateScript(parameters);
-                CheckIfProjectionHasLoadIncludeCounterOrCmpXng(Query.SelectFunctionBody.Program);
+                CheckIfProjectionHasSpecialMethod(Query.SelectFunctionBody.Program);
             }
             catch (Exception e)
             {
@@ -1172,7 +1172,7 @@ namespace Raven.Server.Documents.Queries
                     if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out var tuple))
                     {
 
-                        CheckIfProjectionHasLoadIncludeCounterOrCmpXng(tuple.JavaScript);
+                        CheckIfProjectionHasSpecialMethod(tuple.JavaScript);
 
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
@@ -1351,12 +1351,12 @@ namespace Raven.Server.Documents.Queries
             return args;
         }
 
-        private void CheckIfProjectionHasLoadIncludeCounterOrCmpXng(Esprima.Ast.Program ast)
+        private void CheckIfProjectionHasSpecialMethod(Esprima.Ast.Program ast)
         {
-            if (ast == null || (HasIncludeOrLoad && CounterIncludes != null && HasCmpXchg))
+            if (ast == null || (HasIncludeOrLoad && HasCounterSelect && HasCmpXchg && HasTimeSeriesSelect))
                 return;
 
-            var visitor = new HasLoadIncludeCounterOrCmpXcngVisitor(this);
+            var visitor = new HasSpecialMethodVisitor(this);
             visitor.Visit(ast);
         }
 
