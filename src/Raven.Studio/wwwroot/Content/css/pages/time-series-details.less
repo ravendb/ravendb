@@ -1,0 +1,53 @@
+.time-series-details {
+    overflow: hidden;
+    
+    svg {
+        font: 10px sans-serif;
+    }
+
+    .line {
+        stroke: #00A000;
+        stroke-width: 2;
+        fill: none;
+        clip-path: url(#clip);
+    }
+    
+    .grid-x, .grid-y {
+        line {
+            stroke: @layout-border;
+        }
+    }
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+
+    .brush .extent {
+        shape-rendering: crispEdges;
+        clip-path: url(#clip);
+    }
+    
+    .axis {
+        .domain {
+            stroke: @text-color;
+        }
+        
+        .tick {
+            text {
+                fill: @text-color;
+            }
+            line {
+                stroke: @text-color;
+            }
+        }
+    }
+
+    rect.pane {
+        cursor: move;
+        fill: none;
+        pointer-events: all;
+    }
+}

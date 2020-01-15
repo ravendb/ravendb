@@ -1,7 +1,33 @@
-<div>
-    <h1>TS CHART</h1>
-    <div data-bind="foreach: series">
-        <div data-bind="text: path"></div>
-    </div>    
+<div class="row flex-grow flex-row time-series-details">
+    <div class="col-lg-8 flex-grow dynamic-container">
+    </div>
+    <div class="col-lg-4 flex-vertical">
+        <h3>Legend</h3>
+        <div class="flex-grow" style="position: relative">
+            <div class="scroll absolute-fill">
+                <div data-bind="foreach: timeSeries">
+                    <div class="flex-horizontal">
+                        <div data-bind="text: sectionName" class="flex-grow"></div>
+                        <div class="btn-group" data-bind="if: type === 'raw'">
+                            <button type="button" class="btn btn-default btn-sm"
+                                    data-bind="click: _.partial(selectDisplayMode, 'raw'), css: { active: displayMode() === 'raw' }">
+                                All Values
+                            </button>
+                            <button type="button" class="btn btn-default btn-sm"
+                                    data-bind="click: _.partial(selectDisplayMode, 'aggregate'), css: { active: displayMode() === 'aggregate' }">
+                                Aggregated Values
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="margin-left" data-bind="foreach: series">
+                        <div class="checkbox">
+                            <input type="checkbox" data-bind="attr: { id: uniqueId }, checked: visible" />
+                            <label data-bind="text: name, attr: { for: uniqueId }"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-
