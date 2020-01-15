@@ -646,7 +646,7 @@ namespace Raven.Server.Documents.Queries.Results
                         return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValue;
                     if (!(args[paramIndex] is string s))
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
-                                                        $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[paramIndex].GetType()}'"); //todo aviv : write a better error message
+                                                        $"Expected argument '{compound[0]}' to be a string, but got '{args[paramIndex].GetType()}'");
                     return s;
                 }
 
@@ -673,7 +673,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (!(args[index] is Document document))
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[index].GetType()}'");
-                    
+
                     documentId = document.Id;
                 }
 

@@ -771,16 +771,34 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue InvokeTimeSeriesFunction(string name, JsValue[] args)
             {
-                // todo aviv : write meaningful error messages
-
                 AssertValidDatabaseContext();
 
                 if (_runner.TimeSeriesDeclaration.TryGetValue(name, out var func) == false)
-                    throw new InvalidOperationException($"Unknown time series function '{name}'.");
+                    throw new InvalidOperationException($"Failed to invoke time series function. Unknown time series name '{name}'.");
 
+                object[] tsFunctionArgs = GetTimeSeriesFunctionArgs(name, args, out string docId, out var lazyIds);
+
+                var queryParams = ((Document)tsFunctionArgs[tsFunctionArgs.Length - 1]).Data;
+
+                var retriever = new TimeSeriesRetriever(_database, _docsCtx, queryParams, null);
+
+                var result = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs);
+
+                foreach (var id in lazyIds)
+                {
+                    id?.Dispose();
+                }
+
+                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, result);
+
+            }
+
+            private object[] GetTimeSeriesFunctionArgs(string name, JsValue[] args, out string docId, out List<IDisposable> lazyIds)
+            {
                 var tsFunctionArgs = new object[args.Length + 1];
-                string docId = null;
-                List<IDisposable> lazyIds = new List<IDisposable>();
+                docId = null;
+
+                lazyIds = new List<IDisposable>();
 
                 for (var index = 0; index < args.Length; index++)
                 {
@@ -801,7 +819,6 @@ namespace Raven.Server.Documents.Patch
                             docId = boi.DocumentId;
                         }
                     }
-
                     else
                     {
                         tsFunctionArgs[index] = Translate(args[index], _jsonCtx);
@@ -810,34 +827,23 @@ namespace Raven.Server.Documents.Patch
 
                 if (docId == null)
                 {
-                    if (_args[0].IsObject() == false || 
+                    if (_args[0].IsObject() == false ||
                         !(_args[0].AsObject() is BlittableObjectInstance originalDoc))
-                        throw new InvalidOperationException($"must be called with exactly 1 string argument");
+                        throw new InvalidOperationException($"Failed to invoke time series function '{name}'. Couldn't find the document ID to operate on. " +
+                                                            "A Document instance argument was not provided to the time series function or to the ScriptRunner");
 
                     docId = originalDoc.DocumentId;
                 }
 
+                if (_args[_args.Length - 1].IsObject() == false || !(_args[_args.Length - 1].AsObject() is BlittableObjectInstance queryParams))
+                    throw new InvalidOperationException($"Failed to invoke time series function '{name}'. ScriptRunner is missing QueryParameters argument");
 
-                if (_args[_args.Length -1].IsObject() == false || !(_args[_args.Length - 1].AsObject() is BlittableObjectInstance parameters))
-                    throw new InvalidOperationException($"must be called with exactly 1 string argument");
-
-                var queryParameters = parameters.Blittable;
                 tsFunctionArgs[tsFunctionArgs.Length - 1] = new Document
                 {
-                    Data = queryParameters
+                    Data = queryParams.Blittable
                 };
 
-                var retriever = new TimeSeriesRetriever(_database, _docsCtx, queryParameters, null);
-
-                var result = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs);
-
-                foreach (var id in lazyIds)
-                {
-                    id?.Dispose();
-                }
-
-                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, result);
-
+                return tsFunctionArgs;
             }
 
             private static void ThrowInvalidIncrementCounterArgs(JsValue[] args)
