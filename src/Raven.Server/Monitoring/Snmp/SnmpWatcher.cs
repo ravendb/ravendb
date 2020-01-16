@@ -358,6 +358,7 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new DatabaseLoadedCount(server.ServerStore.DatabasesLandlord));
             store.Add(new DatabaseTotalCount(server.ServerStore));
+            store.Add(new DatabaseOldestBackup(server.ServerStore));
 
             store.Add(new ClusterNodeState(server.ServerStore));
             store.Add(new ClusterNodeTag(server.ServerStore));

@@ -623,7 +623,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupStatus inMemoryBackupStatus)
         {
-            var backupStatus = GetBackupStatusFromCluster(taskId);
+            var backupStatus = GetBackupStatusFromCluster(_serverStore, _database.Name, taskId);
             if (backupStatus == null)
             {
                 backupStatus = inMemoryBackupStatus ?? new PeriodicBackupStatus
@@ -642,18 +642,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             return backupStatus;
         }
 
-        private PeriodicBackupStatus GetBackupStatusFromCluster(long taskId)
+        private static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, string databaseName, long taskId)
         {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return GetBackupStatusFromCluster(context, taskId);
+                return GetBackupStatusFromCluster(serverStore, context, databaseName, taskId);
             }
         }
 
-        private PeriodicBackupStatus GetBackupStatusFromCluster(TransactionOperationContext context, long taskId)
+        internal static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
         {
-            var statusBlittable = _serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(_database.Name, taskId));
+            var statusBlittable = serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
 
             if (statusBlittable == null)
                 return null;
@@ -676,7 +676,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (config.IncrementalBackupFrequency == null)
                         continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
 
-                    var status = GetBackupStatusFromCluster(context, taskId);
+                    var status = GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId);
                     var etag = ChangeVectorUtils.GetEtagById(status.LastDatabaseChangeVector, _database.DbBase64Id);
                     min = Math.Min(etag, min);
                 }
