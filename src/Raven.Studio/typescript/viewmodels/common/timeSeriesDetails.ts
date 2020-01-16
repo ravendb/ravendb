@@ -339,18 +339,12 @@ class timeSeriesDetails extends viewModelBase {
         const data = dataUpdated ? this.getDataToPlot() : undefined;
         
         const areaGenerator = <T>(d: graphSeries<dataRangePoint>, line: d3.svg.Line<dataPoint>) => {
-            const mappedPoints = d.points.map(point => (line([{
-                    date: point.from,
-                    value: 0
-                }, {
+            const mappedPoints = d.points.map(point => (line([ {
                     date: point.from,
                     value: point.value
                 }, {
                     date: point.to,
                     value: point.value
-                }, {
-                    date: point.to,
-                    value: 0
                 }])
             ));
 
