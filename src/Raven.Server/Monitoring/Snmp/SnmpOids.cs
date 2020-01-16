@@ -363,6 +363,9 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of loaded databases")]
                 public const string LoadedCount = "5.1.2";
 
+                [Description("Time since oldest backup")]
+                public const string TimeSinceOldestBackup = "5.1.3";
+
                 public static DynamicJsonArray ToJson()
                 {
                     var array = new DynamicJsonArray();
