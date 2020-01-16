@@ -5,19 +5,9 @@
         <h3>Legend</h3>
         <div class="flex-grow" style="position: relative">
             <div class="scroll absolute-fill">
-                <div data-bind="foreach: timeSeries">
+                <div data-bind="foreach: allTimeSeries">
                     <div class="flex-horizontal">
                         <div data-bind="text: sectionName" class="flex-grow"></div>
-                        <div class="btn-group" data-bind="if: type === 'raw'">
-                            <button type="button" class="btn btn-default btn-sm"
-                                    data-bind="click: _.partial(selectDisplayMode, 'raw'), css: { active: displayMode() === 'raw' }">
-                                All Values
-                            </button>
-                            <button type="button" class="btn btn-default btn-sm"
-                                    data-bind="click: _.partial(selectDisplayMode, 'aggregate'), css: { active: displayMode() === 'aggregate' }">
-                                Aggregated Values
-                            </button>
-                        </div>
                     </div>
                     
                     <div class="margin-left" data-bind="foreach: series">
