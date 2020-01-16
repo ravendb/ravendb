@@ -116,6 +116,12 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Remaining server storage disk space in %")]
             public const string StorageDiskRemainingSpacePercentage = "1.10.4";
 
+            [Description("Server certificate expiration date")]
+            public const string ServerCertificateExpiration = "1.11.1";
+
+            [Description("Server certificate expiration left")]
+            public const string ServerCertificateExpirationLeft = "1.11.2";
+
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();

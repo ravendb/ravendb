@@ -376,6 +376,9 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerStorageDiskRemainingSpace(server.ServerStore));
             store.Add(new ServerStorageDiskRemainingSpacePercentage(server.ServerStore));
 
+            store.Add(new ServerCertificateExpiration(server.ServerStore));
+            store.Add(new ServerCertificateExpirationLeft(server.ServerStore));
+
             return store;
         }
 
