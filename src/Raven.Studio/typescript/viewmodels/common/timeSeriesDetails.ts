@@ -10,13 +10,8 @@ type timeSeriesItem = {
 }
 
 interface graphData {
-    series: seriesData[]; 
-}
-
-interface seriesData {
-    dataPoints: dataPoint[];
-    color: string;
-    name: string;
+    pointSeries: graphSeries<dataPoint>[];
+    rangeSeries: graphSeries<dataRangePoint>[];
 }
 
 interface dataPoint {
@@ -24,136 +19,110 @@ interface dataPoint {
     value: number;
 }
 
-type displayMode = "raw" | "aggregate";
+interface dataRangePoint {
+    from: Date;
+    to: Date;
+    value: number;
+}
 
-class graphSeries {
+class graphSeries<TPoint> {
     onChange: () => void;
-    uniqueId = _.uniqueId("ts-series");
+    uniqueId = _.uniqueId("ts-series-");
     visible = ko.observable<boolean>(true);
     name: string;
-    color: string;
-    points: dataPoint[];
+    points: TPoint[];
     
-    constructor(name: string, points: dataPoint[], onChange: () => void) {
+    constructor(name: string, points: TPoint[], onChange: () => void) {
         this.name = name;
         this.onChange = onChange;
         this.points = points;
-        
-        this.visible.subscribe(() => this.onChange());
-    }
 
-    getSeriesData(): seriesData {
-        return {
-            color: this.color,
-            name: this.name,
-            dataPoints: this.points
-        }
+        this.visible.subscribe(() => this.onChange());
     }
 }
 
-abstract class timeSeriesContainer {
+abstract class timeSeriesContainer<T> {
     sourceDocument: document;
     path: string;
     value: timeSeriesQueryResultDto;
     abstract type: timeSeriesResultType;
-    series = ko.observableArray<graphSeries>();
     onChange: () => void;
+    series = ko.observableArray<graphSeries<T>>();
     
     protected constructor(item: timeSeriesItem, onChange: () => void) {
         this.sourceDocument = item.document;
         this.path = item.path;
         this.value = (item.document as any)[item.path] as timeSeriesQueryResultDto;
         this.onChange = onChange;
-        
-        //TODO: assign colors!
     }
     
     get sectionName() {
         return this.sourceDocument.getId() + " - " + this.path;
     }
-    
-    getSeriesData(): seriesData[] {
+
+    getSeriesData(): graphSeries<T>[] {
         return this.series()
-            .filter(x => x.visible())
-            .map(x => x.getSeriesData());
-    }
-    
-    static for(item: timeSeriesItem, onChange: () => void) {
-        const value = (item.document as any)[item.path] as timeSeriesQueryResultDto;
-        const type = timeSeriesQueryResult.detectResultType(value);
-        switch (type) {
-            case "grouped":
-                return new groupedTimeSeriesContainer(item, onChange);
-            case "raw":
-                return new rawTimeSeriesContainer(item, onChange);
-        }
+            .filter(x => x.visible());
     }
 }
 
-class groupedTimeSeriesContainer extends timeSeriesContainer {
-    type: timeSeriesResultType = "grouped"; 
+class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
+    type: timeSeriesResultType = "grouped";
     
     constructor(item: timeSeriesItem, onChange: () => void) {
         super(item, onChange);
 
         const groupedValues = this.value.Results as Array<timeSeriesQueryGroupedItemResultDto>;
         const allKeys = Object.keys(groupedValues[0]);
-        const seriesNames = _.without(allKeys, "From", "To", "Count");
-        this.series(seriesNames.map(x => new graphSeries(x, [], onChange)));//TODO:
+        const seriesPrefixNames = _.without(allKeys, "From", "To", "Count");
+        
+        const valuesCount = groupedValues[0][seriesPrefixNames[0]].length; //TODO: scan through all values!
+        const seriesValuesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
+        
+        const dateFromPoints = groupedValues.map(x => moment.utc(x.From).toDate());
+        const dateToPoints = groupedValues.map(x => moment.utc(x.To).toDate());
+        
+        const series = [] as Array<graphSeries<dataRangePoint>>;
+        
+        seriesPrefixNames.forEach(prefix => {
+            seriesValuesName.forEach((valueName, valueIdx) => {
+                const dataPoints: dataRangePoint[] = groupedValues.map((item, itemIdx) => ({
+                    value: groupedValues[itemIdx][prefix][valueIdx],
+                    from: dateFromPoints[itemIdx],
+                    to: dateToPoints[itemIdx]
+                }));
+                
+                series.push(new graphSeries<dataRangePoint>(prefix + " - " + valueName, dataPoints, this.onChange));
+            });
+        });
+        
+        this.series(series);
     }
 }
 
-class rawTimeSeriesContainer extends timeSeriesContainer {
+class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
     type: timeSeriesResultType = "raw";
 
-    displayMode = ko.observable<displayMode>("raw");
-    
-    rawSeries = ko.observableArray<graphSeries>([]);
-    aggregateSeries = ko.observableArray<graphSeries>([]);
-    
-    aggregation = {
-        min: ko.observable<boolean>(true),
-        max: ko.observable<boolean>(true),
-        avg: ko.observable<boolean>(true)
-    };
-    
     constructor(item: timeSeriesItem, onChange: () => void) {
         super(item, onChange);
 
         this.prepareSeries();
-        this.setEffectiveSeries();
-        
-        this.displayMode.subscribe(() => {
-            this.setEffectiveSeries();
-            this.onChange();
-        });
     }
 
-    selectDisplayMode(mode: displayMode) {
-        this.displayMode(mode);
-    }
-    
-    setEffectiveSeries() {
-        this.series(this.displayMode() === "raw" ? this.rawSeries() : this.aggregateSeries());
-    }
-    
-    private prepareSeries() {
+    private prepareSeries() { //TODO: check if variable values length! - use max!
         const rawValues = this.value.Results as Array<timeSeriesRawItemResultDto>;
         const valuesCount = rawValues[0].Values.length;
         const seriesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
         
         const datePoints = rawValues.map(x => moment.utc(x.Timestamp).toDate());
         
-        this.rawSeries(seriesName.map((name, seriesNameIdx) => {
+        this.series(seriesName.map((name, seriesNameIdx) => {
             const dataPoints: dataPoint[] = rawValues.map((v, valuesIdx) => ({
                 value: v.Values[seriesNameIdx],
                 date: datePoints[valuesIdx]
             }));
-            return new graphSeries(name, dataPoints, this.onChange);
+            return new graphSeries<dataPoint>(name, dataPoints, this.onChange);
         }));
-
-        const aggregateSeriesName = ["Minimum", "Maximum", "Average"];
-        this.aggregateSeries(aggregateSeriesName.map(x => new graphSeries(x, [], this.onChange))); //TODO:
     }
 }
 
@@ -172,7 +141,8 @@ class timeSeriesDetails extends viewModelBase {
     private readonly heightBrush = 80;
     
     private mode = ko.observable<viewMode>();
-    timeSeries: timeSeriesContainer[];
+    pointTimeSeries: timeSeriesContainer<dataPoint>[] = [];
+    rangeTimeSeries: timeSeriesContainer<dataRangePoint>[] = [];
 
     private containerWidth: number;
     private containerHeight: number;
@@ -195,17 +165,44 @@ class timeSeriesDetails extends viewModelBase {
     private svg: d3.Selection<void>;
     private focus: d3.Selection<void>;
     private context: d3.Selection<void>;
-    private area: d3.svg.Line<dataPoint>; //TODO: rename to line!
-    private areaBrush: d3.svg.Line<dataPoint>;
+    private line: d3.svg.Line<dataPoint>;
+    private lineBrush: d3.svg.Line<dataPoint>;
     
     private zoom: d3.behavior.Zoom<void>;
     private rect: d3.Selection<any>;
+    private colorClassPointScale: d3.scale.Ordinal<string, string>;
+    private colorClassRangeScale: d3.scale.Ordinal<string, string>;
     
-    constructor(timeSeries: Array<timeSeriesItem>, initialMode: viewMode = "plot") {
+    constructor(timeSeries: Array<timeSeriesItem>, initialMode: viewMode = "plot") { //TODO: support modes!
         super();
         
-        this.timeSeries = timeSeries.map(x => timeSeriesContainer.for(x, () => this.draw(true, false)));
+        const onChange = () => this.draw(true, false);
+        
+        timeSeries.forEach(item => {
+            const value = (item.document as any)[item.path] as timeSeriesQueryResultDto;
+            const type = timeSeriesQueryResult.detectResultType(value);
+
+            switch (type) {
+                case "grouped":
+                    this.rangeTimeSeries.push(new groupedTimeSeriesContainer(item, onChange));
+                    break;
+                case "raw":
+                    this.pointTimeSeries.push(new rawTimeSeriesContainer(item, onChange));
+                    break;
+            }
+        });
+        
         this.mode(initialMode);
+
+        this.colorClassPointScale = d3.scale.ordinal<string>()
+            .range(_.range(1, 10).map(x => "color-" + x));
+
+        this.colorClassRangeScale = d3.scale.ordinal<string>()
+            .range(_.range(1, 10).map(x => "color-" + x));
+    }
+    
+    get allTimeSeries() {
+        return [...this.rangeTimeSeries, ...this.pointTimeSeries];
     }
     
     compositionComplete() {
@@ -250,11 +247,11 @@ class timeSeriesDetails extends viewModelBase {
             .x(this.xBrush as any)
             .on("brush", () => this.onBrushed());
         
-        this.area = d3.svg.line<dataPoint>()
+        this.line = d3.svg.line<dataPoint>()
             .x(x => this.x(x.date))
             .y(x => this.y(x.value));
         
-        this.areaBrush = d3.svg.line<dataPoint>()
+        this.lineBrush = d3.svg.line<dataPoint>()
             .x(x => this.xBrush(x.date))
             .y(x => this.yBrush(x.value));
         
@@ -310,6 +307,18 @@ class timeSeriesDetails extends viewModelBase {
             .selectAll("rect")
             .attr("y", 1)
             .attr("height", this.heightBrush - 1);
+        
+        this.focus.append("g")
+            .attr("class", "data-lines");
+        
+        this.focus.append("g")
+            .attr("class", "data-range");
+        
+        this.context.append("g")
+            .attr("class", "data-lines");
+        
+        this.context.append("g")
+            .attr("class", "data-range");
     }
     
     private onBrushed() {
@@ -321,15 +330,38 @@ class timeSeriesDetails extends viewModelBase {
         this.draw(false, false);
     }
     
-    private draw(dataUpdated: boolean, resetXScale: boolean) { //TODO: initScale add default value = false
+    private draw(dataUpdated: boolean, resetXScale: boolean) {
         const data = dataUpdated ? this.getDataToPlot() : undefined;
         
-        if (dataUpdated) {
-            if (data.series.length) {
-                const { minX, maxX, minY, maxY } = timeSeriesDetails.computeExtends(data);
+        const areaGenerator = <T>(d: graphSeries<dataRangePoint>, line: d3.svg.Line<dataPoint>) => {
+            const mappedPoints = d.points.map(point => (line([{
+                    date: point.from,
+                    value: 0
+                }, {
+                    date: point.from,
+                    value: point.value
+                }, {
+                    date: point.to,
+                    value: point.value
+                }, {
+                    date: point.to,
+                    value: 0
+                }])
+            ));
 
-                this.x.domain([minX, maxX]);
-                this.y.domain([minY, maxY]); //TODO: scale to zero ?
+            return mappedPoints.join(" ");
+        };
+
+        if (dataUpdated) {
+            if (data.pointSeries.length || data.rangeSeries.length) {
+                const extents = timeSeriesDetails.computeExtents(data);
+                const paddedExtents = timeSeriesDetails.paddingExtents(extents, 0.02);
+                const { minX, maxX, minY, maxY } = paddedExtents;
+
+                if (resetXScale) {
+                    this.x.domain([minX, maxX]);
+                }
+                this.y.domain([minY, maxY]);
             } else {
                 //TODO: show info that view is empty
                 const now = new Date();
@@ -337,7 +369,9 @@ class timeSeriesDetails extends viewModelBase {
                 this.y.domain([0, 0]);
             }
 
-            this.xBrush.domain(this.x.domain());
+            if (resetXScale) {
+                this.xBrush.domain(this.x.domain());
+            }
             this.yBrush.domain(this.y.domain());
             this.zoom.x(this.x as any);
         }
@@ -349,38 +383,77 @@ class timeSeriesDetails extends viewModelBase {
             .call(this.yAxis);
         
         if (dataUpdated) {
+            // areas should go beneath lines
+            const focusAreas = this.focus
+                .select(".data-range")
+                .selectAll(".area")
+                .data(data.rangeSeries);
+
+            focusAreas.enter()
+                .append("path")
+                .attr("class", d => "area " + this.colorClassRangeScale(d.uniqueId));
+
+            focusAreas.exit()
+                .remove();
+            
+            const contextAreas = this.context
+                .select(".data-range")
+                .selectAll(".area")
+                .data(data.rangeSeries);
+            
+            contextAreas.exit()
+                .remove();
+            
+            contextAreas
+                .attr("d", d => areaGenerator(d, this.lineBrush));
+            
+            contextAreas
+                .enter()
+                .append("path")
+                .attr("class", d => "area " + this.colorClassPointScale(d.uniqueId))
+                .attr("d", d => areaGenerator(d, this.lineBrush));
+            
+            // and draw lines above
             const focusLines = this.focus
+                .select(".data-lines")
                 .selectAll(".line")
-                .data(data.series);
+                .data(data.pointSeries);
 
             focusLines.enter()
                 .append("path")
-                .attr("class", "line");
+                .attr("class", d => "line " + this.colorClassPointScale(d.uniqueId));
 
             focusLines.exit()
                 .remove();
             
             const contextLines = this.context
+                .select(".data-lines")
                 .selectAll(".line")
-                .data(data.series);
+                .data(data.pointSeries);
             
             contextLines.exit()
                 .remove();
 
             contextLines
-                .attr("d", d => this.areaBrush(d.dataPoints));
+                .attr("d", d => this.lineBrush(d.points));
             
             contextLines
                 .enter()
                 .append("path")
-                .attr("class", "line")
-                .attr("d", d => this.areaBrush(d.dataPoints));
+                .attr("class", d => "line " + this.colorClassPointScale(d.uniqueId))
+                .attr("d", d => this.lineBrush(d.points));
         }
 
         this.focus
-            .selectAll<seriesData>(".line")
-            .attr("d", d => this.area(d.dataPoints));
-            
+            .select(".data-lines")
+            .selectAll<graphSeries<dataPoint>>(".line")
+            .attr("d", d => this.line(d.points));
+        
+        this.focus
+            .select(".data-range")
+            .selectAll<graphSeries<dataRangePoint>>(".area")
+            .attr("d", d => areaGenerator(d, this.line));
+        
         this.brush.extent(this.x.domain() as any);
         
         this.svg.select(".brush")
@@ -431,13 +504,13 @@ class timeSeriesDetails extends viewModelBase {
             .attr("y2", d => this.y(d));
     }
     
-    private static computeExtends(data: graphData) {
-        const nonEmptySeries = data.series.filter(x => x.dataPoints.length);
+    private static computePointExtents(series: graphSeries<dataPoint>[]) {
+        const nonEmptySeries = series.filter(x => x.points.length);
         
-        const minX = d3.min(nonEmptySeries.map(x => x.dataPoints[0].date));
-        const maxX = d3.max(nonEmptySeries.map(x => x.dataPoints[x.dataPoints.length - 1].date));
+        const minX = d3.min(nonEmptySeries.map(x => x.points[0].date));
+        const maxX = d3.max(nonEmptySeries.map(x => x.points[x.points.length - 1].date));
 
-        const yExtendsList = nonEmptySeries.map(x => d3.extent(x.dataPoints.map(y => y.value)));
+        const yExtendsList = nonEmptySeries.map(x => d3.extent(x.points.map(y => y.value)));
         const minY = d3.min(yExtendsList.map(x => x[0]));
         const maxY = d3.max(yExtendsList.map(x => x[1]));
         
@@ -446,14 +519,64 @@ class timeSeriesDetails extends viewModelBase {
             minY, maxY
         };
     }
+
+    private static computeRangeExtents(series: graphSeries<dataRangePoint>[]) {
+        const nonEmptySeries = series.filter(x => x.points.length);
+
+        const minX = d3.min(nonEmptySeries.map(x => x.points[0].from));
+        const maxX = d3.max(nonEmptySeries.map(x => x.points[x.points.length - 1].to));
+
+        const yExtendsList = nonEmptySeries.map(x => d3.extent(x.points.map(y => y.value)));
+        const minY = d3.min(yExtendsList.map(x => x[0]));
+        const maxY = d3.max(yExtendsList.map(x => x[1]));
+
+        return {
+            minX, maxX,
+            minY, maxY
+        };
+    }
+    
+    private static computeExtents(data: graphData) {
+        const pointsExtents = timeSeriesDetails.computePointExtents(data.pointSeries);
+        const rangeExtents = timeSeriesDetails.computeRangeExtents(data.rangeSeries);
+        
+        return {
+            minX: d3.min([pointsExtents.minX, rangeExtents.minX]),
+            maxX: d3.max([pointsExtents.maxX, rangeExtents.maxX]),
+            minY: d3.min([pointsExtents.minY, rangeExtents.minY, 0]),
+            maxY: d3.max([pointsExtents.maxY, rangeExtents.maxY, 0])
+        }
+    }
+    
+    private static paddingExtents(extents: { minX: Date, maxX: Date, minY: number, maxY: number }, percentagePadding: number) {
+        // please notice this function doesn't padding zero
+        
+        const deltaX = extents.maxX.getTime() - extents.minX.getTime();
+        const deltaY = extents.maxY - extents.minY;
+        
+        const xShift = deltaX * percentagePadding / 2;
+        const yShift = deltaY * percentagePadding / 2;
+        
+        return {
+            minX: new Date(extents.minX.getTime() - xShift),
+            maxX: new Date(extents.maxX.getTime() + xShift),
+            minY: extents.minY === 0 ? 0 :extents.minY - yShift,
+            maxY: extents.maxY === 0 ? 0 : extents.maxY + yShift
+        }
+    }
     
     getDataToPlot(): graphData {
         const result: graphData = {
-            series: []
+            pointSeries: [],
+            rangeSeries: []
         };
         
-        this.timeSeries.forEach(item => {
-            result.series.push(...item.getSeriesData());
+        this.pointTimeSeries.forEach(item => {
+            result.pointSeries.push(...item.getSeriesData());
+        });
+        
+        this.rangeTimeSeries.forEach(item => {
+            result.rangeSeries.push(...item.getSeriesData());
         });
         
         return result;
