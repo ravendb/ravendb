@@ -285,6 +285,29 @@ class timeSeriesDetails extends viewModelBase {
         this.zoom = d3.behavior.zoom<void>()
             .on("zoom", () => this.draw(false, false));
 
+        this.focus.append("g")
+            .attr("class", "data-lines");
+        
+        this.focus.append("g")
+            .attr("class", "data-range");
+
+        this.focus.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + this.heightGraph + ")");
+
+        this.focus.append("g")
+            .attr("class", "y axis");
+        
+        this.context.append("g")
+            .attr("class", "data-lines");
+        
+        this.context.append("g")
+            .attr("class", "data-range");
+
+        this.context.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + this.heightBrush + ")");
+
         // Add rect cover the zoomed graph and attach zoom event.
         this.rect = this.svg
             .append("svg:rect")
@@ -294,12 +317,6 @@ class timeSeriesDetails extends viewModelBase {
             .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")")
             .call(this.zoom);
 
-        this.focus.append("g")
-            .attr("class", "x axis")
-            .attr("transform", "translate(0," + this.heightGraph + ")");
-        
-        this.focus.append("g")
-            .attr("class", "y axis");
 
         this.context.append("g")
             .attr("class", "x brush")
@@ -307,18 +324,6 @@ class timeSeriesDetails extends viewModelBase {
             .selectAll("rect")
             .attr("y", 1)
             .attr("height", this.heightBrush - 1);
-        
-        this.focus.append("g")
-            .attr("class", "data-lines");
-        
-        this.focus.append("g")
-            .attr("class", "data-range");
-        
-        this.context.append("g")
-            .attr("class", "data-lines");
-        
-        this.context.append("g")
-            .attr("class", "data-range");
     }
     
     private onBrushed() {
@@ -374,6 +379,9 @@ class timeSeriesDetails extends viewModelBase {
             }
             this.yBrush.domain(this.y.domain());
             this.zoom.x(this.x as any);
+
+            this.context.select(".x.axis")
+                .call(this.xAxisBrush);
         }
 
         this.focus.select(".x.axis")
