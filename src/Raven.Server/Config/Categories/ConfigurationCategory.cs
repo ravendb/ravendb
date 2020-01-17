@@ -163,6 +163,17 @@ namespace Raven.Server.Config.Categories
 
                                 property.SetValue(this, values);
                             }
+                            else if (property.PropertyType.IsArray && property.PropertyType.GetElementType().IsEnum)
+                            {
+                                var values = SplitValue(value)
+                                    .Select(item => Enum.Parse(property.PropertyType.GetElementType(), item, ignoreCase: true))
+                                    .ToArray();
+
+                                var enumValues = Array.CreateInstance(property.PropertyType.GetElementType(), values.Length);
+                                Array.Copy(values, enumValues, enumValues.Length);
+
+                                property.SetValue(this, enumValues);
+                            }
                             else if (property.PropertyType == typeof(HashSet<string>))
                             {
                                 var hashSet = new HashSet<string>(SplitValue(value), StringComparer.OrdinalIgnoreCase);
@@ -279,10 +290,21 @@ namespace Raven.Server.Config.Categories
                     {
                         property.SetValue(this, new PathSetting(Convert.ToString(defaultValue), type, resourceName));
                     }
-                    else if (property.PropertyType == typeof(string[]) && defaultValue is string defaultValueAsString)
+                    else if (property.PropertyType == typeof(string[]) && defaultValue is string defaultValueAsString1)
                     {
-                        var values = SplitValue(defaultValueAsString);
+                        var values = SplitValue(defaultValueAsString1);
                         property.SetValue(this, values);
+                    }
+                    else if (property.PropertyType.IsArray && property.PropertyType.GetElementType().IsEnum && defaultValue is string defaultValueAsString2)
+                    {
+                        var values = SplitValue(defaultValueAsString2)
+                            .Select(item => Enum.Parse(property.PropertyType.GetElementType(), item, ignoreCase: true))
+                            .ToArray();
+
+                        var enumValues = Array.CreateInstance(property.PropertyType.GetElementType(), values.Length);
+                        Array.Copy(values, enumValues, enumValues.Length);
+
+                        property.SetValue(this, enumValues);
                     }
                     else
                         property.SetValue(this, defaultValue);
