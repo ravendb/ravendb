@@ -81,7 +81,7 @@ namespace Voron.Impl.Journal
 
         public TimeSpan WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)
         {
-            TimeSpan writeToJournalDuration;
+            TimeSpan writeToJournalDuration = default;
 
             if (_firstPositionInJournalFile != null)
             {
