@@ -89,6 +89,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
             }
 
+            var backupEncryptionSettings = RestoreFromConfiguration.BackupEncryptionSettings;
+            if (backupEncryptionSettings != null)
+            {
+                if (backupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey && 
+                    backupEncryptionSettings.Key == null)
+                {
+                    throw new InvalidOperationException($"{nameof(BackupEncryptionSettings.EncryptionMode)} is set to {nameof(EncryptionMode.UseProvidedKey)} but an encryption key wasn't provided");
+                }
+
+
+                if (backupEncryptionSettings.EncryptionMode != EncryptionMode.UseProvidedKey &&
+                    backupEncryptionSettings.Key != null)
+                {
+                    throw new InvalidOperationException($"{nameof(BackupEncryptionSettings.EncryptionMode)} is set to {backupEncryptionSettings.EncryptionMode} but an encryption key was provided");
+                }
+            }
+
             var hasRestoreDataDirectory = string.IsNullOrWhiteSpace(RestoreFromConfiguration.DataDirectory) == false;
             if (hasRestoreDataDirectory &&
                 HasFilesOrDirectories(dataDirectoryThatWillBeUsed))
@@ -384,23 +401,26 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             {
                                 using (var entryStream = zipEntry.Open())
                                 {
-                                    var stream = RestoreFromConfiguration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey ?
-                                        new DecryptingXChaCha20Oly1305Stream(entryStream, Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey))
-                                        : entryStream;
+                                    var snapshotEncryptionKey = RestoreFromConfiguration.EncryptionKey != null
+                                        ? Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey)
+                                        : null;
 
-                                    var json = context.Read(stream, "read database settings for restore");
-                                    json.BlittableValidation();
+                                    using (var stream = GetInputStream(entryStream, snapshotEncryptionKey))
+                                    {
+                                        var json = context.Read(stream, "read database settings for restore");
+                                        json.BlittableValidation();
 
-                                    restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                                        restoreSettings = JsonDeserializationServer.RestoreSettings(json);
 
-                                    restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
-                                    DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
+                                        restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
+                                        DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
 
-                                    if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
-                                        throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
+                                        if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
+                                            throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
 
-                                    if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
-                                        throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
+                                        if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
+                                            throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
+                                    }
                                 }
                             }
                         }
@@ -636,7 +656,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
             using (var fileStream = await GetStream(filePath))
-            using (var inputStream = GetInputStream(fileStream))
+            using (var inputStream = GetInputStream(fileStream, database.MasterKey))
             using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
             using (var source = new StreamSource(gzipStream, context, database))
             {
@@ -692,9 +712,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private Stream GetInputStream(Stream fileStream)
+        private Stream GetInputStream(Stream stream, byte[] databaseEncryptionKey)
         {
-            return RestoreFromConfiguration.BackupEncryptionSettings?.Key != null ? new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(RestoreFromConfiguration.BackupEncryptionSettings.Key)) : fileStream;
+            if (RestoreFromConfiguration.BackupEncryptionSettings == null ||
+                RestoreFromConfiguration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None)
+                return stream;
+
+            if (RestoreFromConfiguration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseDatabaseKey)
+            {
+                if (databaseEncryptionKey == null)
+                    throw new ArgumentException("Stream is encrypted but the encryption key is missing!");
+
+                return new DecryptingXChaCha20Oly1305Stream(stream, databaseEncryptionKey);
+            }
+
+            return new DecryptingXChaCha20Oly1305Stream(stream, Convert.FromBase64String(RestoreFromConfiguration.BackupEncryptionSettings.Key));
         }
 
         private Stream GetSnapshotInputStream(Stream fileStream, string database)

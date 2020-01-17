@@ -36,9 +36,9 @@ namespace Raven.Server.Documents.Indexes
             return new IndexingPerformanceBasicStats(Scope.Duration)
             {
                 Started = StartTime,
-                InputCount = Stats.MapAttempts,
-                SuccessCount = Stats.MapSuccesses,
-                FailedCount = Stats.MapErrors,
+                InputCount = Stats.MapAttempts + Stats.MapReferenceAttempts,
+                SuccessCount = Stats.MapSuccesses + Stats.MapReferenceSuccesses,
+                FailedCount = Stats.MapErrors + Stats.MapReferenceErrors,
                 OutputCount = Stats.IndexingOutputs,
                 AllocatedBytes = Stats.AllocatedBytes,
                 DocumentsSize = new Size(Stats.DocumentsSize)
@@ -81,9 +81,9 @@ namespace Raven.Server.Documents.Indexes
                 Started = StartTime,
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 Details = Scope.ToIndexingPerformanceOperation("Indexing"),
-                InputCount = Stats.MapAttempts,
-                SuccessCount = Stats.MapSuccesses,
-                FailedCount = Stats.MapErrors,
+                InputCount = Stats.MapAttempts + Stats.MapReferenceAttempts,
+                SuccessCount = Stats.MapSuccesses + Stats.MapReferenceSuccesses,
+                FailedCount = Stats.MapErrors + Stats.MapReferenceErrors,
                 OutputCount = Stats.IndexingOutputs,
                 DocumentsSize = new Size(Stats.DocumentsSize)
             };

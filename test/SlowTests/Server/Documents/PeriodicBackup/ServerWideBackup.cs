@@ -558,6 +558,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     DatabaseName = databaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = key
                     }
                 }))

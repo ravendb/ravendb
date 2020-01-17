@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
@@ -39,7 +40,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <returns>Created subscription</returns>
         public string Create<T>(SubscriptionCreationOptions<T> options, string database = null)
         {
-            return Create(EnsureCriteria(new SubscriptionCreationOptions
+            return Create(CreateSubscriptionOptionsFromGeneric(_store.Conventions, new SubscriptionCreationOptions
             {
                 Name = options.Name,
                 ChangeVector = options.ChangeVector,
@@ -58,7 +59,7 @@ namespace Raven.Client.Documents.Subscriptions
             SubscriptionCreationOptions options = null,
             string database = null)
         {
-            return Create(EnsureCriteria(options, predicate, null, includes: null), database);
+            return Create(CreateSubscriptionOptionsFromGeneric(_store.Conventions, options, predicate, null, includes: null), database);
         }
 
 
@@ -69,7 +70,7 @@ namespace Raven.Client.Documents.Subscriptions
         public Task<string> CreateAsync<T>(
             SubscriptionCreationOptions<T> options, string database = null, CancellationToken token = default)
         {
-            return CreateAsync(EnsureCriteria(new SubscriptionCreationOptions
+            return CreateAsync(CreateSubscriptionOptionsFromGeneric(_store.Conventions, new SubscriptionCreationOptions
             {
                 Name = options.Name,
                 ChangeVector = options.ChangeVector,
@@ -87,24 +88,25 @@ namespace Raven.Client.Documents.Subscriptions
             string database = null,
             CancellationToken token = default)
         {
-            return CreateAsync(EnsureCriteria(options, predicate, null, includes: null), database, token);
+            return CreateAsync(CreateSubscriptionOptionsFromGeneric(_store.Conventions,options, predicate, null, includes: null), database, token);
         }
 
-        private SubscriptionCreationOptions EnsureCriteria<T>(
+        internal static SubscriptionCreationOptions CreateSubscriptionOptionsFromGeneric<T>(
+            DocumentConventions conventions,
             SubscriptionCreationOptions criteria,
             Expression<Func<T, bool>> predicate,
             Expression<Func<T, object>> project,
             Action<ISubscriptionIncludeBuilder<T>> includes)
         {
-            criteria = criteria ?? new SubscriptionCreationOptions();
-            var collectionName = _store.Conventions.GetCollectionName(typeof(T));
+            criteria ??= new SubscriptionCreationOptions();
+            var collectionName = conventions.GetCollectionName(typeof(T));
             if (criteria.Query == null)
             {
                 var tType = typeof(T);
                 var includeRevisions = tType.IsConstructedGenericType && tType.GetGenericTypeDefinition() == typeof(Revision<>);
                 if (includeRevisions)
                 {
-                    collectionName = _store.Conventions.GetCollectionName(tType.GenericTypeArguments[0]);
+                    collectionName = conventions.GetCollectionName(tType.GenericTypeArguments[0]);
                 }
                 if (includeRevisions)
                     criteria.Query = "from " + collectionName + " (Revisions = true)";
@@ -121,8 +123,8 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.MathSupport.Instance,
                         new JavascriptConversionExtensions.DictionarySupport(),
                         JavascriptConversionExtensions.LinqMethodsSupport.Instance,
-                        new JavascriptConversionExtensions.SubscriptionsWrappedConstantSupport(_store.Conventions),
-                        new JavascriptConversionExtensions.ConstSupport(_store.Conventions),
+                        new JavascriptConversionExtensions.SubscriptionsWrappedConstantSupport(conventions),
+                        new JavascriptConversionExtensions.ConstSupport(conventions),
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(predicate.Parameters[0], "this"),
                         JavascriptConversionExtensions.ToStringSupport.Instance,
                         JavascriptConversionExtensions.DateTimeSupport.Instance,
@@ -145,7 +147,7 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.MathSupport.Instance,
                         new JavascriptConversionExtensions.DictionarySupport(),
                         JavascriptConversionExtensions.LinqMethodsSupport.Instance,
-                        new JavascriptConversionExtensions.ConstSupport(_store.Conventions),
+                        new JavascriptConversionExtensions.ConstSupport(conventions),
                         JavascriptConversionExtensions.ToStringSupport.Instance,
                         JavascriptConversionExtensions.DateTimeSupport.Instance,
                         JavascriptConversionExtensions.InvokeSupport.Instance,
@@ -161,7 +163,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             if (includes != null)
             {
-                var builder = new IncludeBuilder<T>(_store.Conventions);
+                var builder = new IncludeBuilder<T>(conventions);
                 includes(builder);
 
                 if (builder.DocumentsToInclude != null && builder.DocumentsToInclude.Count > 0)
