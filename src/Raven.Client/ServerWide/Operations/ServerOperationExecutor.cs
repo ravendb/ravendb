@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,8 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class ServerOperationExecutor : IDisposable
     {
+        private readonly ConcurrentDictionary<string, ServerOperationExecutor> _cache;
+
         private readonly string _nodeTag;
         private readonly DocumentStoreBase _store;
 
@@ -18,11 +21,11 @@ namespace Raven.Client.ServerWide.Operations
         private readonly ClusterRequestExecutor _initialRequestExecutor;
 
         public ServerOperationExecutor(DocumentStoreBase store)
-            : this(store, CreateRequestExecutor(store), initialRequestExecutor: null, nodeTag: null)
+            : this(store, CreateRequestExecutor(store), initialRequestExecutor: null, new ConcurrentDictionary<string, ServerOperationExecutor>(StringComparer.OrdinalIgnoreCase), nodeTag: null)
         {
         }
 
-        private ServerOperationExecutor(DocumentStoreBase store, ClusterRequestExecutor requestExecutor, ClusterRequestExecutor initialRequestExecutor, string nodeTag)
+        private ServerOperationExecutor(DocumentStoreBase store, ClusterRequestExecutor requestExecutor, ClusterRequestExecutor initialRequestExecutor, ConcurrentDictionary<string, ServerOperationExecutor> cache, string nodeTag)
         {
             if (store == null)
                 throw new ArgumentNullException(nameof(store));
@@ -33,15 +36,21 @@ namespace Raven.Client.ServerWide.Operations
             _requestExecutor = requestExecutor;
             _initialRequestExecutor = initialRequestExecutor;
             _nodeTag = nodeTag;
+            _cache = cache;
 
             store.RegisterEvents(_requestExecutor);
 
-            store.AfterDispose += (sender, args) => _requestExecutor.Dispose();
+            store.AfterDispose += (sender, args) => Dispose();
         }
 
         public void Dispose()
         {
-            _requestExecutor.Dispose();
+            _requestExecutor?.Dispose();
+
+            if (_nodeTag != null)
+                _cache?.TryRemove(_nodeTag, out _);
+            else
+                _cache?.Clear();
         }
 
         public ServerOperationExecutor ForNode(string nodeTag)
@@ -55,22 +64,22 @@ namespace Raven.Client.ServerWide.Operations
             if (_store.Conventions.DisableTopologyUpdates)
                 throw new InvalidOperationException($"Cannot switch server operation executor, because {nameof(Conventions)}.{nameof(_store.Conventions.DisableTopologyUpdates)} is set to 'true'.");
 
-            var requestExecutor = _initialRequestExecutor ?? _requestExecutor;
-
-            while (true)
+            return _cache.GetOrAdd(nodeTag, tag =>
             {
+                var requestExecutor = _initialRequestExecutor ?? _requestExecutor;
+
                 var topology = GetTopology(requestExecutor);
 
                 var node = topology
                     .Nodes
-                    .Find(x => string.Equals(x.ClusterTag, nodeTag, StringComparison.OrdinalIgnoreCase));
+                    .Find(x => string.Equals(x.ClusterTag, tag, StringComparison.OrdinalIgnoreCase));
 
                 if (node == null)
-                    throw new InvalidOperationException($"Could not find node '{nodeTag}' in the topology. Available nodes: [{string.Join(", ", topology.Nodes.Select(x => x.ClusterTag))}]");
+                    throw new InvalidOperationException($"Could not find node '{tag}' in the topology. Available nodes: [{string.Join(", ", topology.Nodes.Select(x => x.ClusterTag))}]");
 
                 var clusterExecutor = ClusterRequestExecutor.CreateForSingleNode(node.Url, _store.Certificate, _store.Conventions);
-                return new ServerOperationExecutor(_store, clusterExecutor, requestExecutor, node.ClusterTag);
-            }
+                return new ServerOperationExecutor(_store, clusterExecutor, requestExecutor, _cache, node.ClusterTag);
+            });
         }
 
         public void Send(IServerOperation operation)
