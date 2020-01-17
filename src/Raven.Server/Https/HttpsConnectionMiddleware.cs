@@ -34,7 +34,7 @@ namespace Raven.Server.Https
 
             options.ConfigureHttpsDefaults(o =>
             {
-                o.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls11 | SslProtocols.Tls;
+                o.SslProtocols = SslProtocols.Tls13 | SslProtocols.Tls12 | SslProtocols.Tls11 | SslProtocols.Tls;
                 o.CheckCertificateRevocation = true;
                 o.ClientCertificateMode = ClientCertificateMode.AllowCertificate;
                 o.ClientCertificateValidation = (certificate, chain, sslPolicyErrors) =>
@@ -75,12 +75,12 @@ namespace Raven.Server.Https
             var tlsHandshakeFeature = context.Features.Get<ITlsHandshakeFeature>();
             if (tlsHandshakeFeature != null)
             {
-                if (tlsHandshakeFeature.Protocol != SslProtocols.Tls12)
+                if (tlsHandshakeFeature.Protocol != SslProtocols.Tls13 && tlsHandshakeFeature.Protocol != SslProtocols.Tls12)
                 {
                     context.Features.Set<IHttpAuthenticationFeature>(new RavenServer.AuthenticateConnection
                     {
                         WrongProtocolMessage =
-                            $"RavenDB requires clients to connect using TLS 1.2, but the client used: '{tlsHandshakeFeature.Protocol}'."
+                            $"RavenDB requires clients to connect using TLS 1.3 or TLS 1.2, but the client used: '{tlsHandshakeFeature.Protocol}'."
                     });
 
                     await next();

@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Xunit;
 using Xunit.Abstractions;
@@ -143,7 +144,7 @@ namespace SlowTests.Issues
             var handler = new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = (message, certificate2, arg3, arg4) => true,
-                SslProtocols = SslProtocols.Tls12
+                SslProtocols = TcpUtils.SupportedSslProtocols
             };
 
             if (certificate != null)

@@ -14,6 +14,13 @@ namespace Raven.Client.Util
 {
     internal static class TcpUtils
     {
+        internal const SslProtocols SupportedSslProtocols =
+#if NETSTANDARD2_0 || NETCOREAPP2_1
+            SslProtocols.Tls12;
+#else
+            SslProtocols.Tls13 | SslProtocols.Tls12;
+#endif
+
         private static void SetTimeouts(TcpClient client, TimeSpan timeout)
         {
             client.SendTimeout = (int)timeout.TotalMilliseconds;
@@ -99,13 +106,13 @@ namespace Raven.Client.Util
             return tcpClient;
         }
 
-        internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info, X509Certificate2 storeCertificate, 
+        internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info, X509Certificate2 storeCertificate,
             TimeSpan? timeout)
         {
             var networkStream = tcpClient.GetStream();
             if (timeout != null)
             {
-                networkStream.ReadTimeout =  
+                networkStream.ReadTimeout =
                     networkStream.WriteTimeout = (int)timeout.Value.TotalMilliseconds;
             }
             Stream stream = networkStream;
@@ -114,7 +121,8 @@ namespace Raven.Client.Util
 
             var expectedCert = new X509Certificate2(Convert.FromBase64String(info.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
             var sslStream = new SslStream(stream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
-            await sslStream.AuthenticateAsClientAsync(new Uri(info.Url).Host, new X509CertificateCollection(new X509Certificate[]{storeCertificate}), SslProtocols.Tls12, false).ConfigureAwait(false);
+
+            await sslStream.AuthenticateAsClientAsync(new Uri(info.Url).Host, new X509CertificateCollection(new X509Certificate[] { storeCertificate }), SupportedSslProtocols, false).ConfigureAwait(false);
             stream = sslStream;
             return stream;
         }
@@ -134,8 +142,8 @@ namespace Raven.Client.Util
             {
                 tcpClient = new TcpClient(AddressFamily.InterNetwork);
             }
-            
-            tcpClient.NoDelay = true;            
+
+            tcpClient.NoDelay = true;
             tcpClient.LingerState = new LingerOption(true, 5);
 
             if (timeout.HasValue)
@@ -165,7 +173,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);            
+            tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);
 
             return (tcpClient, info.Url);
         }
