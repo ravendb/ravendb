@@ -208,9 +208,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             var item = DocumentScript.ScriptEngine.Object.Construct(Arguments.Empty);
 
-            item.Put(nameof(VarcharFunctionCall.Type), type, true);
-            item.Put(nameof(VarcharFunctionCall.Value), args[0], true);
-            item.Put(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DefaultVarCharSize, true);
+            item.Set(nameof(VarcharFunctionCall.Type), type, true);
+            item.Set(nameof(VarcharFunctionCall.Value), args[0], true);
+            item.Set(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DefaultVarCharSize, true);
 
             return item;
         }

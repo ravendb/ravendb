@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     foreach (var prop in oe.Properties)
                     {
-                        var fieldName = prop.Key.GetKey(engine);
+                        var fieldName = prop.GetKey(engine);
                         if (fieldName == "_")
                             HasDynamicReturns = true;
 
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 else if (CompareFields(oe) == false)
                 {
                     throw new InvalidOperationException($"Index {IndexName} contains different return structure from different code paths," +
-                                                        $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.Key.GetKey(engine)))}");
+                                                        $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.GetKey(engine)))}");
                 }
             }
         }
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (MoreArguments != null)
             {
-                for (int i = 0; i < MoreArguments.GetLength(); i++)
+                for (int i = 0; i < MoreArguments.Length; i++)
                 {
                     var arg = MoreArguments.Get(i.ToString()).As<FunctionInstance>();
 
@@ -190,8 +190,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     functionExp,
                     LexicalEnvironment.NewDeclarativeEnvironment(engine, engine.ExecutionContext.LexicalEnvironment),
                     function.Strict
-                )
-            { Extensible = true };
+                );
             return (functionObject, functionExp);
         }
 
@@ -206,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 return false;
             foreach (var p in oe.Properties)
             {
-                if (Fields.Contains(p.Key.GetKey(_engine)) == false)
+                if (Fields.Contains(p.GetKey(_engine)) == false)
                     return false;
             }
 

@@ -212,13 +212,10 @@ namespace Raven.Server.Documents.Indexes.Static
             var jsValues = ConstructValues();
             var jsKey = ConstructKey();
 
-            var result = new ObjectInstance(Engine)
-            {
-                Extensible = true
-            };
+            var result = new ObjectInstance(Engine);
 
-            result.Put("values", jsValues, false);
-            result.Put("key", jsKey, false);
+            result.Set("values", jsValues, false);
+            result.Set("key", jsKey, false);
 
             return result;
 
@@ -238,10 +235,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return JsValue.Null;
                 }
 
-                var key = new ObjectInstance(Engine)
-                {
-                    Extensible = true
-                };
+                var key = new ObjectInstance(Engine);
 
                 foreach (var groupByField in _groupByFields)
                 {
@@ -257,7 +251,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                         var value = groupByField.GetValue(null, prop.Value);
 
-                        key.Put(propertyName, JsValue.FromObject(Engine, value), throwOnError: false);
+                        key.Set(propertyName, JsValue.FromObject(Engine, value), throwOnError: false);
                     }
                 }
 
@@ -277,11 +271,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     items[i] = new PropertyDescriptor(jsValue, true, true, true);
                 }
 
-                var jsArray = new ArrayInstance(Engine, items)
-                {
-                    Prototype = Engine.Array.PrototypeObject,
-                    Extensible = false
-                };
+                var jsArray = new ArrayInstance(Engine, items);
+                jsArray.SetPrototypeOf(Engine.Array.PrototypeObject);
+                jsArray.PreventExtensions();
 
                 return jsArray;
             }
@@ -343,7 +335,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (prop.Value is MemberExpression me)
                             path = GetPropertyPath(me).ToArray();
 
-                        var propertyName = prop.Key.GetKey(Engine);
+                        var propertyName = prop.GetKey(Engine);
                         cur.Add(CreateField(propertyName, path));
                     }
 

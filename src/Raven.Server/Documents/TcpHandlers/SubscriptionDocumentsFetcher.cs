@@ -347,10 +347,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 else
                 {
                     metadata = json.Engine.Object.Construct(Array.Empty<JsValue>());
-                    json.Put(Constants.Documents.Metadata.Key, metadata, false);
+                    json.Set(Constants.Documents.Metadata.Key, metadata, false);
                 }
 
-                metadata.Put(Constants.Documents.Metadata.Projection, JsBoolean.True, false);
+                metadata.Set(Constants.Documents.Metadata.Projection, JsBoolean.True, false);
             }
         }
     }

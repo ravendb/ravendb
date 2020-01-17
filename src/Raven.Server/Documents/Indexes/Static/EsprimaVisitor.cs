@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private void VisitCatchClause(CatchClause catchClause)
-        {            
+        {
             VisitIdentifier(catchClause.Param.As<Identifier>());
             VisitStatement(catchClause.Body);
         }
@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 VisitIdentifier(declaration.Id.As<Identifier>());
                 if (declaration.Init != null)
-                {                    
+                {
                     VisitExpression(declaration.Init);
                 }
             }
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Indexes.Static
             VisitExpression(switchStatement.Discriminant);
             foreach (var c in switchStatement.Cases)
             {
-                VisitSwitchCase(c);                
+                VisitSwitchCase(c);
             }
         }
 
@@ -365,7 +365,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             foreach (var p in objectExpression.Properties)
             {
-               VisitProperty(p); 
+                VisitProperty(p);
             }
         }
 
@@ -689,7 +689,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         public virtual void VisitObjectPattern(ObjectPattern objectPattern)
-        {         
+        {
         }
 
         public virtual void VisitSpreadElement(SpreadElement spreadElement)
@@ -751,14 +751,12 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         public virtual void VisitCallExpression(CallExpression callExpression)
-        {            
+        {
             VisitExpression(callExpression.Callee);
-            if (callExpression.Cached == false)
+
+            foreach (var arg in callExpression.Arguments)
             {
-                foreach (var arg in callExpression.Arguments)
-                {
-                    VisitExpression(arg.As<Expression>());
-                }
+                VisitExpression(arg.As<Expression>());
             }
         }
 

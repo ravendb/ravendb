@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Patch
                 // if user didn't specify it, we'll take it from the first doc
                 // we cannot change collections here anyway, anything else, the 
                 // user need to merge on their own
-                instance.Put(Constants.Documents.Metadata.Collection, _fstDocumentConflict.Collection.ToString(), false);
+                instance.Set(Constants.Documents.Metadata.Collection, _fstDocumentConflict.Collection.ToString(), false);
                 resolved = result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 return true;
             }

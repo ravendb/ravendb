@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Patch
         public virtual bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
         {
             if (reference.GetReferencedName() == "reduce" &&
-                value.IsArray() && value.AsArray().GetLength() == 0)
+                value.IsArray() && value.AsArray().Length == 0)
             {
                 value = Null.Instance;
                 return true;
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Patch
                 var baseValue = reference.GetBase();
 
                 if (baseValue.IsUndefined() ||
-                    baseValue.IsArray() && baseValue.AsArray().GetLength() == 0)
+                    baseValue.IsArray() && baseValue.AsArray().Length == 0)
                 {
                     var name = reference.GetReferencedName();
                     switch (name)

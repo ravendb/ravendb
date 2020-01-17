@@ -5,6 +5,7 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Object;
+using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Patch
         public bool Changed;
         private readonly BlittableObjectInstance _parent;
         private readonly Document _doc;
-        private bool _put;
+        private bool _set;
 
         public readonly DateTime? LastModified;
         public readonly string ChangeVector;
@@ -63,10 +64,7 @@ namespace Raven.Server.Documents.Patch
                 var prop = new BlittableObjectProperty(this, propertyName);
                 if (propertyIndex == -1)
                 {
-                    prop.Value = new ObjectInstance(Engine)
-                    {
-                        Extensible = true
-                    };
+                    prop.Value = new ObjectInstance(Engine);
                 }
 
                 return prop;
@@ -242,11 +240,8 @@ namespace Raven.Server.Documents.Patch
                     items[i] = new PropertyDescriptor(item, true, true, true);
                 }
 
-                var jsArray = new ArrayInstance(e, items)
-                {
-                    Prototype = e.Array.PrototypeObject,
-                    Extensible = true
-                };
+                var jsArray = new ArrayInstance(e, items);
+                jsArray.SetPrototypeOf(e.Array.PrototypeObject);
 
                 return jsArray;
             }
@@ -318,7 +313,8 @@ namespace Raven.Server.Documents.Patch
             ChangeVector = changeVector;
             Blittable = blittable;
             DocumentId = id;
-            Prototype = engine.Object.PrototypeObject;
+
+            SetPrototypeOf(engine.Object.PrototypeObject);
         }
 
         public BlittableObjectInstance(Engine engine,
@@ -329,11 +325,15 @@ namespace Raven.Server.Documents.Patch
             _doc = doc;
         }
 
-
-        public override bool Delete(in Key propertyName, bool throwOnError)
+        public override bool Delete(in Key propertyName)
         {
             if (Deletes == null)
                 Deletes = new HashSet<Key>();
+
+            var desc = GetOwnProperty(propertyName);
+
+            if (desc == PropertyDescriptor.Undefined)
+                return true;
 
             MarkChanged();
             Deletes.Add(propertyName);
@@ -351,7 +351,7 @@ namespace Raven.Server.Documents.Patch
 
             if (val.Value.IsUndefined() &&
                 DocumentId == null &&
-                _put == false)
+                _set == false)
             {
                 return PropertyDescriptor.Undefined;
             }
@@ -361,24 +361,24 @@ namespace Raven.Server.Documents.Patch
             return val;
         }
 
-        public override void Put(in Key propertyName, JsValue value, bool throwOnError)
+        public override bool Set(in Key propertyName, JsValue value, JsValue receiver)
         {
-            _put = true;
+            _set = true;
             try
             {
-                base.Put(propertyName, value, throwOnError);
+                return base.Set(propertyName, value, receiver);
             }
             finally
             {
-                _put = false;
+                _set = false;
             }
         }
 
-        public override IEnumerable<KeyValuePair<string, PropertyDescriptor>> GetOwnProperties()
+        public override IEnumerable<KeyValuePair<Key, PropertyDescriptor>> GetOwnProperties()
         {
             foreach (var value in OwnValues)
             {
-                yield return new KeyValuePair<string, PropertyDescriptor>(value.Key, value.Value);
+                yield return new KeyValuePair<Key, PropertyDescriptor>(value.Key, value.Value);
             }
             if (Blittable == null)
                 yield break;
@@ -389,11 +389,37 @@ namespace Raven.Server.Documents.Patch
                     continue;
                 if (OwnValues.ContainsKey(key))
                     continue;
-                yield return new KeyValuePair<string, PropertyDescriptor>(
+                yield return new KeyValuePair<Key, PropertyDescriptor>(
                     prop,
                     GetOwnProperty(key)
                     );
             }
+        }
+
+        public override List<JsValue> GetOwnPropertyKeys(Types types)
+        {
+            var list = new List<JsValue>(Blittable != null ? Blittable.Count : OwnValues.Count);
+
+            foreach (var value in OwnValues)
+            {
+                list.Add(value.Key);
+            }
+
+            if (Blittable == null)
+                return list;
+
+            foreach (var prop in Blittable.GetPropertyNames())
+            {
+                Key key = prop;
+                if (Deletes?.Contains(key) == true)
+                    continue;
+                if (OwnValues.ContainsKey(key))
+                    continue;
+
+                list.Add(prop);
+            }
+
+            return list;
         }
 
         private void RecordNumericFieldType(string key, BlittableJsonToken type)
