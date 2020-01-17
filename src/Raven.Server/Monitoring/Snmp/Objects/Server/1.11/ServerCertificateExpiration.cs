@@ -20,7 +20,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             if (holder == null || holder.Certificate == null)
                 return null;
 
-            var notAfter = holder.Certificate.NotAfter;
+            var notAfter = holder.Certificate.NotAfter.ToUniversalTime();
 
             return new OctetString(notAfter.ToString("d", CultureInfo.CurrentCulture));
         }
