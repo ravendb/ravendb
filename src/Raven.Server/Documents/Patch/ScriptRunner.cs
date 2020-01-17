@@ -1081,10 +1081,7 @@ namespace Raven.Server.Documents.Patch
 
                         if (propertyIndex == -1)
                         {
-                            return new ObjectInstance(selfInstance.Engine)
-                            {
-                                Extensible = true
-                            };
+                            return new ObjectInstance(selfInstance.Engine);
                         }
 
                         BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();

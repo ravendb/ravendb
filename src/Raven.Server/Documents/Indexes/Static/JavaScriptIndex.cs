@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
             var maps = mapsArray.AsArray();
             collectionFunctions = new Dictionary<string, List<JavaScriptMapOperation>>();
-            for (int i = 0; i < maps.GetLength(); i++)
+            for (int i = 0; i < maps.Length; i++)
             {
                 var mapObj = maps.Get(i.ToString());
                 if (mapObj.IsNull() || mapObj.IsUndefined() || mapObj.IsObject() == false)
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (moreArgsObj.IsArray())
                     {
                         var array = moreArgsObj.AsArray();
-                        if (array.GetLength() > 0)
+                        if (array.Length > 0)
                         {
                             operation.MoreArguments = array;
                         }

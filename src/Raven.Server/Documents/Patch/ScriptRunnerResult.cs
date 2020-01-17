@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Patch
             if (o == null || o.IsUndefined() || o.IsNull())
             {
                 o = _parent.ScriptEngine.Object.Construct(Array.Empty<JsValue>());
-                parent.Put(name, o, false);
+                parent.Set(name, o, false);
             }
             return o.AsObject();
         }
