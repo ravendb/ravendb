@@ -711,7 +711,7 @@ namespace Raven.Server
             {
                 using (var httpMessageHandler = new HttpClientHandler())
                 {
-                    httpMessageHandler.SslProtocols = SslProtocols.Tls12;
+                    httpMessageHandler.SslProtocols = TcpUtils.SupportedSslProtocols;
 
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"During server initialization, validating that the server can authenticate with itself using {url}.");
@@ -741,7 +741,7 @@ namespace Raven.Server
                     {
                         // Try again, this time the callback should allow the connection.
                         httpMessageHandler.ServerCertificateCustomValidationCallback += CertificateCallback;
-                        httpMessageHandler.SslProtocols = SslProtocols.Tls12;
+                        httpMessageHandler.SslProtocols = TcpUtils.SupportedSslProtocols;
                         httpMessageHandler.ClientCertificates.Add(certificateCertificate);
 
                         using (var client = new HttpClient(httpMessageHandler)
@@ -2208,7 +2208,7 @@ namespace Raven.Server
                         // connection because SSL negotiation failed.
                         true);
 
-                await sslStream.AuthenticateAsServerAsync(Certificate.Certificate, true, SslProtocols.Tls12, false);
+                await sslStream.AuthenticateAsServerAsync(Certificate.Certificate, true, TcpUtils.SupportedSslProtocols, false);
 
                 return (sslStream, HttpsConnectionMiddleware.ConvertToX509Certificate2(sslStream.RemoteCertificate));
             }
