@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -79,6 +78,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     DatabaseName = databaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = key
                     }
                 }))
@@ -127,7 +127,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 };
 
@@ -150,6 +150,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     DatabaseName = databaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = key
                     }
                 }))
@@ -289,6 +290,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = key
                     }
                 }))
@@ -337,7 +339,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 };
 
@@ -361,6 +363,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = key
                     }
                 }))
@@ -433,8 +436,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
                 }))
                 {
@@ -716,6 +719,103 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task snapshot_encrypted_db__with_incremental_and_restore_to_encrypted_DB()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            var key = EncryptedServer(out var certificates, out string dbName);
+
+            const string key1 = "users/1";
+            const string key2 = "users/2";
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, key1);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "grisha"
+                    }, key2);
+                    await session.SaveChangesAsync();
+                }
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 2);
+                Assert.Equal(2, value);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    EncryptionKey = key,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>(new List<string>
+                        {
+                            key1, key2
+                        });
+
+                        Assert.Equal(2, users.Count);
+                        Assert.NotNull(users[key1]);
+                        Assert.Equal("oren", users[key1].Name);
+                        Assert.NotNull(users[key2]);
+                        Assert.Equal("grisha", users[key2].Name);
                     }
                 }
             }
@@ -1167,6 +1267,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     DatabaseName = restoredDatabaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
+                        EncryptionMode = EncryptionMode.UseProvidedKey,
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
                 }))
@@ -1253,6 +1354,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         DatabaseName = databaseName,
                         BackupEncryptionSettings = new BackupEncryptionSettings
                         {
+                            EncryptionMode = EncryptionMode.UseProvidedKey,
                             Key = Convert.ToBase64String(key)
                         }
                     }))
@@ -1260,6 +1362,90 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 });
                 Assert.IsType<CryptographicException>(e.InnerException);
+            }
+        }
+
+        [Fact]
+        public void encryption_settings_validation()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "oren" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 100);
+                    session.SaveChanges();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = key
+                    }
+                };
+
+                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
+                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 4);
+                Assert.Equal(4, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                var e = Assert.Throws<RavenException>(() =>
+                {
+                    RestoreDatabaseInternal(EncryptionMode.UseProvidedKey, null);
+                });
+
+                Assert.IsType<InvalidOperationException>(e.InnerException);
+                Assert.Contains("EncryptionMode is set to UseProvidedKey but an encryption key wasn't provided", e.Message);
+
+                e = Assert.Throws<RavenException>(() =>
+                {
+                    RestoreDatabaseInternal(EncryptionMode.None, key);
+                });
+
+                Assert.IsType<InvalidOperationException>(e.InnerException);
+                Assert.Contains("EncryptionMode is set to None but an encryption key was provided", e.Message);
+
+                e = Assert.Throws<RavenException>(() =>
+                {
+                    RestoreDatabaseInternal(EncryptionMode.UseDatabaseKey, key);
+                });
+
+                Assert.IsType<InvalidOperationException>(e.InnerException);
+                Assert.Contains("EncryptionMode is set to UseDatabaseKey but an encryption key was provided", e.Message);
+
+                void RestoreDatabaseInternal(EncryptionMode encryptionMode, string encryptionKey)
+                {
+                    using (RestoreDatabase(store, new RestoreBackupConfiguration
+                    {
+                        BackupLocation = Directory.GetDirectories(backupPath).First(),
+                        DatabaseName = databaseName,
+                        BackupEncryptionSettings = new BackupEncryptionSettings
+                        {
+                            EncryptionMode = encryptionMode,
+                            Key = encryptionKey
+                        }
+                    }))
+                    {
+                    }
+                }
             }
         }
 
@@ -1575,8 +1761,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = key,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
-                        Key = key
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 }))
                 {

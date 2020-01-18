@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                             continue;
 
                         if (referenceDocument.Data.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray ids) == false)
-                            ThrowIdsPropertyNotFound(referenceDocument.Id);
+                            ThrowReduceOutputsPropertyNotFound(referenceDocument.Id);
 
                         var idsToRemove = reduceReferenceIdToReduceOutputIds.Value;
 
@@ -400,57 +400,44 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 {
                     using (var existingReferenceDocument = _database.DocumentsStorage.Get(context, referencesOfReduceOutput.Key))
                     {
-                        if (existingReferenceDocument == null)
-                        {
-                            var referenceDoc = new DynamicJsonValue
-                            {
-                                [nameof(OutputReduceToCollectionReference.ReduceOutputs)] = new DynamicJsonArray(referencesOfReduceOutput.Value),
-                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                                {
-                                    [Constants.Documents.Metadata.Collection] = $"{_outputReduceToCollection}/References"
-                                }
-                            };
+                        var uniqueIds = referencesOfReduceOutput.Value;
 
-                            using (var referenceJson = context.ReadObject(referenceDoc, "reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                        if (existingReferenceDocument != null)
+                        {
+                            if (existingReferenceDocument.Data.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray existingIds) == false)
+                                ThrowReduceOutputsPropertyNotFound(existingReferenceDocument.Id);
+
+                            foreach (object id in existingIds)
                             {
-                                PutReferenceDocument(referencesOfReduceOutput, referenceJson);
+                                uniqueIds.Add(id.ToString());
                             }
                         }
-                        else
-                        {
-                            if (existingReferenceDocument.Data.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray ids) == false)
-                                ThrowIdsPropertyNotFound(existingReferenceDocument.Id);
 
-                            if (ids.Modifications == null)
-                                ids.Modifications = new DynamicJsonArray();
+                        var referenceDoc = new DynamicJsonValue
+                        {
+                            [nameof(OutputReduceToCollectionReference.ReduceOutputs)] = new DynamicJsonArray(uniqueIds),
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                            {
+                                [Constants.Documents.Metadata.Collection] = $"{_outputReduceToCollection}/References"
+                            }
+                        };
+
+                        using (var referenceJson = context.ReadObject(referenceDoc, "reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                        {
+                            _database.DocumentsStorage.Put(context, referencesOfReduceOutput.Key, null, referenceJson,
+                                flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
 
                             foreach (var reduceOutputId in referencesOfReduceOutput.Value)
                             {
-                                ids.Modifications.Add(reduceOutputId);
-                            }
-
-                            using (var referenceJson = context.ReadObject(existingReferenceDocument.Data, "existing-reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                            {
-                                PutReferenceDocument(referencesOfReduceOutput, referenceJson);
+                                _index.OutputReduceToCollection.AddPatternGeneratedIdForReduceOutput(indexWriteTransaction, reduceOutputId,
+                                    referencesOfReduceOutput.Key);
                             }
                         }
-                    }
-                }
-
-                void PutReferenceDocument(KeyValuePair<string, HashSet<string>> referencesOfReduceOutput, BlittableJsonReaderObject referenceJson)
-                {
-                    _database.DocumentsStorage.Put(context, referencesOfReduceOutput.Key, null, referenceJson,
-                        flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
-
-                    foreach (var reduceOutputId in referencesOfReduceOutput.Value)
-                    {
-                        _index.OutputReduceToCollection.AddPatternGeneratedIdForReduceOutput(indexWriteTransaction, reduceOutputId,
-                            referencesOfReduceOutput.Key);
                     }
                 }
             }
 
-            private static void ThrowIdsPropertyNotFound(string id)
+            private static void ThrowReduceOutputsPropertyNotFound(string id)
             {
                 throw new InvalidOperationException($"Property {nameof(OutputReduceToCollectionReference.ReduceOutputs)} was not found in document: {id}");
             }

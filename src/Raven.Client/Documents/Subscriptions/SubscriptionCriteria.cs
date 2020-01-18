@@ -1,5 +1,6 @@
 using System;
 using System.Linq.Expressions;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Subscriptions
@@ -26,6 +27,18 @@ namespace Raven.Client.Documents.Subscriptions
         public Action<ISubscriptionIncludeBuilder<T>> Includes { get; set; }
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
+
+        public SubscriptionCreationOptions ToSubscriptionCreationOptions(DocumentConventions conventions)
+        {
+            SubscriptionCreationOptions subscriptionCreationOptions = new SubscriptionCreationOptions
+            {
+                Name = Name,
+                ChangeVector = ChangeVector,
+                MentorNode = MentorNode
+            };
+            return DocumentSubscriptions.CreateSubscriptionOptionsFromGeneric(conventions, 
+                subscriptionCreationOptions, Filter, Projection, Includes);
+        }
     }
 
 

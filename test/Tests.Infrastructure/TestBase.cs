@@ -91,8 +91,16 @@ namespace FastTests
                 Console.WriteLine(sb.ToString());
             };
 #endif
-
-            System.Threading.ThreadPool.SetMinThreads(250, 250);
+            if (PlatformDetails.RunningOnPosix == false &&
+                PlatformDetails.Is32Bits) // RavenDB-13655
+            {
+                System.Threading.ThreadPool.SetMinThreads(25, 25);
+                System.Threading.ThreadPool.SetMaxThreads(125, 125);
+            }
+            else
+            {
+                System.Threading.ThreadPool.SetMinThreads(250, 250);
+            }
 
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
