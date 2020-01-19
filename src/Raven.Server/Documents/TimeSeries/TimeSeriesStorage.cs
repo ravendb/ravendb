@@ -86,7 +86,10 @@ namespace Raven.Server.Documents.TimeSeries
 
         public void PurgeSegments(string collection, long upto, DocumentsOperationContext context)
         {
-            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return;
+
             var tableName = collectionName.GetTableName(CollectionTableType.TimeSeries);
             var table = context.Transaction.InnerTransaction.OpenTable(TimeSeriesSchema, tableName);
 
