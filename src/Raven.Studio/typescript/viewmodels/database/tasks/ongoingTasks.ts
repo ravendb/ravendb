@@ -56,7 +56,9 @@ class ongoingTasks extends viewModelBase {
 
     existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();
     selectedTaskType = ko.observable<TasksNamesInUI | "All tasks">();
-
+    
+    taskNameToCount: KnockoutComputed<dictionary<number>>;    
+    
     existingNodes = ko.observableArray<string>();
     selectedNode = ko.observable<string>();
 
@@ -73,6 +75,20 @@ class ongoingTasks extends viewModelBase {
     private initObservables() {
         this.myNodeTag(this.clusterManager.localNodeTag());
         this.serverWideBackupUrl = appUrl.forServerWideBackupList();
+        
+        this.taskNameToCount = ko.pureComputed<dictionary<number>>(() => {
+            var tasksNameToCount: { [id: string] : number; } = {};
+          
+            tasksNameToCount["External Replication"] = this.replicationTasks().length;
+            tasksNameToCount["RavenDB ETL"] = this.etlTasks().length;
+            tasksNameToCount["SQL ETL"] = this.sqlTasks().length;
+            tasksNameToCount["Backup"] = this.backupTasks().length;
+            tasksNameToCount["Subscription"] = this.subscriptionTasks().length;
+            tasksNameToCount["Pull Replication Hub"] = this.pullReplicationHubTasks().length;
+            tasksNameToCount["Pull Replication Sink"] = this.pullReplicationSinkTasks().length;
+                       
+            return tasksNameToCount;
+        })
     }
 
     activate(args: any): JQueryPromise<any> {
