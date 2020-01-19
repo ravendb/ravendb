@@ -40,17 +40,25 @@ namespace Raven.Client.ServerWide.Operations
 
             store.RegisterEvents(_requestExecutor);
 
-            store.AfterDispose += (sender, args) => Dispose();
+            if (_nodeTag == null)
+                store.AfterDispose += (sender, args) => Dispose();
         }
 
         public void Dispose()
         {
+            if (_nodeTag != null)
+                return;
+
             _requestExecutor?.Dispose();
 
-            if (_nodeTag != null)
-                _cache?.TryRemove(_nodeTag, out _);
-            else
-                _cache?.Clear();
+            var cache = _cache;
+            if (cache != null)
+            {
+                foreach (var kvp in cache)
+                    kvp.Value._requestExecutor?.Dispose();
+
+                cache.Clear();
+            }
         }
 
         public ServerOperationExecutor ForNode(string nodeTag)
