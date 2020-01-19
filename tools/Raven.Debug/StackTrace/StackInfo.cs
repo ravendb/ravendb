@@ -5,12 +5,12 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 
-namespace Raven.Debug
+namespace Raven.Debug.StackTrace
 {
     internal class StackInfo
     {
         public List<uint> ThreadIds = new List<uint>();
         public bool NativeThreads;
-        public List<string> StackTrace = new List<string>(); 
+        public List<string> StackTrace = new List<string>();
     }
 }
