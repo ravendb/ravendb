@@ -120,7 +120,7 @@ rvn_create_file(const char *path,
     if (initial_file_size < allocation_granularity)
         initial_file_size = allocation_granularity;
 
-    if (sz <= initial_file_size || sz % sys_page_size != 0)
+    if (sz <= initial_file_size || sz % allocation_granularity != 0)
     {
         sz = _nearest_size_to_page_size(rvn_max(initial_file_size, sz), allocation_granularity);
     }

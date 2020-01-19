@@ -9,7 +9,7 @@ _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size)
     int64_t mod = orig_size % sys_page_size;
     if (mod == 0)
     {
-        return orig_size;
+        return rvn_max(orig_size, sys_page_size);
     }
     return ((orig_size / sys_page_size) + 1) * sys_page_size;
 }

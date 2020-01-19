@@ -118,6 +118,14 @@ namespace Voron.Impl.Paging
             }
 
             var amountToMapInBytes = NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
+
+            //precaution, should never throw because PAL should enlarge the file to handle misalignment to granularity
+            if(_totalAllocationSize > amountToMapInBytes)
+                throw new InvalidOperationException(
+                    $@"Tried to map more than the file size. 
+                        This shouldn't happen as PAL layer is supposed to handle such cases. 
+                            This is probably a bug. (pager file size is {_totalAllocationSize}, but tried to map {amountToMapInBytes} bytes)");
+
             MapPages(state, allocationStartPosition, amountToMapInBytes);
             return true;
         }
