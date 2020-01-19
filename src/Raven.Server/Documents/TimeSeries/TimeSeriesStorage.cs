@@ -784,7 +784,9 @@ namespace Raven.Server.Documents.TimeSeries
             public ByteString Buffer, TimeSeriesKeyBuffer;
             public Slice TimeSeriesKeySlice, TimeSeriesPrefixSlice, TimeSeriesName;
             private readonly DocumentsOperationContext _context;
-            private string _docId;
+            private readonly string _docId;
+
+            private readonly Dictionary<LazyStringValue, Slice> CachedTags = new Dictionary<LazyStringValue, Slice>();
 
             public TimeSeriesSlicer(DocumentsOperationContext context, string documentId, string name, DateTime timestamp)
             {
@@ -809,8 +811,13 @@ namespace Raven.Server.Documents.TimeSeries
                     return Slices.Empty.AsSpan();
                 }
 
-                // TODO: cache and reuse existing tags
-                _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(_context, tag, out var tagSlice));
+                if (CachedTags.TryGetValue(tag, out var tagSlice))
+                {
+                    return tagSlice.AsSpan();
+                }
+
+                _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(_context, tag, out tagSlice));
+                CachedTags[tag] = tagSlice;
 
                 if (tagSlice.Size > byte.MaxValue)
                     throw new ArgumentOutOfRangeException(nameof(tag),
@@ -821,6 +828,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             public void Dispose()
             {
+                CachedTags.Clear();
+
                 foreach (var internalScope in _internalScopesToDispose)
                 {
                     internalScope.Dispose();
