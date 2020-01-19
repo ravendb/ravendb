@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.Tools.Dump;
+using Microsoft.Diagnostics.Tools.GCDump;
 using Raven.Debug.StackTrace;
 using Raven.Debug.Utils;
 
@@ -130,12 +131,16 @@ namespace Raven.Debug
                 cmd.ExtendedHelpText = cmd.Description = "Creates dump for the given process.";
                 cmd.HelpOption(HelpOptionString);
 
+                var waitOption = cmd.Option("--wait", "Wait for user input", CommandOptionType.NoValue);
                 var pidOption = cmd.Option("--pid", "Process ID to which the tool will attach to", CommandOptionType.SingleValue);
                 var outputOption = cmd.Option("--output", "Output file path", CommandOptionType.SingleValue);
                 var typeOption = cmd.Option("--type", "Type of dump (Heap or Mini). ", CommandOptionType.SingleValue);
 
                 cmd.OnExecuteAsync(async (_) =>
                 {
+                    if (waitOption.HasValue())
+                        Console.ReadLine(); // wait for the caller to finish preparing for us
+
                     if (pidOption.HasValue() == false)
                         return cmd.ExitWithError("Missing --pid option.");
 
@@ -161,6 +166,50 @@ namespace Raven.Debug
                     catch (Exception e)
                     {
                         return cmd.ExitWithError($"Failed to collect dump. Error: {e}");
+                    }
+                });
+            });
+
+            _app.Command("gcdump", cmd =>
+            {
+                cmd.ExtendedHelpText = cmd.Description = "Creates GC dump for the given process.";
+                cmd.HelpOption(HelpOptionString);
+
+                var waitOption = cmd.Option("--wait", "Wait for user input", CommandOptionType.NoValue);
+                var pidOption = cmd.Option("--pid", "Process ID to which the tool will attach to", CommandOptionType.SingleValue);
+                var outputOption = cmd.Option("--output", "Output file path", CommandOptionType.SingleValue);
+                var timeoutOption = cmd.Option("--timeout", "Give up on collecting the gcdump if it takes longer than this many seconds. The default value is. Default 30", CommandOptionType.SingleValue);
+                var verboseOption = cmd.Option("--verbose", "Output the log while collecting the gcdump.", CommandOptionType.NoValue);
+
+                cmd.OnExecuteAsync(async token =>
+                {
+                    if (waitOption.HasValue())
+                        Console.ReadLine(); // wait for the caller to finish preparing for us
+
+                    if (pidOption.HasValue() == false)
+                        return cmd.ExitWithError("Missing --pid option.");
+
+                    if (int.TryParse(pidOption.Value(), out var pid) == false)
+                        return cmd.ExitWithError($"Could not parse --pid with value '{pidOption.Value()}' to number.");
+
+                    string output = null;
+                    if (outputOption.HasValue())
+                        output = outputOption.Value();
+
+                    int timeout = 30;
+                    if (timeoutOption.HasValue() && int.TryParse(timeoutOption.Value(), out timeout) == false)
+                        return cmd.ExitWithError($"Could not parse --timeout with value '{timeoutOption.Value()}' to number.");
+
+                    var verbose = verboseOption.HasValue();
+
+                    try
+                    {
+                        await GCHeapDumper.Collect(token, cmd, pid, output, timeout, verbose).ConfigureAwait(false);
+                        return 0;
+                    }
+                    catch (Exception e)
+                    {
+                        return cmd.ExitWithError($"Failed to collect GC dump. Error: {e}");
                     }
                 });
             });
