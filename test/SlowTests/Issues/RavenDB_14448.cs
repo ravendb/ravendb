@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -52,12 +50,12 @@ namespace SlowTests.Issues
 
                 Assert.Equal(re1, re2);
 
-                // should remove from cache
+                // should not remove from cache
                 re1.Dispose();
 
                 re1 = store.Maintenance.Server.ForNode("A");
 
-                Assert.NotEqual(re1, re2);
+                Assert.Equal(re1, re2);
             }
         }
 
