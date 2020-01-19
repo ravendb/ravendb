@@ -219,6 +219,14 @@ namespace Raven.Server.Documents.TimeSeries
                         var newSegment = new TimeSeriesValuesSegment(holder.Allocator.Buffer.Ptr, MaxSegmentSize);
                         newSegment.Initialize(readOnlySegment.NumberOfValues);
 
+                        if (baseline >= from && end <= to)
+                        {
+                            // this entire segment can be deleted, so we overwrite it with a single dead value
+                            holder.AddValue(baseline, new double[readOnlySegment.NumberOfValues],Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
+                            holder.AppendExistingSegment(newSegment);
+                            return true;
+                        }
+
                         using (var enumerator = readOnlySegment.GetEnumerator(context.Allocator))
                         {
                             var state = new TimestampState[readOnlySegment.NumberOfValues];
@@ -923,7 +931,6 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureSegmentSize(newValueSegment.NumberOfBytes);
 
                 if (newValueSegment.SegmentValues.Span[0].Count == 0)
-                    // maybe optimize here, and compact it if we have a low population ratio
                 {
                     MarkSegmentAsPendingDeletion(_currentEtag);
                 }
