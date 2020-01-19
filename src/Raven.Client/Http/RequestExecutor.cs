@@ -1921,9 +1921,22 @@ namespace Raven.Client.Http
                 san.Add(asnData.Format(false));
             }
 
+            string hostname = ConvertSenderObjectToHostname(sender);
+
+            // could not figure out hostname so instead let's throw a generic error
+            if (string.IsNullOrEmpty(hostname))
+                throw new CertificateNameMismatchException(
+                    $"The hostname of the server URL must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
+                
+            throw new CertificateNameMismatchException(
+                $"You are trying to contact host {hostname} but the hostname must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
+        }
+
+        public static string ConvertSenderObjectToHostname(object sender)
+        {
             // The sender parameter passed to the RemoteCertificateValidationCallback can be a host string name or an object derived
             // from WebRequest. When using WebSockets, the sender parameter will be of type SslStream, but we cannot extract the
-            // hostname from there so instead let's throw a generic error by default
+            // hostname from there so returning null.
 
             string hostname;
             switch (sender)
@@ -1938,10 +1951,12 @@ namespace Raven.Client.Http
                     hostname = request.RequestUri.DnsSafeHost;
                     break;
                 default:
-                    throw new CertificateNameMismatchException($"The hostname of the server URL must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
+                    hostname = string.Empty;
+                    break;
+                    
             }
 
-            throw new CertificateNameMismatchException($"You are trying to contact host {hostname} but the hostname must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
+            return hostname;
         }
 
         public class NodeStatus : IDisposable

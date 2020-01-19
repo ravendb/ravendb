@@ -65,6 +65,7 @@ using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Server
 {
@@ -253,6 +254,14 @@ namespace Raven.Server
                         // errors here, it all goes to the log anyway
                     }
 
+                    if (string.IsNullOrEmpty(Configuration.Security.CertificateValidationExec) == false)
+                    {
+                        RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) =>
+                        {
+                            return ExternalCertificateValidationCallback(sender, cert, chain, errors, Logger);
+                        };
+                    }
+
                     var port = new Uri(Configuration.Core.ServerUrls[0]).Port;
                     if (port == 443 && Configuration.Security.DisableHttpsRedirection == false)
                     {
@@ -327,6 +336,116 @@ namespace Raven.Server
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Could not start server", e);
                 throw;
+            }
+        }
+
+        public bool ExternalCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, Logger log)
+        {
+            Process process = null;
+            try
+            {
+                var timeout = Configuration.Security.CertificateValidationExecTimeout.AsTimeSpan;
+
+                var userArgs = Configuration.Security.CertificateValidationExecArguments ?? string.Empty;
+                var senderHostname = RequestExecutor.ConvertSenderObjectToHostname(sender);
+                var base64Cert = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
+
+                var args = $"{userArgs} " +
+                           $"{CommandLineArgumentEscaper.EscapeSingleArg(senderHostname)} " +
+                           $"{CommandLineArgumentEscaper.EscapeSingleArg(base64Cert)} " +
+                           $"{CommandLineArgumentEscaper.EscapeSingleArg(sslPolicyErrors.ToString())}";
+                
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = Configuration.Security.CertificateValidationExec,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                var sw = Stopwatch.StartNew();
+
+                try
+                {
+                    process = Process.Start(startInfo);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Unable to execute '{Configuration.Security.CertificateValidationExec} {args}'. Failed to start process.", e);
+                }
+
+                var readStdOut = process.StandardOutput.ReadToEndAsync();
+                var readErrors = process.StandardError.ReadToEndAsync();
+
+                string GetStdError()
+                {
+                    try
+                    {
+                        return readErrors.Result;
+                    }
+                    catch (Exception e)
+                    {
+                        return $"Unable to get stderr, got exception: {e}";
+                    }
+                }
+
+                string GetStdOut()
+                {
+                    try
+                    {
+                        return readStdOut.Result;
+                    }
+                    catch (Exception e)
+                    {
+                        return $"Unable to get stdout, got exception: {e}";
+                    }
+                }
+
+                if (process.WaitForExit((int)timeout.TotalMilliseconds) == false)
+                {
+                    process.Kill();
+                    throw new InvalidOperationException($"Unable to execute '{Configuration.Security.CertificateValidationExec} {args}', waited for {(int)timeout.TotalMilliseconds} ms but the process didn't exit. Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}");
+                }
+
+                try
+                {
+                    readStdOut.Wait(timeout);
+                    readErrors.Wait(timeout);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Unable to read redirected stderr and stdout when executing '{Configuration.Security.CertificateValidationExec} {args}'", e);
+                }
+
+                // Can have exit code o (success) but still get errors. We log the errors anyway.
+                if (log.IsOperationsEnabled)
+                    log.Operations($"Executing '{Configuration.Security.CertificateValidationExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}");
+
+                if (process.ExitCode != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Command or executable '{Configuration.Security.CertificateValidationExec} {args}' failed. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}");
+                }
+
+                string output = GetStdOut();
+                bool result;
+                try
+                {
+                    bool.TryParse(output, out result);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot parse to boolean the result of Command or executable '{Configuration.Security.CertificateValidationExec} {args}'. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}", e);
+                }
+
+                return result;
+            }
+            finally
+            {
+                process?.Dispose();
             }
         }
 
