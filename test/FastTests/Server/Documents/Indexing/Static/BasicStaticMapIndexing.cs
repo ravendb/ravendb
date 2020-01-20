@@ -164,6 +164,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     .ToList();
 
                 Assert.Equal(IndexType.Map, indexes[0].Type);
+                Assert.Equal(IndexSourceType.Documents, indexes[0].SourceType);
                 Assert.Equal("Users_ByName", indexes[0].Name);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
@@ -174,6 +175,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition()));
 
                 Assert.Equal(IndexType.Map, indexes[1].Type);
+                Assert.Equal(IndexSourceType.Documents, indexes[1].SourceType);
                 Assert.Equal("Users_ByAge", indexes[1].Name);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());

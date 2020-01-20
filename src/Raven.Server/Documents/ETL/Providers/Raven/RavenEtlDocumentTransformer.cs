@@ -78,13 +78,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
 
             if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
-                metadata.Put(Constants.Documents.Metadata.Collection, collectionName, throwOnError: true);
+                metadata.Set(Constants.Documents.Metadata.Collection, collectionName, throwOnError: true);
 
             if (metadata.HasProperty(Constants.Documents.Metadata.Attachments))
-                metadata.Delete(Constants.Documents.Metadata.Attachments, throwOnError: true);
+                metadata.DeletePropertyOrThrow(Constants.Documents.Metadata.Attachments);
 
             if (metadata.HasProperty(Constants.Documents.Metadata.Counters))
-                metadata.Delete(Constants.Documents.Metadata.Counters, throwOnError: true);
+                metadata.DeletePropertyOrThrow(Constants.Documents.Metadata.Counters);
 
             var transformed = document.TranslateToObject(Context);
 
@@ -96,14 +96,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
-                docInstance.DefineOwnProperty(Transformation.AddAttachment, _addAttachmentMethod, throwOnError: true);
+                docInstance.DefinePropertyOrThrow(Transformation.AddAttachment, _addAttachmentMethod);
             }
 
             if (_transformation.IsAddingCounters)
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
-                docInstance.DefineOwnProperty(Transformation.AddCounter, _addCounterMethod, throwOnError: true);
+                docInstance.DefinePropertyOrThrow(Transformation.AddCounter, _addCounterMethod);
             }
         }
 

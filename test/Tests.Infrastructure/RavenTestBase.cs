@@ -101,6 +101,29 @@ namespace FastTests
             return Convert.ToBase64String(buffer);
         }
 
+        protected async Task WaitForRaftCommandToBeAppliedInCluster(RavenServer leader, string commandType)
+        {
+            var updateIndex = 0L;
+            var haveUpdateExternalReplicationStateCommand = false;
+            using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var entry in leader.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
+                {
+                    var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
+                    if (type == commandType)
+                    {
+                        haveUpdateExternalReplicationStateCommand = true;
+                        Assert.True(long.TryParse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString(), out updateIndex));
+                    }
+                }
+            }
+
+            Assert.True(haveUpdateExternalReplicationStateCommand);
+
+            await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
+        }
+
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)
         {
             if (Servers.Count == 0)

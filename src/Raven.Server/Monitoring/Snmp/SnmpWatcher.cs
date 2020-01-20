@@ -358,6 +358,7 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new DatabaseLoadedCount(server.ServerStore.DatabasesLandlord));
             store.Add(new DatabaseTotalCount(server.ServerStore));
+            store.Add(new DatabaseOldestBackup(server.ServerStore));
 
             store.Add(new ClusterNodeState(server.ServerStore));
             store.Add(new ClusterNodeTag(server.ServerStore));
@@ -374,6 +375,9 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerStorageTotalSize(server.ServerStore));
             store.Add(new ServerStorageDiskRemainingSpace(server.ServerStore));
             store.Add(new ServerStorageDiskRemainingSpacePercentage(server.ServerStore));
+
+            store.Add(new ServerCertificateExpiration(server.ServerStore));
+            store.Add(new ServerCertificateExpirationLeft(server.ServerStore));
 
             return store;
         }

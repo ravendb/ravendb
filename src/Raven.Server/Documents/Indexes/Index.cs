@@ -28,6 +28,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -114,6 +115,7 @@ namespace Raven.Server.Documents.Indexes
         /// Cancelled if the database is in shutdown process.
         /// </summary>
         private CancellationTokenSource _indexingProcessCancellationTokenSource;
+
         private bool _indexDisabled;
 
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
@@ -329,9 +331,11 @@ namespace Raven.Server.Documents.Indexes
                 environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index);
 
                 IndexType type;
+                IndexSourceType sourceType;
                 try
                 {
                     type = IndexStorage.ReadIndexType(name, environment);
+                    sourceType = IndexStorage.ReadIndexSourceType(name, environment);
                 }
                 catch (Exception e)
                 {
@@ -355,14 +359,32 @@ namespace Raven.Server.Documents.Indexes
 
                         if (staticDef != null)
                         {
-                            switch (staticDef.Type)
+                            switch (staticDef.SourceType)
                             {
-                                case IndexType.Map:
-                                case IndexType.JavaScriptMap:
-                                    return MapIndex.CreateNew(staticDef, documentDatabase);
-                                case IndexType.MapReduce:
-                                case IndexType.JavaScriptMapReduce:
-                                    return MapReduceIndex.CreateNew(staticDef, documentDatabase);
+                                case IndexSourceType.Documents:
+                                    switch (staticDef.Type)
+                                    {
+                                        case IndexType.Map:
+                                        case IndexType.JavaScriptMap:
+                                            return MapIndex.CreateNew(staticDef, documentDatabase);
+                                        case IndexType.MapReduce:
+                                        case IndexType.JavaScriptMapReduce:
+                                            return MapReduceIndex.CreateNew<MapReduceIndex>(staticDef, documentDatabase);
+                                    }
+                                    break;
+                                case IndexSourceType.TimeSeries:
+                                    switch (staticDef.Type)
+                                    {
+                                        case IndexType.Map:
+                                        case IndexType.JavaScriptMap:
+                                            return MapTimeSeriesIndex.CreateNew(staticDef, documentDatabase);
+                                        case IndexType.MapReduce:
+                                        case IndexType.JavaScriptMapReduce:
+                                            return MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(staticDef, documentDatabase);
+                                    }
+                                    break;
+                                default:
+                                    throw new ArgumentException($"Unknown index source type {staticDef.SourceType} for index {name}");
                             }
                         }
                         else
@@ -381,20 +403,38 @@ namespace Raven.Server.Documents.Indexes
                         e);
                 }
 
-                switch (type)
+                switch (sourceType)
                 {
-                    case IndexType.AutoMap:
-                        return AutoMapIndex.Open(environment, documentDatabase);
-                    case IndexType.AutoMapReduce:
-                        return AutoMapReduceIndex.Open(environment, documentDatabase);
-                    case IndexType.Map:
-                    case IndexType.JavaScriptMap:
-                        return MapIndex.Open(environment, documentDatabase);
-                    case IndexType.MapReduce:
-                    case IndexType.JavaScriptMapReduce:
-                        return MapReduceIndex.Open(environment, documentDatabase);
+                    case IndexSourceType.Documents:
+                        switch (type)
+                        {
+                            case IndexType.AutoMap:
+                                return AutoMapIndex.Open(environment, documentDatabase);
+                            case IndexType.AutoMapReduce:
+                                return AutoMapReduceIndex.Open(environment, documentDatabase);
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                return MapIndex.Open(environment, documentDatabase);
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                return MapReduceIndex.Open<MapReduceIndex>(environment, documentDatabase);
+                            default:
+                                throw new ArgumentException($"Unknown index type {type} for index {name}");
+                        }
+                    case IndexSourceType.TimeSeries:
+                        switch (type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                return MapTimeSeriesIndex.Open(environment, documentDatabase);
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                return MapReduceIndex.Open<MapReduceTimeSeriesIndex>(environment, documentDatabase);
+                            default:
+                                throw new ArgumentException($"Unknown index type {type} for index {name}");
+                        }
                     default:
-                        throw new ArgumentException($"Unknown index type {type} for index {name}");
+                        throw new ArgumentException($"Unknown index source type {sourceType} for index {name}");
                 }
             }
             catch (Exception e)
@@ -441,7 +481,9 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual bool IsMultiMap => false;
 
-        public virtual void ResetIsSideBySideAfterReplacement() { }
+        public virtual void ResetIsSideBySideAfterReplacement()
+        {
+        }
 
         public AsyncManualResetEvent.FrozenAwaiter GetIndexingBatchAwaiter()
         {
@@ -1103,7 +1145,7 @@ namespace Raven.Server.Documents.Indexes
                                     catch
                                     {
                                         // need to call it here to the let the index continue running
-                                        // we'll stop when we reach the index error threshold 
+                                        // we'll stop when we reach the index error threshold
                                         _mre.Set();
                                         throw;
                                     }
@@ -1311,7 +1353,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 // allocation cleanup has been requested multiple times or
                                 // there is no work to be done, and hasn't been for a while,
-                                // so this is a good time to release resources we won't need 
+                                // so this is a good time to release resources we won't need
                                 // anytime soon
                                 ReduceMemoryUsage(storageEnvironment);
 
@@ -2130,10 +2172,13 @@ namespace Raven.Server.Documents.Indexes
 
         private void UpdateIndexProgress(DocumentsOperationContext documentsContext, IndexProgress progress, IndexStats stats)
         {
-            var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
-            if (indexingPerformance?.DurationInMs > 0)
+            if (progress.IndexRunningStatus == IndexRunningStatus.Running)
             {
-                progress.ProcessedPerSecond = indexingPerformance.InputCount / (indexingPerformance.DurationInMs / 1000);
+                var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
+                if (indexingPerformance?.DurationInMs > 0)
+                {
+                    progress.ProcessedPerSecond = indexingPerformance.InputCount / (indexingPerformance.DurationInMs / 1000);
+                }
             }
 
             foreach (var collection in GetCollections(documentsContext, out var isAllDocs))
@@ -2452,9 +2497,9 @@ namespace Raven.Server.Documents.Indexes
                     AssertIndexState();
                     marker.HoldLock();
 
-                    // we take the awaiter _before_ the indexing transaction happens, 
-                    // so if there are any changes, it will already happen to it, and we'll 
-                    // query the index again. This is important because of: 
+                    // we take the awaiter _before_ the indexing transaction happens,
+                    // so if there are any changes, it will already happen to it, and we'll
+                    // query the index again. This is important because of:
                     // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                     var frozenAwaiter = GetIndexingBatchAwaiter();
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
@@ -2615,8 +2660,6 @@ namespace Raven.Server.Documents.Indexes
 
                                             includeTimeSeriesCommand?.Fill(document.Result);
                                         }
-
-
                                     }
                                 }
                                 catch (Exception e)
@@ -2790,9 +2833,9 @@ namespace Raven.Server.Documents.Indexes
 
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
-                        // we take the awaiter _before_ the indexing transaction happens, 
-                        // so if there are any changes, it will already happen to it, and we'll 
-                        // query the index again. This is important because of: 
+                        // we take the awaiter _before_ the indexing transaction happens,
+                        // so if there are any changes, it will already happen to it, and we'll
+                        // query the index again. This is important because of:
                         // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                         var frozenAwaiter = GetIndexingBatchAwaiter();
                         using (var indexTx = indexContext.OpenReadTransaction())
@@ -2834,7 +2877,6 @@ namespace Raven.Server.Documents.Indexes
                             }
                         }
                     }
-
                 }
             }
         }
@@ -2891,9 +2933,9 @@ namespace Raven.Server.Documents.Indexes
 
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
-                        // we take the awaiter _before_ the indexing transaction happens, 
-                        // so if there are any changes, it will already happen to it, and we'll 
-                        // query the index again. This is important because of: 
+                        // we take the awaiter _before_ the indexing transaction happens,
+                        // so if there are any changes, it will already happen to it, and we'll
+                        // query the index again. This is important because of:
                         // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                         var frozenAwaiter = GetIndexingBatchAwaiter();
                         using (var indexTx = indexContext.OpenReadTransaction())
@@ -3336,7 +3378,6 @@ namespace Raven.Server.Documents.Indexes
             return etags;
         }
 
-
         private void AddIndexingPerformance(IndexingStatsAggregator stats)
         {
             _lastIndexingStats.Enqueue(stats);
@@ -3770,7 +3811,6 @@ namespace Raven.Server.Documents.Indexes
                 PathSetting compactPath = null;
                 PathSetting tempPath = null;
 
-
                 try
                 {
                     var storageEnvironmentOptions = _environment.Options;
@@ -3902,7 +3942,6 @@ namespace Raven.Server.Documents.Indexes
             return Math.Max(lastDocEtag, lastTombstoneEtag);
         }
 
-
         public virtual long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
             return collection == Constants.Documents.Collections.AllDocumentsCollection
@@ -4020,7 +4059,7 @@ namespace Raven.Server.Documents.Indexes
 
             private static readonly TimeSpan ExtendedLockTimeout = TimeSpan.FromSeconds(30);
 
-            readonly Index _parent;
+            private readonly Index _parent;
             private bool _hasLock;
 
             public IndexQueryDoneRunning(Index parent)
@@ -4141,7 +4180,6 @@ namespace Raven.Server.Documents.Indexes
                         }
                     }
                     currentFile++;
-
                 }
 
                 return files.Length;

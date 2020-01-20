@@ -63,10 +63,11 @@ namespace Sparrow.Utils
 
             public bool IsThreadAlive()
             {
-                if (_threadInstance == null)
+                var threadInstance = _threadInstance;
+                if (threadInstance == null)
                     return false;
 
-                if (_threadInstance.TryGetTarget(out var copy) == false)
+                if (threadInstance.TryGetTarget(out var copy) == false)
                     return false;
 
                 if (copy == null)
@@ -76,7 +77,7 @@ namespace Sparrow.Utils
                     return true;
 
                 _threadInstance = null; // intentionally not thread safe, worst case it will take time to see this
-                _lastName = copy.Name; // fine if mulitple threads setting this
+                _lastName = copy.Name; // fine if multiple threads setting this
 
                 return false;
             }

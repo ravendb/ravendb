@@ -1196,17 +1196,11 @@ namespace Raven.Server.Documents
         {
             var result = new Document();
 
-            if (fields.Contain(DocumentFields.StorageId))
-                result.StorageId = tvr.Id;
-
             if (fields.Contain(DocumentFields.LowerId))
                 result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
 
             if (fields.Contain(DocumentFields.Id))
                 result.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
-
-            if (fields.Contain(DocumentFields.Etag))
-                result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
 
             if (fields.Contain(DocumentFields.Data))
                 result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
@@ -1214,14 +1208,11 @@ namespace Raven.Server.Documents
             if (fields.Contain(DocumentFields.ChangeVector))
                 result.ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
 
-            if (fields.Contain(DocumentFields.LastModified))
-                result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
-
-            if (fields.Contain(DocumentFields.Flags))
-                result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
-
-            if (fields.Contain(DocumentFields.TransactionMarker))
-                result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
+            result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
+            result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
+            result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+            result.StorageId = tvr.Id;
+            result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
 
             return result;
         }
@@ -1488,7 +1479,7 @@ namespace Raven.Server.Documents
         }
 
         // Note: Make sure to call this with a separator, so you won't delete "users/11" for "users/1"
-        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, long maxDocsToDelete = long.MaxValue)
+        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, long maxDocsToDelete = long.MaxValue, Action<Document> beforeDeleted = null)
         {
             var deleteResults = new List<DeleteOperationResult>();
 
@@ -1500,6 +1491,13 @@ namespace Raven.Server.Documents
                 {
                     if (table.SeekOnePrimaryKeyPrefix(prefixSlice, out var reader) == false)
                         break;
+
+                    if (beforeDeleted != null)
+                    {
+                        var doc = TableValueToDocument(context, ref reader);
+
+                        beforeDeleted(doc);
+                    }
 
                     var id = TableValueToId(context, (int)DocumentsTable.Id, ref reader);
 

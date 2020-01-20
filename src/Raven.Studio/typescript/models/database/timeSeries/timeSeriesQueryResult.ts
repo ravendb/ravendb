@@ -12,7 +12,7 @@ class timeSeriesQueryResult {
             return [null, null];
         }
         
-        switch (this.detectResultType()) {
+        switch (timeSeriesQueryResult.detectResultType(this.dto)) {
             case "grouped":
                 const groupedResults = this.dto.Results as Array<timeSeriesQueryGroupedItemResultDto>;
                 return [groupedResults[0].From, groupedResults[groupedResults.length - 1].To];
@@ -22,8 +22,8 @@ class timeSeriesQueryResult {
         }
     }
     
-    detectResultType(): timeSeriesResultType {
-        const results = this.dto.Results;
+    static detectResultType(dto: timeSeriesQueryResultDto): timeSeriesResultType {
+        const results = dto.Results;
         if (results.length === 0) {
             return "raw"; //we guess but list is empty
         }

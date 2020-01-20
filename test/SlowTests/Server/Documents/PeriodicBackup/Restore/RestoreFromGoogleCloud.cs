@@ -77,25 +77,25 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 {
                     BackupType = BackupType.Backup,
                     GoogleCloudSettings = googleCloudSettings,
-                    IncrementalBackupFrequency = "* * * * *" //every minute
+                    IncrementalBackupFrequency = "0 0 1 1 *"
                 };
 
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                PeriodicBackupStatus status = null;
                 var value = WaitForValue(() =>
                 {
-                    var status = store.Maintenance.Send(operation).Status;
+                    status = store.Maintenance.Send(operation).Status;
                     return status?.LastEtag;
                 }, 4);
-                Assert.Equal(4, value);
+                Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
+                Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
 
-                var backupStatus = store.Maintenance.Send(operation);
-                var backupOperationId = backupStatus.Status.LastOperationId;
-
-                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
 
                 var backupResult = backupOperation.Result as BackupResult;
+                Assert.NotNull(backupResult);
                 Assert.True(backupResult.Counters.Processed);
                 Assert.Equal(1, backupResult.Counters.ReadCount);
 
@@ -115,12 +115,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                var subfolderGoogleCloudSettings = GetGoogleCloudSettings(backupStatus.Status.FolderName);
+                var subfolderGoogleCloudSettings = GetGoogleCloudSettings(status.FolderName);
                 
                 var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration
                 {
                     DatabaseName = databaseName,
-                    Settings = subfolderGoogleCloudSettings
+                    Settings = subfolderGoogleCloudSettings,
+                    DisableOngoingTasks = true
                 };
 
                 using (RestoreDatabaseFromCloud(store, restoreFromGoogleCloudConfiguration, TimeSpan.FromSeconds(30)))

@@ -1,7 +1,23 @@
-<div>
-    <h1>TS CHART</h1>
-    <div data-bind="foreach: series">
-        <div data-bind="text: path"></div>
-    </div>    
+<div class="row flex-grow flex-row time-series-details">
+    <div class="col-lg-8 flex-grow dynamic-container">
+    </div>
+    <div class="col-lg-4 flex-vertical">
+        <h3>Legend</h3>
+        <div class="flex-grow" style="position: relative">
+            <div class="scroll absolute-fill">
+                <div data-bind="foreach: allTimeSeries">
+                    <div class="flex-horizontal">
+                        <div data-bind="text: sectionName" class="flex-grow"></div>
+                    </div>
+                    
+                    <div class="margin-left" data-bind="foreach: series">
+                        <div class="checkbox">
+                            <input type="checkbox" data-bind="attr: { id: uniqueId }, checked: visible" />
+                            <label data-bind="text: name, attr: { for: uniqueId }"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-

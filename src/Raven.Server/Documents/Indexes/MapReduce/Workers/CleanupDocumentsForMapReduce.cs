@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Workers
         {
             var moreWorkFound = base.Execute(databaseContext, indexContext, writeOperation, stats, token);
 
-            if (_mapReduceIndex.OutputReduceToCollection?.HasDocumentsToDelete() == true)
+            if (_mapReduceIndex.OutputReduceToCollection?.HasDocumentsToDelete(indexContext) == true)
             {
                 moreWorkFound = true;
 

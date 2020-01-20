@@ -1616,5 +1616,119 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
+        [Fact]
+        public async Task CanPersist()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false
+            }))
+            {
+                var dbName = store.Database;
+
+                var indexDefinition1 = new TimeSeriesIndexDefinition
+                {
+                    Name = "MyTsIndex",
+                    Maps = {
+                    "from ts in timeseries.Companies.HeartRate " +
+                    "from entry in ts.Entries " +
+                    "select new { " +
+                    "   HeartBeat = entry.Values[0], " +
+                    "   Name = ts.Name," +
+                    "   Date = entry.Timestamp.Date, " +
+                    "   User = ts.DocumentId " +
+                    "}" }
+                };
+
+                var indexDefinition2 = new TimeSeriesIndexDefinition
+                {
+                    Name = "MyTsIndex2",
+                    Maps = {
+                    "from ts in timeSeries.Users.HeartRate " +
+                    "from entry in ts.Entries " +
+                    "select new { " +
+                    "   HeartBeat = entry.Value, " +
+                    "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
+                    "   User = ts.DocumentId, " +
+                    "   Count = 1" +
+                    "}" },
+                    Reduce = "from r in results " +
+                             "group r by new { r.Date, r.User } into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumHeartBeat / sumCount, " +
+                             "  Date = g.Key.Date," +
+                             "  User = g.Key.User, " +
+                             "  Count = sumCount" +
+                             "}"
+                };
+
+                await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition1, indexDefinition2));
+
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
+
+                var indexDefinitions = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 25));
+                Assert.Equal(2, indexDefinitions.Length);
+
+                indexDefinitions = indexDefinitions
+                    .OrderBy(x => x.Name.Length)
+                    .ToArray();
+
+                var index = indexDefinitions[0];
+
+                Assert.Equal(IndexType.Map, index.Type);
+                Assert.Equal(IndexSourceType.TimeSeries, index.SourceType);
+                Assert.Equal("MyTsIndex", index.Name);
+                Assert.Equal(IndexLockMode.Unlock, index.LockMode);
+                Assert.Equal(IndexPriority.Normal, index.Priority);
+                Assert.True(indexDefinition1.Equals(index));
+
+                index = indexDefinitions[1];
+
+                Assert.Equal(IndexType.MapReduce, index.Type);
+                Assert.Equal(IndexSourceType.TimeSeries, index.SourceType);
+                Assert.Equal("MyTsIndex2", index.Name);
+                Assert.Equal(IndexLockMode.Unlock, index.LockMode);
+                Assert.Equal(IndexPriority.Normal, index.Priority);
+                Assert.True(indexDefinition2.Equals(index));
+
+                var database = await GetDatabase(dbName);
+
+                var indexes = database
+                    .IndexStore
+                    .GetIndexes()
+                    .OrderBy(x => x.Name.Length)
+                    .ToList();
+
+                Assert.Equal(IndexType.Map, indexes[0].Type);
+                Assert.Equal(IndexSourceType.TimeSeries, indexes[0].SourceType);
+                Assert.Equal("MyTsIndex", indexes[0].Name);
+                Assert.Equal(1, indexes[0].Definition.Collections.Count);
+                Assert.Equal("Companies", indexes[0].Definition.Collections.Single());
+                Assert.Equal(4, indexes[0].Definition.MapFields.Count);
+                Assert.Contains("Name", indexes[0].Definition.MapFields.Keys);
+                Assert.Contains("HeartBeat", indexes[0].Definition.MapFields.Keys);
+                Assert.Contains("Date", indexes[0].Definition.MapFields.Keys);
+                Assert.Contains("User", indexes[0].Definition.MapFields.Keys);
+                Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
+                Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
+                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition()));
+
+                Assert.Equal(IndexType.MapReduce, indexes[1].Type);
+                Assert.Equal(IndexSourceType.TimeSeries, indexes[1].SourceType);
+                Assert.Equal("MyTsIndex2", indexes[1].Name);
+                Assert.Equal(1, indexes[1].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[1].Definition.Collections.Single());
+                Assert.Equal(4, indexes[1].Definition.MapFields.Count);
+                Assert.Contains("HeartBeat", indexes[1].Definition.MapFields.Keys);
+                Assert.Contains("Date", indexes[1].Definition.MapFields.Keys);
+                Assert.Contains("User", indexes[1].Definition.MapFields.Keys);
+                Assert.Contains("Count", indexes[1].Definition.MapFields.Keys);
+                Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
+                Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
+                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition()));
+            }
+        }
     }
 }

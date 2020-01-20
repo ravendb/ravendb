@@ -477,7 +477,7 @@ class query extends viewModelBase {
 
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             enableInlinePreview: true,
-            detectTimeSeries: false, //TODO
+            detectTimeSeries: true, 
             timeSeriesActionHandler: (type, document, path, event) => {
                 const chart = new timeSeriesDetails([{
                     document,

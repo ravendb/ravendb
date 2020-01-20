@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             else if (jsValue.IsArray())
             {
                 var arr = jsValue.AsArray();
-                var array = new object[arr.GetLength()];
+                var array = new object[arr.Length];
                 var i = 0;
                 foreach ((var key, var val) in arr.GetOwnProperties())
                 {

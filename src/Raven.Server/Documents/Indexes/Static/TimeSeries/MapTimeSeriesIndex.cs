@@ -15,6 +15,7 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -177,6 +178,18 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
             instance.Initialize(documentDatabase,
+                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
+                documentDatabase.Configuration.PerformanceHints);
+
+            return instance;
+        }
+
+        public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        {
+            var definition = MapIndexDefinition.Load(environment);
+            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
+
+            instance.Initialize(environment, documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
                 documentDatabase.Configuration.PerformanceHints);
 

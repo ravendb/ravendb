@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
+using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -253,6 +254,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 await store.ExecuteIndexAsync(new Replacement.Orders_ProfitByProductAndOrderedAt());
 
+                WaitForUserToContinueTheTest(store);
+
                 WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
@@ -291,6 +294,22 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     Assert.NotNull(output);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanPersistPatternForOutputReduceToCollectionReferences()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var indexToCreate = new Orders_ProfitByProductAndOrderedAt();
+                indexToCreate.Execute(store);
+
+                var database = await GetDatabase(store.Database);
+                var index = database.IndexStore.GetIndexes().First();
+
+                var definition = MapIndexDefinition.Load(index._environment);
+                Assert.NotNull(definition.PatternForOutputReduceToCollectionReferences);
             }
         }
 
@@ -365,6 +384,54 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                         Assert.NotNull(output);
                     }
+
+                    int count = session.Advanced.RawQuery<object>("from 'Profits/References'").Count();
+
+                    Assert.Equal(1, count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdatePatternFieldInIndexDefinitionSoItWillAffectReferenceDocuments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    PutOrders(session);
+
+                    session.SaveChanges();
+                }
+
+                new Orders_ProfitByProductAndOrderedAt().Execute(store);
+
+                WaitForIndexing(store);
+
+                WaitForUserToContinueTheTest(store);
+
+                await store.ExecuteIndexAsync(new Replacement_PatternFieldUpdate.Orders_ProfitByProductAndOrderedAt());
+
+                WaitForIndexing(store);
+
+                WaitForUserToContinueTheTest(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2020-01-01", x => x.IncludeDocuments(y => y.ReduceOutputs));
+
+                    Assert.Equal(2, doc.ReduceOutputs.Count);
+
+                    foreach (var docReduceOutput in doc.ReduceOutputs)
+                    {
+                        Replacement.Orders_ProfitByProductAndOrderedAt.Result output = session.Load<Replacement.Orders_ProfitByProductAndOrderedAt.Result>(docReduceOutput);
+
+                        Assert.NotNull(output);
+                    }
+
+                    int count = session.Advanced.RawQuery<object>("from 'Profits/References'").Count();
+
+                    Assert.Equal(1, count);
                 }
             }
         }
@@ -494,6 +561,35 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     select new { g.Key.Product, g.Key.OrderedAt, Profit = g.Sum(r => r.Profit) };",
                         OutputReduceToCollection = "Profits",
                         PatternForOutputReduceToCollectionReferences = "reports/monthly/{OrderedAt:yyyy-MM}"
+                    };
+                }
+            }
+        }
+
+        private static class Replacement_PatternFieldUpdate
+        {
+            public class Orders_ProfitByProductAndOrderedAt : AbstractIndexCreationTask
+            {
+                public override IndexDefinition CreateIndexDefinition()
+                {
+                    return new IndexDefinition
+                    {
+                        Maps =
+                        {
+                            @"from order in docs.Orders
+                        from line in order.Lines
+                        select new {
+                            line.Product, 
+                            OrderedAt = new DateTime(2020, 1, 1), // fixed date field so it will affect reference documents 
+                            Profit = line.Quantity * line.PricePerUnit * (1 - line.Discount) };
+                        "
+                        },
+                        Reduce = @"from r in results
+                    group r by new { r.OrderedAt, r.Product }
+                    into g
+                    select new { g.Key.Product, g.Key.OrderedAt, Profit = g.Sum(r => r.Profit) };",
+                        OutputReduceToCollection = "Profits",
+                        PatternForOutputReduceToCollectionReferences = "reports/daily/{OrderedAt:yyyy-MM-dd}"
                     };
                 }
             }

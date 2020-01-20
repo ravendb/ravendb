@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations
         private readonly DocumentConventions _conventions;
         private readonly Task _additionalTask;
         private readonly long _id;
-        private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
         public Action<IOperationProgress> OnProgressChanged;
@@ -76,6 +76,22 @@ namespace Raven.Client.Documents.Operations
                     _result.TrySetException(e);
                     _lock.Release();
                 }
+            }
+        }
+
+        private async Task<TaskCompletionSource<IOperationResult>> InitializeResult()
+        {
+            await _lock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (_result.Task.IsCompleted)
+                    _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                return _result;
+            }
+            finally
+            {
+                _lock.Release();
             }
         }
 
@@ -280,11 +296,13 @@ namespace Raven.Client.Documents.Operations
         {
             using (_requestExecutor.ContextPool.AllocateOperationContext(out _context))
             {
+                var result = await InitializeResult().ConfigureAwait(false);
+
 #pragma warning disable 4014
                 Task.Factory.StartNew(Initialize);
 #pragma warning restore 4014
 
-                var completed = await _result.Task.WaitWithTimeout(timeout).ConfigureAwait(false);
+                var completed = await result.Task.WaitWithTimeout(timeout).ConfigureAwait(false);
                 if (completed == false)
                 {
                     await _lock.WaitAsync().ConfigureAwait(false);
@@ -306,7 +324,7 @@ namespace Raven.Client.Documents.Operations
                 }
 
                 await _additionalTask.ConfigureAwait(false);
-                return (TResult)await _result.Task.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
+                return (TResult)await result.Task.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
             }
         }
 

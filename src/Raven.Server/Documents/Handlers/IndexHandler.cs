@@ -814,7 +814,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 case IndexSourceType.Documents:
                                     var etag = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
-                                    var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, 1, DocumentFields.LastModified).FirstOrDefault();
+                                    var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, 1, DocumentFields.Default).FirstOrDefault();
                                     if (document != null && document.LastModified > baseLine)
                                         baseLine = document.LastModified;
                                     break;

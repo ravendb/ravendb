@@ -15,6 +15,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Workers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
@@ -72,19 +73,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 return;
 
             _mre.Set();
-        }
-
-        public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false)
-        {
-            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
-            ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase,
-                checkIfCollectionEmpty: isIndexReset == false);
-
-            instance.Initialize(documentDatabase,
-                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
-                documentDatabase.Configuration.PerformanceHints);
-
-            return instance;
         }
 
         protected override void OnInitialization()
@@ -273,12 +261,42 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return false;
         }
 
-        public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        public static Index Open<TStaticIndex>(StorageEnvironment environment, DocumentDatabase documentDatabase)
+            where TStaticIndex : MapReduceIndex
         {
             var definition = MapIndexDefinition.Load(environment);
-            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
+
+            TStaticIndex instance;
+            if (typeof(TStaticIndex) == typeof(MapReduceIndex))
+                instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex, StaticIndexBase>(definition, documentDatabase.Configuration, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex));
+            else if (typeof(TStaticIndex) == typeof(MapReduceTimeSeriesIndex))
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex, StaticTimeSeriesIndexBase>(definition, documentDatabase.Configuration, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex));
+            else
+                throw new NotSupportedException($"Not supported index type {typeof(TStaticIndex).Name}");
 
             instance.Initialize(environment, documentDatabase,
+                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
+                documentDatabase.Configuration.PerformanceHints);
+
+            return instance;
+        }
+
+        public static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false)
+            where TStaticIndex : MapReduceIndex
+        {
+            TStaticIndex instance;
+            if (typeof(TStaticIndex) == typeof(MapReduceIndex))
+                instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex, StaticIndexBase>(definition, documentDatabase.Configuration, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex));
+            else if (typeof(TStaticIndex) == typeof(MapReduceTimeSeriesIndex))
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex, StaticTimeSeriesIndexBase>(definition, documentDatabase.Configuration, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex));
+            else
+                throw new NotSupportedException($"Not supported index type {typeof(TStaticIndex).Name}");
+
+
+            ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase,
+                checkIfCollectionEmpty: isIndexReset == false);
+
+            instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
                 documentDatabase.Configuration.PerformanceHints);
 
@@ -295,15 +313,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
-        private static MapReduceIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
+        private static TStaticIndex CreateIndexInstance<TStaticIndex, TStaticIndexBase>(IndexDefinition definition, RavenConfiguration configuration, Func<MapReduceIndexDefinition, TStaticIndexBase, TStaticIndex> factory)
+            where TStaticIndex : MapReduceIndex
+            where TStaticIndexBase : AbstractStaticIndexBase
         {
-            var staticIndex = (StaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticMapIndexDefinition = CreateIndexDefinition<TStaticIndexBase>(definition, configuration, out var staticIndex);
+            return factory(staticMapIndexDefinition, staticIndex);
+        }
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
-                staticIndex.GroupByFields, staticIndex.HasDynamicFields);
-            var instance = new MapReduceIndex(staticMapIndexDefinition, staticIndex);
-
-            return instance;
+        private static MapReduceIndexDefinition CreateIndexDefinition<TStaticIndexBase>(IndexDefinition definition, RavenConfiguration configuration, out TStaticIndexBase staticIndex)
+            where TStaticIndexBase : AbstractStaticIndexBase
+        {
+            staticIndex = (TStaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
+            return new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields);
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()

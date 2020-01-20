@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -47,6 +49,12 @@ namespace SlowTests.Issues
                 }
 
                 WaitForIndexing(store);
+
+                Assert.True(SpinWait.SpinUntil(() =>
+                {
+                    var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                    return stats.IsInvalidIndex;
+                }, TimeSpan.FromSeconds(10))); //precaution
 
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
 
@@ -97,7 +105,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
                 }
-                
+
                 WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
@@ -107,11 +115,17 @@ namespace SlowTests.Issues
                         var parent = session.Load<Parent>(referencedDocument);
                         parent.NumericId = "a";
                     }
-                    
+
                     session.SaveChanges();
                 }
 
                 WaitForIndexing(store);
+
+                Assert.True(SpinWait.SpinUntil(() =>
+                {
+                    var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                    return stats.IsInvalidIndex;
+                }, TimeSpan.FromSeconds(10))); //precaution
 
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
 
@@ -144,11 +158,11 @@ namespace SlowTests.Issues
             public Index()
             {
                 Map = users => from user in users
-                    let parent = LoadDocument<Parent>(user.Reference)
-                    select new
-                    {
-                        Number = int.Parse(parent.NumericId)
-                    };
+                               let parent = LoadDocument<Parent>(user.Reference)
+                               select new
+                               {
+                                   Number = int.Parse(parent.NumericId)
+                               };
             }
         }
     }
