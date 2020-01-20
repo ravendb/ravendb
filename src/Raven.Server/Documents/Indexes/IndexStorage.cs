@@ -140,6 +140,19 @@ namespace Raven.Server.Documents.Indexes
             return (IndexState)state.Reader.ReadLittleEndianInt32();
         }
 
+        public void DeleteErrors()
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
+
+                table.DeleteForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, startsWith: false, numberOfEntriesToDelete: long.MaxValue);
+
+                tx.Commit();
+            }
+        }
+
         public unsafe List<IndexingError> ReadErrors()
         {
             var errors = new List<IndexingError>();
