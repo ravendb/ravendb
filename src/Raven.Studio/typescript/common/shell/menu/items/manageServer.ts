@@ -52,7 +52,7 @@ function getManageServerMenuItem() {
             route: 'admin/settings/adminJsConsole',
             moduleId: "viewmodels/manage/adminJsConsole",
             title: "Admin JS Console",
-            nav: access.showAdminJSConsoleMenuItem,
+            nav: true,
             css: 'icon-administrator-js-console',
             dynamicHash: appUrl.forAdminJsConsole,
             disableWithReason: access.disableAdminJSConsoleMenuItem

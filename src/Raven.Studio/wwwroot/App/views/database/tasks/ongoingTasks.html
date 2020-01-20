@@ -236,7 +236,7 @@
                 <div data-bind="if: showBackupSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item periodic-backup no-text-transform"><i class="icon-backup"></i><span>Backup</span></h5><hr>
-                        <h5 class="tasks-list-item no-text-transform" title="Navigate to the Server-Wide Backup View" data-bind="visible: $root.serverWideBackupTasksExist">
+                        <h5 class="tasks-list-item no-text-transform" title="Navigate to the Server-Wide Backup View" data-bind="visible: $root.canNavigateToServerWideBackupTasks">
                             <a target="_blank" data-bind="attr: { href: $root.serverWideBackupUrl }">&nbsp;Go to Server-Wide Backup View</a>
                         </h5>
                     </div>
@@ -668,9 +668,9 @@
 <script type="text/html" id="connection-string">
     <div class="property-name">Connection String:</div>
     <div class="property-value" data-bind="visible: connectionStringDefined">
-        <span title="Connection string name">
+        <div title="Connection string name">
             <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
-        </span>
+        </div>
     </div>
     <div data-bind="visible: !connectionStringDefined()">
         <div class="property-name" data-bind="text: connectionStringName"></div>

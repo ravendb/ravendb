@@ -312,7 +312,7 @@ class certificates extends viewModelBase {
                             .done(operationId => {
 
                                 const targetFrame = $("form#certificate_download_form");
-                                targetFrame.attr("action", this.generateCertificateUrl + "?operationId=" + operationId);
+                                targetFrame.attr("action", this.generateCertificateUrl + "?operationId=" + operationId + "&raft-request-id=" + generalUtils.generateUUID());
                                 targetFrame.submit();
 
                                 notificationCenter.instance.monitorOperation(null, operationId)

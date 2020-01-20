@@ -14,7 +14,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
                     this.reportError("Failed to save replication task", response.responseText, response.statusText);
             })
             .done(() => {
-                this.reportSuccess(`Saved replication task from database ${this.db.name} to ${this.replicationSettings.Database}`);
+                this.reportSuccess(`Saved replication task`);
             });
     }
 
