@@ -546,42 +546,6 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
-
-            if (indexingScope.ReferenceEtagsByCollection != null)
-            {
-                foreach (var kvp in indexingScope.ReferenceEtagsByCollection)
-                {
-                    var lastIndexedEtag = ReadLastIndexedEtag(tx, kvp.Key);
-                    var collectionEtagTree = tx.InnerTransaction.CreateTree("$" + kvp.Key); // $collection
-                    foreach (var collections in kvp.Value)
-                    {
-                        if (_referencedCollections.TryGetValue(collections.Key, out CollectionName collectionName) == false)
-                            throw new InvalidOperationException(
-                                $"Could not find collection {collections.Key} in the index storage collections. Should not happen ever!");
-
-                        using (Slice.From(tx.InnerTransaction.Allocator, collectionName.Name, ByteStringType.Immutable, out Slice collectionKey))
-                        {
-                            var etag = collections.Value;
-                            var result = collectionEtagTree.Read(collectionKey);
-                            var oldEtag = result?.Reader.ReadLittleEndianInt64();
-                            if (oldEtag >= etag)
-                                continue;
-
-                            if (oldEtag == lastIndexedEtag)
-                                continue;
-
-                            // we cannot set referenced etag value higher than last processed document from the main indexing functions
-                            // to avoid skipping document re-indexation when batch is being cancelled (e.g. due to memory limitations)
-                            // and changed are applied to references, not main documents (RDBC-128.IndexingOfLoadDocumentWhileChanged)
-                            if (etag > lastIndexedEtag)
-                                etag = lastIndexedEtag;
-
-                            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
-                                collectionEtagTree.Add(collectionKey, etagSlice);
-                        }
-                    }
-                }
-            }
         }
 
         public void RemoveReferences(Slice key, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
