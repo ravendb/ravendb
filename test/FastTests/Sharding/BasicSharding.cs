@@ -29,6 +29,7 @@ namespace FastTests.Sharding
                     var u = s.Load<User>("users/1");
                     Assert.Null(u);
                 }
+                
             }
         }
 

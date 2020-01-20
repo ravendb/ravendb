@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -103,6 +104,8 @@ namespace Raven.Client.ServerWide
         public long TruncatedClusterTransactionCommandsCount;
 
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
+        [JsonIgnore]
+        public bool IsSharded => Shards?.Length > 0;
 
         public void AddSorter(SorterDefinition definition)
         {
