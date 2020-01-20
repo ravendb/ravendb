@@ -90,7 +90,7 @@ rvn_create_file(const char *path,
     }
     mfh->flags = flags;
     int32_t largefile = 0;
-     if (sizeof(int) == 4) /* 32 bits */
+     if (sizeof(void*) == 4) /* 32 bits */
         largefile = O_LARGEFILE;
 
     mfh->fd = open(path, O_RDWR | O_CREAT | largefile, S_IWUSR | S_IRUSR);
@@ -116,13 +116,12 @@ rvn_create_file(const char *path,
         goto error_clean_with_error;
     }
 
-    int32_t allocation_granularity = ALLOCATION_GRANULARITY;
-    if (initial_file_size < allocation_granularity)
-        initial_file_size = allocation_granularity;
+    if (initial_file_size < ALLOCATION_GRANULARITY)
+        initial_file_size = ALLOCATION_GRANULARITY;
 
-    if (sz <= initial_file_size || sz % allocation_granularity != 0)
+    if (sz <= initial_file_size || sz % (ALLOCATION_GRANULARITY) != 0)
     {
-        sz = _nearest_size_to_page_size(rvn_max(initial_file_size, sz), allocation_granularity);
+        sz = _nearest_size_to_page_size(rvn_max(initial_file_size, sz), ALLOCATION_GRANULARITY);
     }
 
     if(sz != st.st_size)

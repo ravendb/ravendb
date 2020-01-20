@@ -42,19 +42,6 @@ namespace Voron.Impl.Paging
             if (Options.CopyOnWriteMode)
                 ThrowNotSupportedOption(file.FullPath);
 
-
-//            _totalAllocationSize = GetFileSize();
-//
-//            if (_totalAllocationSize == 0 && initialFileSize.HasValue)
-//            {
-//                _totalAllocationSize = NearestSizeToAllocationGranularity(initialFileSize.Value);
-//            }
-//            if (_totalAllocationSize == 0 || _totalAllocationSize % AllocationGranularity != 0 ||
-//                _totalAllocationSize != GetFileSize())
-//            {
-//                _totalAllocationSize = NearestSizeToAllocationGranularity(_totalAllocationSize);
-//            }
-
             var mmapOptions = _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None;
             if (DeleteOnClose)
                 mmapOptions |= MmapOptions.DeleteOnClose;
@@ -553,10 +540,9 @@ namespace Voron.Impl.Paging
 
         protected override void DisposeInternal()
         {
-            if (_handle.IsInvalid == false) // TODO: correct usage ?
-            {
-                _handle.Dispose();
-            }
+            var rc = rvn_mmap_dispose_handle(_handle.DangerousGetHandle(), out var errorCode);
+            if (rc != FailCodes.Success) 
+                PalHelper.ThrowLastError(rc, errorCode, "Failed to dispose the pager file handle. This is weird and shouldn't happen.");
         }
     }
 }
