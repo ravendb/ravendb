@@ -22,6 +22,7 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
 import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
 import ongoingTaskPullReplicationSinkListModel = require("models/database/tasks/ongoingTaskPullReplicationSinkListModel");
+import accessManager = require("common/shell/accessManager");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription" | "Pull Replication Hub" | "Pull Replication Sink";
 
@@ -63,7 +64,7 @@ class ongoingTasks extends viewModelBase {
     existingNodes = ko.observableArray<string>();
     selectedNode = ko.observable<string>();
 
-    serverWideBackupTasksExist = ko.observable<boolean>();
+    canNavigateToServerWideBackupTasks: KnockoutComputed<boolean>;
     serverWideBackupUrl: string;
     
     constructor() {
@@ -76,7 +77,7 @@ class ongoingTasks extends viewModelBase {
     private initObservables() {
         this.myNodeTag(this.clusterManager.localNodeTag());
         this.serverWideBackupUrl = appUrl.forServerWideBackupList();
-        
+        this.canNavigateToServerWideBackupTasks = accessManager.default.clusterAdminOrClusterNode;
         this.taskNameToCount = ko.pureComputed<dictionary<number>>(() => {
             return {
                 "External Replication": this.replicationTasks().length,
@@ -87,23 +88,23 @@ class ongoingTasks extends viewModelBase {
                 "Pull Replication Hub": this.pullReplicationHubTasks().length,
                 "Pull Replication Sink": this.pullReplicationSinkTasks().length
             }
-        })
+        });
     }
 
     activate(args: any): JQueryPromise<any> {
         super.activate(args);
         
-        this.addNotification(this.changesContext.serverNotifications()
-            .watchClusterTopologyChanges(() => this.refresh()));
-        this.addNotification(this.changesContext.serverNotifications()
-            .watchDatabaseChange(this.activeDatabase().name, () => this.refresh()));
-        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
-
         return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
     }
 
     attached() {
         super.attached();
+
+        this.addNotification(this.changesContext.serverNotifications()
+            .watchClusterTopologyChanges(() => this.refresh()));
+        this.addNotification(this.changesContext.serverNotifications()
+            .watchDatabaseChange(this.activeDatabase().name, () => this.refresh()));
+        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
         
         const db = this.activeDatabase();
         this.updateUrl(appUrl.forOngoingTasks(db));
@@ -317,8 +318,6 @@ class ongoingTasks extends viewModelBase {
         const serverWideBackupTasks = groupedBackupTasks.true;
         const ongoingBackupTasks = groupedBackupTasks.false;
 
-        this.serverWideBackupTasksExist(!!serverWideBackupTasks);
-        
         if (ongoingBackupTasks) {
             this.backupTasks(serverWideBackupTasks ? ongoingBackupTasks.concat(serverWideBackupTasks) : ongoingBackupTasks);            
         } else if (serverWideBackupTasks) {
