@@ -63,7 +63,15 @@ class ongoingTasks extends viewModelBase {
     selectedNode = ko.observable<string>();
 
     serverWideBackupTasksExist = ko.observable<boolean>();
-    serverWideBackupUrl: string; 
+    serverWideBackupUrl: string;
+
+    tasksOrderForUI: dictionary<number> = { "External Replication": 1,
+                                            "RavenDB ETL": 2,
+                                            "SQL ETL": 3,
+                                            "Backup": 4,
+                                            "Subscription": 5,
+                                            "Pull Replication Hub": 6,
+                                            "Pull Replication Sink": 7 };
     
     constructor() {
         super();
@@ -77,17 +85,15 @@ class ongoingTasks extends viewModelBase {
         this.serverWideBackupUrl = appUrl.forServerWideBackupList();
         
         this.taskNameToCount = ko.pureComputed<dictionary<number>>(() => {
-            var tasksNameToCount: { [id: string] : number; } = {};
-          
-            tasksNameToCount["External Replication"] = this.replicationTasks().length;
-            tasksNameToCount["RavenDB ETL"] = this.etlTasks().length;
-            tasksNameToCount["SQL ETL"] = this.sqlTasks().length;
-            tasksNameToCount["Backup"] = this.backupTasks().length;
-            tasksNameToCount["Subscription"] = this.subscriptionTasks().length;
-            tasksNameToCount["Pull Replication Hub"] = this.pullReplicationHubTasks().length;
-            tasksNameToCount["Pull Replication Sink"] = this.pullReplicationSinkTasks().length;
-                       
-            return tasksNameToCount;
+            return {
+                "External Replication": this.replicationTasks().length,
+                "RavenDB ETL": this.etlTasks().length,
+                "SQL ETL": this.sqlTasks().length,
+                "Backup": this.backupTasks().length,
+                "Subscription": this.subscriptionTasks().length,
+                "Pull Replication Hub": this.pullReplicationHubTasks().length,
+                "Pull Replication Sink": this.pullReplicationSinkTasks().length
+            }
         })
     }
 
@@ -353,7 +359,6 @@ class ongoingTasks extends viewModelBase {
         }
         
         this.existingTaskTypes(taskTypes
-            .sort()
             .map((taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType) => {
                 switch (taskType) {
                     case "RavenEtl":
@@ -369,7 +374,8 @@ class ongoingTasks extends viewModelBase {
                     default:
                         return taskType;
                 }
-            }));
+            })
+            .sort((a, b) => { return this.tasksOrderForUI[a] - this.tasksOrderForUI[b] }));
         
         this.existingNodes(_.uniq(result
             .OngoingTasksList
