@@ -207,6 +207,28 @@ class editDocument extends viewModelBase {
         this.focusOnEditor();
        
         this.initTooltips();
+
+        let documentIdAreaElement = $('#document-id-header-area');
+        let copyIdIconElement = $('#copy-document-id-icon');
+
+        documentIdAreaElement
+            .on('mouseenter', () => {
+                copyIdIconElement.removeClass("invisible");
+            })
+            .on('mouseleave', () => {
+                copyIdIconElement.addClass("invisible");
+            });
+
+        copyIdIconElement
+            .on('mouseenter', () => {
+                copyIdIconElement.addClass("copy-id-icon-color");
+            })
+            .on('mouseleave', () => {
+                copyIdIconElement.removeClass("copy-id-icon-color");
+            })
+            .on('click', () => {
+                copyToClipboard.copy(this.editedDocId());
+        });               
     }
     
     private initTooltips() {
