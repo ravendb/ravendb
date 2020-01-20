@@ -40,11 +40,13 @@ namespace Raven.Server.Documents.Handlers
                     Url = $"/docs?id={Uri.EscapeUriString(id)}",
                 };
                 await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
-                HttpContext.Response.Headers.Add(Constants.Headers.Etag, cmd.Response.Headers.ETag?.Tag);
+                string responseEtag = cmd.Response?.Headers?.ETag?.Tag;
+                if (responseEtag != null)
+                    HttpContext.Response.Headers.Add(Constants.Headers.Etag, responseEtag);
 
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                 //TODO: Pass the ETag
-                cmd.Result.WriteJsonTo(ResponseBodyStream());
+                cmd.Result?.WriteJsonTo(ResponseBodyStream());
             }
         }
 

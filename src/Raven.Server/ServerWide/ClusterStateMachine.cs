@@ -1171,13 +1171,12 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
                 var databaseName = remove.DatabaseName;
+                int shardIndex = TryGetShardIndexAndDatabaseName(ref databaseName);
 
                 var keyStr = "db/" + databaseName;
                 using (Slice.From(context.Allocator, keyStr.ToLowerInvariant(), out Slice lowerKey))
                 using (Slice.From(context.Allocator, keyStr, out Slice key))
                 {
-                    int shardIndex = TryGetShardIndexAndDatabaseName(ref databaseName);
-
                     var rawRecord = ReadRawDatabase(context, databaseName, out _);
 
                     if (rawRecord == null)
@@ -1191,7 +1190,6 @@ namespace Raven.Server.ServerWide
                             DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                         return;
                     }
-
 
                     var databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord);
 

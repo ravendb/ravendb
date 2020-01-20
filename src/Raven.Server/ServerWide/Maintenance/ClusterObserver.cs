@@ -195,7 +195,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             if (rawRecord.IsSharded())
                             {
-                                if (DateTime.Today < new DateTime(2019, 10, 1))
+                                if (DateTime.Today < new DateTime(2020, 2, 1))
                                     continue; //TODO: Need to handle sharding here
                                 throw new InvalidOperationException("Need to handle sharded dbs in ClusterObserver!");
                             }

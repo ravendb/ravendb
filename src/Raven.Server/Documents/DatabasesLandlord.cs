@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -93,7 +94,6 @@ namespace Raven.Server.Documents
 
                     // response to changed database.
                     // if disabled, unload
-                    DatabaseTopology topology;
                     using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
@@ -107,7 +107,10 @@ namespace Raven.Server.Documents
 
                         if (rawRecord.IsSharded())
                         {
-                            foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
+                            // We materialize the values here because we may close the read transaction
+                            // if we are deleting the database
+                            var rawDatabaseRecords = rawRecord.GetShardedDatabaseRecords().ToList();
+                            foreach (var shardRawRecord in rawDatabaseRecords)
                             {
                                 await HandleSpecificClusterDatabaseChanged(
                                     shardRawRecord.GetDatabaseName(), index, type, changeType, context, shardRawRecord);
@@ -167,16 +170,6 @@ namespace Raven.Server.Documents
         {
             if (ShouldDeleteDatabase(context, databaseName, rawRecord))
                 return;
-
-            if (rawRecord.IsSharded())
-            {
-                foreach (var shardedDatabaseRecord in rawRecord.GetShardedDatabaseRecords())
-                {
-                    await HandleSpecificClusterDatabaseChanged(shardedDatabaseRecord.GetDatabaseName(),
-                        index, type, changeType, context, shardedDatabaseRecord);
-                }
-                return;
-            }
 
             var topology = rawRecord.GetTopology();
             if (topology.RelevantFor(_serverStore.NodeTag) == false)
@@ -307,14 +300,14 @@ namespace Raven.Server.Documents
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
         {
             var deletionInProgress = DeletionInProgressStatus.No;
-            var directDelete = rawRecord.GetDeletionInProgressStatus()?.TryGetValue(_serverStore.NodeTag, out deletionInProgress) == true &&
+            var directDelete = rawRecord.GetDeletionInProgressStatus()?.TryGetValue(dbName, out deletionInProgress) == true &&
                                deletionInProgress != DeletionInProgressStatus.No;
 
             if (directDelete == false)
                 return false;
 
-            if (rawRecord.GetTopology().Rehabs.Contains(_serverStore.NodeTag))
-                // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
+            if (rawRecord.GetTopology().Rehabs.Contains(dbName))
+                // If the deletion was issued from the cluster observer to maintain the replication factor we need to make sure
                 // that all the documents were replicated from this node, therefor the deletion will be called from the replication code.
                 return false;
 
@@ -336,7 +329,7 @@ namespace Raven.Server.Documents
                     removeLockAndReturn = DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out var database);
                     databaseId = database?.DbBase64Id;
                 }
-                catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
+                catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException?.Data["Source"]))
                 {
                     // this is already in the process of being deleted, we can just exit and let another thread handle it
                     return;

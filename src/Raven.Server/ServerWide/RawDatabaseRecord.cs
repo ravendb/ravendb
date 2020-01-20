@@ -115,8 +115,9 @@ namespace Raven.Server.ServerWide
                         [nameof(DatabaseRecord.ShardAllocations)] = null,
                         [nameof(DatabaseRecord.Shards)] = null,
                     };
-
-                    yield return new RawDatabaseRecord(_context, _context.ReadObject(clone, shardName));
+                    var modifiedClone = _context.ReadObject(clone, shardName);
+                    var shardRecord = new RawDatabaseRecord(_context, modifiedClone);
+                    yield return shardRecord;
                 }
             }
         }
