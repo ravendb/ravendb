@@ -54,7 +54,8 @@ class ongoingTasks extends viewModelBase {
     showPullReplicationHubSection = this.createShowSectionComputedForPullHub(this.pullReplicationHubTasks);
     showPullReplicationSinkSection = this.createShowSectionComputed(this.pullReplicationSinkTasks, "Pull Replication Sink");
 
-    existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();
+    tasksTypesOrderForUI = ["Replication", "RavenEtl", "SqlEtl", "Backup", "Subscription", "PullReplicationAsHub", "PullReplicationAsSink"] as Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>;
+    existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();    
     selectedTaskType = ko.observable<TasksNamesInUI | "All tasks">();
     
     taskNameToCount: KnockoutComputed<dictionary<number>>;    
@@ -64,14 +65,6 @@ class ongoingTasks extends viewModelBase {
 
     serverWideBackupTasksExist = ko.observable<boolean>();
     serverWideBackupUrl: string;
-
-    tasksOrderForUI: dictionary<number> = { "External Replication": 1,
-                                            "RavenDB ETL": 2,
-                                            "SQL ETL": 3,
-                                            "Backup": 4,
-                                            "Subscription": 5,
-                                            "Pull Replication Hub": 6,
-                                            "Pull Replication Sink": 7 };
     
     constructor() {
         super();
@@ -357,8 +350,8 @@ class ongoingTasks extends viewModelBase {
             // we have any pull replication definitions but no incoming connections, so append PullReplicationAsHub task type
             taskTypes.push("PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType);
         }
-        
-        this.existingTaskTypes(taskTypes
+
+        this.existingTaskTypes(this.tasksTypesOrderForUI.filter(x => _.includes(taskTypes, x))
             .map((taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType) => {
                 switch (taskType) {
                     case "RavenEtl":
@@ -374,8 +367,7 @@ class ongoingTasks extends viewModelBase {
                     default:
                         return taskType;
                 }
-            })
-            .sort((a, b) => { return this.tasksOrderForUI[a] - this.tasksOrderForUI[b] }));
+        }));
         
         this.existingNodes(_.uniq(result
             .OngoingTasksList
