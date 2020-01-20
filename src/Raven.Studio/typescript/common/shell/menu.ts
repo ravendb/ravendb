@@ -148,6 +148,12 @@ class menu {
     update(items: Array<menuItem>) {
         this.items(items);
         this.setActiveMenuItem();
+
+        $('#main-menu [data-toggle="tooltip"]').tooltip({
+            placement: "right",
+            container: "body",
+            html: true
+        });
     }
 
     handleLevelClick($data: any, $event: JQueryEventObject) {

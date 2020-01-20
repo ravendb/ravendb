@@ -19,7 +19,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-cluster',
             dynamicHash: appUrl.forCluster,
-            enabled: access.enableClusterMenuItem
+            disableWithReason: access.disableClusterMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/addClusterNode',
@@ -27,7 +27,7 @@ function getManageServerMenuItem() {
             title: "Add Cluster Node",
             nav: false,
             dynamicHash: appUrl.forAddClusterNode,
-            enabled: accessManager.default.clusterAdminOrClusterNode,
+            disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode,
             itemRouteToHighlight: 'admin/settings/cluster'
         }),           
         new leafMenuItem({
@@ -37,7 +37,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-client-configuration',
             dynamicHash: appUrl.forGlobalClientConfiguration,
-            enabled: access.enableClientConfigurationMenuItem
+            disableWithReason: access.disableClientConfigurationMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/studioConfiguration',
@@ -46,7 +46,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-studio-configuration',
             dynamicHash: appUrl.forGlobalStudioConfiguration,
-            enabled: access.enableStudioConfigurationMenuItem
+            disableWithReason: access.disableStudioConfigurationMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
@@ -55,7 +55,7 @@ function getManageServerMenuItem() {
             nav: access.showAdminJSConsoleMenuItem,
             css: 'icon-administrator-js-console',
             dynamicHash: appUrl.forAdminJsConsole,
-            enabled: access.enableAdminJSConsoleMenuItem
+            disableWithReason: access.disableAdminJSConsoleMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/certificates',
@@ -64,7 +64,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-certificate',
             dynamicHash: appUrl.forCertificates,
-            enabled: access.enableCertificatesMenuItem
+            disableWithReason: access.disableCertificatesMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideBackupList',
@@ -73,7 +73,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-server-wide-backup',
             dynamicHash: appUrl.forServerWideBackupList,
-            enabled: access.enableServerWideBackupMenuItem
+            disableWithReason: access.disableServerWideBackupMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideBackup',
@@ -81,7 +81,7 @@ function getManageServerMenuItem() {
             title: "Edit Server-Wide Backup Task",
             nav: false,
             dynamicHash: appUrl.forEditServerWideBackup,
-            enabled: accessManager.default.clusterAdminOrClusterNode,
+            disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode,
             itemRouteToHighlight: 'admin/settings/serverWideBackupList'
         }),
         new separatorMenuItem(),
@@ -93,7 +93,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-admin-logs',
             dynamicHash: appUrl.forAdminLogs,
-            enabled: access.enableAdminLogsMenuItem
+            disableWithReason: access.disableAdminLogsMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/trafficWatch',
@@ -102,7 +102,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-traffic-watch',
             dynamicHash: appUrl.forTrafficWatch,
-            enabled: access.enableTrafficWatchMenuItem
+            disableWithReason: access.disableTrafficWatchMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/debugInfo',
@@ -111,7 +111,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-gather-debug-information',
             dynamicHash: appUrl.forDebugInfo,
-            enabled: access.enableGatherDebugInfoMenuItem
+            disableWithReason: access.disableGatherDebugInfoMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/storageReport',
@@ -121,7 +121,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-system-storage',
             dynamicHash: appUrl.forSystemStorageReport,
-            enabled: access.enableSystemStorageReport
+            disableWithReason: access.disableSystemStorageReport
         }),
         new leafMenuItem({
             route: 'admin/settings/ioStats',
@@ -131,7 +131,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-manage-server-io-test',
             dynamicHash: appUrl.forSystemIoStats,
-            enabled: access.enableSystemIoStats,
+            disableWithReason: access.disableSystemIoStats,
         }),
         new leafMenuItem({
             route: 'admin/settings/captureStackTraces',
@@ -140,7 +140,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-stack-traces', 
             dynamicHash: appUrl.forCaptureStackTraces,
-            enabled: access.enableCaptureStackTraces,
+            disableWithReason: access.disableCaptureStackTraces,
         }),
         new leafMenuItem({
             route: 'admin/settings/runningQueries',
@@ -157,7 +157,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-debug-advanced',
             hash: appUrl.forDebugAdvancedThreadsRuntime(),
-            enabled: access.enableAdvancedMenuItem
+            disableWithReason: access.disableAdvancedMenuItem
         }),
     ];
 

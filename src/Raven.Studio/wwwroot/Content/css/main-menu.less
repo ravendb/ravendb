@@ -191,6 +191,17 @@
                 background-color: @main-menu-hover;
             }
 
+            &.disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                
+                i {
+                    &:before {
+                        color: @menu-text-color !important;
+                    }
+                }
+            }
+
             &:after {
                 -webkit-transition: opacity @menu-transition-ease;
                 -moz-transition: opacity @menu-transition-ease;
@@ -221,7 +232,7 @@
             .level-1 {
                 transition-delay: .35s;
 
-                a {
+                a:not(.disabled) {
                     transition: opacity 0s .35s, background-color .1s;
                 }
             }
@@ -229,7 +240,7 @@
             .level-1:not(:hover) {
                 transform: translateX(@menu-width - 55);
 
-                a {
+                a:not(.disabled) {
                     opacity: 0;
                     transition-delay: 0;
                 }
@@ -242,6 +253,9 @@
 
                 a {
                     transition-delay: 0;
+                }
+
+                a:not(.disabled) {
                     opacity: 1;
                 }
             }
@@ -271,8 +285,6 @@
 
                 & > a {
                     padding: 15px 10px;
-
-
 
                     span {
                         transition: opacity 0.1s linear;

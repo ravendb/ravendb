@@ -156,6 +156,7 @@ interface backupNowConfirmResult extends confirmDialogResult {
 type menuItemType = "separator" | "intermediate" | "leaf" | "collections";
 
 interface menuItem {
+    disableWithReason?: KnockoutObservable<string>;
     type: menuItemType;
     parent: KnockoutObservable<menuItem>;
 }

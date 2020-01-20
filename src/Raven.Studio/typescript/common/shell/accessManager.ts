@@ -16,7 +16,15 @@ class accessManager {
          return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
     });
     
-    // *** Views Access *** //
+    disableIfNotClusterAdminOrClusterNode = ko.pureComputed<string>(() => {
+        const enabled = this.clusterAdminOrClusterNode();
+        const clearance = this.securityClearance();
+        if (enabled) {
+            return undefined;
+        } else {
+            return "Insufficient security clearance. <br /> Required: Cluster Admin<br />Current: " + clearance;
+        }
+    });
     
     dashboardView = {
         showCertificatesLink: this.operatorAndAbove
@@ -52,27 +60,25 @@ class accessManager {
         canGenerateClientCertificateForAdmin: this.clusterAdminOrClusterNode
     };
 
-    // *** Menus Access *** //
-    
     mainMenu = {
         showManageServerMenuItem: this.operatorAndAbove
     };
     
     manageServerMenu = {
         showAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
-        enableClusterMenuItem: this.allLevels,
-        enableClientConfigurationMenuItem: this.clusterAdminOrClusterNode,
-        enableStudioConfigurationMenuItem: this.clusterAdminOrClusterNode,
-        enableAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
-        enableCertificatesMenuItem: this.clusterAdminOrClusterNode,
-        enableServerWideBackupMenuItem: this.clusterAdminOrClusterNode,
-        enableAdminLogsMenuItem: this.clusterAdminOrClusterNode,
-        enableTrafficWatchMenuItem: this.clusterAdminOrClusterNode,
-        enableGatherDebugInfoMenuItem: this.clusterAdminOrClusterNode,
-        enableSystemStorageReport: this.clusterAdminOrClusterNode,
-        enableSystemIoStats: this.clusterAdminOrClusterNode,
-        enableAdvancedMenuItem: this.clusterAdminOrClusterNode,
-        enableCaptureStackTraces: this.clusterAdminOrClusterNode,
+        disableClusterMenuItem: undefined as KnockoutComputed<string>,
+        disableClientConfigurationMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableStudioConfigurationMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableAdminJSConsoleMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableCertificatesMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableServerWideBackupMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableAdminLogsMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableTrafficWatchMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableGatherDebugInfoMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableSystemStorageReport: this.disableIfNotClusterAdminOrClusterNode,
+        disableSystemIoStats: this.disableIfNotClusterAdminOrClusterNode,
+        disableAdvancedMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableCaptureStackTraces: this.disableIfNotClusterAdminOrClusterNode,
         enableRecordTransactionCommands: this.clusterAdminOrClusterNode
     };
     
