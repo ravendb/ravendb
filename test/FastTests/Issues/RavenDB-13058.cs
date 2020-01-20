@@ -243,7 +243,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                var errors = WaitForIndexingErrors(store, TimeSpan.FromMinutes(1));
+                var errors = WaitForIndexingErrors(store, timeout: TimeSpan.FromMinutes(1));
                 Assert.Single(errors);
             }
         }

@@ -81,6 +81,11 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"{Type} index does not support flushing it's filters.");
         }
 
+        public override void DeleteErrors()
+        {
+            // no-op
+        }
+
         public override List<IndexingError> GetErrors()
         {
             return new List<IndexingError>

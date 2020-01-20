@@ -1879,6 +1879,16 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
+        public virtual void DeleteErrors()
+        {
+            using (DrainRunningQueries())
+            {
+                AssertIndexState(assertState: false);
+
+                _indexStorage.DeleteErrors();
+            }
+        }
+
         public virtual List<IndexingError> GetErrors()
         {
             using (CurrentlyInUse(out var valid))
