@@ -569,7 +569,7 @@ namespace Raven.Server.Documents
                 if (databaseRecord.Shards?.Length > 0)
                 {
                     var shardedContext = new ShardedContext(_serverStore, databaseRecord);
-                    _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(shardedContext));
+                    shardedContext = _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(shardedContext)).Result;
                     return new DatabaseSearchResult
                     {
                         DatabaseStatus = DatabaseSearchResult.Status.Sharded,
