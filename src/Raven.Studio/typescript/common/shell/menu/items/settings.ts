@@ -25,7 +25,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
-            disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode
         }),
         new leafMenuItem({
             route: 'databases/settings/conflictResolution',
@@ -34,7 +33,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-conflicts-resolution',
             dynamicHash: appUrls.conflictResolution,
-            disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode
         }),
         new leafMenuItem({
             route: 'databases/settings/clientConfiguration',

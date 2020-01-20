@@ -114,6 +114,12 @@ class menu {
     }
 
     navigate($data: menuItem, $event: JQueryEventObject) {
+        const targetLink = $event.target.closest("a");
+        if (targetLink && targetLink.classList.contains("disabled")) {
+            $event.preventDefault();
+            return false;
+        }
+
         if (this.shouldOpenAsDialog($data)) {
             const leafItem = $data as leafMenuItem;
             require([leafItem.moduleId],

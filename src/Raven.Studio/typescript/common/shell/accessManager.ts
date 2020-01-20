@@ -16,15 +16,21 @@ class accessManager {
          return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
     });
     
-    disableIfNotClusterAdminOrClusterNode = ko.pureComputed<string>(() => {
-        const enabled = this.clusterAdminOrClusterNode();
-        const clearance = this.securityClearance();
-        if (enabled) {
-            return undefined;
-        } else {
-            return "Insufficient security clearance. <br /> Required: Cluster Admin<br />Current: " + clearance;
-        }
-    });
+    private createSecurityRule(enabledPredicate: KnockoutObservable<boolean>, requiredRoles: string) {
+        return ko.pureComputed(() => {
+            const enabled = enabledPredicate();
+            const clearance = this.securityClearance();
+            if (enabled) {
+                return undefined;
+            } else {
+                return "Insufficient security clearance. <br /> Required: " + requiredRoles + "<br />Current: " + clearance;
+            }
+        });
+    }
+
+    disableIfNotClusterAdminOrClusterNode = this.createSecurityRule(this.clusterAdminOrClusterNode, "Cluster Admin");
+
+    disableIfNotOperatorOrAbove = this.createSecurityRule(this.operatorAndAbove, "Cluster Admin or Operator");
     
     dashboardView = {
         showCertificatesLink: this.operatorAndAbove
@@ -61,25 +67,24 @@ class accessManager {
     };
 
     mainMenu = {
-        showManageServerMenuItem: this.operatorAndAbove
+        showManageServerMenuItem: this.allLevels
     };
     
     manageServerMenu = {
-        showAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
         disableClusterMenuItem: undefined as KnockoutComputed<string>,
-        disableClientConfigurationMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableStudioConfigurationMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableClientConfigurationMenuItem: this.disableIfNotOperatorOrAbove,
+        disableStudioConfigurationMenuItem: this.disableIfNotOperatorOrAbove,
         disableAdminJSConsoleMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableCertificatesMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableCertificatesMenuItem: this.disableIfNotOperatorOrAbove,
         disableServerWideBackupMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableAdminLogsMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableTrafficWatchMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableGatherDebugInfoMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableSystemStorageReport: this.disableIfNotClusterAdminOrClusterNode,
-        disableSystemIoStats: this.disableIfNotClusterAdminOrClusterNode,
-        disableAdvancedMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableCaptureStackTraces: this.disableIfNotClusterAdminOrClusterNode,
-        enableRecordTransactionCommands: this.clusterAdminOrClusterNode
+        disableAdminLogsMenuItem: this.disableIfNotOperatorOrAbove,
+        disableTrafficWatchMenuItem: this.disableIfNotOperatorOrAbove,
+        disableGatherDebugInfoMenuItem: this.disableIfNotOperatorOrAbove,
+        disableSystemStorageReport: this.disableIfNotOperatorOrAbove,
+        disableSystemIoStats: this.disableIfNotOperatorOrAbove,
+        disableAdvancedMenuItem: this.disableIfNotOperatorOrAbove,
+        disableCaptureStackTraces: this.disableIfNotOperatorOrAbove,
+        enableRecordTransactionCommands: this.disableIfNotOperatorOrAbove
     };
     
     databaseSettingsMenu = {
