@@ -295,6 +295,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                         continue;
                     }
 
+                    if (doc.Etag > referencedDocument.Etag)
+                    {
+                        //IF the map worker already mapped this "doc" version it must be with this version of "referencedDocument" and if the map worker didn't mapped the "doc" so it will process it later 
+                        doc.Dispose();
+                        continue;
+                    }
+
                     yield return doc;
                 }
 

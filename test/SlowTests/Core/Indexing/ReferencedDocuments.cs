@@ -4,14 +4,18 @@
 //  </copyright>
 //----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 
@@ -488,6 +492,138 @@ namespace SlowTests.Core.Indexing
                     WaitForIndexing(store);
 
                     Assert.Equal(5, session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", null).ToList().Count);
+                }
+            }
+        }
+        
+        [Fact]
+        public async Task HandleReference_ShouldCompleteTheIndexing()
+        {
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-14506
+            const int batchSize = 128;
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = doc =>
+                {
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = batchSize.ToString();
+                }
+            }))
+            {
+                var index = new Companies_ByEmployeeLastName();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var employees = Enumerable.Range(0, batchSize + 1)
+                        .Select(i => new Employee {Id = $"Employees/{i}"})
+                        .ToArray();
+
+                    var company = new Company
+                    {
+                        Name = "HR",
+                        EmployeesIds = employees.Select(e => e.Id).ToList()
+                    };
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+
+                    index.Execute(store);
+                    WaitForIndexing(store);
+
+                    //Index disable
+                    store.Maintenance.Send(new DisableIndexOperation(index.IndexName));
+
+                    foreach (var employee in employees)
+                    {
+                        employee.FirstName = "Changed";
+                        await session.StoreAsync(employee);
+                    }
+                    await session.SaveChangesAsync();
+
+                    //Index enable
+                    store.Maintenance.Send(new EnableIndexOperation(index.IndexName));
+                    
+                    //Assert
+                    WaitForIndexing(store, timeout: TimeSpan.FromSeconds(10));
+                }
+            }
+        }
+        
+        [Fact]
+        public async Task HandleReferenceAndMapping_ShouldNotMissChangedReference()
+        {
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-14506
+            const int batchSize = 128;
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = doc =>
+                {
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = batchSize.ToString();
+                    
+                },
+                ModifyDocumentStore = localStore =>
+                {
+                    localStore.Conventions = new Raven.Client.Documents.Conventions.DocumentConventions {MaxNumberOfRequestsPerSession = int.MaxValue};
+                }
+            }))
+            {
+                var index = new Companies_ByEmployeeLastName();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var list = Enumerable.Range(0, batchSize + 1)
+                        .Select(i =>
+                        {
+                            var employeeId = $"Employees/{i}";
+                            return (
+                                    new Company{Id = $"Companies/{i}", EmployeesIds = new List<string>{employeeId}},
+                                    new Employee {Id = employeeId}
+                                );
+                        })
+                        .ToArray();
+
+                    var (firstCompany, _) = list[0];
+                    foreach (var (company, _) in list)
+                    {
+                        await session.StoreAsync(company);
+                    }
+                    await session.SaveChangesAsync();
+                    
+                    var newEmployee = new Employee{Id = $"Employees/{batchSize + 1}"};
+                    firstCompany.EmployeesIds.Add(newEmployee.Id);
+                    await session.StoreAsync(firstCompany);
+                    await session.SaveChangesAsync();
+                    
+                    index.Execute(store);
+                    WaitForIndexing(store);
+                    
+                    //Index disable
+                    store.Maintenance.Send(new DisableIndexOperation(index.IndexName));
+                    foreach (var (_, employee) in list)
+                    {
+                        await session.StoreAsync(employee);
+                    }
+                    await session.SaveChangesAsync();
+
+                    await session.StoreAsync(newEmployee);
+                    await session.SaveChangesAsync();
+                    
+                    await session.StoreAsync(newEmployee);
+                    await session.SaveChangesAsync();
+                    await session.StoreAsync(new Company{EmployeesIds = new List<string>{newEmployee.Id}});
+                    await session.SaveChangesAsync();
+
+                    //Index enable
+                    store.Maintenance.Send(new EnableIndexOperation(index.IndexName));
+                    WaitForIndexing(store);
+
+                    //Assert
+                    var queryResult = await session
+                        .Query<Companies_ByEmployeeLastName.Result, Companies_ByEmployeeLastName>()
+                        .OfType<Company>()
+                        .ToArrayAsync();
+
+                    Assert.Contains(queryResult, e => e.Id == $"Companies/{batchSize}");
                 }
             }
         }
