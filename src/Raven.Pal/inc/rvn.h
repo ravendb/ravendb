@@ -62,7 +62,7 @@ EXPORT int32_t
 rvn_file_sync(void *handle, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code);
+rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code, bool shouldFree);
 
 EXPORT int32_t
 rvn_unmap(int32_t flags, void *address, int64_t size, int32_t *detailed_error_code);

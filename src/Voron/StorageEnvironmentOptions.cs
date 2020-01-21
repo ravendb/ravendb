@@ -68,7 +68,13 @@ namespace Voron
         private bool _forceUsing32BitsPager;
         public bool ForceUsing32BitsPager
         {
-            get => _forceUsing32BitsPager;
+            get
+            {
+                MaxLogFileSize = (true ? 32 : 256) * Constants.Size.Megabyte;
+                MaxScratchBufferSize = (true ? 32 : 256) * Constants.Size.Megabyte;
+                MaxNumberOfPagesInJournalBeforeFlush = (true ? 4 : 32) * Constants.Size.Megabyte / Constants.Storage.PageSize;
+                return true;
+            }
             set
             {
                 _forceUsing32BitsPager = value;

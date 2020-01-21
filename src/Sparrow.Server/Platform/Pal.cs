@@ -142,7 +142,8 @@ namespace Sparrow.Server.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_mmap_dispose_handle(
             IntPtr handle,
-            out Int32 errorCode);
+            out Int32 errorCode,
+            bool shouldFree);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_unmap(

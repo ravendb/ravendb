@@ -227,11 +227,11 @@ rvn_unmap(int32_t flags, void *address, int64_t size, int32_t *detailed_error_co
 }
 
 EXPORT int32_t
-rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code)
+rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code, bool shouldFree)
 {
     struct map_file_handle *mfh = (struct map_file_handle *)handle;
     int32_t rc = SUCCESS;
-
+    
     if (mfh->fd == -1)
     {
         rc = FAIL_INVALID_HANDLE;
@@ -264,7 +264,10 @@ rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code)
 error_cleanup:
     *detailed_error_code = errno;
 cleanup:
-    free_map_file_handle(mfh);
+    if(shouldFree == true)
+    {
+        free_map_file_handle(mfh);
+    }
     return rc;
 }
 

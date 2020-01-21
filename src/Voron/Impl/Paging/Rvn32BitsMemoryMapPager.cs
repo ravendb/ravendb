@@ -57,6 +57,7 @@ namespace Voron.Impl.Paging
                 out _totalAllocationSize,
                 out var errorCode);
 
+
             if (rc != FailCodes.Success)
             {
                 try
@@ -69,6 +70,8 @@ namespace Voron.Impl.Paging
                     throw new DiskFullException(file.FullPath, initialFileSize.Value, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
                 }
             }
+
+            _handle.Use64BitSemantics = false;
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
             SetPagerState(new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold));
@@ -540,9 +543,11 @@ namespace Voron.Impl.Paging
 
         protected override void DisposeInternal()
         {
-            var rc = rvn_mmap_dispose_handle(_handle.DangerousGetHandle(), out var errorCode);
-            if (rc != FailCodes.Success) 
-                PalHelper.ThrowLastError(rc, errorCode, "Failed to dispose the pager file handle. This is weird and shouldn't happen.");
+            lock(_handle)
+            {
+                if(!_handle.IsInvalid)
+                    _handle.Dispose();
+            }
         }
     }
 }
