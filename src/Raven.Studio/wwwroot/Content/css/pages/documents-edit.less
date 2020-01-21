@@ -218,6 +218,22 @@
             max-width: 100%;
         }
     }
+
+    #copy-document-id-icon {
+        visibility: hidden;
+
+        &:hover {
+            color: darken(@color-4-1, 20%);
+        }
+    }
+
+    #document-id-header-area {
+        &:hover {
+            #copy-document-id-icon {
+                visibility: visible;
+            }
+        }
+    }
 }
 
 .virtual-row {
