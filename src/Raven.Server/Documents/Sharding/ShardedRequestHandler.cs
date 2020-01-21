@@ -1,16 +1,16 @@
-﻿using System;
+﻿using System.Text;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow;
-using Sparrow.Json;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Sharding
 {
     public class ShardedRequestHandler : RequestHandler
     {
         public ShardedContext ShardedContext;
         public TransactionContextPool ContextPool;
 
+        protected static readonly ObjectPool<StringBuilder> StringBuilderObjectPool = new ObjectPool<StringBuilder>(()=> new StringBuilder());
         public override void Init(RequestHandlerContext context)
         {
             base.Init(context);

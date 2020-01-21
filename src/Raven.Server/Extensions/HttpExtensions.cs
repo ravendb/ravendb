@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -55,5 +56,17 @@ namespace Raven.Server.Extensions
             }
             return ExtractNodeUrlFromRequest(request);
         }
+
+        public static bool IsSuccessStatusCode(this HttpResponse response)
+        {
+            return response.StatusCode >= 200 && response.StatusCode <= 299;
+        }
+
+        public static bool IsSuccessStatusCode(this HttpStatusCode statusCode)
+        {
+            return (int)statusCode >= 200 && (int)statusCode <= 299;
+        }
+
+        
     }
 }

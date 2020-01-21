@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 
 namespace Raven.Server.Web
