@@ -200,6 +200,10 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task ReshuffleAfterPromotion()
         {
+            var extendedTimeout = 30_000;
+            if (Environment.Is64BitProcess == false)
+                extendedTimeout = 60_000;
+
             var clusterSize = 3;
             var cluster = await CreateRaftCluster(clusterSize, false, 0, customSettings: new Dictionary<string, string>
             {
@@ -225,9 +229,9 @@ namespace RachisTests.DatabaseCluster
                 // wait for moving all of the nodes to rehab state
                 foreach (string name in names)
                 {
-                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize - 1);
+                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize - 1, extendedTimeout);
                     Assert.Equal(clusterSize - 1, val);
-                    val = await WaitForValueAsync(async () => await GetRehabCount(store, name), 1);
+                    val = await WaitForValueAsync(async () => await GetRehabCount(store, name), 1, extendedTimeout);
                     Assert.Equal(1, val);
                 }
 
@@ -252,7 +256,7 @@ namespace RachisTests.DatabaseCluster
                 // wait for recovery of all of the nodes back to member
                 foreach (string name in names)
                 {
-                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize);
+                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize, extendedTimeout);
                     Assert.Equal(clusterSize, val);
 
                     var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(name));
