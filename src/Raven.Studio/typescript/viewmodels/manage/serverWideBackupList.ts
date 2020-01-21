@@ -20,16 +20,17 @@ class serverWideBackupList extends viewModelBase {
     activate(args: any): JQueryPromise<any> {
         super.activate(args);
         
-        this.addNotification(this.changesContext.serverNotifications()
-            .watchClusterTopologyChanges(() => this.refresh()));
-        this.addNotification(this.changesContext.serverNotifications()
-            .watchReconnect(() => this.refresh())); 
-
         return this.fetchServerWideBackupTasks();
     }
 
     attached() {
-        super.attached();        
+        super.attached();
+        
+        this.addNotification(this.changesContext.serverNotifications()
+            .watchClusterTopologyChanges(() => this.refresh()));
+        this.addNotification(this.changesContext.serverNotifications()
+            .watchReconnect(() => this.refresh()));
+
         this.updateUrl(appUrl.forServerWideBackupList());
     }
     

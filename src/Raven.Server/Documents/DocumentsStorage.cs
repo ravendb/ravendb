@@ -1944,6 +1944,12 @@ namespace Raven.Server.Documents
                 return null;
             }
 
+            if (context.Transaction.TryGetFromCache(collectionName, out name))
+            {
+                // for documents with case insensitive collections that were created on the same transaction
+                return name;
+            }
+
             var collections = context.Transaction.InnerTransaction.OpenTable(CollectionsSchema, CollectionsSlice);
             if (collections == null)
                 throw new InvalidOperationException("Should never happen!");
@@ -1956,6 +1962,8 @@ namespace Raven.Server.Documents
                     tvr.Add(collectionSlice);
                     collections.Set(tvr);
                 }
+
+                context.Transaction.AddToCache(collectionName, name);
 
                 DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
                 TombstonesSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Tombstones), 16);

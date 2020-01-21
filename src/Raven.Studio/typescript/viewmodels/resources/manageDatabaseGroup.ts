@@ -100,13 +100,17 @@ class manageDatabaseGroup extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         
+        return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
+    }
+    
+    attached() {
+        super.attached();
+
         this.addNotification(this.changesContext.serverNotifications()
             .watchClusterTopologyChanges(() => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications()
             .watchAllDatabaseChanges(() => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
-
-        return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
     }
 
     compositionComplete(): void {

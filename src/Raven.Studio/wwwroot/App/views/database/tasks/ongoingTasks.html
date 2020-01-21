@@ -32,7 +32,10 @@
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <!-- ko foreach: existingTaskTypes() -->
-                            <li><a href="#" data-bind="text: $data, click: $root.setSelectedTaskType.bind($root, $data)"></a></li>
+                            <li class="flex-horizontal">
+                                <a class="flex-grow" href="#" data-bind="text: $data, click: $root.setSelectedTaskType.bind($root, $data)"></a>
+                                <span class="badge margin-right margin-right-sm" data-bind="text: $root.taskNameToCount()[$data]"></span>
+                            </li>
                             <!-- /ko -->
                             <li class="divider"></li>
                             <li><a data-bind="click: $root.setSelectedTaskType.bind($root, 'All tasks')" href="#">All tasks</a></li>
@@ -71,7 +74,8 @@
 
                 <div data-bind="if: showReplicationSection">
                     <div class="hr-title">
-                        <h5 class="tasks-list-item external-replication no-text-transform"><i class="icon-external-replication"></i><span>External Replication</span></h5><hr>
+                        <h5 class="tasks-list-item external-replication no-text-transform"><i class="icon-external-replication"></i>
+                            <span>External Replication</span><span data-bind="text: ' (' + replicationTasks().length + ')'"></span></h5><hr>
                     </div>
                     <div data-bind="foreach: replicationTasks">
                         <div class="panel destination-item external-replication" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -129,7 +133,8 @@
 
                 <div data-bind="if: showEtlSection">
                     <div class="hr-title">
-                        <h5 class="tasks-list-item ravendb-etl no-text-transform"><i class="icon-etl"></i><span>RavenDB ETL</span></h5><hr>
+                        <h5 class="tasks-list-item ravendb-etl no-text-transform"><i class="icon-etl"></i>
+                            <span>RavenDB ETL</span><span data-bind="text: ' (' + etlTasks().length + ')'"></span></h5><hr>
                     </div>
                     <div data-bind="foreach: etlTasks">
                         <div class="panel destination-item ravendb-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -184,7 +189,8 @@
 
                 <div data-bind="if: showSqlSection">
                     <div class="hr-title">
-                        <h5 class="tasks-list-item sql-etl no-text-transform"><i class="icon-sql-etl"></i><span>SQL ETL</span></h5><hr>
+                        <h5 class="tasks-list-item sql-etl no-text-transform"><i class="icon-sql-etl"></i>
+                            <span>SQL ETL</span><span data-bind="text: ' (' + sqlTasks().length + ')'"></span></h5><hr>
                     </div>
                     <div data-bind="foreach: sqlTasks">
                         <div class="panel destination-item sql-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -230,7 +236,7 @@
                 <div data-bind="if: showBackupSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item periodic-backup no-text-transform"><i class="icon-backup"></i><span>Backup</span></h5><hr>
-                        <h5 class="tasks-list-item no-text-transform" title="Navigate to the Server-Wide Backup View" data-bind="visible: $root.serverWideBackupTasksExist">
+                        <h5 class="tasks-list-item no-text-transform" title="Navigate to the Server-Wide Backup View" data-bind="visible: $root.canNavigateToServerWideBackupTasks">
                             <a target="_blank" data-bind="attr: { href: $root.serverWideBackupUrl }">&nbsp;Go to Server-Wide Backup View</a>
                         </h5>
                     </div>
@@ -310,7 +316,8 @@
 
                 <div data-bind="if: showSubscriptionsSection">
                     <div class="hr-title">
-                        <h5 class="tasks-list-item subscription no-text-transform"><i class="icon-subscription"></i><span>Subscription</span></h5><hr>
+                        <h5 class="tasks-list-item subscription no-text-transform"><i class="icon-subscription"></i>
+                            <span>Subscription</span><span data-bind="text: ' (' + subscriptionTasks().length + ')'"></span></h5><hr>
                     </div>
                     <div data-bind="foreach: subscriptionTasks">
                         <div class="panel destination-item subscription" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -384,7 +391,8 @@
 
                 <div data-bind="if: showPullReplicationHubSection">
                     <div class="hr-title">
-                        <h5 class="tasks-list-item pull-replication-hub no-text-transform"><i class="icon-pull-replication-hub"></i><span>Pull Replication Hub</span></h5><hr>
+                        <h5 class="tasks-list-item pull-replication-hub no-text-transform"><i class="icon-pull-replication-hub"></i>
+                            <span>Pull Replication Hub</span><span data-bind="text: ' (' + pullReplicationHubTasks().length + ')'"></span></h5><hr>
                     </div>
                     <div data-bind="foreach: pullReplicationHubTasks">
                         <div class="panel destination-item pull-replication-hub">
@@ -459,7 +467,8 @@
 
                 <div data-bind="if: showPullReplicationSinkSection">
                     <div class="hr-title">
-                        <h5 class="tasks-list-item pull-replication-sink no-text-transform"><i class="icon-pull-replication-agent"></i><span>Pull Replication Sink</span></h5><hr>
+                        <h5 class="tasks-list-item pull-replication-sink no-text-transform"><i class="icon-pull-replication-agent"></i>
+                            <span>Pull Replication Sink</span><span data-bind="text: ' (' + pullReplicationSinkTasks().length + ')'"></span></h5><hr>
                     </div>
                     <div data-bind="foreach: pullReplicationSinkTasks">
                         <div class="panel destination-item pull-replication-sink" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -659,9 +668,9 @@
 <script type="text/html" id="connection-string">
     <div class="property-name">Connection String:</div>
     <div class="property-value" data-bind="visible: connectionStringDefined">
-        <span title="Connection string name">
+        <div title="Connection string name">
             <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
-        </span>
+        </div>
     </div>
     <div data-bind="visible: !connectionStringDefined()">
         <div class="property-name" data-bind="text: connectionStringName"></div>

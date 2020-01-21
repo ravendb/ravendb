@@ -5,6 +5,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Voron.Impl;
 
 namespace Raven.Server.Documents
@@ -22,6 +23,8 @@ namespace Raven.Server.Documents
         private List<TimeSeriesChange> _timeSeriesNotifications;
 
         private bool _replaced;
+
+        private Dictionary<string, CollectionName> _collectionCache;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
             : base(transaction)
@@ -126,6 +129,23 @@ namespace Raven.Server.Documents
                     _changes.RaiseNotifications(notification);
                 }
             }
+        }
+
+        public bool TryGetFromCache(string collectionName, out CollectionName name)
+        {
+            if (_collectionCache != null)
+                return _collectionCache.TryGetValue(collectionName, out name);
+
+            name = null;
+            return false;
+        }
+
+        public void AddToCache(string collectionName, CollectionName name)
+        {
+            if (_collectionCache == null)
+                _collectionCache = new Dictionary<string, CollectionName>(OrdinalIgnoreCaseStringStructComparer.Instance);
+
+            _collectionCache.Add(collectionName, name);
         }
     }
 }

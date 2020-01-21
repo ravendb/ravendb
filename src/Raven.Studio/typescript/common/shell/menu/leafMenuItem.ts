@@ -14,7 +14,7 @@ class leafMenuItem implements menuItem {
     openAsDialog: boolean;
     path: KnockoutComputed<string>;
     parent: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
-    enabled: KnockoutObservable<boolean>;
+    disableWithReason?: KnockoutObservable<string>;
     type: menuItemType = "leaf";
     itemRouteToHighlight: string;
     alias: boolean;
@@ -23,7 +23,7 @@ class leafMenuItem implements menuItem {
     countPrefix: KnockoutComputed<string>;
     sizeClass: KnockoutComputed<string>;
 
-    constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, enabled, openAsDialog, itemRouteToHighlight, badgeData, alias }: {
+    constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, badgeData, alias }: {
         title: string,
         route: string | Array<string>,
         moduleId: string,
@@ -33,7 +33,7 @@ class leafMenuItem implements menuItem {
         dynamicHash?: dynamicHashType,
         css?: string,
         openAsDialog?: boolean,
-        enabled?: KnockoutObservable<boolean>;
+        disableWithReason?: KnockoutObservable<string>;
         itemRouteToHighlight?: string;
         badgeData?: KnockoutObservable<number>;
         alias?: boolean;
@@ -51,7 +51,7 @@ class leafMenuItem implements menuItem {
         this.hash = hash;
         this.dynamicHash = dynamicHash;
         this.css = css;
-        this.enabled = enabled;
+        this.disableWithReason = disableWithReason;
         this.openAsDialog = openAsDialog;
         this.alias = alias || false;
 

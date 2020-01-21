@@ -22,10 +22,9 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/settings/connectionStrings',
             moduleId: "viewmodels/database/settings/connectionStrings",
             title: "Connection Strings",
-            nav: access.showConnectionStringsMenuItem,
+            nav: true,
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
-            enabled: access.enableConnectionStringsMenuItem
         }),
         new leafMenuItem({
             route: 'databases/settings/conflictResolution',
@@ -34,7 +33,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-conflicts-resolution',
             dynamicHash: appUrls.conflictResolution,
-            enabled: access.enableConflictResolutionMenuItem
         }),
         new leafMenuItem({
             route: 'databases/settings/clientConfiguration',

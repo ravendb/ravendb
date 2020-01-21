@@ -114,6 +114,12 @@ class menu {
     }
 
     navigate($data: menuItem, $event: JQueryEventObject) {
+        const targetLink = $event.target.closest("a");
+        if (targetLink && targetLink.classList.contains("disabled")) {
+            $event.preventDefault();
+            return false;
+        }
+
         if (this.shouldOpenAsDialog($data)) {
             const leafItem = $data as leafMenuItem;
             require([leafItem.moduleId],
@@ -148,6 +154,12 @@ class menu {
     update(items: Array<menuItem>) {
         this.items(items);
         this.setActiveMenuItem();
+
+        $('#main-menu [data-toggle="tooltip"]').tooltip({
+            placement: "right",
+            container: "body",
+            html: true
+        });
     }
 
     handleLevelClick($data: any, $event: JQueryEventObject) {

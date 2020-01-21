@@ -39,7 +39,7 @@ class databaseRecord extends viewModelBase {
             .then(() => {
                 const deferred = $.Deferred<canActivateResultDto>();
 
-                this.isForbidden(!accessManager.default.clusterAdminOrClusterNode());
+                this.isForbidden(!accessManager.default.operatorAndAbove());
 
                 if (this.isForbidden()) {
                     deferred.resolve({ can: true });
