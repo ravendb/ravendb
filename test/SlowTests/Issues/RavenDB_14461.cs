@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Session;
@@ -71,6 +68,51 @@ namespace SlowTests.Issues
                 }))
                 {
                     Assert.Empty(await session.Advanced.LoadStartingWithAsync<Company>("orders/"));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task FindByEmptyCollectionShouldWork()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var ids = new string[] { };
+                    var objs = session.Load<Company>(ids);
+
+                    Assert.NotNull(objs);
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    NoTracking = true
+                }))
+                {
+                    var ids = new string[] { };
+                    var objs = session.Load<Company>(ids);
+
+                    Assert.NotNull(objs);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ids = new string[] { };
+                    var objs = await session.LoadAsync<Company>(ids);
+
+                    Assert.NotNull(objs);
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    NoTracking = true
+                }))
+                {
+                    var ids = new string[] { };
+                    var objs = await session.LoadAsync<Company>(ids);
+
+                    Assert.NotNull(objs);
                 }
             }
         }
