@@ -480,7 +480,7 @@ namespace Raven.Server
             string output = GetStdOut();
             string errors = GetStdError();
 
-            // Can have exit code o (success) but still get errors. We log the errors anyway.
+            // Can have exit code 0 (success) but still get errors. We log the errors anyway.
             if (log.IsOperationsEnabled)
                 log.Operations($"Executing '{Configuration.Security.CertificateValidationExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {output}{Environment.NewLine}Errors: {errors}{Environment.NewLine}");
 

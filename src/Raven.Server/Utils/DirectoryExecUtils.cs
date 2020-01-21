@@ -111,7 +111,7 @@ namespace Raven.Server.Utils
                     throw new InvalidOperationException($"Unable to read redirected stderr and stdout when executing '{parameters.OnDirectoryInitializeExec} {args}'", e);
                 }
 
-                // Can have exit code o (success) but still get errors. We log the errors anyway.
+                // Can have exit code 0 (success) but still get errors. We log the errors anyway.
                 if (log.IsOperationsEnabled)
                     log.Operations($"Executing '{parameters.OnDirectoryInitializeExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}");
 
