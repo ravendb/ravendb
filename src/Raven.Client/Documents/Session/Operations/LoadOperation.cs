@@ -173,7 +173,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (_includeAllCounters || _countersToInclude != null)
             {
-                _session.RegisterCounters(result.CounterIncludes, _ids.ToArray(), _countersToInclude, _includeAllCounters);
+                _session.RegisterCounters(result.CounterIncludes, _ids, _countersToInclude, _includeAllCounters);
             }
 
             foreach (var document in GetDocumentsFromResult(result))
