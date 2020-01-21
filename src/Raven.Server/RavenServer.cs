@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -11,10 +10,8 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -24,11 +21,9 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
-using Raven.Client;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -56,18 +51,12 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
-using Raven.Server.Web.Authentication;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.LowMemory;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
-using Sparrow.Server.Utils;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using DateTime = System.DateTime;
 
 namespace Raven.Server
@@ -95,6 +84,7 @@ namespace Raven.Server
         private IWebHost _redirectingWebHost;
 
         private readonly Logger _tcpLogger;
+        private readonly ExternalCertificateValidator _externalCertificateValidator;
 
         public event Action AfterDisposal;
 
@@ -105,65 +95,6 @@ namespace Raven.Server
         public ICpuUsageCalculator CpuUsageCalculator;
 
         internal bool ThrowOnLicenseActivationFailure;
-
-
-
-        public class ExternalCertificateValidation
-        {
-            public class CachedValue
-            {
-                public DateTime Until;
-                public bool Valid;
-
-                public Task<CachedValue> Next;
-            }
-
-            public class Key
-            {
-                public readonly string Host;
-                public readonly string Cert;
-                public readonly SslPolicyErrors Errors;
-                public readonly long LastScriptHash;
-
-                public Key(string host, string cert, SslPolicyErrors errors, long lastScriptWrite)
-                {
-                    Host = host;
-                    Cert = cert;
-                    Errors = errors;
-                    LastScriptHash = lastScriptWrite;
-                }
-
-                protected bool Equals(Key other)
-                {
-                    return Host == other.Host && Cert == other.Cert && Errors == other.Errors && LastScriptHash.Equals(other.LastScriptHash);
-                }
-
-                public override bool Equals(object obj)
-                {
-                    if (ReferenceEquals(null, obj))
-                        return false;
-                    if (ReferenceEquals(this, obj))
-                        return true;
-                    if (obj.GetType() != this.GetType())
-                        return false;
-                    return Equals((Key)obj);
-                }
-
-                public override int GetHashCode()
-                {
-                    unchecked
-                    {
-                        var hashCode = (Host != null ? Host.GetHashCode() : 0);
-                        hashCode = (hashCode * 397) ^ (Cert != null ? Cert.GetHashCode() : 0);
-                        hashCode = (hashCode * 397) ^ (int)Errors;
-                        hashCode = (hashCode * 397) ^ LastScriptHash.GetHashCode();
-                        return hashCode;
-                    }
-                }
-            }
-        }
-
-        private ConcurrentDictionary<ExternalCertificateValidation.Key, Task<ExternalCertificateValidation.CachedValue>> _externalCertificateValidationCallbackCache;
 
         public RavenServer(RavenConfiguration configuration)
         {
@@ -185,6 +116,7 @@ namespace Raven.Server
             MetricCacher = new ServerMetricCacher(this);
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
+            _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
         }
 
         public TcpListenerStatus GetTcpServerStatus()
@@ -316,11 +248,7 @@ namespace Raven.Server
                         // errors here, it all goes to the log anyway
                     }
 
-                    if (string.IsNullOrEmpty(Configuration.Security.CertificateValidationExec) == false)
-                    {
-                        _externalCertificateValidationCallbackCache = new ConcurrentDictionary<ExternalCertificateValidation.Key, Task<ExternalCertificateValidation.CachedValue>>();
-                        RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => ExternalCertificateValidationCallback(sender, cert, chain, errors, Logger);
-                    }
+                    _externalCertificateValidator.Initialize();
 
                     var port = new Uri(Configuration.Core.ServerUrls[0]).Port;
                     if (port == 443 && Configuration.Security.DisableHttpsRedirection == false)
@@ -397,201 +325,6 @@ namespace Raven.Server
                     Logger.Operations("Could not start server", e);
                 throw;
             }
-        }
-
-        private ExternalCertificateValidation.CachedValue CheckExternalCertificateValidation(string senderHostname, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, Logger log)
-        {
-
-            var base64Cert = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
-
-            var timeout = Configuration.Security.CertificateValidationExecTimeout.AsTimeSpan;
-
-            var userArgs = RegexSplit(Configuration.Security.CertificateValidationExecArguments ?? string.Empty);
-            
-            var args = $"{CommandLineArgumentEscaper.EscapeAndConcatenate(userArgs)} " +
-                       $"{CommandLineArgumentEscaper.EscapeSingleArg(senderHostname)} " +
-                       $"{CommandLineArgumentEscaper.EscapeSingleArg(base64Cert)} " +
-                       $"{CommandLineArgumentEscaper.EscapeSingleArg(sslPolicyErrors.ToString())}";
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = Configuration.Security.CertificateValidationExec,
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            var sw = Stopwatch.StartNew();
-            Process process;
-            try
-            {
-                process = Process.Start(startInfo);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Unable to execute '{Configuration.Security.CertificateValidationExec} {args}'. Failed to start process.", e);
-            }
-
-            var readStdOut = process.StandardOutput.ReadToEndAsync();
-            var readErrors = process.StandardError.ReadToEndAsync();
-
-            string GetStdError()
-            {
-                try
-                {
-                    return readErrors.Result;
-                }
-                catch (Exception e)
-                {
-                    return $"Unable to get stderr, got exception: {e}";
-                }
-            }
-
-            string GetStdOut()
-            {
-                try
-                {
-                    return readStdOut.Result;
-                }
-                catch (Exception e)
-                {
-                    return $"Unable to get stdout, got exception: {e}";
-                }
-            }
-
-            if (process.WaitForExit((int)timeout.TotalMilliseconds) == false)
-            {
-                process.Kill();
-                throw new InvalidOperationException($"Unable to execute '{Configuration.Security.CertificateValidationExec} {args}', waited for {(int)timeout.TotalMilliseconds} ms but the process didn't exit. Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}");
-            }
-
-            try
-            {
-                readStdOut.Wait(timeout);
-                readErrors.Wait(timeout);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Unable to read redirected stderr and stdout when executing '{Configuration.Security.CertificateValidationExec} {args}'", e);
-            }
-
-            string output = GetStdOut();
-            string errors = GetStdError();
-
-            // Can have exit code 0 (success) but still get errors. We log the errors anyway.
-            if (log.IsOperationsEnabled)
-                log.Operations($"Executing '{Configuration.Security.CertificateValidationExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {output}{Environment.NewLine}Errors: {errors}{Environment.NewLine}");
-
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException(
-                    $"Command or executable '{Configuration.Security.CertificateValidationExec} {args}' failed. Exit code: {process.ExitCode}{Environment.NewLine}Output: {output}{Environment.NewLine}Errors: {errors}{Environment.NewLine}");
-            }
-
-            if (bool.TryParse(output, out bool result) == false)
-            {
-                throw new InvalidOperationException(
-                    $"Cannot parse to boolean the result of Command or executable '{Configuration.Security.CertificateValidationExec} {args}'. Exit code: {process.ExitCode}{Environment.NewLine}Output: {output}{Environment.NewLine}Errors: {errors}{Environment.NewLine}");
-            }
-
-            return new ExternalCertificateValidation.CachedValue { Valid = result, Until = result ? DateTime.UtcNow.AddMinutes(15) : DateTime.UtcNow.AddSeconds(30) };
-        }
-
-        public bool ExternalCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, Logger log)
-        {
-            var senderHostname = RequestExecutor.ConvertSenderObjectToHostname(sender);
-            var lastWriteTimeHash = GetScriptLastWriteHash();
-            var cacheKey = new ExternalCertificateValidation.Key(senderHostname, certificate.GetCertHashString(), sslPolicyErrors, lastWriteTimeHash);
-
-            Task<ExternalCertificateValidation.CachedValue> task;
-            if (_externalCertificateValidationCallbackCache.TryGetValue(cacheKey, out var existingTask) == false)
-            {
-                task = new Task<ExternalCertificateValidation.CachedValue>(() => CheckExternalCertificateValidation(senderHostname, certificate, chain, sslPolicyErrors, log));
-                existingTask = _externalCertificateValidationCallbackCache.GetOrAdd(cacheKey, task);
-                if (existingTask == task)
-                {
-                    task.Start();
-
-                    if (_externalCertificateValidationCallbackCache.Count > 50)
-                    {
-                        foreach (var item in _externalCertificateValidationCallbackCache.Where(x => x.Value.IsCompleted).OrderBy(x => x.Value.Result.Until).Take(25))
-                        {
-                            _externalCertificateValidationCallbackCache.TryRemove(item.Key, out _);
-                        }
-                    }
-                }
-            }
-
-            ExternalCertificateValidation.CachedValue cachedValue;
-            try
-            {
-                cachedValue = existingTask.Result;
-            }
-            catch
-            {
-                _externalCertificateValidationCallbackCache.TryRemove(cacheKey, out _);
-                throw;
-            }
-
-            if (Time.GetUtcNow() < cachedValue.Until)
-                return cachedValue.Valid;
-
-            var cachedValueNext = cachedValue.Next;
-            if (cachedValueNext != null)
-                return ReturnTaskValue(cachedValueNext);
-
-            task = new Task<ExternalCertificateValidation.CachedValue>(() =>
-                CheckExternalCertificateValidation(senderHostname, certificate, chain, sslPolicyErrors, log));
-
-            var nextTask = Interlocked.CompareExchange(ref cachedValue.Next, task, null);
-            if (nextTask != null)
-                return ReturnTaskValue(nextTask);
-
-            
-            task.ContinueWith(done =>
-            {
-                _externalCertificateValidationCallbackCache.TryUpdate(cacheKey, done, existingTask);
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
-
-            task.Start();
-
-            return cachedValue.Valid; // we are computing this, but may take some time, let's use cached value for now
-
-            bool ReturnTaskValue(Task<ExternalCertificateValidation.CachedValue> task)
-            {
-                if (task.IsCompletedSuccessfully)
-                    return task.Result.Valid;
-
-                // not done yet? return the cached value
-                return cachedValue.Valid;
-            }
-        }
-
-        // https://stackoverflow.com/questions/14241479/how-to-split-a-space-delimited-list-of-paths-where-paths-can-include-spaces-in
-        static Regex re = new Regex(@"^([ ]*((?<r>[^ ""]+)|[""](?<r>[^""]*)[""]))*[ ]*$");
-        public static IEnumerable<string> RegexSplit(string input)
-        {
-            var m = re.Match(input ?? "");
-            if (!m.Success)
-                throw new ArgumentException("Malformed input.");
-
-            return from Capture capture in m.Groups["r"].Captures select capture.Value;
-        }
-
-        private long GetScriptLastWriteHash()
-        {
-
-            long hash = File.GetLastWriteTimeUtc(Configuration.Security.CertificateValidationExec).Ticks;
-            var args = RegexSplit(Configuration.Security.CertificateValidationExecArguments);
-
-            foreach (string arg in args)
-            {
-                hash = Hashing.Combine(hash, File.GetLastWriteTimeUtc(arg).Ticks);
-            }
-
-            return hash;
         }
 
         public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
