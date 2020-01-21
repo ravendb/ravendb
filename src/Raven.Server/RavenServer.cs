@@ -406,9 +406,9 @@ namespace Raven.Server
 
             var timeout = Configuration.Security.CertificateValidationExecTimeout.AsTimeSpan;
 
-            var userArgs = Configuration.Security.CertificateValidationExecArguments ?? string.Empty;
-
-            var args = $"{userArgs} " +
+            var userArgs = RegexSplit(Configuration.Security.CertificateValidationExecArguments ?? string.Empty);
+            
+            var args = $"{CommandLineArgumentEscaper.EscapeAndConcatenate(userArgs)} " +
                        $"{CommandLineArgumentEscaper.EscapeSingleArg(senderHostname)} " +
                        $"{CommandLineArgumentEscaper.EscapeSingleArg(base64Cert)} " +
                        $"{CommandLineArgumentEscaper.EscapeSingleArg(sslPolicyErrors.ToString())}";
