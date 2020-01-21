@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public void AddValue(ulong value, int bitsInValue)
         {
-            Debug.Assert(EnsureAdditionalBits(null, bitsInValue));
+            Debug.Assert(HasEnoughBits(Header->UncompressedBitsPosition, bitsInValue));
 
             if (bitsInValue == 0)
             {

@@ -124,6 +124,7 @@ namespace Raven.Server.Documents.TimeSeries
             var maximumSize =
                 sizeof(BitsBufferHeader) +
                 sizeof(int) + // max timestamp
+                1 + // timestamp uses ControlValue which takes 4 bits, need to account for this
                 sizeof(double) * vals.Length + vals.Length /* may use additional 2 bits per value here for the first items */ +
                 2 // previous tag position (10 bits)
                 ;
