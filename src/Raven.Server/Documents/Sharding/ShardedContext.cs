@@ -7,7 +7,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Sharding
 {
     public unsafe class ShardedContext
     {
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents
 
         public int GetShardIndex(int shardId)
         {
-            for (int i = 0; i < _record.ShardAllocations.Count-1; i++)
+            for (int i = 0; i < _record.ShardAllocations.Count - 1; i++)
             {
                 if (shardId < _record.ShardAllocations[i + 1].RangeStart)
                     return _record.ShardAllocations[i].Shard;
