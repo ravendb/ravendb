@@ -9,7 +9,7 @@ namespace Raven.Client.Util
     {
         private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         private static readonly TimeSpan DefaultReadTimeout = TimeSpan.FromSeconds(120);
-        
+
         private readonly Stream _stream;
         private int _writeTimeout;
         private int _readTimeout;
@@ -17,77 +17,100 @@ namespace Raven.Client.Util
         private bool _canBaseStreamTimeoutOnRead;
         private CancellationTokenSource _writeCts;
         private CancellationTokenSource _readCts;
-        public StreamWithTimeout(Stream stream, TimeSpan? writeTimeout = null, TimeSpan? readTimeout = null)
+
+        public StreamWithTimeout(Stream stream)
         {
             _stream = stream;
-            SetWriteTimeoutIfNeeded(writeTimeout);
-            SetReadTimeoutIfNeeded(readTimeout);
+            SetWriteTimeoutIfNeeded(DefaultWriteTimeout);
+            SetReadTimeoutIfNeeded(DefaultReadTimeout);
         }
 
-        private void SetReadTimeoutIfNeeded(TimeSpan? readTimeout)
+        private void SetReadTimeoutIfNeeded(TimeSpan readTimeout)
         {
-            _canBaseStreamTimeoutOnRead = _stream.CanTimeout && _stream.ReadTimeout < int.MaxValue;
-
-            if (_canBaseStreamTimeoutOnRead)
+            try
             {
-                _readTimeout = (int?)readTimeout?.TotalMilliseconds ?? _stream.ReadTimeout;
-                if (_stream.ReadTimeout == _readTimeout)
-                    return;
+                _readTimeout = (int)readTimeout.TotalMilliseconds;
+                _canBaseStreamTimeoutOnRead = _stream.CanRead && _stream.CanTimeout;
 
-                try
+                if (_canBaseStreamTimeoutOnRead)
                 {
-                    _stream.ReadTimeout = _readTimeout;
-                }
-                catch
-                {
-                    // not every stream support setting the timeout value
-                    // so we need to fall-back to the inner stream timeout
-                    _readTimeout = _stream.ReadTimeout;
+                    var streamReadTimeout = _stream.ReadTimeout;
+
+                    try
+                    {
+                        _stream.ReadTimeout = _readTimeout;
+                    }
+                    catch
+                    {
+                        if (streamReadTimeout <= _readTimeout)
+                            _readTimeout = streamReadTimeout;
+                        else
+                            _canBaseStreamTimeoutOnRead = false;
+                    }
                 }
             }
-            else
-                _readTimeout = (int)(readTimeout ?? DefaultReadTimeout).TotalMilliseconds;
+            catch
+            {
+                _canBaseStreamTimeoutOnRead = false;
+            }
         }
 
-        private void SetWriteTimeoutIfNeeded(TimeSpan? writeTimeout)
+        private void SetWriteTimeoutIfNeeded(TimeSpan writeTimeout)
         {
-            _canBaseStreamTimeoutOnWrite = _stream.CanTimeout && _stream.WriteTimeout < int.MaxValue;
-
-            if (_canBaseStreamTimeoutOnWrite)
+            try
             {
-                _writeTimeout = (int?)writeTimeout?.TotalMilliseconds ?? _stream.WriteTimeout;
-                if (_stream.WriteTimeout == _writeTimeout)
-                    return;
+                _writeTimeout = (int)writeTimeout.TotalMilliseconds;
+                _canBaseStreamTimeoutOnWrite = _stream.CanWrite && _stream.CanTimeout;
 
-                try
+                if (_canBaseStreamTimeoutOnWrite)
                 {
-                    _stream.WriteTimeout = _writeTimeout;
-                }
-                catch
-                {
-                    // not every stream support setting the timeout value
-                    // so we need to fall-back to the inner stream timeout
-                    _writeTimeout = _stream.WriteTimeout;
+                    var streamWriteTimeout = _stream.WriteTimeout;
+
+                    try
+                    {
+                        _stream.WriteTimeout = _writeTimeout;
+                    }
+                    catch
+                    {
+                        if (streamWriteTimeout <= _writeTimeout)
+                            _writeTimeout = streamWriteTimeout;
+                        else
+                            _canBaseStreamTimeoutOnWrite = false;
+                    }
                 }
             }
-            else
-                _writeTimeout = (int)(writeTimeout ?? DefaultWriteTimeout).TotalMilliseconds;
+            catch
+            {
+                _canBaseStreamTimeoutOnWrite = false;
+            }
         }
 
         public override int ReadTimeout
         {
             get => _readTimeout;
-            set => _readTimeout = value;
+            set
+            {
+                if (_canBaseStreamTimeoutOnRead)
+                    _stream.ReadTimeout = value; // we only need to set it when base stream supports that, if not we are handling that ourselves
+
+                _readTimeout = value;
+            }
         }
 
         public override int WriteTimeout
         {
             get => _writeTimeout;
-            set => _writeTimeout = value;
+            set
+            {
+                if (_canBaseStreamTimeoutOnWrite)
+                    _stream.WriteTimeout = value;  // we only need to set it when base stream supports that, if not we are handling that ourselves
+
+                _writeTimeout = value;
+            }
         }
 
         public override bool CanTimeout => true;
-        
+
         public override void Flush()
         {
             _stream.Flush();
@@ -117,8 +140,6 @@ namespace Raven.Client.Util
 
             return _stream.ReadAsync(buffer, offset, count, _readCts.Token);
         }
-
-        
 
         public override long Seek(long offset, SeekOrigin origin)
         {
@@ -164,6 +185,7 @@ namespace Raven.Client.Util
         public override bool CanSeek => _stream.CanSeek;
         public override bool CanWrite => _stream.CanWrite;
         public override long Length => _stream.Length;
+
         public override long Position
         {
             get => _stream.Position;
