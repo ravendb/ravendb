@@ -42,7 +42,7 @@ namespace Raven.Client.Util
                     }
                     catch
                     {
-                        if (streamReadTimeout <= _readTimeout)
+                        if (streamReadTimeout > 0 && streamReadTimeout <= _readTimeout)
                             _readTimeout = streamReadTimeout;
                         else
                             _canBaseStreamTimeoutOnRead = false;
@@ -72,7 +72,7 @@ namespace Raven.Client.Util
                     }
                     catch
                     {
-                        if (streamWriteTimeout <= _writeTimeout)
+                        if (streamWriteTimeout > 0 && streamWriteTimeout <= _writeTimeout)
                             _writeTimeout = streamWriteTimeout;
                         else
                             _canBaseStreamTimeoutOnWrite = false;
