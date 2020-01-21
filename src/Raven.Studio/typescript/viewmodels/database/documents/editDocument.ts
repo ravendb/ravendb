@@ -150,7 +150,7 @@ class editDocument extends viewModelBase {
         this.initializeObservables();
         this.initValidation();
         
-        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision", "toClipboard");
+        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision");
     }
 
     canActivate(args: any) {
@@ -569,9 +569,12 @@ class editDocument extends viewModelBase {
         return collectionForNewDocument + "/";
     }
 
-    toClipboard(copyId: boolean = false) {
-        copyToClipboard.copy(copyId ? this.editedDocId() : this.documentText(),
-            `Document ${copyId ? 'ID' : ''} has been copied to clipboard`);
+    copyDocumentBodyToClipboard() {
+        copyToClipboard.copy(this.documentText(), "Document has been copied to clipboard");
+    }
+
+    copyDocumentIdToClipboard() {
+        copyToClipboard.copy(this.editedDocId(), "Document ID has been copied to clipboard");
     }
 
     toggleNewlineMode() {
