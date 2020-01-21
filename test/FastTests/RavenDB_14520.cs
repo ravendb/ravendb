@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Util;
 using Xunit;
 using Xunit.Abstractions;
@@ -48,6 +49,25 @@ namespace FastTests
             {
                 throw new NotImplementedException();
             }
+        }
+
+        private abstract class ReadOnlyStream : Stream
+        {
+            public override bool CanRead => true;
+
+            public override bool CanWrite => false;
+
+            public override int WriteTimeout
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+                => throw new NotSupportedException();
+
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+                => throw new NotSupportedException();
         }
     }
 }

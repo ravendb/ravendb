@@ -27,7 +27,7 @@ namespace Tests.Infrastructure
         protected InterversionTestBase(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         public class ProcessNode
         {
             public string Version;
@@ -342,60 +342,6 @@ namespace Tests.Infrastructure
             await Task.WhenAll(tasks);
 
             return tasks.All(x => x.Result);
-        }
-
-
-        protected bool WaitForDocument<T>(IDocumentStore store,
-            string docId,
-            Func<T, bool> predicate,
-            int timeout = 10000,
-            string database = null)
-        {
-            if (DebuggerAttachedTimeout.DisableLongTimespan == false &&
-                Debugger.IsAttached)
-                timeout *= 100;
-
-            database = database ?? store.Database;
-            var sw = Stopwatch.StartNew();
-            Exception ex = null;
-            while (sw.ElapsedMilliseconds < timeout)
-            {
-                using (var session = store.OpenSession(database))
-                {
-                    try
-                    {
-                        var doc = session.Load<T>(docId);
-                        if (doc != null)
-                        {
-                            if (predicate == null || predicate(doc))
-                                return true;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        ex = e;
-                        // expected that we might get conflict, ignore and wait
-                    }
-                }
-
-                Thread.Sleep(100);
-            }
-
-            using (var session = store.OpenSession(database))
-            {
-                //one last try, and throw if there is still a conflict
-                var doc = session.Load<T>(docId);
-                if (doc != null)
-                {
-                    if (predicate == null || predicate(doc))
-                        return true;
-                }
-            }
-            if (ex != null)
-            {
-                throw ex;
-            }
-            return false;
         }
 
         public class InterversionTestOptions
