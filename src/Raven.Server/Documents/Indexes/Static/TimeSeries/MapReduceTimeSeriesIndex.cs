@@ -13,7 +13,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.ServerWide.Context;
-using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -21,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly StaticTimeSeriesIndexBase _compiled;
+        protected new internal readonly StaticTimeSeriesIndexBase _compiled;
 
         public MapReduceTimeSeriesIndex(MapReduceIndexDefinition definition, StaticTimeSeriesIndexBase compiled) : base(definition, compiled)
         {

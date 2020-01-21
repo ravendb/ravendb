@@ -30,9 +30,6 @@ namespace Raven.Server.Documents.Indexes.Static
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollection;
 
-        /// [collection: [collectionKey: etag]]
-        public Dictionary<string, Dictionary<string, long>> ReferenceEtagsByCollection;
-
         [ThreadStatic]
         public static CurrentIndexingScope Current;
 
@@ -120,7 +117,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 Slice.From(_documentsContext.Allocator, id, out var idSlice);
                 var references = GetReferencesForItem(idSlice);
-                var referenceEtags = GetReferenceEtags();
 
                 references.Add(keySlice);
 
@@ -129,11 +125,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 if (document == null)
                 {
-                    MaybeUpdateReferenceEtags(referenceEtags, collectionName, 0);
                     return DynamicNullObject.Null;
                 }
-
-                MaybeUpdateReferenceEtags(referenceEtags, collectionName, document.Etag);
 
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
@@ -159,31 +152,6 @@ namespace Raven.Server.Documents.Indexes.Static
             _javaScriptUtils?.Clear();
             _javaScriptUtils = null;
             Current = null;
-        }
-
-        private static void MaybeUpdateReferenceEtags(Dictionary<string, long> referenceEtags, string collection, long etag)
-        {
-            if (referenceEtags.TryGetValue(collection, out long oldEtag) == false)
-            {
-                referenceEtags[collection] = etag;
-                return;
-            }
-
-            if (oldEtag >= etag)
-                return;
-
-            referenceEtags[collection] = etag;
-        }
-
-        private Dictionary<string, long> GetReferenceEtags()
-        {
-            if (ReferenceEtagsByCollection == null)
-                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
-
-            if (ReferenceEtagsByCollection.TryGetValue(SourceCollection, out Dictionary<string, long> referenceEtags) == false)
-                ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase));
-
-            return referenceEtags;
         }
 
         private HashSet<Slice> GetReferencesForItem(Slice key)

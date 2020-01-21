@@ -68,9 +68,8 @@ class editExternalReplicationTask extends viewModelBase {
             deferred.resolve();
         }
 
-        deferred.done(() => this.initObservables());
-        
-        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred);
+        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred)
+            .done(() => this.initObservables());
     }
     
     private loadPossibleMentors() {
@@ -106,7 +105,7 @@ class editExternalReplicationTask extends viewModelBase {
                 model.connectionStringName,
                 model.delayReplicationTime,
                 model.showDelayReplication,
-                this.createNewConnectionString                
+                this.createNewConnectionString
             ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.newConnectionString(connectionStringRavenEtlModel.empty());

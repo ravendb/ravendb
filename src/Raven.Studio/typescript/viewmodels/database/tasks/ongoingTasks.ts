@@ -22,6 +22,7 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
 import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
 import ongoingTaskPullReplicationSinkListModel = require("models/database/tasks/ongoingTaskPullReplicationSinkListModel");
+import accessManager = require("common/shell/accessManager");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription" | "Pull Replication Hub" | "Pull Replication Sink";
 
@@ -54,14 +55,17 @@ class ongoingTasks extends viewModelBase {
     showPullReplicationHubSection = this.createShowSectionComputedForPullHub(this.pullReplicationHubTasks);
     showPullReplicationSinkSection = this.createShowSectionComputed(this.pullReplicationSinkTasks, "Pull Replication Sink");
 
-    existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();
+    tasksTypesOrderForUI = ["Replication", "RavenEtl", "SqlEtl", "Backup", "Subscription", "PullReplicationAsHub", "PullReplicationAsSink"] as Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>;
+    existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();    
     selectedTaskType = ko.observable<TasksNamesInUI | "All tasks">();
-
+    
+    taskNameToCount: KnockoutComputed<dictionary<number>>;    
+    
     existingNodes = ko.observableArray<string>();
     selectedNode = ko.observable<string>();
 
-    serverWideBackupTasksExist = ko.observable<boolean>();
-    serverWideBackupUrl: string; 
+    canNavigateToServerWideBackupTasks: KnockoutComputed<boolean>;
+    serverWideBackupUrl: string;
     
     constructor() {
         super();
@@ -73,22 +77,34 @@ class ongoingTasks extends viewModelBase {
     private initObservables() {
         this.myNodeTag(this.clusterManager.localNodeTag());
         this.serverWideBackupUrl = appUrl.forServerWideBackupList();
+        this.canNavigateToServerWideBackupTasks = accessManager.default.clusterAdminOrClusterNode;
+        this.taskNameToCount = ko.pureComputed<dictionary<number>>(() => {
+            return {
+                "External Replication": this.replicationTasks().length,
+                "RavenDB ETL": this.etlTasks().length,
+                "SQL ETL": this.sqlTasks().length,
+                "Backup": this.backupTasks().length,
+                "Subscription": this.subscriptionTasks().length,
+                "Pull Replication Hub": this.pullReplicationHubTasks().length,
+                "Pull Replication Sink": this.pullReplicationSinkTasks().length
+            }
+        });
     }
 
     activate(args: any): JQueryPromise<any> {
         super.activate(args);
         
-        this.addNotification(this.changesContext.serverNotifications()
-            .watchClusterTopologyChanges(() => this.refresh()));
-        this.addNotification(this.changesContext.serverNotifications()
-            .watchDatabaseChange(this.activeDatabase().name, () => this.refresh()));
-        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
-
         return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
     }
 
     attached() {
         super.attached();
+
+        this.addNotification(this.changesContext.serverNotifications()
+            .watchClusterTopologyChanges(() => this.refresh()));
+        this.addNotification(this.changesContext.serverNotifications()
+            .watchDatabaseChange(this.activeDatabase().name, () => this.refresh()));
+        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
         
         const db = this.activeDatabase();
         this.updateUrl(appUrl.forOngoingTasks(db));
@@ -302,8 +318,6 @@ class ongoingTasks extends viewModelBase {
         const serverWideBackupTasks = groupedBackupTasks.true;
         const ongoingBackupTasks = groupedBackupTasks.false;
 
-        this.serverWideBackupTasksExist(!!serverWideBackupTasks);
-        
         if (ongoingBackupTasks) {
             this.backupTasks(serverWideBackupTasks ? ongoingBackupTasks.concat(serverWideBackupTasks) : ongoingBackupTasks);            
         } else if (serverWideBackupTasks) {
@@ -335,9 +349,8 @@ class ongoingTasks extends viewModelBase {
             // we have any pull replication definitions but no incoming connections, so append PullReplicationAsHub task type
             taskTypes.push("PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType);
         }
-        
-        this.existingTaskTypes(taskTypes
-            .sort()
+
+        this.existingTaskTypes(this.tasksTypesOrderForUI.filter(x => _.includes(taskTypes, x))
             .map((taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType) => {
                 switch (taskType) {
                     case "RavenEtl":
@@ -353,7 +366,7 @@ class ongoingTasks extends viewModelBase {
                     default:
                         return taskType;
                 }
-            }));
+        }));
         
         this.existingNodes(_.uniq(result
             .OngoingTasksList

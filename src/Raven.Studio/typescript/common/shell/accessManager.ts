@@ -16,7 +16,21 @@ class accessManager {
          return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
     });
     
-    // *** Views Access *** //
+    private createSecurityRule(enabledPredicate: KnockoutObservable<boolean>, requiredRoles: string) {
+        return ko.pureComputed(() => {
+            const enabled = enabledPredicate();
+            const clearance = this.securityClearance();
+            if (enabled) {
+                return undefined;
+            } else {
+                return "Insufficient security clearance. <br /> Required: " + requiredRoles + "<br />Current: " + clearance;
+            }
+        });
+    }
+
+    disableIfNotClusterAdminOrClusterNode = this.createSecurityRule(this.clusterAdminOrClusterNode, "Cluster Admin");
+
+    disableIfNotOperatorOrAbove = this.createSecurityRule(this.operatorAndAbove, "Cluster Admin or Operator");
     
     dashboardView = {
         showCertificatesLink: this.operatorAndAbove
@@ -52,28 +66,25 @@ class accessManager {
         canGenerateClientCertificateForAdmin: this.clusterAdminOrClusterNode
     };
 
-    // *** Menus Access *** //
-    
     mainMenu = {
-        showManageServerMenuItem: this.operatorAndAbove
+        showManageServerMenuItem: this.allLevels
     };
     
     manageServerMenu = {
-        showAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
-        enableClusterMenuItem: this.allLevels,
-        enableClientConfigurationMenuItem: this.clusterAdminOrClusterNode,
-        enableStudioConfigurationMenuItem: this.clusterAdminOrClusterNode,
-        enableAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
-        enableCertificatesMenuItem: this.clusterAdminOrClusterNode,
-        enableServerWideBackupMenuItem: this.clusterAdminOrClusterNode,
-        enableAdminLogsMenuItem: this.clusterAdminOrClusterNode,
-        enableTrafficWatchMenuItem: this.clusterAdminOrClusterNode,
-        enableGatherDebugInfoMenuItem: this.clusterAdminOrClusterNode,
-        enableSystemStorageReport: this.clusterAdminOrClusterNode,
-        enableSystemIoStats: this.clusterAdminOrClusterNode,
-        enableAdvancedMenuItem: this.clusterAdminOrClusterNode,
-        enableCaptureStackTraces: this.clusterAdminOrClusterNode,
-        enableRecordTransactionCommands: this.clusterAdminOrClusterNode
+        disableClusterMenuItem: undefined as KnockoutComputed<string>,
+        disableClientConfigurationMenuItem: this.disableIfNotOperatorOrAbove,
+        disableStudioConfigurationMenuItem: this.disableIfNotOperatorOrAbove,
+        disableAdminJSConsoleMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableCertificatesMenuItem: this.disableIfNotOperatorOrAbove,
+        disableServerWideBackupMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableAdminLogsMenuItem: this.disableIfNotOperatorOrAbove,
+        disableTrafficWatchMenuItem: this.disableIfNotOperatorOrAbove,
+        disableGatherDebugInfoMenuItem: this.disableIfNotOperatorOrAbove,
+        disableSystemStorageReport: this.disableIfNotOperatorOrAbove,
+        disableSystemIoStats: this.disableIfNotOperatorOrAbove,
+        disableAdvancedMenuItem: this.disableIfNotOperatorOrAbove,
+        disableCaptureStackTraces: this.disableIfNotOperatorOrAbove,
+        enableRecordTransactionCommands: this.disableIfNotOperatorOrAbove
     };
     
     databaseSettingsMenu = {
