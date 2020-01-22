@@ -20,6 +20,7 @@ namespace Raven.Server.Https
     {
         private readonly RavenServer _server;
         private readonly Logger _logger;
+        private List<string> _userArgs; 
 
         private ConcurrentDictionary<Key, Task<CachedValue>> _externalCertificateValidationCallbackCache;
 
@@ -33,6 +34,10 @@ namespace Raven.Server.Https
         {
             if (string.IsNullOrEmpty(_server.Configuration.Security.CertificateValidationExec))
                 return;
+            
+            _userArgs = string.IsNullOrEmpty(_server.Configuration.Security.CertificateValidationExecArguments)
+                ? new List<string> { string.Empty }
+                : RegexSplit(_server.Configuration.Security.CertificateValidationExecArguments).ToList();
 
             _externalCertificateValidationCallbackCache = new ConcurrentDictionary<Key, Task<CachedValue>>();
 
@@ -45,9 +50,7 @@ namespace Raven.Server.Https
 
             var timeout = _server.Configuration.Security.CertificateValidationExecTimeout.AsTimeSpan;
 
-            var userArgs = RegexSplit(_server.Configuration.Security.CertificateValidationExecArguments ?? string.Empty);
-
-            var args = $"{CommandLineArgumentEscaper.EscapeAndConcatenate(userArgs)} " +
+            var args = $"{CommandLineArgumentEscaper.EscapeAndConcatenate(_userArgs)} " +
                        $"{CommandLineArgumentEscaper.EscapeSingleArg(senderHostname)} " +
                        $"{CommandLineArgumentEscaper.EscapeSingleArg(base64Cert)} " +
                        $"{CommandLineArgumentEscaper.EscapeSingleArg(sslPolicyErrors.ToString())}";
@@ -223,9 +226,8 @@ namespace Raven.Server.Https
         private long GetScriptLastWriteHash()
         {
             long hash = File.GetLastWriteTimeUtc(_server.Configuration.Security.CertificateValidationExec).Ticks;
-            var args = RegexSplit(_server.Configuration.Security.CertificateValidationExecArguments);
 
-            foreach (string arg in args)
+            foreach (string arg in _userArgs)
             {
                 hash = Hashing.Combine(hash, File.GetLastWriteTimeUtc(arg).Ticks);
             }
