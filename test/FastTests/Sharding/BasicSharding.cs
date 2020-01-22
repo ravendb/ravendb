@@ -64,6 +64,20 @@ namespace FastTests.Sharding
             }
         }
 
+        [Fact]
+        public void CanPutAndCheckIfExists()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                PutEntity(store, new DynamicJsonValue { ["Name"] = "Oren", }, "users/1");
+
+                using (var s = store.OpenSession())
+                {
+                    Assert.True(s.Advanced.Exists("users/1"));
+                }
+            }
+        }
+
         private static void PutEntity(IDocumentStore store, DynamicJsonValue user, string id)
         {
             RequestExecutor requestExecutor = store.GetRequestExecutor();
