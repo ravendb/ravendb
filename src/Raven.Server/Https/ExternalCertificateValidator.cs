@@ -41,7 +41,7 @@ namespace Raven.Server.Https
 
         public void ClearCache()
         {
-            _externalCertificateValidationCallbackCache = new ConcurrentDictionary<Key, Task<CachedValue>>();
+            _externalCertificateValidationCallbackCache?.Clear();
         }
         private CachedValue CheckExternalCertificateValidation(string senderHostname, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, Logger log)
         {
