@@ -10,7 +10,6 @@ namespace Raven.Server.Documents.Sharding
         public ShardedContext ShardedContext;
         public TransactionContextPool ContextPool;
 
-        protected static readonly ObjectPool<StringBuilder> StringBuilderObjectPool = new ObjectPool<StringBuilder>(()=> new StringBuilder());
         public override void Init(RequestHandlerContext context)
         {
             base.Init(context);

@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
@@ -14,17 +15,13 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class ShardedDocumentHandler : ShardedRequestHandler
     {
-        protected readonly StringBuilder UrlStringBuilder = new StringBuilder();
-        protected readonly List<Task> Task = new List<Task>();
-        protected readonly Dictionary<int, ShardedCommand> Cmds = new Dictionary<int, ShardedCommand>();
-        protected readonly List<TransactionOperationContext> CmdsContext = new List<TransactionOperationContext>();
-
         [RavenShardedAction("/databases/*/docs", "GET")]
         public async Task Get()
         {
@@ -34,41 +31,33 @@ namespace Raven.Server.Documents.Handlers
             var etag = GetStringFromHeaders("If-None-Match");
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-
+            var sb = new StringBuilder();
+            var cmds = new List<ShardedCommand>();
+            var tasks = new List<Task>();
             try
             {
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
+                    await FetchDocumentsFromShards(ids, context, sb, includePaths, cmds, tasks);
 
-                    var shards = ShardLocator.GetDocumentIdsShards(ids, ShardedContext, context);
-                    foreach (var shard in shards.ShardsToIds)
+                    if (cmds.Count == 1)
                     {
-
-                        UrlStringBuilder.Clear();
-                        UrlStringBuilder.Append("/docs?");
-                        foreach (var id in shard.Value)
+                        var singleEtag = cmds[0].Response?.Headers?.ETag?.Tag;
+                        if (etag == singleEtag)
                         {
-                            UrlStringBuilder.Append($"&id={Uri.EscapeUriString(id)}");
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                            return;
                         }
-
-                        var cmd = new ShardedCommand {Method = HttpMethod.Get, Url = UrlStringBuilder.ToString()};
-                        ContextPool.AllocateOperationContext(out TransactionOperationContext ctx);
-                        CmdsContext.Add(ctx);
-
-                        var task = ShardedContext.RequestExecutors[shard.Key].ExecuteAsync(cmd, ctx);
-                        Task.Add(task);
-                        Cmds.Add(shard.Key, cmd);
+                        HttpContext.Response.StatusCode = (int)cmds[0].StatusCode;
+                        HttpContext.Response.Headers[Constants.Headers.Etag] = singleEtag;
+                        cmds[0].Result?.WriteJsonTo(ResponseBodyStream());
+                        return;
                     }
 
-                    await System.Threading.Tasks.Task.WhenAll(Task);
-
-                    HttpContext.Response.StatusCode = (int)ShardedStatusCodeChooser.GetStatusCode(Cmds.Values);
-
-                    if (HttpContext.Response.IsSuccessStatusCode() == false)
-                        return;
-
-                    var actualEtag = ComputeHttpEtags.CombineEtags(EnumerateEtags(Cmds));
-
+                    // here we know that all of them are good
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+               
+                    var actualEtag = ComputeHttpEtags.CombineEtags(EnumerateEtags(cmds));
                     if (etag == actualEtag)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -76,14 +65,56 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
+                    
+                    
+                    var results = new BlittableJsonReaderObject[ids.Count];
+                    var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+                    var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var cmd in cmds)
+                    {
+                        if(cmd.Response == null)
+                            continue;
+                        cmd.Result.TryGet(nameof(GetDocumentsResult.Results), out BlittableJsonReaderArray cmdResults);
+                        if (cmd.Result.TryGet(nameof(GetDocumentsResult.Includes), out BlittableJsonReaderObject cmdIncludes))
+                        {
+                            BlittableJsonReaderObject.PropertyDetails prop = default;
+                            for (int i = 0; i < cmdIncludes.Count; i++)
+                            {
+                                cmdIncludes.GetPropertyByIndex(i, ref prop);
+                                includesMap[prop.Name] = (BlittableJsonReaderObject)prop.Value;
+                            }
+                        }
+                        for (var index = 0; index < cmd.PositionMatches.Count; index++)
+                        {
+                            int match = cmd.PositionMatches[index];
+                            var result = (BlittableJsonReaderObject)cmdResults[index];
+                            foreach (string includePath in includePaths)
+                            {
+                                IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes);
+                            }
+                            results[match] = result;
+                        }
+                    }
+
+                    foreach (var kvp in includesMap)// remove the items we already have
+                    {
+                        missingIncludes.Remove(kvp.Key);
+                    }
+
+                    if (missingIncludes.Count > 0)
+                    {
+                        await FetchMissingIncludes(cmds, tasks, missingIncludes, context, sb, includePaths, includesMap);
+                    }
 
                     using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), ServerStore.ServerShutdown))
                     {
                         writer.WriteStartObject();
 
-                        WriteArray(writer, nameof(GetDocumentsResult.Results), ids, shards);
+                        await writer.WriteArrayAsync(nameof(GetDocumentsResult.Results), results);
 
-                        //TODO: write includes
+                        writer.WriteComma();
+
+                        await WriteIncludesAsync(includesMap, writer);
 
                         writer.WriteEndObject();
                         await writer.OuterFlushAsync();
@@ -93,72 +124,101 @@ namespace Raven.Server.Documents.Handlers
             }
             finally
             {
-                Task.Clear();
-                Cmds.Clear();
-
-                Parallel.ForEach(CmdsContext, c =>
+                foreach (ShardedCommand cmd in cmds)
                 {
-                    c.Dispose();
-                });
+                    cmd.Disposable.Dispose();
+                }
             }
         }
 
-        private IEnumerable<string> EnumerateEtags(Dictionary<int, ShardedCommand> cmds)
+        private async Task WriteIncludesAsync(Dictionary<string, BlittableJsonReaderObject> includesMap, AsyncBlittableJsonTextWriter writer)
         {
-            foreach (var cmd in cmds.Values)
+            writer.WritePropertyName(nameof(GetDocumentsResult.Includes));
+            writer.WriteStartObject();
+            var first = true;
+            foreach (var kvp in includesMap)
             {
-                yield return cmd.Response?.Headers?.ETag?.Tag;
-            }
-        }
-
-        private int WriteArray(AsyncBlittableJsonTextWriter writer, string arrayName, IEnumerable<string> ids,
-            ShardLocator.ShardLocatorResults shardPositions )
-        {
-            int numberOfItems = 0;
-            writer.WritePropertyName(arrayName);
-
-            writer.WriteStartArray();
-
-            bool first = true;
-            Dictionary<int, BlittableJsonReaderArray> results = new Dictionary<int, BlittableJsonReaderArray>();
-
-            foreach (var cmd in Cmds)
-            {
-                if (cmd.Value.Result.TryGet<BlittableJsonReaderArray>(arrayName, out var result) == false)
-                {
-                    //This should not happen
-                    Debug.Assert(false, $"Missing results for shard #{cmd.Value}");
-                    continue;
-                }
-                results.Add(cmd.Key, result);
-            }
-
-            //We must keep the same order of ids
-            foreach (var id in ids)
-            {
-                if (shardPositions.IdsToShardPosition.TryGetValue(id, out var pos) == false)
-                {
-                    //This should not happen
-                    Debug.Assert(false, "Got an id that had no shard position");
-                    continue; 
-                }
-
-                var document = results[pos.ShardId].GetByIndex<BlittableJsonReaderObject>(pos.Position);
-
                 if (first == false)
-                {
                     writer.WriteComma();
-                }
                 first = false;
 
-                writer.WriteObject(document);
-                numberOfItems++;
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteObject(kvp.Value);
+                await writer.MaybeOuterFlushAsync();
             }
-
-            writer.WriteEndArray();
-            return numberOfItems;
+            writer.WriteEndObject();
         }
 
+        private async Task FetchMissingIncludes(List<ShardedCommand> cmds, List<Task> tasks, HashSet<string> missingIncludes, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
+            Dictionary<string, BlittableJsonReaderObject> includesMap)
+        {
+            cmds.Clear();
+            tasks.Clear();
+            var missingList = missingIncludes.ToList();
+            await FetchDocumentsFromShards(missingList, context, sb.Clear(), includePaths, cmds, tasks, ignoreIncludes: true);
+            foreach (var cmd in cmds)
+            {
+                if (cmd.Response == null)
+                    continue;
+
+                cmd.Result.TryGet(nameof(GetDocumentsResult.Results), out BlittableJsonReaderArray cmdResults);
+                for (var index = 0; index < cmd.PositionMatches.Count; index++)
+                {
+                    var result = (BlittableJsonReaderObject)cmdResults[index];
+                    includesMap.Add(missingList[cmd.PositionMatches[index]], result);
+                }
+            }
+        }
+
+        private async Task FetchDocumentsFromShards(IList<string> ids, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
+            List<ShardedCommand> cmds, List<Task> tasks, bool ignoreIncludes = false)
+        {
+            var shards = ShardLocator.GetDocumentIdsShards(ids, ShardedContext, context);
+            foreach (var shard in shards)
+            {
+                sb.Clear();
+                sb.Append("/docs?");
+                if(ignoreIncludes == false)
+                {
+                    foreach (string includePath in includePaths)
+                    {
+                        sb.Append("&include=").Append(Uri.EscapeDataString(includePath));
+                    }
+                }
+
+                var matches = new List<int>();
+                foreach (var idIdx in shard.Value)
+                {
+                    sb.Append($"&id={Uri.EscapeUriString(ids[idIdx])}");
+                    matches.Add(idIdx);
+                }
+
+                var cmd = new ShardedCommand
+                {
+                    Method = HttpMethod.Get,
+                    Url = sb.ToString(),
+                    PositionMatches = matches,
+                    Disposable = ContextPool.AllocateOperationContext(out TransactionOperationContext ctx)
+                };
+                cmds.Add(cmd);
+                var task = ShardedContext.RequestExecutors[shard.Key].ExecuteAsync(cmd, ctx);
+                tasks.Add(task);
+            }
+
+            await Task.WhenAll(tasks); // if any failed, we explicitly let it throw here
+        }
+
+        private IEnumerable<string> EnumerateEtags(List<ShardedCommand> cmds)
+        {
+            foreach (var cmd in cmds)
+            {
+                string etag = cmd.Response?.Headers?.ETag?.Tag;
+                if (etag != null)
+                    yield return etag;
+            }
+        }
+
+   
         [RavenShardedAction("/databases/*/docs", "PUT")]
         public async Task Put()
         {

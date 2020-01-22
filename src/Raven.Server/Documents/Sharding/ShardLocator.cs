@@ -1,43 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding
 {
     public static class ShardLocator
     {
-        public static ShardLocatorResults GetDocumentIdsShards(IEnumerable<string> ids,
+        public static Dictionary<int, List<int>> GetDocumentIdsShards(IList<string> ids,
             ShardedContext shardedContext, TransactionOperationContext context)
         {
-            ShardLocatorResults result = new ShardLocatorResults
-            {
-                ShardsToIds = new Dictionary<int, List<string>>(),
-                IdsToShardPosition = new Dictionary<string, (int ShardId, int Position)>()
-            };
+            var result  = new Dictionary<int, List<int>>();
 
-            foreach (var id in ids)
+            for (var i = 0; i < ids.Count; i++)
             {
+                var id = ids[i];
                 var shardId = shardedContext.GetShardId(context, id);
                 var index = shardedContext.GetShardIndex(shardId);
 
-                if (result.ShardsToIds.TryGetValue(index, out var shardIds) == false)
+                if (result.TryGetValue(index, out var shardIds) == false)
                 {
-                    shardIds = new List<string>();
-                    result.ShardsToIds.Add(index, shardIds);
+                    shardIds = new List<int>();
+                    result.Add(index, shardIds);
                 }
 
-                result.IdsToShardPosition.Add(id, (index, shardIds.Count));
-                shardIds.Add(id);
+                shardIds.Add(i);
             }
 
             return result;
         }
 
-        public class ShardLocatorResults
-        {
-            public Dictionary<int, List<string>> ShardsToIds { get; set; }
-            public Dictionary<string, (int ShardId, int Position)> IdsToShardPosition { get; set; }
-        }
     }
 }
