@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Queries.Results
                                     && x.Name != Constants.Documents.Indexing.Fields.ValueFieldName
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
-                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false));
+                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false, isTimeSeries: false));
                 }
 
                 if (fields == null)
@@ -719,7 +719,6 @@ namespace Raven.Server.Documents.Queries.Results
                 query.DeclaredFunctions.TryGetValue(methodName, out var func) &&
                 func.Type == DeclaredFunction.FunctionType.TimeSeries)
             {
-                fieldToFetch.IsTimeSeries = true;
                 _timeSeriesRetriever ??= new TimeSeriesRetriever(_database, _includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
                 return _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args);
             }

@@ -555,13 +555,6 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.ResultEtag);
             writer.WriteComma();
 
-            if (result.TimeSeriesFields != null)
-            {
-                writer.WriteArray(nameof(result.TimeSeriesFields), result.TimeSeriesFields);
-                writer.WriteComma();
-
-            }
-
             writer.WritePropertyName(nameof(result.NodeTag));
             writer.WriteString(result.NodeTag);
 

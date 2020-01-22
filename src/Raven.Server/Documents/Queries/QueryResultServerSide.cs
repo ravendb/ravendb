@@ -24,6 +24,9 @@ namespace Raven.Server.Documents.Queries
 
         public void RegisterTimeSeriesFields(FieldsToFetch fields)
         {
+            if (fields.AnyTimeSeries == false)
+                return;
+
             foreach (var field in fields.Fields)
             {
                 if (field.Value.IsTimeSeries)
@@ -35,7 +38,8 @@ namespace Raven.Server.Documents.Queries
                         // that we lifted the expression
                         return;
                     }
-                    TimeSeriesFields .Add(field.Key);
+
+                    TimeSeriesFields.Add(field.Key);
                 }
             }
         }
