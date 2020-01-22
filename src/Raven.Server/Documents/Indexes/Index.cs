@@ -2688,7 +2688,8 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (includeTimeSeriesCommand != null)
                                     resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
-                                resultToFill.RegisterTimeSeriesFields(fieldsToFetch);
+
+                                resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
 
                                 resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
                                 resultToFill.SkippedResults = skippedResults.Value;

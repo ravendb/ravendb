@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         },
                         new CollectionQueryResultsIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
                         {
-                            Start = query.Start, 
+                            Start = query.Start,
                             Take = query.PageSize
                         });
                 }
@@ -177,8 +177,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (query.Metadata.TimeSeriesIncludes != null)
                 {
                     includeTimeSeriesCommand = new IncludeTimeSeriesCommand(
-                        Database, 
-                        context, 
+                        Database,
+                        context,
                         query.Metadata.TimeSeriesIncludes.TimeSeries);
                 }
 
@@ -201,7 +201,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                             includeTimeSeriesCommand?.Fill(document);
                         }
-
                     }
                 }
                 catch (Exception e)
@@ -220,10 +219,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (includeTimeSeriesCommand != null)
                     resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
-                resultToFill.RegisterTimeSeriesFields(fieldsToFetch);
+
+                resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
 
                 resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
-                
+
                 if (query.Offset != null || query.Limit != null)
                 {
                     if (resultToFill.TotalResults == -1)
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         resultToFill.CappedMaxResults = Math.Min(
                             query.Limit ?? int.MaxValue,
                             resultToFill.TotalResults - (query.Offset ?? 0)
-                        );    
+                        );
                     }
                 }
             }
@@ -257,7 +257,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var collection = query.CollectionName;
             var buffer = stackalloc long[bufferSize];
 
-            // If the query has include or load, it's too difficult to check the etags for just the included collections, 
+            // If the query has include or load, it's too difficult to check the etags for just the included collections,
             // it's easier to just show etag for all docs instead.
             if (collection == Constants.Documents.Collections.AllDocumentsCollection ||
                 query.HasIncludeOrLoad)
@@ -309,8 +309,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (string.IsNullOrEmpty(collection))
                 collection = Constants.Documents.Collections.AllDocumentsCollection;
 
-            indexName = collection == Constants.Documents.Collections.AllDocumentsCollection 
-                ? "AllDocs" 
+            indexName = collection == Constants.Documents.Collections.AllDocumentsCollection
+                ? "AllDocs"
                 : CollectionIndexPrefix + collection;
 
             return collection;
