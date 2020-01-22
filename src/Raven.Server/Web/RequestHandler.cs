@@ -24,6 +24,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -262,7 +263,7 @@ namespace Raven.Server.Web
             if (guid == null)
             {
 #if DEBUG
-                var fromStudio = HttpContext.Request.Headers.ContainsKey(Constants.Headers.StudioVersion);
+                var fromStudio = HttpContext.Request.IsFromStudio();
                 if (fromStudio)
                     guid = RaftIdGenerator.NewId();
 #else
@@ -697,6 +698,6 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
 
-   
+
     }
 }

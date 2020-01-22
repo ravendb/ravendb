@@ -22,9 +22,9 @@ namespace Raven.Server.Documents.Queries
         /// </summary>
         public List<string> TimeSeriesFields { get; set; }
 
-        public void RegisterTimeSeriesFields(FieldsToFetch fields)
+        public void RegisterTimeSeriesFields(IndexQueryServerSide query, FieldsToFetch fields)
         {
-            if (fields.AnyTimeSeries == false)
+            if (query.IsFromStudio == false || fields.AnyTimeSeries == false)
                 return;
 
             foreach (var field in fields.Fields)

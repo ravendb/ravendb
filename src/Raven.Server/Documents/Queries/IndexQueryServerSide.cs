@@ -10,6 +10,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.TrafficWatch;
@@ -78,6 +79,8 @@ namespace Raven.Server.Documents.Queries
 
         public string ClientVersion;
 
+        public bool IsFromStudio;
+
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
             Query = Uri.UnescapeDataString(query);
@@ -134,6 +137,8 @@ namespace Raven.Server.Documents.Queries
 
                 if (result.Metadata.HasFacet && httpContext.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var clientVersion))
                     result.ClientVersion = clientVersion;
+
+                result.IsFromStudio = httpContext.Request.IsFromStudio();
 
                 AssertPaging(result);
 
@@ -223,6 +228,8 @@ namespace Raven.Server.Documents.Queries
 
                 if (tracker != null)
                     tracker.Query = result.Query;
+
+                result.IsFromStudio = httpContext.Request.IsFromStudio();
 
                 AssertPaging(result);
 

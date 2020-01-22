@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client;
 using Microsoft.AspNetCore.Http;
 
 namespace Raven.Server.Extensions
@@ -50,6 +51,11 @@ namespace Raven.Server.Extensions
                 return localUrl[0];
             }
             return ExtractNodeUrlFromRequest(request);
+        }
+
+        public static bool IsFromStudio(this HttpRequest request)
+        {
+            return request.Headers.ContainsKey(Constants.Headers.StudioVersion);
         }
     }
 }
