@@ -220,9 +220,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (includeTimeSeriesCommand != null)
                     resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
+                resultToFill.RegisterTimeSeriesFields(fieldsToFetch);
 
                 resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
-
+                
                 if (query.Offset != null || query.Limit != null)
                 {
                     if (resultToFill.TotalResults == -1)
