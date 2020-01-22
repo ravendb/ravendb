@@ -637,6 +637,7 @@ namespace Raven.Server.Documents.Queries.Results
                 args[args.Length - 1] = _query.QueryParameters;
 
                 var value = InvokeFunction(
+                    fieldToFetch,
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
                     documentId,
@@ -712,12 +713,13 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public object InvokeFunction(string methodName, Query query, string documentId, object[] args)
+        public object InvokeFunction(FieldsToFetch.FieldToFetch fieldToFetch, string methodName, Query query, string documentId, object[] args)
         {
             if (query.DeclaredFunctions != null &&
                 query.DeclaredFunctions.TryGetValue(methodName, out var func) &&
                 func.Type == DeclaredFunction.FunctionType.TimeSeries)
             {
+                fieldToFetch.IsTimeSeries = true;
                 _timeSeriesRetriever ??= new TimeSeriesRetriever(_database, _includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
                 return _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args);
             }

@@ -77,6 +77,12 @@ namespace Raven.Client.Documents.Queries
         public string NodeTag { get; set; }
 
         /// <summary>
+        /// If the query returned time series results, this field will contain
+        /// the names of the fields with time series data
+        /// </summary>
+        public List<string> TimeSeriesFields { get; set; }
+
+        /// <summary>
         /// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results) - if requested.
         /// </summary>
         public QueryTimings Timings { get; set; }

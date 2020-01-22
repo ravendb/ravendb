@@ -449,6 +449,12 @@ namespace Raven.Server.Json
                 await writer.WriteTimeSeriesAsync(context, timeSeries);
             }
 
+            if (result.TimeSeriesFields != null)
+            {
+                writer.WriteComma();
+                writer.WriteArray(nameof(result.TimeSeriesFields), result.TimeSeriesFields);
+            }
+
             writeAdditionalData?.Invoke(writer);
 
             writer.WriteEndObject();
@@ -548,6 +554,13 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(result.ResultEtag));
             writer.WriteInteger(result.ResultEtag);
             writer.WriteComma();
+
+            if (result.TimeSeriesFields != null)
+            {
+                writer.WriteArray(nameof(result.TimeSeriesFields), result.TimeSeriesFields);
+                writer.WriteComma();
+
+            }
 
             writer.WritePropertyName(nameof(result.NodeTag));
             writer.WriteString(result.NodeTag);

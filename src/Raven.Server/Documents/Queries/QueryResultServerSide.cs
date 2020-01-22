@@ -16,6 +16,24 @@ namespace Raven.Server.Documents.Queries
             Includes = new List<T>();
         }
 
+        public void RegisterTimeSeriesFields(FieldsToFetch fields)
+        {
+            foreach (var field in fields.Fields)
+            {
+                if (field.Value.IsTimeSeries)
+                {
+                    TimeSeriesFields ??= new List<string>();
+                    if (fields.SingleBodyOrMethodWithNoAlias)
+                    {
+                        // in this case, we have an empty array, which indicate
+                        // that we lifted the expression
+                        return;
+                    }
+                    TimeSeriesFields .Add(field.Key);
+                }
+            }
+        }
+
         public abstract void AddResult(T result);
 
         public abstract void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings);

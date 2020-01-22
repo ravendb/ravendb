@@ -258,6 +258,8 @@ namespace Raven.Server.Documents.Queries
 
             public readonly bool IsCompositeField;
 
+            public bool IsTimeSeries;
+
             public readonly bool IsDocumentId;
 
             public readonly string[] Components;
