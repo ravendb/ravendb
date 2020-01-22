@@ -16,9 +16,9 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -45,7 +45,6 @@ namespace RachisTests.DatabaseCluster
                 Map = usersCollection => from user in usersCollection
                                          select new { user.Name };
                 Index(x => x.Name, FieldIndexing.Search);
-
             }
         }
 
@@ -69,7 +68,6 @@ namespace RachisTests.DatabaseCluster
                 DeleteDatabaseOnDispose = true
             }))
             {
-
             }
         }
 
@@ -159,13 +157,13 @@ namespace RachisTests.DatabaseCluster
                 Database = databaseName
             }.Initialize())
             {
-                var order = new List<string> {"A", "B", "C"};
+                var order = new List<string> { "A", "B", "C" };
                 var doc = new DatabaseRecord(databaseName)
                 {
                     Topology = new DatabaseTopology
                     {
-                        Members = new List<string> {"A", "B", "C"}, 
-                        ReplicationFactor = 3, 
+                        Members = new List<string> { "A", "B", "C" },
+                        ReplicationFactor = 3,
                         PriorityOrder = order
                     }
                 };
@@ -186,7 +184,7 @@ namespace RachisTests.DatabaseCluster
                     CustomSettings = settings,
                     PartialPath = revive.DataDir
                 });
-                
+
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3);
                 Assert.Equal(3, val);
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 0);
@@ -201,8 +199,12 @@ namespace RachisTests.DatabaseCluster
         public async Task ReshuffleAfterPromotion()
         {
             var extendedTimeout = 30_000;
-            if (Environment.Is64BitProcess == false)
+            var numberOfDatabases = 25;
+            if (PlatformDetails.Is32Bits)
+            {
                 extendedTimeout = 60_000;
+                numberOfDatabases = 10;
+            }
 
             var clusterSize = 3;
             var cluster = await CreateRaftCluster(clusterSize, false, 0, customSettings: new Dictionary<string, string>
@@ -215,7 +217,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var names = new List<string>();
-                for (int i = 0; i < 30; i++)
+                for (int i = 0; i < numberOfDatabases; i++)
                 {
                     var name = GetDatabaseName();
                     names.Add(name);
@@ -311,7 +313,7 @@ namespace RachisTests.DatabaseCluster
 
                 await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
                 await WaitForDocumentInClusterAsync<User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(10));
-                await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer 
+                await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer
                 var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
                 Assert.Equal(0, val);
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2);
@@ -462,7 +464,6 @@ namespace RachisTests.DatabaseCluster
                             {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0]},
                             {RavenConfiguration.GetKey(x => x.Core.ServerUrls), urls[0]},
                             {RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout), "600"}
-
                         },
                         RunInMemory = false,
                         DeletePrevious = false,
@@ -824,7 +825,6 @@ namespace RachisTests.DatabaseCluster
                 RunInMemory = false,
                 DeletePrevious = false,
                 PartialPath = dataDir
-
             });
 
             var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
@@ -885,10 +885,9 @@ namespace RachisTests.DatabaseCluster
                     RunInMemory = false,
                     DeletePrevious = false,
                     PartialPath = dataDir
-
                 });
                 newUrl = Servers[1].WebUrl;
-                // ensure that at this point we still can't talk to node 
+                // ensure that at this point we still can't talk to node
                 await Task.Delay(fromSeconds); // wait for the observer to update the status
                 dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(1, dbToplogy.Rehabs.Count);
@@ -910,7 +909,6 @@ namespace RachisTests.DatabaseCluster
             // create a new database and verify that it resides on the server with the new url
             var (_, dbGroupNodes) = await CreateDatabaseInCluster(GetDatabaseName(), groupSize, leader.WebUrl);
             Assert.True(dbGroupNodes.Select(s => s.WebUrl).Contains(newUrl));
-
         }
 
         [Fact]
@@ -1052,11 +1050,10 @@ namespace RachisTests.DatabaseCluster
 
             await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
 
-
             using var store1 = new DocumentStore
             {
                 Database = database,
-                Urls = new []{cluster.Nodes[0].WebUrl},
+                Urls = new[] { cluster.Nodes[0].WebUrl },
                 Conventions = new DocumentConventions
                 {
                     DisableTopologyUpdates = true
@@ -1086,7 +1083,7 @@ namespace RachisTests.DatabaseCluster
             using (var session = store1.OpenAsyncSession())
             {
                 session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
-                    
+
                 await session.StoreAsync(new User(), "foo/bar");
                 await session.SaveChangesAsync();
             }
@@ -1109,7 +1106,7 @@ namespace RachisTests.DatabaseCluster
                 var user = await session.LoadAsync<User>("foo/bar");
                 session.Advanced.WaitForReplicationAfterSaveChanges();
 
-                using (var stream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     session.Advanced.Attachments.Store(user, "dummy", stream);
                     user.Name = "Oops";
@@ -1122,7 +1119,6 @@ namespace RachisTests.DatabaseCluster
                 var rev = await session.Advanced.Revisions.GetMetadataForAsync("foo/bar");
                 Assert.Equal(0, rev.Count);
             }
-
         }
 
         [Fact]
@@ -1179,7 +1175,6 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(2, members);
             }
         }
-
 
         [Fact]
         public async Task WaitMoveToRehabGraceTime()
