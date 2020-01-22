@@ -330,7 +330,7 @@ namespace Raven.Server
         public void ClearExternalCertificateValidationCache()
         {
             // Can be called from the Admin JS Console
-            _externalCertificateValidator.ClearCache();
+            _externalCertificateValidator?.ClearCache();
         }
 
         public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
