@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public LoadOperation ById(string id)
         {
-            if (id == null)
+            if (string.IsNullOrWhiteSpace(id))
                 return this;
 
             if (_ids == null)
@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Session.Operations
         public LoadOperation ByIds(IEnumerable<string> ids)
         {
             _ids = ids
-                .Where(x => x != null)
+                .Where(id => string.IsNullOrWhiteSpace(id) == false)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
