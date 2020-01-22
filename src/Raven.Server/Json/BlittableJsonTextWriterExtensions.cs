@@ -449,12 +449,6 @@ namespace Raven.Server.Json
                 await writer.WriteTimeSeriesAsync(context, timeSeries);
             }
 
-            if (result.TimeSeriesFields != null)
-            {
-                writer.WriteComma();
-                writer.WriteArray(nameof(result.TimeSeriesFields), result.TimeSeriesFields);
-            }
-
             writeAdditionalData?.Invoke(writer);
 
             writer.WriteEndObject();
@@ -562,7 +556,7 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
         }
 
-        public static async Task<int> WriteQueryResultAsync<TResult, TInclude>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, bool partial = false)
+        public static async Task<int> WriteQueryResultAsync<TResult>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultServerSide<TResult> result, bool metadataOnly, bool partial = false)
         {
             int numberOfResults;
 
@@ -623,7 +617,7 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
             else
-                throw new NotSupportedException($"Cannot write query includes of '{typeof(TInclude)}' type in '{result.GetType()}'.");
+                throw new NotSupportedException($"Cannot write query includes of '{includes.GetType()}' type in '{result.GetType()}'.");
 
             writer.WritePropertyName(nameof(result.IndexTimestamp));
             writer.WriteString(result.IndexTimestamp.ToString(DefaultFormat.DateTimeFormatsToWrite));
@@ -649,6 +643,12 @@ namespace Raven.Server.Json
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.Timings));
                 writer.WriteQueryTimings(context, result.Timings);
+            }
+
+            if (result.TimeSeriesFields != null)
+            {
+                writer.WriteComma();
+                writer.WriteArray(nameof(result.TimeSeriesFields), result.TimeSeriesFields);
             }
 
             if (partial == false)
