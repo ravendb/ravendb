@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -16,6 +17,8 @@ namespace Raven.Server.Documents.Handlers
         public HttpMethod Method;
 
         public HttpResponseMessage Response;
+        public IDisposable Disposable;
+        public List<int> PositionMatches;
 
         public override bool IsReadRequest => false;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
