@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Queries
 
             if (selectField.Function != null)
             {
-                var isTimeSeries = metadata.DeclaredFunctions.TryGetValue(selectField.Function, out var func) && func.Type == DeclaredFunction.FunctionType.TimeSeries;
+                var isTimeSeries = metadata.DeclaredFunctions != null && metadata.DeclaredFunctions.TryGetValue(selectField.Function, out var func) && func.Type == DeclaredFunction.FunctionType.TimeSeries;
                 if (isTimeSeries)
                     anyTimeSeries = true;
 
