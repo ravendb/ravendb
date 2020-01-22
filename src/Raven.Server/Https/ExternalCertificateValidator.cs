@@ -20,7 +20,6 @@ namespace Raven.Server.Https
     {
         private readonly RavenServer _server;
         private readonly Logger _logger;
-        private List<string> _userArgs; 
 
         private ConcurrentDictionary<Key, Task<CachedValue>> _externalCertificateValidationCallbackCache;
 
@@ -35,22 +34,22 @@ namespace Raven.Server.Https
             if (string.IsNullOrEmpty(_server.Configuration.Security.CertificateValidationExec))
                 return;
             
-            _userArgs = string.IsNullOrEmpty(_server.Configuration.Security.CertificateValidationExecArguments)
-                ? new List<string> { string.Empty }
-                : RegexSplit(_server.Configuration.Security.CertificateValidationExecArguments).ToList();
-
             _externalCertificateValidationCallbackCache = new ConcurrentDictionary<Key, Task<CachedValue>>();
 
             RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => ExternalCertificateValidationCallback(sender, cert, chain, errors, _logger);
         }
 
+        public void ClearCache()
+        {
+            _externalCertificateValidationCallbackCache = new ConcurrentDictionary<Key, Task<CachedValue>>();
+        }
         private CachedValue CheckExternalCertificateValidation(string senderHostname, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, Logger log)
         {
             var base64Cert = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
 
             var timeout = _server.Configuration.Security.CertificateValidationExecTimeout.AsTimeSpan;
 
-            var args = $"{CommandLineArgumentEscaper.EscapeAndConcatenate(_userArgs)} " +
+            var args = $"{_server.Configuration.Security.CertificateValidationExecArguments ?? string.Empty} " +
                        $"{CommandLineArgumentEscaper.EscapeSingleArg(senderHostname)} " +
                        $"{CommandLineArgumentEscaper.EscapeSingleArg(base64Cert)} " +
                        $"{CommandLineArgumentEscaper.EscapeSingleArg(sslPolicyErrors.ToString())}";
@@ -144,8 +143,8 @@ namespace Raven.Server.Https
         public bool ExternalCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, Logger log)
         {
             var senderHostname = RequestExecutor.ConvertSenderObjectToHostname(sender);
-            var lastWriteTimeHash = GetScriptLastWriteHash();
-            var cacheKey = new Key(senderHostname, certificate.GetCertHashString(), sslPolicyErrors, lastWriteTimeHash);
+
+            var cacheKey = new Key(senderHostname, certificate.GetCertHashString(), sslPolicyErrors);
 
             Task<CachedValue> task;
             if (_externalCertificateValidationCallbackCache.TryGetValue(cacheKey, out var existingTask) == false)
@@ -211,30 +210,6 @@ namespace Raven.Server.Https
             }
         }
 
-        // https://stackoverflow.com/questions/14241479/how-to-split-a-space-delimited-list-of-paths-where-paths-can-include-spaces-in
-        private static readonly Regex re = new Regex(@"^([ ]*((?<r>[^ ""]+)|[""](?<r>[^""]*)[""]))*[ ]*$");
-
-        private static IEnumerable<string> RegexSplit(string input)
-        {
-            var m = re.Match(input ?? "");
-            if (!m.Success)
-                throw new ArgumentException("Malformed input.");
-
-            return from Capture capture in m.Groups["r"].Captures select capture.Value;
-        }
-
-        private long GetScriptLastWriteHash()
-        {
-            long hash = File.GetLastWriteTimeUtc(_server.Configuration.Security.CertificateValidationExec).Ticks;
-
-            foreach (string arg in _userArgs)
-            {
-                hash = Hashing.Combine(hash, File.GetLastWriteTimeUtc(arg).Ticks);
-            }
-
-            return hash;
-        }
-
         private class CachedValue
         {
             public DateTime Until;
@@ -248,19 +223,17 @@ namespace Raven.Server.Https
             public readonly string Host;
             public readonly string Cert;
             public readonly SslPolicyErrors Errors;
-            public readonly long LastScriptHash;
 
-            public Key(string host, string cert, SslPolicyErrors errors, long lastScriptWrite)
+            public Key(string host, string cert, SslPolicyErrors errors)
             {
                 Host = host;
                 Cert = cert;
                 Errors = errors;
-                LastScriptHash = lastScriptWrite;
             }
 
             protected bool Equals(Key other)
             {
-                return Host == other.Host && Cert == other.Cert && Errors == other.Errors && LastScriptHash.Equals(other.LastScriptHash);
+                return Host == other.Host && Cert == other.Cert && Errors == other.Errors;
             }
 
             public override bool Equals(object obj)
@@ -281,7 +254,6 @@ namespace Raven.Server.Https
                     var hashCode = (Host != null ? Host.GetHashCode() : 0);
                     hashCode = (hashCode * 397) ^ (Cert != null ? Cert.GetHashCode() : 0);
                     hashCode = (hashCode * 397) ^ (int)Errors;
-                    hashCode = (hashCode * 397) ^ LastScriptHash.GetHashCode();
                     return hashCode;
                 }
             }
