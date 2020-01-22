@@ -16,6 +16,12 @@ namespace Raven.Server.Documents.Queries
             Includes = new List<T>();
         }
 
+        /// <summary>
+        /// If the query returned time series results, this field will contain
+        /// the names of the fields with time series data
+        /// </summary>
+        public List<string> TimeSeriesFields { get; set; }
+
         public void RegisterTimeSeriesFields(FieldsToFetch fields)
         {
             foreach (var field in fields.Fields)
