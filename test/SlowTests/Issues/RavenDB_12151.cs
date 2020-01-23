@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Tests.Infrastructure;
@@ -177,11 +180,50 @@ namespace SlowTests.Issues
 
             indexInstance._indexStorage.Environment().Options.MaxNumberOfPagesInJournalBeforeFlush = 4;
 
-            using (var session = store.OpenSession())
-            {
-                var count = session.Query<Order, SimpleIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(2))).Count();
+            var sw = Stopwatch.StartNew();
 
-                Assert.Equal(4000, count);
+            try
+            {
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Order, SimpleIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(2))).Count();
+
+                    Assert.Equal(4000, count);
+                }
+            }
+            catch (Exception e)
+            {
+                sw.Stop();
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"Ex: {e}")
+                    .AppendLine($"Elapsed: {sw.Elapsed}");
+
+                try
+                {
+                    WaitForIndexing(store);
+                }
+                catch
+                {
+                }
+
+                var errors = store.Maintenance.Send(new GetIndexErrorsOperation());
+                if (errors != null)
+                {
+                    foreach (var error in errors)
+                    {
+                        if (error != null && error.Errors != null && error.Errors.Length > 0)
+                        {
+                            sb.AppendLine($"Indexing errors for: '{error.Name}'");
+                            foreach (var er in error.Errors)
+                            {
+                                sb.AppendLine($" - {er}");
+                            }
+                        }
+                    }
+                }
+
+                throw new InvalidOperationException(sb.ToString());
             }
 
             var stats = indexInstance.GetIndexingPerformance();
