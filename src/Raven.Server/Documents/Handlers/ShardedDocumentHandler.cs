@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -10,14 +7,15 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -95,97 +93,114 @@ namespace Raven.Server.Documents.Handlers
             var includePaths = GetStringValuesQueryString("include", required: false);
             var etag = GetStringFromHeaders("If-None-Match");
 
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                await GetDocumentsAsync(ids, includePaths, etag, metadataOnly, context);
+            }
+        }
+
+        private async Task GetDocumentsAsync(StringValues ids, StringValues includePaths, string etag, bool metadataOnly, TransactionOperationContext context)
+        {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             var sb = new StringBuilder();
             var cmds = new List<ShardedCommand>();
             var tasks = new List<Task>();
             try
             {
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                await FetchDocumentsFromShards(ids, context, sb, includePaths, cmds, tasks);
+
+                if (cmds.Count == 1)
                 {
-                    await FetchDocumentsFromShards(ids, context, sb, includePaths, cmds, tasks);
-
-                    if (cmds.Count == 1)
-                    {
-                        var singleEtag = cmds[0].Response?.Headers?.ETag?.Tag;
-                        if (etag == singleEtag)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                            return;
-                        }
-                        HttpContext.Response.StatusCode = (int)cmds[0].StatusCode;
-                        HttpContext.Response.Headers[Constants.Headers.Etag] = singleEtag;
-                        cmds[0].Result?.WriteJsonTo(ResponseBodyStream());
-                        return;
-                    }
-
-                    // here we know that all of them are good
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-               
-                    var actualEtag = ComputeHttpEtags.CombineEtags(EnumerateEtags(cmds));
-                    if (etag == actualEtag)
+                    var singleEtag = cmds[0].Response?.Headers?.ETag?.Tag;
+                    if (etag == singleEtag)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                         return;
                     }
+                    //TODO: verify all headers are taken care of
+                    HttpContext.Response.StatusCode = (int)cmds[0].StatusCode;
+                    HttpContext.Response.Headers[Constants.Headers.Etag] = singleEtag;
+                    cmds[0].Result?.WriteJsonTo(ResponseBodyStream());
+                    return;
+                }
 
-                    HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
-                    
-                    
-                    var results = new BlittableJsonReaderObject[ids.Count];
-                    var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-                    var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var cmd in cmds)
+                // here we know that all of them are good
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                var actualEtag = ComputeHttpEtags.CombineEtags(EnumerateEtags(cmds));
+                if (etag == actualEtag)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return;
+                }
+
+                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
+
+
+                var results = new BlittableJsonReaderObject[ids.Count];
+                var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+                var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var cmd in cmds)
+                {
+                    if (cmd.Response == null)
+                        continue;
+                    cmd.Result.TryGet(nameof(GetDocumentsResult.Results), out BlittableJsonReaderArray cmdResults);
+                    if (cmd.Result.TryGet(nameof(GetDocumentsResult.Includes), out BlittableJsonReaderObject cmdIncludes))
                     {
-                        if(cmd.Response == null)
-                            continue;
-                        cmd.Result.TryGet(nameof(GetDocumentsResult.Results), out BlittableJsonReaderArray cmdResults);
-                        if (cmd.Result.TryGet(nameof(GetDocumentsResult.Includes), out BlittableJsonReaderObject cmdIncludes))
+                        BlittableJsonReaderObject.PropertyDetails prop = default;
+                        for (int i = 0; i < cmdIncludes.Count; i++)
                         {
-                            BlittableJsonReaderObject.PropertyDetails prop = default;
-                            for (int i = 0; i < cmdIncludes.Count; i++)
-                            {
-                                cmdIncludes.GetPropertyByIndex(i, ref prop);
-                                includesMap[prop.Name] = (BlittableJsonReaderObject)prop.Value;
-                            }
+                            cmdIncludes.GetPropertyByIndex(i, ref prop);
+                            includesMap[prop.Name] = (BlittableJsonReaderObject)prop.Value;
                         }
-                        for (var index = 0; index < cmd.PositionMatches.Count; index++)
+                    }
+
+                    for (var index = 0; index < cmd.PositionMatches.Count; index++)
+                    {
+                        int match = cmd.PositionMatches[index];
+                        var result = (BlittableJsonReaderObject)cmdResults[index];
+                        foreach (string includePath in includePaths)
                         {
-                            int match = cmd.PositionMatches[index];
-                            var result = (BlittableJsonReaderObject)cmdResults[index];
-                            foreach (string includePath in includePaths)
-                            {
-                                IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes);
-                            }
+                            IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes);
+                        }
+
+                        if (metadataOnly)
+                        {
+                            //TODO: Generate metadata
+                        }
+                        else
+                        {
+                            //TODO: Need to deal with conflicts and null here
                             results[match] = result;
                         }
                     }
-
-                    foreach (var kvp in includesMap)// remove the items we already have
-                    {
-                        missingIncludes.Remove(kvp.Key);
-                    }
-
-                    if (missingIncludes.Count > 0)
-                    {
-                        await FetchMissingIncludes(cmds, tasks, missingIncludes, context, sb, includePaths, includesMap);
-                    }
-
-                    using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), ServerStore.ServerShutdown))
-                    {
-                        writer.WriteStartObject();
-
-                        await writer.WriteArrayAsync(nameof(GetDocumentsResult.Results), results);
-
-                        writer.WriteComma();
-
-                        await WriteIncludesAsync(includesMap, writer);
-
-                        writer.WriteEndObject();
-                        await writer.OuterFlushAsync();
-                        //TODO: Add performance hints
-                    }
                 }
+
+                foreach (var kvp in includesMap) // remove the items we already have
+                {
+                    missingIncludes.Remove(kvp.Key);
+                }
+
+                if (missingIncludes.Count > 0)
+                {
+                    await FetchMissingIncludes(cmds, tasks, missingIncludes, context, sb, includePaths, includesMap);
+                }
+
+                using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), ServerStore.ServerShutdown))
+                {
+                    writer.WriteStartObject();
+
+                    await writer.WriteArrayAsync(nameof(GetDocumentsResult.Results), results);
+
+                    writer.WriteComma();
+
+                    await WriteIncludesAsync(includesMap, writer);
+
+                    writer.WriteEndObject();
+                    await writer.OuterFlushAsync();
+                    //TODO: Add performance hints
+                }
+            
             }
             finally
             {
@@ -196,6 +211,33 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenShardedAction("/databases/*/docs", "POST")]
+        public async Task PostGet()
+        {
+            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
+            var includePaths = GetStringValuesQueryString("include", required: false);
+            var etag = GetStringFromHeaders("If-None-Match");
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var docs = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
+                if (docs.TryGet("Ids", out BlittableJsonReaderArray array) == false)
+                    ThrowRequiredPropertyNameInRequest("Ids");
+
+                var ids = new string[array.Length];
+                for (int i = 0; i < array.Length; i++)
+                {
+                    ids[i] = array.GetStringByIndex(i);
+                }
+
+                var idsStringValues = new Microsoft.Extensions.Primitives.StringValues(ids);
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    HttpContext.Items["TrafficWatch"] = (idsStringValues.ToString(), TrafficWatchChangeType.Documents);
+
+                await GetDocumentsAsync(ids, includePaths, etag, metadataOnly, context);
+            }
+        }
         private async Task WriteIncludesAsync(Dictionary<string, BlittableJsonReaderObject> includesMap, AsyncBlittableJsonTextWriter writer)
         {
             writer.WritePropertyName(nameof(GetDocumentsResult.Includes));
@@ -208,7 +250,14 @@ namespace Raven.Server.Documents.Handlers
                 first = false;
 
                 writer.WritePropertyName(kvp.Key);
-                writer.WriteObject(kvp.Value);
+                if (kvp.Value != null)
+                {
+                    writer.WriteObject(kvp.Value);
+                }
+                else
+                {
+                    writer.WriteNull();
+                }
                 await writer.MaybeOuterFlushAsync();
             }
             writer.WriteEndObject();
@@ -217,6 +266,10 @@ namespace Raven.Server.Documents.Handlers
         private async Task FetchMissingIncludes(List<ShardedCommand> cmds, List<Task> tasks, HashSet<string> missingIncludes, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
             Dictionary<string, BlittableJsonReaderObject> includesMap)
         {
+            foreach (var cmd in cmds)
+            {
+                cmd.Disposable.Dispose();
+            }
             cmds.Clear();
             tasks.Clear();
             var missingList = missingIncludes.ToList();
