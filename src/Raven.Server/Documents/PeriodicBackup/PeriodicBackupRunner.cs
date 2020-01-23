@@ -762,17 +762,17 @@ namespace Raven.Server.Documents.PeriodicBackup
             var previousConfiguration = existingBackupState.Configuration;
             existingBackupState.Configuration = newConfiguration;
 
+            if (existingBackupState.RunningTask != null)
+            {
+                // a backup is already running 
+                // the next one will be re-scheduled by the backup task if needed
+                return;
+            }
+
             if (taskState != TaskStatus.ActiveByCurrentNode)
             {
                 // this node isn't responsible for the backup task
                 existingBackupState.DisableFutureBackups();
-                return;
-            }
-
-            if (existingBackupState.RunningTask != null)
-            {
-                // a backup is already running 
-                // the next one will be re-scheduled by the backup task
                 return;
             }
 

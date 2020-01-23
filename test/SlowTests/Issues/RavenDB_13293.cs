@@ -123,6 +123,7 @@ namespace SlowTests.Issues
                         MentorNode = node
                     };
                     var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
+                    await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
                     var res = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup));
                     Assert.True(node == res.MentorNode, $"node({node}) == res.MentorNode({res.MentorNode})");
                     Assert.True(node == res.ResponsibleNode.NodeTag, $"node({node}) == res.ResponsibleNode.NodeTag({res.ResponsibleNode.NodeTag})");
