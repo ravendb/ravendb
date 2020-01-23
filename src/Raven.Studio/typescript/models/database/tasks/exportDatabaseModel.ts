@@ -13,6 +13,7 @@ class exportDatabaseModel {
     includeCompareExchange = ko.observable(true);
     includeCounters = ko.observable(true);
     includeAttachments = ko.observable(true);
+    includeTimeSeries = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeSubscriptions = ko.observable(true);
     revisionsAreConfigured: KnockoutComputed<boolean>;
@@ -46,6 +47,25 @@ class exportDatabaseModel {
             if (!documents) {
                 this.includeCounters(false);
                 this.includeAttachments(false);
+                this.includeTimeSeries(false);
+            }
+        });
+        
+        this.includeCounters.subscribe(counters => {
+            if (counters) {
+                this.includeDocuments(true);
+            }
+        });
+        
+        this.includeAttachments.subscribe(attachments => {
+            if (attachments) {
+                this.includeDocuments(true);
+            }
+        });
+        
+        this.includeTimeSeries.subscribe(timeSeries => {
+            if (timeSeries) {
+                this.includeDocuments(true);
             }
         });
 
@@ -105,6 +125,9 @@ class exportDatabaseModel {
         if (this.includeAttachments()) {
             operateOnTypes.push("Attachments");
         }
+        if (this.includeTimeSeries()) {
+            operateOnTypes.push("TimeSeries");
+        }
         if (this.includeSubscriptions()) {
             operateOnTypes.push("Subscriptions");
         }
@@ -135,6 +158,7 @@ class exportDatabaseModel {
                 || this.includeSubscriptions()
                 || this.includeCompareExchange() 
                 || this.includeCounters() 
+                || this.includeTimeSeries()
                 || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) 
                 || this.includeDocuments();
         });
