@@ -390,6 +390,7 @@ namespace Tests.Infrastructure
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false)
         {
+            string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
             var serversToPorts = new Dictionary<RavenServer, string>();
@@ -434,7 +435,8 @@ namespace Tests.Infrastructure
                 {
                     CustomSettings = customSettings,
                     RunInMemory = shouldRunInMemory,
-                    RegisterForDisposal = false
+                    RegisterForDisposal = false,
+                    NodeTag = allowedNodeTags[i]
                 };
                 var server = GetNewServer(co);
                 var port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);
@@ -446,7 +448,7 @@ namespace Tests.Infrastructure
                 serversToPorts.Add(server, serverUrl);
                 if (i == leaderIndex)
                 {
-                    server.ServerStore.EnsureNotPassive();
+                    server.ServerStore.EnsureNotPassive(null, nodeTag: co.NodeTag);
                     leader = server;
                 }
             }
@@ -458,7 +460,7 @@ namespace Tests.Infrastructure
                 }
                 var follower = clustersServers[i];
                 // ReSharper disable once PossibleNullReferenceException
-                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], asWatcher: watcherCluster);
+                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster);
                 if (watcherCluster)
                 {
                     await follower.ServerStore.WaitForTopology(Leader.TopologyModification.NonVoter);
