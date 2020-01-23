@@ -1,8 +1,8 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.TestDriver;
-using SlowTests;
 using Xunit;
 
 namespace EmbeddedTests.TestDriver
@@ -19,8 +19,13 @@ namespace EmbeddedTests.TestDriver
 
         private static string GetServerPath()
         {
-            var testAssemblyLocation = typeof(RavenTestDriver).Assembly.Location;
+            var prefix = "file:///";
+            var testAssemblyLocation = typeof(RavenTestDriver).Assembly.CodeBase;
+            if (testAssemblyLocation.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                testAssemblyLocation = testAssemblyLocation.Substring(prefix.Length);
             var testDllFile = new FileInfo(testAssemblyLocation);
+            if (testDllFile.Exists == false)
+                throw new InvalidOperationException($"Could not find '{testDllFile.FullName}'.");
 
 #if DEBUG
             var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp3.1";
@@ -32,7 +37,7 @@ namespace EmbeddedTests.TestDriver
                 serverDirectory = @"../../../../../src/Raven.Server/bin/Release/netcoreapp3.1";
 #endif
 
-            return Path.Combine(testDllFile.DirectoryName, serverDirectory);
+            return Path.GetFullPath(Path.Combine(testDllFile.DirectoryName, serverDirectory));
         }
 
         private const string ExampleDocId = "TestDriver/Item";
@@ -62,9 +67,9 @@ namespace EmbeddedTests.TestDriver
         };
 
         protected override Stream DatabaseDumpFileStream =>
-            typeof(FacetTestBase)
+            typeof(TestDriverExampleTest)
             .Assembly
-            .GetManifestResourceStream("SlowTests.Data.testing.ravendbdump");
+            .GetManifestResourceStream("EmbeddedTests.Data.testing.ravendbdump");
 
         protected override void PreInitialize(IDocumentStore documentStore)
         {
