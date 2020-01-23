@@ -1,7 +1,7 @@
 <form data-bind="submit: saveDocument, css: { 'diff': inDiffMode }" class="editDocument" autocomplete="off">
     <div class="docEditor flex-window flex-grow content-margin">
         <div class="flex-window-head">
-            <div class="flex-horizontal">
+            <div class="flex-horizontal" id="document-id-header-area">
                 <div class="flex-grow">
                     <div class="documentId">
                         <div data-bind="if: isCreatingNewDocument()">
@@ -20,10 +20,9 @@
                                 <!--<span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>-->
                             <!--</a>-->
                             <span class="obj-name on-base-background" data-bind="text: userSpecifiedId, attr: { title: userSpecifiedId }"></span>
-                            
+                            <a href="#" id="copy-document-id" title="Copy document Id" data-bind="click: copyDocumentIdToClipboard"><i class="icon-copy"></i></a>
                             <span data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-primary revision flex-noshrink"> | REVISION</span>
                             <span data-bind="visible: inReadOnlyMode() && isDeleteRevision()" class="text-primary revision flex-noshrink"> | DELETED REVISION</span>
-                            
                             <a target="_blank" href="#" title="Show raw output" class="flex-noshrink margin-left margin-left-sm" data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-json"></i></a>
                         </div>
                     </div>
@@ -62,7 +61,7 @@
                 </div>
                 <div class="pull-right-sm" data-bind="visible: !isDeleteRevision()">
                     <div class="btn-group" data-bind="visible: !inDiffMode()">
-                        <button type="button" class="btn btn-default" data-bind="click: toClipboard" title="Copy document content to clipboard">
+                        <button type="button" class="btn btn-default" data-bind="click: copyDocumentBodyToClipboard" title="Copy document content to clipboard">
                             <i class="icon-copy-to-clipboard"></i>
                             <span>Copy to Clipboard</span>
                         </button>

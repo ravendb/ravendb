@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public LazyLoadOperation<T> ById(string id)
         {
-            if (id == null)
+            if (string.IsNullOrWhiteSpace(id))
                 return this;
 
             if (_ids == null)
@@ -61,7 +61,10 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public LazyLoadOperation<T> ByIds(IEnumerable<string> ids)
         {
-            _ids = ids.ToArray();
+            _ids = ids
+                .Where(id => string.IsNullOrWhiteSpace(id) == false)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
             return this;
         }
