@@ -557,7 +557,7 @@ namespace Raven.Server.Documents
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            int start, int take, string collection)
+            long start, long take, string collection)
         {
             foreach (var doc in GetDocumentsStartingWith(context, idPrefix, matches, exclude, startAfterId, start, take))
             {
@@ -585,7 +585,7 @@ namespace Raven.Server.Documents
             }
         }
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            int start, int take, Reference<int> skip = null)
+            long start, long take, Reference<long> skip = null)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -628,7 +628,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, int start, int take)
+        public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, long start, long take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -641,7 +641,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, int take, int skip)
+        public IEnumerable<Document> GetDocumentsInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, long take, long skip)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -654,7 +654,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, string collection, int start, int take)
+        public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, string collection, long start, long take)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -690,7 +690,7 @@ namespace Raven.Server.Documents
             public ManualResetEventSlim DelayDocumentLoad;
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, int start, int take, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             // ReSharper disable once LoopCanBeConvertedToQuery
@@ -716,7 +716,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, int start, int take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, long start, long take, Reference<int> totalCount)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -740,7 +740,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, int start, int take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take, Reference<int> totalCount)
         {
             var listOfIds = new List<Slice>();
             foreach (var id in ids)
@@ -752,7 +752,7 @@ namespace Raven.Server.Documents
             return GetDocuments(context, listOfIds, start, take, totalCount);
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, string collection, int start, int take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, string collection, long start, long take, Reference<int> totalCount)
         {
             foreach (var doc in GetDocuments(context, ids, start, take, totalCount))
             {
@@ -782,7 +782,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, long start, long take, DocumentFields fields = DocumentFields.All)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -806,14 +806,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, List<string> collections, long etag, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, List<string> collections, long etag, long take)
         {
             foreach (var collection in collections)
             {
                 if (take <= 0)
                     yield break;
 
-                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, int.MaxValue))
+                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, long.MaxValue))
                 {
                     if (take-- <= 0)
                         yield break;
@@ -996,7 +996,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public IEnumerable<Tombstone> GetTombstonesFrom(DocumentsOperationContext context, long etag, int start, int take)
+        public IEnumerable<Tombstone> GetTombstonesFrom(DocumentsOperationContext context, long etag, long start, long take)
         {
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
@@ -1010,14 +1010,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Tombstone> GetTombstonesFrom(DocumentsOperationContext context, List<string> collections, long etag, int take)
+        public IEnumerable<Tombstone> GetTombstonesFrom(DocumentsOperationContext context, List<string> collections, long etag, long take)
         {
             foreach (var collection in collections)
             {
                 if (take <= 0)
                     yield break;
 
-                foreach (var tombstone in GetTombstonesFrom(context, collection, etag, 0, int.MaxValue))
+                foreach (var tombstone in GetTombstonesFrom(context, collection, etag, 0, long.MaxValue))
                 {
                     if (take-- <= 0)
                         yield break;
@@ -1042,8 +1042,8 @@ namespace Raven.Server.Documents
             DocumentsOperationContext context,
             string collection,
             long etag,
-            int start,
-            int take)
+            long start,
+            long take)
         {
             string tableName;
 

@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _documentsStorage = documentsStorage;
         }
 
-        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
+        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, long pageSize)
         {
             foreach (var document in GetDocumentsEnumerator(databaseContext, collection, lastEtag, pageSize))
             {
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
         }
 
-        private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
+        private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, long pageSize)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);

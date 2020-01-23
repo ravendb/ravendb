@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Replication
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
             var conflicts = _parent._database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1).Select(DocumentReplicationItem.From);
             var revisionsStorage = _parent._database.DocumentsStorage.RevisionsStorage;
-            var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, int.MaxValue).Select(DocumentReplicationItem.From);
+            var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue).Select(DocumentReplicationItem.From);
             var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
             var counters = _parent._database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1);
             var timeSeries = _parent._database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1);

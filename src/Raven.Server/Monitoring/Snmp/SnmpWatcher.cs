@@ -398,7 +398,7 @@ namespace Raven.Server.Monitoring.Snmp
                     databases = _server
                         .ServerStore
                         .Cluster
-                        .ItemKeysStartingWith(context, Constants.Documents.Prefix, 0, int.MaxValue)
+                        .ItemKeysStartingWith(context, Constants.Documents.Prefix, 0, long.MaxValue)
                         .Select(x => x.Substring(Constants.Documents.Prefix.Length))
                         .ToList();
 

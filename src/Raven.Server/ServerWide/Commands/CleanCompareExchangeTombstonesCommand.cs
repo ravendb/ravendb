@@ -7,12 +7,12 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string DatabaseName;
         public long MaxRaftIndex;
-        public int Take;
+        public long Take;
 
         public CleanCompareExchangeTombstonesCommand()
         {}
 
-        public CleanCompareExchangeTombstonesCommand(string databaseName, long maxRaftIndex, int take, string uniqueRequestId) : base(uniqueRequestId)
+        public CleanCompareExchangeTombstonesCommand(string databaseName, long maxRaftIndex, long take, string uniqueRequestId) : base(uniqueRequestId)
         {
             DatabaseName = databaseName;
             MaxRaftIndex = maxRaftIndex;

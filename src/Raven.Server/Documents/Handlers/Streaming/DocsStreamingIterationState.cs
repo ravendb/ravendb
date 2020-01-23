@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         public int Start;
         public int Take;
         public long? LastIteratedEtag;
-        public Reference<int> Skip;
+        public Reference<long> Skip;
 
         public override void OnMoveNext(Document current)
         {

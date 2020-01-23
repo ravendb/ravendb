@@ -715,7 +715,7 @@ namespace Raven.Server.Web.Authentication
                         List<(string ItemName, BlittableJsonReaderObject Value)> allItems = null;
                         try
                         {
-                            allItems = ServerStore.Cluster.GetAllCertificatesFromCluster(context, 0, int.MaxValue).ToList();
+                            allItems = ServerStore.Cluster.GetAllCertificatesFromCluster(context, 0, long.MaxValue).ToList();
                             var clusterNodes = allItems.Select(item => JsonDeserializationServer.CertificateDefinition(item.Value))
                                 .Where(certificateDef => certificateDef.SecurityClearance == SecurityClearance.ClusterNode)
                                 .ToList();

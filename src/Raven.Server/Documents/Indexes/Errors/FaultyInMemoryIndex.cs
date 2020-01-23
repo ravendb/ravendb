@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override TermsQueryResultServerSide GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override TermsQueryResultServerSide GetTerms(string field, string fromValue, long pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }

@@ -26,7 +26,7 @@ namespace Voron.Data
             throw new InvalidOperationException("No current page");
         }
 
-        public bool Skip(int count)
+        public bool Skip(long count)
         {
             throw new InvalidOperationException("No records");
         }

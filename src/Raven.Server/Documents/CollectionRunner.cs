@@ -36,19 +36,19 @@ namespace Raven.Server.Documents
             _collectionQuery = collectionQuery;
         }
 
-        public virtual Task<IOperationResult> ExecuteDelete(string collectionName, int start, int take, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public virtual Task<IOperationResult> ExecuteDelete(string collectionName, long start, long take, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, start, take, options, Context, onProgress, key => new DeleteDocumentCommand(key, null, Database), token);
         }
 
-        public Task<IOperationResult> ExecutePatch(string collectionName, int start, int take, CollectionOperationOptions options, PatchRequest patch,
+        public Task<IOperationResult> ExecutePatch(string collectionName, long start, long take, CollectionOperationOptions options, PatchRequest patch,
             BlittableJsonReaderObject patchArgs, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, start, take, options, Context, onProgress,
                 key => new PatchDocumentCommand(Context, key, null, false, (patch, patchArgs), (null, null), Database, false, false, false, false), token);
         }
 
-        protected async Task<IOperationResult> ExecuteOperation(string collectionName, int start, int take, CollectionOperationOptions options, DocumentsOperationContext context,
+        protected async Task<IOperationResult> ExecuteOperation(string collectionName, long start, long take, CollectionOperationOptions options, DocumentsOperationContext context,
              Action<DeterminateProgress> onProgress, Func<string, TransactionOperationsMerger.MergedTransactionCommand> action, OperationCancelToken token)
         {
             var progress = new DeterminateProgress();
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int start, int batchSize, bool isAllDocs, DocumentFields fields)
+        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, long start, long batchSize, bool isAllDocs, DocumentFields fields)
         {
             if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
             {

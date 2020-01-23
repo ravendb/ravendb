@@ -55,7 +55,7 @@ namespace Voron.Data.BTrees
                 DecompressedCurrentPage();
                 node = _currentPage.Search(_tx, key);
             }
-            
+
             _cursor = constructor.Build(key);
             _cursor.Pop();
 
@@ -63,13 +63,13 @@ namespace Voron.Data.BTrees
             {
                 _prevKeyScope.Dispose();
                 _prevKeyScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out _currentInternalKey);
-                _currentKey = _currentInternalKey; 
+                _currentKey = _currentInternalKey;
 
                 if (DoRequireValidation)
                     return this.ValidateCurrentKey(_tx, Current);
                 return true;
             }
-            
+
             // The key is not found in the db, but we are Seek()ing for equals or starts with.
             // We know that the exact value isn't there, but it is possible that the next page has values 
             // that is actually greater than the key, so we need to check it as well.
@@ -90,7 +90,7 @@ namespace Voron.Data.BTrees
 
                 if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
                     throw new InvalidOperationException(string.Format("Current page is invalid. Search position ({0}) exceeds number of entries ({1}). Page: {2}.", _currentPage.LastSearchPosition, _currentPage.NumberOfEntries, _currentPage));
-                    
+
                 return _currentKey;
             }
         }
@@ -108,7 +108,7 @@ namespace Voron.Data.BTrees
 
                 if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
                     throw new InvalidOperationException(string.Format("Current page is invalid. Search position ({0}) exceeds number of entries ({1}). Page: {2}.", _currentPage.LastSearchPosition, _currentPage.NumberOfEntries, _currentPage));
-                    
+
                 return _currentPage.GetNode(_currentPage.LastSearchPosition);
             }
         }
@@ -213,23 +213,24 @@ namespace Voron.Data.BTrees
                 _currentPage = _cursor.Pop();
             }
             _currentPage = null;
-            
+
             return false;
         }
 
-        public bool Skip(int count)
+        public bool Skip(long count)
         {
             if (count != 0)
             {
                 var moveMethod = (count > 0) ? (Func<bool>)MoveNext : MovePrev;
 
-                for (int i = 0; i < Math.Abs(count); i++)
+                for (long i = 0; i < Math.Abs(count); i++)
                 {
-                    if (!moveMethod()) break;
+                    if (!moveMethod())
+                        break;
                 }
             }
 
-            if ( DoRequireValidation )
+            if (DoRequireValidation)
                 return _currentPage != null && this.ValidateCurrentKey(_tx, Current);
             return _currentPage != null;
         }
@@ -287,7 +288,7 @@ namespace Voron.Data.BTrees
 
         public long TreeRootPage
         {
-            get { return  this._tree.State.RootPageNumber; }
+            get { return this._tree.State.RootPageNumber; }
         }
 
         private void DecompressedCurrentPage()
@@ -303,7 +304,7 @@ namespace Voron.Data.BTrees
     public static class IteratorExtensions
     {
         public static IEnumerable<string> DumpValues(this IIterator self)
-        {                      
+        {
             if (self.Seek(Slices.BeforeAllKeys) == false)
                 yield break;
 
@@ -313,7 +314,7 @@ namespace Voron.Data.BTrees
             }
             while (self.MoveNext());
         }
-        
+
         public static unsafe bool ValidateCurrentKey<T>(this T self, LowLevelTransaction tx, TreeNodeHeader* node) where T : IIterator
         {
             Slice currentKey;

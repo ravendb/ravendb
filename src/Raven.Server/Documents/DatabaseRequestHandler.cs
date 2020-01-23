@@ -129,7 +129,7 @@ namespace Raven.Server.Documents
             return new OperationCancelToken(Database.DatabaseShutdown);
         }
 
-        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, int numberOfResults, int pageSize, long duration)
+        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration)
         {
             if (numberOfResults <= Database.Configuration.PerformanceHints.MaxNumberOfResults)
                 return;

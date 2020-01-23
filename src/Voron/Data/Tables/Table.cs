@@ -867,7 +867,7 @@ namespace Voron.Data.Tables
             return fst.NumberOfEntries;
         }
 
-        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, int skip, bool startsWith = false)
+        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long skip, bool startsWith = false)
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -902,7 +902,7 @@ namespace Voron.Data.Tables
         }
 
 
-        public IEnumerable<SeekResult> SeekForwardFromPrefix(TableSchema.SchemaIndexDef index, Slice start, Slice prefix, int skip)
+        public IEnumerable<SeekResult> SeekForwardFromPrefix(TableSchema.SchemaIndexDef index, Slice start, Slice prefix, long skip)
         {
             var tree = GetTree(index);
             using (var it = tree.Iterate(true))
@@ -1091,7 +1091,7 @@ namespace Voron.Data.Tables
             return fstIndex.NumberOfEntries;
         }
 
-        public IEnumerable<(Slice Key, TableValueHolder Value)> SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, int skip)
+        public IEnumerable<(Slice Key, TableValueHolder Value)> SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, long skip)
         {
             var isStartAfter = startAfter.Equals(Slices.Empty) == false;
 
@@ -1121,7 +1121,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value, int skip)
+        public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value, long skip)
         {
             var pk = _schema.Key;
             var tree = GetTree(pk);
@@ -1294,7 +1294,7 @@ namespace Voron.Data.Tables
         }
 
 
-        public IEnumerable<TableValueHolder> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, int skip)
+        public IEnumerable<TableValueHolder> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, long skip)
         {
             var fst = GetFixedSizeTree(index);
 
@@ -1330,7 +1330,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index, int skip = 0)
+        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index, long skip = 0)
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
@@ -1351,7 +1351,7 @@ namespace Voron.Data.Tables
         }
 
 
-        public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, int skip = 0)
+        public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, long skip = 0)
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
@@ -1429,14 +1429,14 @@ namespace Voron.Data.Tables
             return true;
         }
         
-        public int DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
+        public long DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
         {
             AssertWritableTable();
 
             if (numberOfEntriesToDelete < 0)
                 ThrowNonNegativeNumberOfEntriesToDelete();
 
-            int deleted = 0;
+            long deleted = 0;
             var fst = GetFixedSizeTree(index);
             // deleting from a table can shift things around, so we delete 
             // them one at a time
@@ -1520,7 +1520,7 @@ namespace Voron.Data.Tables
             if (numberOfEntriesToDelete < 0)
                 ThrowNonNegativeNumberOfEntriesToDelete();
 
-            int deleted = 0;
+            long deleted = 0;
             var tree = GetTree(index);
             TableValueHolder tableValueHolder = null;
             while (deleted < numberOfEntriesToDelete)
@@ -1604,7 +1604,7 @@ namespace Voron.Data.Tables
             return deleted;
         }
 
-        public bool DeleteForwardUpToPrefix(Slice startSlice, long upToIndex, int numberOfEntriesToDelete)
+        public bool DeleteForwardUpToPrefix(Slice startSlice, long upToIndex, long numberOfEntriesToDelete)
         {
             AssertWritableTable();
 

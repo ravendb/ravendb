@@ -171,10 +171,10 @@ namespace Raven.Server.Documents.ETL
 
                         if (Transformation.ApplyToAllDocuments)
                         {
-                            var docs = Database.DocumentsStorage.GetDocumentsFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            var docs = Database.DocumentsStorage.GetDocumentsFrom(context, fromEtag, 0, long.MaxValue).GetEnumerator();
                             scope.EnsureDispose(docs);
 
-                            var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, long.MaxValue).GetEnumerator();
                             scope.EnsureDispose(tombstones);
 
                             tombstones = new FilterTombstonesEnumerator(tombstones, stats, Tombstone.TombstoneType.Document, context);
@@ -185,10 +185,10 @@ namespace Raven.Server.Documents.ETL
                         {
                             foreach (var collection in Transformation.Collections)
                             {
-                                var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
+                                var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, fromEtag, 0, long.MaxValue).GetEnumerator();
                                 scope.EnsureDispose(docs);
 
-                                var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
+                                var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, long.MaxValue).GetEnumerator();
                                 scope.EnsureDispose(tombstones);
 
                                 enumerators.Add((docs, tombstones, collection));
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.ETL
                         if (ShouldTrackAttachmentTombstones())
                         {
                             var attachmentTombstones = Database.DocumentsStorage
-                                .GetTombstonesFrom(context, AttachmentsStorage.AttachmentsTombstones, fromEtag, 0, int.MaxValue).GetEnumerator();
+                                .GetTombstonesFrom(context, AttachmentsStorage.AttachmentsTombstones, fromEtag, 0, long.MaxValue).GetEnumerator();
                             scope.EnsureDispose(attachmentTombstones);
 
                             attachmentTombstones = new FilterTombstonesEnumerator(attachmentTombstones, stats, Tombstone.TombstoneType.Attachment, context,
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.ETL
 
                         if (Transformation.ApplyToAllDocuments)
                         {
-                            var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, long.MaxValue).GetEnumerator();
                             scope.EnsureDispose(counters);
 
                             counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context, lastDocEtag);
@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.ETL
                         {
                             foreach (var collection in Transformation.Collections)
                             {
-                                var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
+                                var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, fromEtag, 0, long.MaxValue).GetEnumerator();
                                 scope.EnsureDispose(counters);
 
                                 counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context, lastDocEtag);

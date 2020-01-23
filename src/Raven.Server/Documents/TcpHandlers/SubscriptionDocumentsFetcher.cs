@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     _collection,
                     startEtag + 1,
                     0,
-                    int.MaxValue))
+                    long.MaxValue))
                 {
                     using (doc.Data)
                     {
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.TcpHandlers
             var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
-                foreach (var revisionTuple in GetRevisionsEnumerator(_db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, int.MaxValue)))
+                foreach (var revisionTuple in GetRevisionsEnumerator(_db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, long.MaxValue)))
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);

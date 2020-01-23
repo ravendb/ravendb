@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         public virtual bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            const int pageSize = int.MaxValue;
+            const long pageSize = long.MaxValue;
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
                 ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                 : TimeSpan.FromMinutes(15);
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastCollectionEtag = -1L;
                     while (keepRunning)
                     {
-                        var batchCount = 0;
+                        var batchCount = 0L;
 
                         using (databaseContext.OpenReadTransaction())
                         {
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             IndexWriteOperation indexWriteOperation,
             long currentEtag,
             long maxEtag,
-            int count)
+            long count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;

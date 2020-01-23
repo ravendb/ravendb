@@ -13,6 +13,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                      Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token);
 
         bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, 
-            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, int count);
+            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count);
     }
 }

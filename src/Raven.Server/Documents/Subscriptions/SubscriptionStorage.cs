@@ -140,9 +140,9 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
                 var topology = _serverStore.Cluster.ReadDatabaseTopology(serverStoreContext, _db.Name);
-                
+
                 var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
-                
+
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     var databaseTopologyAvailabilityExplanation = new Dictionary<string, string>();
@@ -157,9 +157,9 @@ namespace Raven.Server.Documents.Subscriptions
                     {
                         generalState = currentState.ToString();
                     }
-                    databaseTopologyAvailabilityExplanation["NodeState"] = generalState;                    
+                    databaseTopologyAvailabilityExplanation["NodeState"] = generalState;
 
-                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup:topology.Rehabs, stateName:"rehab");
+                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Rehabs, stateName: "rehab");
                     FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Promotables, stateName: "promotable");
 
                     //whoseTaskIsIt!= null && whoseTaskIsIt == subscription.MentorNode 
@@ -179,14 +179,14 @@ namespace Raven.Server.Documents.Subscriptions
                             {
                                 databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology and is chosen to be running the subscription";
                             }
-                        }                        
+                        }
                         else
                         {
                             databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology but was not chosen to run the subscription, we didn't find any other match either";
                         }
                     }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",                    
+                        $"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
                         whoseTaskIsIt,
                         databaseTopologyAvailabilityExplanation);
                 }
@@ -262,9 +262,17 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
-            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
-                SubscriptionState.SubscriptionPrefix(_db.Name)))
+            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(_db.Name)))
             {
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+
+                if (take-- <= 0)
+                    yield break;
+
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
                 var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(subscriptionState);
                 GetSubscriptionInternal(subscriptionGeneralData, history);

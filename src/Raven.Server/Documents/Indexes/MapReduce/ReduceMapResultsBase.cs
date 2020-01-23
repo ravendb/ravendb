@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         }
 
         public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, 
-            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, int count)
+            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count)
         {
             throw new NotSupportedException();
         }

@@ -159,7 +159,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<CounterGroupDetail> GetCountersFrom(DocumentsOperationContext context, long etag, int skip, int take)
+        public IEnumerable<CounterGroupDetail> GetCountersFrom(DocumentsOperationContext context, long etag, long skip, long take)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<CounterGroupDetail> GetCountersFrom(DocumentsOperationContext context, string collection, long etag, int skip, int take)
+        public IEnumerable<CounterGroupDetail> GetCountersFrom(DocumentsOperationContext context, string collection, long etag, long skip, long take)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)

@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                     if (_outputToCollectionReferences != null)
                     {
-                        var docs = _database.DocumentsStorage.GetDocumentsStartingWith(context, prefix, null, null, null, 0, int.MaxValue);
+                        var docs = _database.DocumentsStorage.GetDocumentsStartingWith(context, prefix, null, null, null, 0, long.MaxValue);
 
                         foreach (var doc in docs)
                         {

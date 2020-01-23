@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            const int pageSize = int.MaxValue;
+            const long pageSize = long.MaxValue;
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
                             ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                             : TimeSpan.FromMinutes(15);
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext,
-            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, int count)
+            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return true;
         }
 
-        private unsafe bool HandleItems(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
+        private unsafe bool HandleItems(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
@@ -170,13 +170,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         if (lastCollectionEtag == -1)
                                             lastCollectionEtag = _index.GetLastItemEtagInCollection(databaseContext, collection);
 
-                                        references = GetItemReferences(databaseContext, referencedCollection, lastEtag, 0, pageSize);
+                                        references = GetItemReferences(databaseContext, referencedCollection, lastEtag, pageSize);
                                         break;
                                     case ActionType.Tombstone:
                                         if (lastCollectionEtag == -1)
                                             lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
 
-                                        references = GetTombstoneReferences(databaseContext, referencedCollection, lastEtag, 0, pageSize);
+                                        references = GetTombstoneReferences(databaseContext, referencedCollection, lastEtag, pageSize);
                                         break;
                                     default:
                                         throw new NotSupportedException();
@@ -314,7 +314,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
         }
 
-        protected IEnumerable<Reference> GetItemReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, int start, int pageSize)
+        protected IEnumerable<Reference> GetItemReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
             return _documentsStorage
                 .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, DocumentFields.Id)
@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 });
         }
 
-        protected IEnumerable<Reference> GetTombstoneReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, int start, int pageSize)
+        protected IEnumerable<Reference> GetTombstoneReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
             return _documentsStorage
                 .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)

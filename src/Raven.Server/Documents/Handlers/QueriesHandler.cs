@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
-            int numberOfResults;
+            long numberOfResults;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteFacetedQueryResult(context, result, numberOfResults: out numberOfResults);
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
-            int numberOfResults;
+            long numberOfResults;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteSuggestionQueryResult(context, result, numberOfResults: out numberOfResults);
