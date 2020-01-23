@@ -13,7 +13,7 @@ namespace Voron.Data
         bool Seek(Slice key);
         bool MoveNext();
         bool MovePrev();
-        bool Skip(int count);
+        bool Skip(long count);
         void SetRequiredPrefix(Slice prefix);
 
         ValueReader CreateReaderForCurrent();

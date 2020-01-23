@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
                 var pageSize = GetPageSize();
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), pageSize);
 
-                int numberOfResults;
+                long numberOfResults;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
 

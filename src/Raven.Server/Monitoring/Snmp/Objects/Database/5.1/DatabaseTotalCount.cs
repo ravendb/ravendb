@@ -26,7 +26,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var items = serverStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, 0, int.MaxValue);
+                var items = serverStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, 0, long.MaxValue);
                 return items.Count();
             }
         }

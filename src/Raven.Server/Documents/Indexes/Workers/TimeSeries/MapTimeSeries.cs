@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             _timeSeriesStorage = timeSeriesStorage;
         }
 
-        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
+        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, long pageSize)
         {
             foreach (var timeSeries in GetTimeSeriesEnumerator(databaseContext, collection, lastEtag, pageSize))
             {
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             }
         }
 
-        private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
+        private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, long pageSize)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 return _timeSeriesStorage.GetTimeSeriesFrom(databaseContext, lastEtag + 1, pageSize);

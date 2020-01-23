@@ -18,7 +18,7 @@ namespace Raven.Server.Web.Studio
             _excludeIds = excludeIds;
         }
 
-        public override Task<IOperationResult> ExecuteDelete(string collectionName, int start, int take, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecuteDelete(string collectionName, long start, long take, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             if (_excludeIds.Count == 0)
                 return base.ExecuteDelete(collectionName, start, take, options, onProgress, token);

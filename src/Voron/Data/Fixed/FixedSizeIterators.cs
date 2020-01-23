@@ -22,7 +22,7 @@ namespace Voron.Data.Fixed
 
             ValueReader CreateReaderForCurrent();
 
-            bool Skip(int count);
+            bool Skip(long count);
         }
 
         public class NullIterator : IFixedSizeIterator
@@ -64,7 +64,7 @@ namespace Voron.Data.Fixed
                 throw new InvalidOperationException("No current page");
             }
 
-            public bool Skip(int count)
+            public bool Skip(long count)
             {
                 return false;
             }
@@ -74,7 +74,7 @@ namespace Voron.Data.Fixed
         {
             private readonly FixedSizeTree _fst;
             private readonly ByteStringContext _allocator;
-            private int _pos;
+            private long _pos;
             private FixedSizeTreeHeader.Embedded* _header;
             private byte* _dataStart;
             private int _changesAtStart;
@@ -113,7 +113,7 @@ namespace Voron.Data.Fixed
                 {
                     if (_pos >= _header->NumberOfEntries)
                         throw new InvalidOperationException("Invalid position, cannot read past end of tree");
-                    return FixedSizeTreePage.GetEntry(_dataStart, _pos, _fst._entrySize)->Key;
+                    return FixedSizeTreePage.GetEntry(_dataStart, (int)_pos, _fst._entrySize)->Key;
                 }
             }
 
@@ -159,7 +159,7 @@ namespace Voron.Data.Fixed
                 return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
             }
 
-            public bool Skip(int count)
+            public bool Skip(long count)
             {
                 if (count != 0)
                     _pos += count;
@@ -260,7 +260,7 @@ namespace Voron.Data.Fixed
                 return false;
             }
 
-            private bool MovePrev(int skip)
+            private bool MovePrev(long skip)
             {
                 AssertNoChanges();
 
@@ -269,7 +269,7 @@ namespace Voron.Data.Fixed
 
                 while (skip >= 0)
                 {
-                    var skipInPage = Math.Min(_currentPage.LastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(_currentPage.LastSearchPosition, skip);
                     skip -= skipInPage;
                     _currentPage.LastSearchPosition -= skipInPage;
                     if (skip == 0)
@@ -311,7 +311,7 @@ namespace Voron.Data.Fixed
                 return false;
             }
             
-            private bool MoveNext(int skip)
+            private bool MoveNext(long skip)
             {
                 AssertNoChanges();
 
@@ -320,7 +320,7 @@ namespace Voron.Data.Fixed
 
                 while (skip >= 0)
                 {
-                    var skipInPage = Math.Min(_currentPage.NumberOfEntries - _currentPage.LastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(_currentPage.NumberOfEntries - _currentPage.LastSearchPosition, skip);
                     skip -= skipInPage;
                     _currentPage.LastSearchPosition += skipInPage;
                     if (skip == 0)
@@ -410,7 +410,7 @@ namespace Voron.Data.Fixed
                 return new ValueReader(_currentPage.Pointer + _currentPage.StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
             }
 
-            public bool Skip(int count)
+            public bool Skip(long count)
             {
                 if (count > 0)
                 {
@@ -419,7 +419,7 @@ namespace Voron.Data.Fixed
                 }
                 else
                 {
-                    if (MovePrev(Math.Abs(count)) == false)
+                    if (MovePrev(-count) == false)
                         return false;
                 }
 

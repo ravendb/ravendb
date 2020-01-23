@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
 {
     public static class IndexDebugExtensions
     {
-        public static IDisposable GetIdentifiersOfMappedDocuments(this Index self, string startsWith, int start, int take, out IEnumerable<string> docIds)
+        public static IDisposable GetIdentifiersOfMappedDocuments(this Index self, string startsWith, long start, long take, out IEnumerable<string> docIds)
         {
             if (self.Type.IsMapReduce() == false)
                 throw new NotSupportedException("Getting doc ids for map indexes is not supported");
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             }
         }
 
-        private static IEnumerable<string> IterateKeys(IIterator it, string prefix, int start, int take, TransactionOperationContext context)
+        private static IEnumerable<string> IterateKeys(IIterator it, string prefix, long start, long take, TransactionOperationContext context)
         {
             if (it.Seek(Slices.BeforeAllKeys) == false)
                 yield break;

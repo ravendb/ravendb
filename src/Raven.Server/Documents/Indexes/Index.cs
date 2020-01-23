@@ -2893,7 +2893,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual TermsQueryResultServerSide GetTerms(string field, string fromValue, int pageSize,
+        public virtual TermsQueryResultServerSide GetTerms(string field, string fromValue, long pageSize,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             AssertIndexState();
@@ -3548,7 +3548,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentsOperationContext documentsOperationContext,
             TransactionOperationContext indexingContext,
             IndexWriteOperation indexWriteOperation,
-            int count)
+            long count)
         {
             var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
@@ -3752,7 +3752,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         private void HandleStoppedBatchesConcurrently(
-            IndexingStatsScope stats, int count,
+            IndexingStatsScope stats, long count,
             Func<bool> canContinue, string reason)
         {
             if (_batchStopped)

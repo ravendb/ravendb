@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Queries
             _totalResults = totalResults;
         }
 
-        public int? InternalQueryOperationStart { get; set; }
+        public long? InternalQueryOperationStart { get; set; }
 
         public IEnumerator<Document> GetEnumerator()
         {
@@ -68,14 +68,14 @@ namespace Raven.Server.Documents.Queries
             private readonly string _collection;
             private readonly bool _isAllDocsCollection;
             private readonly IndexQueryServerSide _query;
-            private readonly int? _queryOperationInternalStart;
+            private readonly long? _queryOperationInternalStart;
 
             private bool _initialized;
 
             private int _returnedResults;
 
             private readonly HashSet<ulong> _alreadySeenProjections;
-            private int _start;
+            private long _start;
             private IEnumerator<Document> _inner;
             private int _innerCount;
             private readonly List<Slice> _ids;
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Queries
             private readonly string _startsWith;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
-                IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults, int? queryOperationInternalStart)
+                IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults, long? queryOperationInternalStart)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Queries
                 return documents;
             }
 
-            private int Initialize()
+            private long Initialize()
             {
                 _initialized = true;
 

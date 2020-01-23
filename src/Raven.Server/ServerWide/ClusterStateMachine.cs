@@ -2188,7 +2188,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster(TransactionOperationContext context, int start, int take)
+        public IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster(TransactionOperationContext context, long start, long take)
         {
             var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
@@ -2211,7 +2211,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith(TransactionOperationContext context, string prefix, int start, int take)
+        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith(TransactionOperationContext context, string prefix, long start, long take)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2290,7 +2290,7 @@ namespace Raven.Server.ServerWide
         }
 
         public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context,
-            string dbName, string prefix, int start = 0, int pageSize = 1024)
+            string dbName, string prefix, long start = 0, long pageSize = 1024)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             using (Slice.From(context.Allocator, prefix, out Slice keySlice))
@@ -2309,7 +2309,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, int take)
+        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, long take)
         {
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
             {
@@ -2351,7 +2351,7 @@ namespace Raven.Server.ServerWide
         }
 
         public IEnumerable<string> GetCompareExchangeTombstonesByKey(TransactionOperationContext context,
-            string dbName, long fromIndex = 0, int take = int.MaxValue)
+            string dbName, long fromIndex = 0, long take = long.MaxValue)
         {
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
             {
@@ -2384,7 +2384,7 @@ namespace Raven.Server.ServerWide
                 if (cmd.TryGet(nameof(CleanCompareExchangeTombstonesCommand.MaxRaftIndex), out long maxEtag) == false)
                     throw new RachisApplyException("Clear Compare Exchange command must contain a MaxRaftIndex property");
 
-                if (cmd.TryGet(nameof(CleanCompareExchangeTombstonesCommand.Take), out int take) == false)
+                if (cmd.TryGet(nameof(CleanCompareExchangeTombstonesCommand.Take), out long take) == false)
                     throw new RachisApplyException("Clear Compare Exchange command must contain a Take property");
 
                 var databaseNameLowered = databaseName.ToLowerInvariant();
@@ -2396,7 +2396,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static bool DeleteCompareExchangeTombstonesUpToPrefix(TransactionOperationContext context, string dbName, long upToIndex, int take = int.MaxValue)
+        private static bool DeleteCompareExchangeTombstonesUpToPrefix(TransactionOperationContext context, string dbName, long upToIndex, long take = long.MaxValue)
         {
             using (Slice.From(context.Allocator, dbName, out var dbNameSlice))
             {
@@ -2433,7 +2433,7 @@ namespace Raven.Server.ServerWide
             return index;
         }
 
-        public List<string> ItemKeysStartingWith(TransactionOperationContext context, string prefix, int start, int take)
+        public List<string> ItemKeysStartingWith(TransactionOperationContext context, string prefix, long start, long take)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2454,7 +2454,7 @@ namespace Raven.Server.ServerWide
             return results;
         }
 
-        public List<string> GetDatabaseNames(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
+        public List<string> GetDatabaseNames(TransactionOperationContext context, long take = long.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2475,7 +2475,7 @@ namespace Raven.Server.ServerWide
             return names;
         }
 
-        public List<DatabaseRecord> GetAllDatabases(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
+        public List<DatabaseRecord> GetAllDatabases(TransactionOperationContext context, long take = long.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 

@@ -144,7 +144,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (state.StartEtagByCollection.Count != 0)
                         return GetDocumentsFromCollections(_context, state);
 
-                    return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, int.MaxValue);
+                    return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, long.MaxValue);
                 },
                 new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
@@ -171,7 +171,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 state.CurrentCollection = collection;
 
-                foreach (var document in _database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, int.MaxValue))
+                foreach (var document in _database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, long.MaxValue))
                 {
                     yield return document;
                 }
@@ -192,7 +192,7 @@ namespace Raven.Server.Smuggler.Documents
                     if(state.StartEtagByCollection.Count != 0)
                         return GetRevisionsFromCollections(_context, state);
 
-                    return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, int.MaxValue);
+                    return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, long.MaxValue);
                 },
                 new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
@@ -223,7 +223,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 state.CurrentCollection = collection;
 
-                foreach (var document in _database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, collectionName, etag, int.MaxValue))
+                foreach (var document in _database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, collectionName, etag, long.MaxValue))
                 {
                     yield return document.current;
                 }
@@ -265,7 +265,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (state.StartEtagByCollection.Count != 0)
                         return GetTombstonesFromCollections(_context, state);
 
-                    return _database.DocumentsStorage.GetTombstonesFrom(_context, state.StartEtag, 0, int.MaxValue);
+                    return _database.DocumentsStorage.GetTombstonesFrom(_context, state.StartEtag, 0, long.MaxValue);
                 },
                 new TombstonesIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit)
                 {
@@ -288,7 +288,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 state.CurrentCollection = collection;
 
-                foreach (var counter in _database.DocumentsStorage.GetTombstonesFrom(context, collection, etag, 0, int.MaxValue))
+                foreach (var counter in _database.DocumentsStorage.GetTombstonesFrom(context, collection, etag, 0, long.MaxValue))
                 {
                     yield return counter;
                 }
@@ -395,7 +395,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, _database.Name, _startRaftIndex, int.MaxValue);
+            return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, _database.Name, _startRaftIndex, long.MaxValue);
         }
 
         public IEnumerable<string> GetCompareExchangeTombstones()
@@ -415,7 +415,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (state.StartEtagByCollection.Count != 0)
                         return GetCounterValuesFromCollections(_context, state);
 
-                    return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, state.StartEtag, 0, int.MaxValue);
+                    return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, state.StartEtag, 0, long.MaxValue);
                 },
                 new CountersIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
@@ -438,7 +438,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 state.CurrentCollection = collection;
 
-                foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, etag, 0, int.MaxValue))
+                foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, etag, 0, long.MaxValue))
                 {
                     yield return counter;
                 }

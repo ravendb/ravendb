@@ -1517,7 +1517,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, long startEtag, int take)
+        public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, long startEtag, long take)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             using (GetEtagAsSlice(context, startEtag, out var slice))
@@ -1573,7 +1573,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, int take)
+        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, long take)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
 
@@ -1587,7 +1587,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, List<string> collections, long etag, int take)
+        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, List<string> collections, long etag, long take)
         {
             foreach (var collection in collections)
             {
@@ -1598,7 +1598,7 @@ namespace Raven.Server.Documents.Revisions
                 if (collectionName == null)
                     continue;
 
-                foreach (var document in GetRevisionsFrom(context, collectionName, etag, int.MaxValue))
+                foreach (var document in GetRevisionsFrom(context, collectionName, etag, long.MaxValue))
                 {
                     if (take-- <= 0)
                         yield break;
@@ -1636,7 +1636,7 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag, int take)
+        public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag, long take)
         {
             var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
             var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
@@ -1730,7 +1730,7 @@ namespace Raven.Server.Documents.Revisions
             return Slice.External(context.Allocator, mem.Address, size, out slice);
         }
 
-        public IEnumerable<Document> GetResolvedDocumentsSince(DocumentsOperationContext context, DateTime since, int take = 1024)
+        public IEnumerable<Document> GetResolvedDocumentsSince(DocumentsOperationContext context, DateTime since, long take = 1024)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             using (GetResolvedSlice(context, since, out var slice))

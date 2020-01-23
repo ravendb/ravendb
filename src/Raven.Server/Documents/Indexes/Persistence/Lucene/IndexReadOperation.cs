@@ -593,7 +593,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return new Sort(sort.ToArray());
         }
 
-        public HashSet<string> Terms(string field, string fromValue, int pageSize, CancellationToken token)
+        public HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
             var results = new HashSet<string>();
             using (var termDocs = _searcher.IndexReader.HasDeletions ? _searcher.IndexReader.TermDocs(_state) : null)

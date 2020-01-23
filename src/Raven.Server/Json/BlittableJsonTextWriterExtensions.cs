@@ -165,7 +165,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteSuggestionQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResult result, out int numberOfResults)
+        public static void WriteSuggestionQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResult result, out long numberOfResults)
         {
             writer.WriteStartObject();
 
@@ -188,7 +188,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteFacetedQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetedQueryResult result, out int numberOfResults)
+        public static void WriteFacetedQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetedQueryResult result, out long numberOfResults)
         {
             writer.WriteStartObject();
 
@@ -347,7 +347,7 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
-            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out int _, partial: true);
+            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out long _, partial: true);
 
             writer.WriteEndObject();
         }
@@ -474,7 +474,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteQueryResult<TResult, TInclude>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, out int numberOfResults, bool partial = false)
+        public static void WriteQueryResult<TResult, TInclude>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, out long numberOfResults, bool partial = false)
         {
             if (partial == false)
                 writer.WriteStartObject();
@@ -1246,13 +1246,13 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, out int numberOfResults)
+        public static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, out long numberOfResults)
         {
             WriteDocuments(writer, context, documents.GetEnumerator(), metadataOnly, out numberOfResults);
         }
 
         public static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerator<Document> documents, bool metadataOnly,
-            out int numberOfResults)
+            out long numberOfResults)
         {
             numberOfResults = 0;
 
@@ -1399,7 +1399,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteObjects(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, out int numberOfResults)
+        public static void WriteObjects(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, out long numberOfResults)
         {
             numberOfResults = 0;
 

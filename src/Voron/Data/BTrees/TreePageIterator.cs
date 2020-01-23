@@ -134,9 +134,12 @@ namespace Voron.Data.BTrees
 
         }
 
-        public bool Skip(int count)
+        public bool Skip(long count)
         {
-            _page.LastSearchPosition += count;
+            if (count > int.MaxValue)
+                throw new InvalidOperationException($"Cannot skip by '{count}' because it is more than int.MaxValue");
+
+            _page.LastSearchPosition += (int)count;
             
             return TrySetPosition();
         }

@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-            int numberOfResults;
+            long numberOfResults;
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
             if (blittable)
             {
@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetRevisionByChangeVector), HttpContext.Request.QueryString.Value, numberOfResults, revisions.Count, sw.ElapsedMilliseconds);
         }
 
-        private void WriteRevisionsJson(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, out int numberOfResults)
+        private void WriteRevisionsJson(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, out long numberOfResults)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void WriteRevisionsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, out int numberOfResults)
+        private void WriteRevisionsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, out long numberOfResults)
         {
             numberOfResults = 0;
             HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
 
-            int loadedRevisionsCount;
+            long loadedRevisionsCount;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
                 }
 
-                int count;
+                long count;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();

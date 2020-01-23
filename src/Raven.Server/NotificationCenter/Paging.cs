@@ -22,7 +22,7 @@ namespace Raven.Server.NotificationCenter
         private readonly string _database;
 
         private readonly object _locker = new object();
-        private readonly ConcurrentQueue<(PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, long Duration, DateTime Occurrence)> _pagingQueue = new ConcurrentQueue<(PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, long Duration, DateTime Occurrence)>();
+        private readonly ConcurrentQueue<(PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence)> _pagingQueue = new ConcurrentQueue<(PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence)>();
         private readonly DateTime[] _pagingUpdates = new DateTime[Enum.GetNames(typeof(PagingOperationType)).Length];
         private Timer _pagingTimer;
         private readonly Logger _logger;
@@ -35,7 +35,7 @@ namespace Raven.Server.NotificationCenter
             _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
-        public void Add(PagingOperationType operation, string action, string details, int numberOfResults, int pageSize, long duration)
+        public void Add(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration)
         {
             var now = SystemTime.UtcNow;
             var update = _pagingUpdates[(int)operation];
@@ -71,7 +71,7 @@ namespace Raven.Server.NotificationCenter
                 PerformanceHint documents = null, queries = null, revisions = null;
 
                 while (_pagingQueue.TryDequeue(
-                    out (PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, long Duration, DateTime Occurrence) tuple))
+                    out (PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence) tuple))
                 {
                     switch (tuple.Type)
                     {

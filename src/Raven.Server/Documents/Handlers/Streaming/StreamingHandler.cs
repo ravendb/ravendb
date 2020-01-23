@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     initialState.Excludes = HttpContext.Request.Query["excludes"];
                     initialState.Matches = HttpContext.Request.Query["matches"];
                     initialState.StartAfter = HttpContext.Request.Query["startAfter"];
-                    initialState.Skip = new Reference<int>();
+                    initialState.Skip = new Reference<long>();
                 }
 
                 var documentsEnumerator = new PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
 
-                    writer.WriteDocuments(context, documentsEnumerator, metadataOnly: false, numberOfResults: out int _);
+                    writer.WriteDocuments(context, documentsEnumerator, metadataOnly: false, numberOfResults: out long _);
 
                     writer.WriteEndObject();
                 }

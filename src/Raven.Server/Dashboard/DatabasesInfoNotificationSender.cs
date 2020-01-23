@@ -120,7 +120,7 @@ namespace Raven.Server.Dashboard
             using (transactionContext.OpenReadTransaction())
             {
                 // 1. Fetch databases info
-                foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(transactionContext, Constants.Documents.Prefix, 0, int.MaxValue))
+                foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(transactionContext, Constants.Documents.Prefix, 0, long.MaxValue))
                 {
                     var databaseName = databaseTuple.ItemName.Substring(Constants.Documents.Prefix.Length);
                     if (cts.IsCancellationRequested)
