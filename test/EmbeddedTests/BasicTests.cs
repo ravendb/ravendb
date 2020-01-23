@@ -1,20 +1,12 @@
-﻿using System;
-using System.IO;
-using FastTests;
+﻿using System.IO;
 using Raven.Client.Documents.Conventions;
 using Raven.Embedded;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EmbeddedTests
 {
-    public class BasicTests : RavenTestBase
+    public class BasicTests : EmbeddedTestBase
     {
-        public BasicTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
         public void TestEmbedded()
         {
@@ -124,6 +116,15 @@ namespace EmbeddedTests
                 File.Copy(newPath, newPath.Replace(runtimesSource, runtimesDestination), true);
 
             return (serverDirectory, dataDirectory);
+        }
+
+
+
+        private class Person
+        {
+            public string Id { get; set; }
+
+            public string Name { get; set; }
         }
     }
 }
