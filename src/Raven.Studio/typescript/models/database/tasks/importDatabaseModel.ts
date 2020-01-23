@@ -14,6 +14,7 @@ class importDatabaseModel {
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(false);
     includeAttachments = ko.observable(true);
+    includeTimeSeries = ko.observable(true);
     includeSubscriptions = ko.observable(true);
 
     databaseModel = new smugglerDatabaseRecord();
@@ -36,8 +37,28 @@ class importDatabaseModel {
         this.includeDocuments.subscribe(documents => {
             if (!documents) {
                 this.includeCounters(false);
+                this.includeLegacyCounters(false);
                 this.includeAttachments(false);
                 this.includeLegacyAttachments(false);
+                this.includeTimeSeries(false);
+            }
+        });
+        
+        this.includeCounters.subscribe(counters => {
+            if (counters) {
+                this.includeDocuments(true);
+            }
+        });
+        
+        this.includeAttachments.subscribe(attachments => {
+            if (attachments) {
+                this.includeDocuments(true);
+            }
+        });
+        
+        this.includeTimeSeries.subscribe(timeSeries => {
+            if (timeSeries) {
+                this.includeDocuments(true);
             }
         });
         
@@ -103,6 +124,9 @@ class importDatabaseModel {
         if (this.includeLegacyAttachments()) {
             operateOnTypes.push("LegacyAttachments");
         }
+        if (this.includeTimeSeries()) {
+            operateOnTypes.push("TimeSeries");
+        }
         if (this.includeSubscriptions()) {
             operateOnTypes.push("Subscriptions");
         }
@@ -131,6 +155,7 @@ class importDatabaseModel {
                 || this.includeLegacyAttachments() 
                 || this.includeCounters() 
                 || this.includeLegacyCounters()
+                || this.includeTimeSeries()
                 || this.includeRevisionDocuments() 
                 || this.includeDocuments()
                 || this.includeAttachments();
