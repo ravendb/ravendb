@@ -51,9 +51,12 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     nextBackupHumanized: KnockoutComputed<string>;
     onGoingBackupHumanized: KnockoutComputed<string>;
     retentionPolicyHumanized: KnockoutComputed<string>;
+    throttledRefreshBackupInfo: () => void;
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, watchProvider: (task: ongoingTaskBackupListModel) => void) {
         super();
+        
+        this.throttledRefreshBackupInfo = _.throttle(() => this.refreshBackupInfo(false), 60 * 1000);
         
         this.watchProvider = watchProvider;
         this.update(dto);
@@ -130,8 +133,9 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             this.textClass("text-details");
             const now = timeHelpers.utcNowWithSecondPrecision();
             const diff = moment.utc(nextBackup.DateTime).diff(now);
-            if (diff <= 0) {
-                this.refreshBackupInfo(true);
+            
+            if (diff <= 0 && this.showDetails()) {
+                this.throttledRefreshBackupInfo();
             }
 
             const backupType = this.getBackupType(this.backupType(), nextBackup.IsFull);
@@ -251,8 +255,8 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             }
         }
 
-        const confirmDeleteViewModel = new backupNow(this.getBackupType(this.backupType(), true));
-        confirmDeleteViewModel
+        const backupNowViewModel = new backupNow(this.getBackupType(this.backupType(), true));
+        backupNowViewModel
             .result
             .done((confirmResult: backupNowConfirmResult) => {
                 if (confirmResult.can) {
@@ -284,7 +288,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
                 }
             });
 
-        app.showBootstrapDialog(confirmDeleteViewModel);
+        app.showBootstrapDialog(backupNowViewModel);
     }
 }
 
