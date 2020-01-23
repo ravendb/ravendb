@@ -498,6 +498,18 @@ namespace FastTests
                 }
             }
 
+            private string _nodeTag;
+
+            public string NodeTag
+            {
+                get => _nodeTag;
+                set
+                {
+                    AssertNotFrozen();
+                    _nodeTag = value;
+                }
+            }
+
             private readonly bool _frozen;
 
             private void AssertNotFrozen()
@@ -553,7 +565,7 @@ namespace FastTests
                 if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.DataDirectory)) == false)
                 {
                     configuration.Core.DataDirectory =
-                        configuration.Core.DataDirectory.Combine(options.PartialPath ?? $"Tests{Interlocked.Increment(ref _serverCounter)}");
+                        configuration.Core.DataDirectory.Combine(options.PartialPath ?? NewDataPath(prefix: $"GetNewServer-{options.NodeTag}", forceCreateDir: true));
                 }
 
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
