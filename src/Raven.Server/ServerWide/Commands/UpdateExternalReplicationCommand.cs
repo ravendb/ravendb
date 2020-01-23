@@ -20,6 +20,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            Watcher.AssertValidReplication();
+
             if (Watcher == null)
                 return null;
 
@@ -30,7 +32,7 @@ namespace Raven.Server.ServerWide.Commands
             else
             {
                 //modified watcher, remove the old one
-                ExternalReplication.RemoveExternalReplication(record.ExternalReplications, Watcher.TaskId);
+                ExternalReplicationBase.RemoveExternalReplication(record.ExternalReplications, Watcher.TaskId);
             }
             //this covers the case of a new watcher and edit of an old watcher
             if (string.IsNullOrEmpty(Watcher.Name))
