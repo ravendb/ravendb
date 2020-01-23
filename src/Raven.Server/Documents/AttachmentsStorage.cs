@@ -30,13 +30,13 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
 
-        private static readonly Slice AttachmentsSlice;
-        private static readonly Slice AttachmentsMetadataSlice;
+        internal static readonly Slice AttachmentsSlice;
+        internal static readonly Slice AttachmentsMetadataSlice;
         public static readonly Slice AttachmentsEtagSlice;
         private static readonly Slice AttachmentsHashSlice;
         private static readonly Slice AttachmentsTombstonesSlice;
 
-        private static readonly TableSchema AttachmentsSchema = new TableSchema();
+        internal static readonly TableSchema AttachmentsSchema = new TableSchema();
         public static readonly string AttachmentsTombstones = "Attachments.Tombstones";
 
 

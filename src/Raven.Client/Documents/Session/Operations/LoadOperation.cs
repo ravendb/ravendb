@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public LoadOperation ById(string id)
         {
-            if (id == null)
+            if (string.IsNullOrWhiteSpace(id))
                 return this;
 
             if (_ids == null)
@@ -81,12 +81,10 @@ namespace Raven.Client.Documents.Session.Operations
 
         public LoadOperation ByIds(IEnumerable<string> ids)
         {
-            _ids = ids.Where(x => x != null).ToArray();
-
-            foreach (var id in _ids.Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                ById(id);
-            }
+            _ids = ids
+                .Where(id => string.IsNullOrWhiteSpace(id) == false)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
             return this;
         }
@@ -95,7 +93,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             if (_session.NoTracking)
             {
-                if (_resultsSet == false)
+                if (_resultsSet == false && _ids.Length > 0)
                     throw new InvalidOperationException($"Cannot execute '{nameof(GetDocument)}' before operation execution.");
 
                 if (_results == null || _results.Results == null || _results.Results.Length == 0)
@@ -135,7 +133,7 @@ namespace Raven.Client.Documents.Session.Operations
             var finalResults = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
             if (_session.NoTracking)
             {
-                if (_resultsSet == false)
+                if (_resultsSet == false && _ids.Length > 0)
                     throw new InvalidOperationException($"Cannot execute '{nameof(GetDocuments)}' before operation execution.");
 
                 foreach (var id in _ids)
@@ -161,6 +159,7 @@ namespace Raven.Client.Documents.Session.Operations
                     continue;
                 finalResults[id] = GetDocument<T>(id);
             }
+
             return finalResults;
         }
 
@@ -181,7 +180,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (_includeAllCounters || _countersToInclude != null)
             {
-                _session.RegisterCounters(result.CounterIncludes, _ids.ToArray(), _countersToInclude, _includeAllCounters);
+                _session.RegisterCounters(result.CounterIncludes, _ids, _countersToInclude, _includeAllCounters);
             }
 
             if (_timeSeriesToInclude != null)
@@ -193,7 +192,6 @@ namespace Raven.Client.Documents.Session.Operations
                 _session.DocumentsById.Add(document);
 
             _session.RegisterMissingIncludes(result.Results, result.Includes, _includes);
-
         }
 
         private static IEnumerable<DocumentInfo> GetDocumentsFromResult(GetDocumentsResult result)

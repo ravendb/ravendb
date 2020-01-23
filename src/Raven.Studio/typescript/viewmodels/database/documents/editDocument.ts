@@ -585,8 +585,12 @@ class editDocument extends viewModelBase {
         return collectionForNewDocument + "/";
     }
 
-    toClipboard() {
+    copyDocumentBodyToClipboard() {
         copyToClipboard.copy(this.documentText(), "Document has been copied to clipboard");
+    }
+
+    copyDocumentIdToClipboard() {
+        copyToClipboard.copy(this.editedDocId(), "Document ID has been copied to clipboard");
     }
 
     toggleNewlineMode() {
