@@ -96,7 +96,6 @@ namespace RachisTests
         }
         
         [Theory]
-        [InlineData(true)]
         [InlineData(false)]
         public async Task ReAddMemberNode(bool withManyCompareExchange)
         {
