@@ -87,7 +87,7 @@ namespace Raven.Client.Documents.Replication
 
         public override string ToString()
         {
-            var str = $"{Url} - {Database}";
+            var str = $"{FromString()}";
             if (Disabled)
                 str += " - DISABLED";
             return str;
