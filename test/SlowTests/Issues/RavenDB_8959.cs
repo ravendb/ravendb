@@ -16,18 +16,18 @@ namespace SlowTests.Issues
 
         public class SingleNodeAsyncMultiDatabaseHiLoIdGenerator : AsyncMultiDatabaseHiLoIdGenerator
         {
-            public SingleNodeAsyncMultiDatabaseHiLoIdGenerator(DocumentStore store, DocumentConventions conventions) : base(store, conventions)
+            public SingleNodeAsyncMultiDatabaseHiLoIdGenerator(DocumentStore store) : base(store)
             {
             }
 
             public override AsyncMultiTypeHiLoIdGenerator GenerateAsyncMultiTypeHiLoFunc(string dbName)
             {
-                return new SingleNodeAsyncMultiTypeHiLoIdGenerator(Store, dbName, Conventions);
+                return new SingleNodeAsyncMultiTypeHiLoIdGenerator(Store, dbName);
             }
 
             public class SingleNodeAsyncMultiTypeHiLoIdGenerator : AsyncMultiTypeHiLoIdGenerator
             {
-                public SingleNodeAsyncMultiTypeHiLoIdGenerator(DocumentStore store, string dbName, DocumentConventions conventions) : base(store, dbName, conventions)
+                public SingleNodeAsyncMultiTypeHiLoIdGenerator(DocumentStore store, string dbName) : base(store, dbName)
                 {
                 }
 
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = documentStore =>
                 {
-                    var gen = new SingleNodeAsyncMultiDatabaseHiLoIdGenerator(documentStore, documentStore.Conventions);
+                    var gen = new SingleNodeAsyncMultiDatabaseHiLoIdGenerator(documentStore);
                     documentStore.Conventions.AsyncDocumentIdGenerator = gen.GenerateDocumentIdAsync;
                 }
             }))

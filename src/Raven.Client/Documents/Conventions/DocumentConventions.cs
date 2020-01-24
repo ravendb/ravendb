@@ -962,6 +962,7 @@ namespace Raven.Client.Documents.Conventions
                 {
                     _maxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
                     _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior.Value;
+                    _identityPartsSeparator = _originalConfiguration.IdentityPartsSeparator; // TODO [ppekrol]
 
                     _originalConfiguration = null;
                     return;
@@ -972,11 +973,13 @@ namespace Raven.Client.Documents.Conventions
                     {
                         Etag = -1,
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
-                        ReadBalanceBehavior = ReadBalanceBehavior
+                        ReadBalanceBehavior = ReadBalanceBehavior,
+                        IdentityPartsSeparator = IdentityPartsSeparator
                     };
 
                 _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
                 _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior.Value;
+                _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator;
             }
         }
 

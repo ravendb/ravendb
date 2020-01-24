@@ -14,6 +14,8 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         public ReadBalanceBehavior? ReadBalanceBehavior { get; set; }
 
+        public string IdentityPartsSeparator { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -21,7 +23,8 @@ namespace Raven.Client.Documents.Operations.Configuration
                 [nameof(Disabled)] = Disabled,
                 [nameof(Etag)] = Etag,
                 [nameof(MaxNumberOfRequestsPerSession)] = MaxNumberOfRequestsPerSession,
-                [nameof(ReadBalanceBehavior)] = ReadBalanceBehavior
+                [nameof(ReadBalanceBehavior)] = ReadBalanceBehavior,
+                [nameof(IdentityPartsSeparator)] = IdentityPartsSeparator
             };
         }
     }
