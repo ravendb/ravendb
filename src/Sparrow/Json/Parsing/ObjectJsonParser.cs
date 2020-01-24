@@ -408,6 +408,12 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
+                if (current is char @char)
+                {
+                    current = new string(@char, 1);
+                    continue;
+                }
+
                 if (current is int || current is byte || current is sbyte || current is short || current is ushort)
                 {
                     _state.Long = Convert.ToInt32(current);

@@ -160,6 +160,7 @@ namespace Raven.Server.Documents
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
                 });
                 _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
+                IdentityPartsSeparator = '/';
             }
             catch (Exception)
             {
@@ -1129,7 +1130,7 @@ namespace Raven.Server.Documents
                     _lastTopologyIndex = record.Topology.Stamp.Index;
 
                 ClientConfiguration = record.Client;
-                IdentityPartsSeparator = record.Client?.IdentityPartsSeparator ?? '/'; // TODO [ppekrol]
+                IdentityPartsSeparator = record.Client?.IdentityPartsSeparator ?? '/';
 
                 _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
 

@@ -432,7 +432,7 @@ namespace Sparrow.Json
                 var type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
                 try
                 {
-                    if (type.GetTypeInfo().IsEnum)
+                    if (type.IsEnum)
                     {
                         obj = (T)Enum.Parse(type, result.ToString());
                     }
@@ -469,6 +469,14 @@ namespace Sparrow.Json
                         if (Guid.TryParse(guidString, out Guid guid) == false)
                             ThrowFormatException(result, result.GetType().FullName, "Guid");
                         obj = (T)(object)guid;
+                    }
+                    else if (type == typeof(char))
+                    {
+                        if (ChangeTypeToString(result, out string charString) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "string");
+                        if (char.TryParse(charString, out char @char) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "char");
+                        obj = (T)(object)@char;
                     }
                     else
                     {
