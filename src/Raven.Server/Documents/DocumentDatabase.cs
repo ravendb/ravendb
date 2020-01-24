@@ -151,7 +151,7 @@ namespace Raven.Server.Documents
                 NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown, configuration);
                 HugeDocuments = new HugeDocuments(NotificationCenter, ConfigurationStorage.NotificationsStorage, Name, configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
-                Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes, 
+                Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes,
                     Is32Bits ? TimeSpan.FromHours(12) : TimeSpan.FromDays(2));
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
@@ -236,6 +236,8 @@ namespace Raven.Server.Documents
         public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
 
         public readonly byte[] MasterKey;
+
+        public char IdentityPartsSeparator { get; private set; }
 
         public ClientConfiguration ClientConfiguration { get; private set; }
 
@@ -330,17 +332,17 @@ namespace Raven.Server.Documents
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
-                TaskExecutor.Execute( _ =>
-                {
-                    try
-                    {
-                        NotifyFeaturesAboutStateChange(record, index);
-                    }
-                    catch
-                    {
+                TaskExecutor.Execute(_ =>
+               {
+                   try
+                   {
+                       NotifyFeaturesAboutStateChange(record, index);
+                   }
+                   catch
+                   {
                         // We ignore the exception since it was caught in the function itself
                     }
-                }, null);
+               }, null);
 
                 Task.Run(async () =>
                 {
@@ -971,8 +973,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public SmugglerResult FullBackupTo(string backupPath, CompressionLevel compressionLevel = CompressionLevel.Optimal, 
-            Action <(string Message, int FilesCount)> infoNotify = null, CancellationToken cancellationToken = default)
+        public SmugglerResult FullBackupTo(string backupPath, CompressionLevel compressionLevel = CompressionLevel.Optimal,
+            Action<(string Message, int FilesCount)> infoNotify = null, CancellationToken cancellationToken = default)
         {
             SmugglerResult smugglerResult;
 
@@ -1127,6 +1129,8 @@ namespace Raven.Server.Documents
                     _lastTopologyIndex = record.Topology.Stamp.Index;
 
                 ClientConfiguration = record.Client;
+                IdentityPartsSeparator = record.Client?.IdentityPartsSeparator ?? '/'; // TODO [ppekrol]
+
                 _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
 
                 StudioConfiguration = record.Studio;
@@ -1270,12 +1274,12 @@ namespace Raven.Server.Documents
 
                     if (taken == false)
                         continue;
-                
+
                     DatabaseShutdown.ThrowIfCancellationRequested();
                     SubscriptionStorage?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseValueChanged(record);
 
-                    LastValueChangeIndex  = index;
+                    LastValueChangeIndex = index;
                 }
                 finally
                 {

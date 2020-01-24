@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Handlers
                         for (; i < NumberOfCommands; i++)
                         {
                             cmd = Commands[i];
-                            if (cmd.Id?.EndsWith('/') == true)
+                            if (cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
                             {
                                 cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
                                 RetryOnError = true;

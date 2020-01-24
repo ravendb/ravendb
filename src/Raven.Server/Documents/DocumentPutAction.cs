@@ -346,7 +346,7 @@ namespace Raven.Server.Documents
                     ThrowInvalidDocumentId(id);
                 }
 
-                if (lastChar == '/')
+                if (lastChar == _documentDatabase.IdentityPartsSeparator)
                 {                    
                     string nodeTag = _documentDatabase.ServerStore.NodeTag;
 

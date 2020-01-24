@@ -634,7 +634,7 @@ namespace Raven.Server.Documents.Handlers
 
                 // The TransactionMerger will re-run us when we ask it to as a 
                 // separate transaction
-                if (_id?.EndsWith('/') == true)
+                if (_id?.EndsWith(_database.IdentityPartsSeparator) == true)
                 {
                     _id = GenerateNonConflictingId(_database, _id);
                     RetryOnError = true;

@@ -38,7 +38,7 @@ namespace SlowTests.Issues
 
                 public class SingleNodeAsyncHiLoIdGenerator : AsyncHiLoIdGenerator
                 {
-                    public SingleNodeAsyncHiLoIdGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator) : base(tag, store, dbName,
+                    public SingleNodeAsyncHiLoIdGenerator(string tag, DocumentStore store, string dbName, char identityPartsSeparator) : base(tag, store, dbName,
                         identityPartsSeparator)
                     {
                     }

@@ -183,7 +183,7 @@ namespace Raven.Server.Utils
         private static string ValueWithPrefix(StringSegment prefixSegment, object val)
         {
             var prefix = prefixSegment.Subsegment(0, prefixSegment.Length - 1);
-            return (prefix.Length > 0) && (prefix[prefix.Length - 1] != '/') ? null : $"{prefix}{val}";
+            return (prefix.Length > 0) && (prefix[prefix.Length - 1] != '/') ? null : $"{prefix}{val}"; // TODO [ppekrol]
         }
 
         private static string BlittableValueToString(object value)

@@ -132,7 +132,7 @@ namespace Raven.Server.ServerWide.Commands
         private static void ClusterCommandValidation(ClusterTransactionDataCommand command)
         {
             var lastChar = command.Id[command.Id.Length - 1];
-            if (lastChar == '/' || lastChar == '|')
+            if (lastChar == '/' || lastChar == '|') // TODO [ppekrol]
             {
                 throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '/' as part of cluster transaction");
             }
