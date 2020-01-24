@@ -792,7 +792,7 @@ namespace Raven.Server.Documents.Handlers
                                 for (; i < ParsedCommands.Count; i++)
                                 {
                                     cmd = ParsedCommands.Array[ParsedCommands.Offset + i];
-                                    if (cmd.Type == CommandType.PUT && cmd.Id?.EndsWith('/') == true)
+                                    if (cmd.Type == CommandType.PUT && cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
                                     {
                                         cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
                                         RetryOnError = true;
@@ -855,7 +855,7 @@ namespace Raven.Server.Documents.Handlers
 
                             var docId = cmd.Id;
 
-                            if (docId[docId.Length - 1] == '/')
+                            if (docId[docId.Length - 1] == Database.IdentityPartsSeparator)
                             {
                                 // attachment sent by Raven ETL, only prefix is defined
 
@@ -998,7 +998,7 @@ namespace Raven.Server.Documents.Handlers
 
                             var counterDocId = cmd.Counters.DocumentId;
 
-                            if (cmd.FromEtl && counterDocId[counterDocId.Length - 1] == '/')
+                            if (cmd.FromEtl && counterDocId[counterDocId.Length - 1] == Database.IdentityPartsSeparator)
                             {
                                 // counter sent by Raven ETL, only prefix is defined
 

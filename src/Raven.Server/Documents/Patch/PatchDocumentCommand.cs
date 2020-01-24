@@ -428,7 +428,7 @@ namespace Raven.Server.Documents.Patch
             _id = id;
             _expectedChangeVector = expectedChangeVector;
 
-            if (string.IsNullOrEmpty(id) || id.EndsWith('/') || id.EndsWith('|'))
+            if (string.IsNullOrEmpty(id) || id.EndsWith(database.IdentityPartsSeparator) || id.EndsWith('|'))
                 throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
         }
 

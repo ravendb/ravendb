@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Identity
         protected readonly DocumentStore Store;
         protected readonly string DbName;
         protected readonly DocumentConventions Conventions;
-        private string _identityPartsSeparator;
+        private char _identityPartsSeparator;
 
         public AsyncMultiTypeHiLoIdGenerator(DocumentStore store, string dbName)
         {
@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Identity
             return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
         }
 
-        private async Task MaybeRefresh(string identityPartsSeparator)
+        private async Task MaybeRefresh(char identityPartsSeparator)
         {
             List<AsyncHiLoIdGenerator> idGenerators = null;
             await _generatorLock.WaitAsync().ConfigureAwait(false);

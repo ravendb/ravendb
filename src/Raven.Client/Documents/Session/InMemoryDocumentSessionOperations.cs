@@ -818,7 +818,7 @@ more responsive application.
             DocumentInfo info;
             if (string.IsNullOrEmpty(id) ||
                 id[id.Length - 1] == '|' ||
-                id[id.Length - 1] == '/' ||
+                id[id.Length - 1] == Conventions.IdentityPartsSeparator ||
                 DocumentsById.TryGetValue(id, out info) == false ||
                 ReferenceEquals(info.Entity, entity))
                 return;

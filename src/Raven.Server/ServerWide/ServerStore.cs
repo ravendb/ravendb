@@ -2299,7 +2299,7 @@ namespace Raven.Server.ServerWide
                     $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
-            return (etag, id.Substring(0, id.Length - 1) + '/' + result, (long)result);
+            return (etag, id.Substring(0, id.Length - 1) + '/' + result, (long)result); // TODO [ppekrol]
         }
 
         public async Task<long> UpdateClusterIdentityAsync(string id, string databaseName, long newIdentity, bool force, string raftRequestId)

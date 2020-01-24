@@ -127,7 +127,7 @@ namespace Raven.Client.Documents.Conventions
             ReadBalanceBehavior = ReadBalanceBehavior.None;
 
             FindIdentityProperty = q => q.Name == "Id";
-            IdentityPartsSeparator = "/";
+            IdentityPartsSeparator = '/';
             FindIdentityPropertyNameFromCollectionName = collectionName => "Id";
 
             FindClrType = (id, doc) =>
@@ -176,7 +176,7 @@ namespace Raven.Client.Documents.Conventions
         private Dictionary<Type, MemberInfo> _idPropertyCache = new Dictionary<Type, MemberInfo>();
 
         private bool _saveEnumsAsIntegers;
-        private string _identityPartsSeparator;
+        private char _identityPartsSeparator;
         private bool _disableTopologyUpdates;
         private Func<MemberInfo, bool> _findIdentityProperty;
         private Func<string, string> _transformTypeCollectionNameToDocumentIdPrefix;
@@ -607,7 +607,7 @@ namespace Raven.Client.Documents.Conventions
         ///     Gets or sets the identity parts separator used by the HiLo generators
         /// </summary>
         /// <value>The identity parts separator.</value>
-        public string IdentityPartsSeparator
+        public char IdentityPartsSeparator
         {
             get => _identityPartsSeparator;
             set
@@ -962,7 +962,7 @@ namespace Raven.Client.Documents.Conventions
                 {
                     _maxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
                     _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior.Value;
-                    _identityPartsSeparator = _originalConfiguration.IdentityPartsSeparator; // TODO [ppekrol]
+                    _identityPartsSeparator = _originalConfiguration.IdentityPartsSeparator.Value;
 
                     _originalConfiguration = null;
                     return;
@@ -979,7 +979,7 @@ namespace Raven.Client.Documents.Conventions
 
                 _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
                 _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior.Value;
-                _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator;
+                _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator.Value;
             }
         }
 

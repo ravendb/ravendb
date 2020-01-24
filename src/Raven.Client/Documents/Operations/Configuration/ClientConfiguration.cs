@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         public ReadBalanceBehavior? ReadBalanceBehavior { get; set; }
 
-        public string IdentityPartsSeparator { get; set; }
+        public char? IdentityPartsSeparator { get; set; }
 
         public DynamicJsonValue ToJson()
         {

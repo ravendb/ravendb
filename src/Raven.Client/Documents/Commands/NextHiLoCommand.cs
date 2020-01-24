@@ -12,15 +12,15 @@ namespace Raven.Client.Documents.Commands
         private readonly string _tag;
         private readonly long _lastBatchSize;
         private readonly DateTime _lastRangeAt;
-        private readonly string _identityPartsSeparator;
+        private readonly char _identityPartsSeparator;
         private readonly long _lastRangeMax;
 
-        public NextHiLoCommand(string tag, long lastBatchSize, DateTime lastRangeAt, string identityPartsSeparator, long lastRangeMax)
+        public NextHiLoCommand(string tag, long lastBatchSize, DateTime lastRangeAt, char identityPartsSeparator, long lastRangeMax)
         {
             _tag = tag ?? throw new ArgumentNullException(nameof(tag));
             _lastBatchSize = lastBatchSize;
             _lastRangeAt = lastRangeAt;
-            _identityPartsSeparator = identityPartsSeparator ?? throw new ArgumentNullException(nameof(identityPartsSeparator));
+            _identityPartsSeparator = identityPartsSeparator;
             _lastRangeMax = lastRangeMax;
         }
 

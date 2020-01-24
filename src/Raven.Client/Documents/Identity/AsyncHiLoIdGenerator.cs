@@ -25,14 +25,14 @@ namespace Raven.Client.Documents.Identity
         private long _lastBatchSize;
         private DateTime _lastRangeDate;
         private readonly string _dbName;
-        private readonly string _identityPartsSeparator;
+        private readonly char _identityPartsSeparator;
         private volatile RangeValue _range;
 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncHiLoIdGenerator"/> class.
         /// </summary>
-        public AsyncHiLoIdGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)
+        public AsyncHiLoIdGenerator(string tag, DocumentStore store, string dbName, char identityPartsSeparator)
         {
             _store = store;
             _tag = tag;

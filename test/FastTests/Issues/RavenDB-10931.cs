@@ -31,7 +31,7 @@ namespace FastTests.Issues
                 Urls = new[] { server.WebUrl },
                 Conventions =
                     {
-                        IdentityPartsSeparator = "-"
+                        IdentityPartsSeparator = '-'
                     }
             })
             using (EnsureDatabaseDeletion(databaseName, store))
