@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Handlers
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
                 var lastSize = GetLongQueryString("lastBatchSize", false) ?? 0;
                 var lastRangeAt = GetStringQueryString("lastRangeAt", false);
-                var identityPartsSeparator = GetStringQueryString("identityPartsSeparator", false) ?? "/";
+                var identityPartsSeparator = GetCharQueryString("identityPartsSeparator", false) ?? Database.IdentityPartsSeparator;
                 var lastMax = GetLongQueryString("lastMax", false) ?? 0;
 
                 var capacity = CalculateCapacity(lastSize, lastRangeAt);
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
             public string Key;
             public DocumentDatabase Database;
             public long Capacity;
-            public string Separator;
+            public char Separator;
             public long LastRangeMax;
             public string Prefix;
             public long OldMax;
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents.Handlers
     {
         public string Key;
         public long Capacity;
-        public string Separator;
+        public char Separator;
         public long LastRangeMax;
         public string Prefix;
         public long OldMax;

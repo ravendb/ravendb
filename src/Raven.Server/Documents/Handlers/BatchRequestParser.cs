@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Handlers
             for (var index = 0; index < positionInListToCommandIndex.Count; index++)
             {
                 var value = positionInListToCommandIndex[index];
-                cmds[value].Id = cmds[value].Id.Substring(0, cmds[value].Id.Length - 1) + "/" + newIds[index];
+                cmds[value].Id = cmds[value].Id.Substring(0, cmds[value].Id.Length - 1) + database.IdentityPartsSeparator + newIds[index];
 
                 if (string.IsNullOrEmpty(cmds[value].ChangeVector) == false)
                     ThrowInvalidUsageOfChangeVectorWithIdentities(cmds[value]);
