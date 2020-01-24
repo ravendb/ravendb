@@ -387,6 +387,23 @@ namespace Raven.Server.Web
             return val[0];
         }
 
+        protected char? GetCharQueryString(string name, bool required = true)
+        {
+            var val = HttpContext.Request.Query[name];
+            if (val.Count == 0 || string.IsNullOrWhiteSpace(val[0]))
+            {
+                if (required)
+                    ThrowRequiredMember(name);
+
+                return null;
+            }
+
+            if (val[0].Length > 1)
+                throw new InvalidOperationException("TODO ppekrol");
+
+            return val[0][0];
+        }
+
         private static void ThrowRequiredMember(string name)
         {
             throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified.");
