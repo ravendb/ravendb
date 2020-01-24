@@ -106,6 +106,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
                 result.push(this.mapToExportListItem("Counters", status.Counters));
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
+                result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries));
             }
 
             const currentlyProcessingItems = smugglerDatabaseDetails.findCurrentlyProcessingItems(result);
@@ -357,7 +358,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.Messages = [result.Message];
             }
             
-        } else if (incoming.State.Status === "InProgress") { // if incoming operaton is in progress, then merge messages into existing item
+        } else if (incoming.State.Status === "InProgress") { // if incoming operation is in progress, then merge messages into existing item
             const incomingResult = incoming.State.Progress as Raven.Client.Documents.Smuggler.SmugglerResult;
             const existingResult = existing.progress() as Raven.Client.Documents.Smuggler.SmugglerResult;
 

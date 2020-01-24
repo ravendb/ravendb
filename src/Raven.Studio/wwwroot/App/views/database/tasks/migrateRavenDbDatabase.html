@@ -14,7 +14,7 @@
                                         <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                                id="server-url"
                                                data-bind="textInput: serverUrl"
-                                               placeholder="Source server url">
+                                               placeholder="Source server url" />
                                         <ul class="dropdown-menu max-height" data-bind="foreach: createServerUrlAutoCompleter(), autoComplete: '#server-url'">
                                             <li data-bind="click: $parent.selectServerUrl.bind($parent, $data)">
                                                 <a href="#" data-bind="text: $data"></a>
@@ -29,7 +29,7 @@
                             <div class="form-group" data-bind="visible: isSecuredConnection">
                                 <label class="control-label"></label>
                                 <div class="toggle">
-                                    <input class="styled" type="checkbox" id="skip-server-certificate-validation" data-bind="checked: skipServerCertificateValidation">
+                                    <input class="styled" type="checkbox" id="skip-server-certificate-validation" data-bind="checked: skipServerCertificateValidation" />
                                     <label for="skip-server-certificate-validation">Skip Server Certificate Validation</label>
                                 </div>
                             </div>
@@ -74,7 +74,7 @@
                                            class="form-control dropdown-toggle"
                                            data-toggle="dropdown"
                                            id="resource-name"
-                                           data-bind="textInput: resourceName, attr: { 'placeholder': 'Source ' + resourceTypeName().toLowerCase() + ' name' }">
+                                           data-bind="textInput: resourceName, attr: { 'placeholder': 'Source ' + resourceTypeName().toLowerCase() + ' name' }" />
                                     <ul class="dropdown-menu max-height" data-bind="foreach: createResourceNamesAutoCompleter(), autoComplete: '#resource-name'">
                                         <li data-bind="click: $parent.selectResourceName.bind($parent, $data)">
                                             <a href="#" data-bind="text: $data"></a>
@@ -138,7 +138,7 @@
                                 <div class="form-group" data-bind="visible: isUnsecuredBasicAuthentication">
                                     <label class="control-label"></label>
                                     <div class="toggle">
-                                        <input class="styled" type="checkbox" id="basic-authentication" data-bind="checked: enableBasicAuthenticationOverUnsecuredHttp">
+                                        <input class="styled" type="checkbox" id="basic-authentication" data-bind="checked: enableBasicAuthenticationOverUnsecuredHttp" />
                                         <label for="basic-authentication">Enable Basic Authentication Over Unsecured Http</label>
                                     </div>
                                 </div>
@@ -152,65 +152,72 @@
                         <div class="row">
                             <div class="col-lg-3">
                                 <div class="toggle">
-                                    <input id="migrate_documents" type="checkbox" data-bind="checked: includeDocuments">
+                                    <input id="migrate_documents" type="checkbox" data-bind="checked: includeDocuments" />
                                     <label for="migrate_documents">Include Documents</label>
                                 </div>
                                 <div class="margin-left margin-left-lg">
                                     <div class="toggle" data-bind="visible: isLegacy">
-                                        <input id="migrate_legacy_attachments" type="checkbox" data-bind="checked: includeLegacyAttachments">
+                                        <input id="migrate_legacy_attachments" type="checkbox" data-bind="checked: includeLegacyAttachments" />
                                         <label for="migrate_legacy_attachments">Include Legacy Attachments</label>
                                     </div>
                                     <div class="toggle" data-bind="visible: !isLegacy()">
-                                        <input id="migrate_attachments" type="checkbox" data-bind="checked: includeAttachments">
+                                        <input id="migrate_attachments" type="checkbox" data-bind="checked: includeAttachments" />
                                         <label for="migrate_attachments">Include Attachments</label>
                                     </div>
                                     <div class="toggle" data-bind="visible: isV41">
-                                        <input id="migrate_counters" type="checkbox" data-bind="checked: includeCounters">
+                                        <input id="migrate_legacy_counters" type="checkbox" data-bind="checked: includeLegacyCounters" />
+                                        <label for="migrate_legacy_counters">Include Legacy Counters</label>
+                                    </div>
+                                    <div class="toggle" data-bind="visible: isV42orAbove">
+                                        <input id="migrate_counters" type="checkbox" data-bind="checked: includeCounters" />
                                         <label for="migrate_counters">Include Counters</label>
+                                    </div>
+                                    <div class="toggle" data-bind="visible: isV50orAbove">
+                                        <input id="migrate_time_series" type="checkbox" data-bind="checked: includeTimeSeries" />
+                                        <label for="migrate_time_series">Include Time Series</label>
                                     </div>
                                     <div class="toggle" data-toggle="tooltip" data-placement="top">
                                         <input id="migrate_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
                                         <label for="migrate_revisions">Include Revisions</label>
                                     </div>
                                     <div class="toggle" data-bind="visible: !isLegacy()">
-                                        <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts">
+                                        <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts" />
                                         <label for="migrate_conflicts">Include Conflicts</label>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-lg-5">
                                 <div class="toggle">
-                                    <input id="migrate_indexes" type="checkbox" data-bind="checked: includeIndexes">
+                                    <input id="migrate_indexes" type="checkbox" data-bind="checked: includeIndexes" />
                                     <label for="migrate_indexes">Include Indexes</label>
                                 </div>
                                 <div class="margin-left margin-left-lg">
                                     <div class="toggle">
-                                        <input id="migrate_remove_analyzers" type="checkbox" data-bind="checked: removeAnalyzers">
+                                        <input id="migrate_remove_analyzers" type="checkbox" data-bind="checked: removeAnalyzers" />
                                         <label for="migrate_remove_analyzers">Remove Analyzers</label>
                                     </div>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_identities" type="checkbox" data-bind="checked: includeIdentities">
+                                    <input id="migrate_identities" type="checkbox" data-bind="checked: includeIdentities" />
                                     <label for="migrate_identities">Include Identities</label>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_cmp_xch" type="checkbox" data-bind="checked: includeCompareExchange">
+                                    <input id="migrate_cmp_xch" type="checkbox" data-bind="checked: includeCompareExchange" />
                                     <label for="migrate_cmp_xch">Include Compare Exchange</label>
                                 </div>
 
                                 <div class="toggle">
-                                    <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions">
+                                    <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
                                     <label for="includeSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
                                 </div>
                                 <div class="flex-horizontal" data-bind="visible: !isLegacy()">
                                     <div class="toggle">
-                                        <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord">
+                                        <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
                                         <label for="importConfiguration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
                                     </div>
                                     <button class="btn btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
                                     <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
                                 </div>
-                                
                             </div>
                         </div>
                         <div data-bind="validationElement: importDefinitionHasIncludes">
@@ -233,8 +240,8 @@
                                     </div>
                                 </div>
                                 <div class="flex-grow" data-bind="collapse: showTransformScript">
-                            <pre class="form-control editor query-source" style="height: 200px;"
-                                 data-bind="aceEditor: { code: transformScript, allowResize: false, lang:'ace/mode/javascript' }">
+                                <pre class="form-control editor query-source" style="height: 200px;"
+                                     data-bind="aceEditor: { code: transformScript, allowResize: false, lang:'ace/mode/javascript' }">
                                 </pre>
                                 </div>
                             </div>
