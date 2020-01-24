@@ -107,6 +107,7 @@ namespace Sparrow.Json
         {
             var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
             if (type == typeof(string) ||
+                type == typeof(char) ||
                 type == typeof(bool) ||
                 type == typeof(long) ||
                 type == typeof(ulong) ||
