@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using EmbeddedTests.Platform;
 using Sparrow.Collections;
 
 namespace EmbeddedTests
@@ -14,7 +15,11 @@ namespace EmbeddedTests
 
         protected string NewDataPath([CallerMemberName] string caller = null)
         {
-            var path = Path.GetFullPath($".\\Databases\\{caller ?? "TestPath"}.{Interlocked.Increment(ref _pathCount)}");
+            var path = $".\\Databases\\{caller ?? "TestPath"}.{Interlocked.Increment(ref _pathCount)}";
+            if (PosixHelper.RunningOnPosix)
+                path = PosixHelper.FixLinuxPath(path);
+
+            path = Path.GetFullPath(path);
             _localPathsToDelete.Add(path);
 
             return path;

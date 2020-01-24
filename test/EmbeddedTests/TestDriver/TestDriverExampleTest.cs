@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using EmbeddedTests.Platform;
 using Raven.Client.Documents;
 using Raven.TestDriver;
 using Xunit;
@@ -19,10 +20,12 @@ namespace EmbeddedTests.TestDriver
 
         private static string GetServerPath()
         {
-            var prefix = "file:///";
+            var prefix = PosixHelper.RunningOnPosix ? "file://" : "file:///";
+
             var testAssemblyLocation = typeof(RavenTestDriver).Assembly.CodeBase;
             if (testAssemblyLocation.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 testAssemblyLocation = testAssemblyLocation.Substring(prefix.Length);
+
             var testDllFile = new FileInfo(testAssemblyLocation);
             if (testDllFile.Exists == false)
                 throw new InvalidOperationException($"Could not find '{testDllFile.FullName}'.");
@@ -37,7 +40,11 @@ namespace EmbeddedTests.TestDriver
                 serverDirectory = @"../../../../../src/Raven.Server/bin/Release/netcoreapp3.1";
 #endif
 
-            return Path.GetFullPath(Path.Combine(testDllFile.DirectoryName, serverDirectory));
+            var path = Path.Combine(testDllFile.DirectoryName, serverDirectory);
+            if (PosixHelper.RunningOnPosix)
+                path = PosixHelper.FixLinuxPath(path);
+
+            return Path.GetFullPath(path);
         }
 
         private const string ExampleDocId = "TestDriver/Item";
