@@ -6,43 +6,37 @@
 
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Conventions;
 
 namespace Raven.Client.Documents.Identity
 {
     public class AsyncMultiDatabaseHiLoIdGenerator
     {
         protected readonly DocumentStore Store;
-        protected readonly DocumentConventions Conventions;
 
         private readonly ConcurrentDictionary<string, AsyncMultiTypeHiLoIdGenerator> _generators =
             new ConcurrentDictionary<string, AsyncMultiTypeHiLoIdGenerator>();
 
-        public AsyncMultiDatabaseHiLoIdGenerator(DocumentStore store, DocumentConventions conventions)
+        public AsyncMultiDatabaseHiLoIdGenerator(DocumentStore store)
         {
             Store = store;
-            Conventions = conventions;
         }
 
-
-        public Task<string> GenerateDocumentIdAsync(string dbName, object entity)
+        public Task<string> GenerateDocumentIdAsync(string database, object entity)
         {
-            var db = dbName ?? Store.Database;
-            var generator = _generators.GetOrAdd(db, GenerateAsyncMultiTypeHiLoFunc);
+            database ??= Store.Database;
+            var generator = _generators.GetOrAdd(database, GenerateAsyncMultiTypeHiLoFunc);
             return generator.GenerateDocumentIdAsync(entity);
         }
 
-        public virtual AsyncMultiTypeHiLoIdGenerator GenerateAsyncMultiTypeHiLoFunc(string dbName)
+        public virtual AsyncMultiTypeHiLoIdGenerator GenerateAsyncMultiTypeHiLoFunc(string database)
         {
-            return new AsyncMultiTypeHiLoIdGenerator(Store, dbName, Conventions);
+            return new AsyncMultiTypeHiLoIdGenerator(Store, database);
         }
 
         public async Task ReturnUnusedRange()
         {
             foreach (var generator in _generators)
-            {
                 await generator.Value.ReturnUnusedRange().ConfigureAwait(false);
-            }
         }
     }
 }

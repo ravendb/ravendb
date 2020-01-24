@@ -89,7 +89,7 @@ namespace FastTests.Client
                     session.SaveChanges();
 
 
-                    var multiDbHiLo = new AsyncMultiDatabaseHiLoIdGenerator(store, store.Conventions);
+                    var multiDbHiLo = new AsyncMultiDatabaseHiLoIdGenerator(store);
 
                     var generateDocumentKey = multiDbHiLo.GenerateDocumentIdAsync(null, new User()).GetAwaiter().GetResult();
                     Assert.Equal("users/65-A", generateDocumentKey);

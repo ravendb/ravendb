@@ -222,9 +222,9 @@ namespace Raven.Client.Documents
             {
                 if (Conventions.AsyncDocumentIdGenerator == null) // don't overwrite what the user is doing
                 {
-                    var generator = new AsyncMultiDatabaseHiLoIdGenerator(this, Conventions);
+                    var generator = new AsyncMultiDatabaseHiLoIdGenerator(this);
                     _asyncMultiDbHiLo = generator;
-                    Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentIdAsync(dbName, entity);
+                    Conventions.AsyncDocumentIdGenerator = (database, entity) => generator.GenerateDocumentIdAsync(database, entity);
                 }
 
                 Conventions.Freeze();
