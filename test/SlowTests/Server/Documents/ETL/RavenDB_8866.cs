@@ -94,7 +94,7 @@ namespace SlowTests.Server.Documents.ETL
                 var mre2 = new ManualResetEvent(false);
                 var etlDone = WaitForEtl(src, (n, s) =>
                 {
-                    mre.WaitOne();
+                    Assert.True(mre.WaitOne(TimeSpan.FromMinutes(1)));
                     mre.Reset();
 
                     mre2.Set();

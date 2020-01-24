@@ -348,7 +348,7 @@ namespace Tests.Infrastructure
             serverToDispose.AfterDisposal += () => mre.Set();
             serverToDispose.Dispose();
 
-            mre.Wait();
+            Assert.True(mre.Wait(TimeSpan.FromMinutes(1)), $"Could not dispose server: {serverToDispose.WebUrl}");
         }
 
         protected static async Task<(string DataDir, string Url)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose, CancellationToken token = default)
