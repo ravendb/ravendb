@@ -6,6 +6,8 @@ namespace Raven.Client.Documents.Operations.Configuration
 {
     public class ClientConfiguration
     {
+        private char? _identityPartsSeparator;
+
         public long Etag { get; set; }
 
         public bool Disabled { get; set; }
@@ -14,7 +16,17 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         public ReadBalanceBehavior? ReadBalanceBehavior { get; set; }
 
-        public char? IdentityPartsSeparator { get; set; }
+        public char? IdentityPartsSeparator
+        {
+            get => _identityPartsSeparator;
+            set
+            {
+                if (value == '|')
+                    throw new InvalidOperationException("Cannot set identity parts separator to '|'.");
+
+                _identityPartsSeparator = value;
+            }
+        }
 
         public DynamicJsonValue ToJson()
         {
