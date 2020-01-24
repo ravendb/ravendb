@@ -613,6 +613,10 @@ namespace Raven.Client.Documents.Conventions
             set
             {
                 AssertNotFrozen();
+
+                if (value == '|')
+                    throw new InvalidOperationException("Cannot set identity parts separator to '|'.");
+
                 _identityPartsSeparator = value;
             }
         }
