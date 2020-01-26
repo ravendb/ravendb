@@ -110,7 +110,7 @@ namespace Sparrow.Json.Parsing
         }
     }
 
-    public class DynamicJsonArray : IEnumerable<object>
+    public class DynamicJsonArray : IEnumerable<object>, IDisposable
     {
         public int SourceIndex = -1;
         public int ModificationsIndex;
@@ -161,6 +161,15 @@ namespace Sparrow.Json.Parsing
         public void Clear()
         {
             Items.Clear();
+        }
+
+        public void Dispose()
+        {
+            foreach (var item in Items)
+            {
+                if (item is IDisposable toDispose)
+                    toDispose.Dispose();
+            }
         }
     }
 
