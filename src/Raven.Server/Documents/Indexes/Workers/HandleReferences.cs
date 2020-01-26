@@ -194,6 +194,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             collectionStats.RecordMapReferenceAttempt();
 
                                             var current = docsEnumerator.Current;
+                                            stats.RecordDocumentSize(current.Data.Size);
 
                                             if (indexWriter == null)
                                                 indexWriter = writeOperation.Value;
