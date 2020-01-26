@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -198,23 +200,11 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task ReshuffleAfterPromotion()
         {
-            var extendedTimeout = 30_000;
             var numberOfDatabases = 25;
-            if (PlatformDetails.Is32Bits)
-            {
-                extendedTimeout = 60_000;
-                numberOfDatabases = 10;
-            }
 
             var clusterSize = 3;
-            var cluster = await CreateRaftCluster(clusterSize, false, 0, customSettings: new Dictionary<string, string>
-            {
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1"
-            });
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { cluster.Leader.WebUrl },
-            }.Initialize())
+            var cluster = await CreateRaftCluster(clusterSize, false, 0, watcherCluster: true);
+            using (var store = new DocumentStore {Urls = new[] {cluster.Leader.WebUrl}}.Initialize())
             {
                 var names = new List<string>();
                 for (int i = 0; i < numberOfDatabases; i++)
@@ -224,6 +214,7 @@ namespace RachisTests.DatabaseCluster
                     var doc = new DatabaseRecord(name);
                     var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                     Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
+                    await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 }
 
                 var nodeInfo = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[2]);
@@ -231,9 +222,9 @@ namespace RachisTests.DatabaseCluster
                 // wait for moving all of the nodes to rehab state
                 foreach (string name in names)
                 {
-                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize - 1, extendedTimeout);
+                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize - 1);
                     Assert.Equal(clusterSize - 1, val);
-                    val = await WaitForValueAsync(async () => await GetRehabCount(store, name), 1, extendedTimeout);
+                    val = await WaitForValueAsync(async () => await GetRehabCount(store, name), 1);
                     Assert.Equal(1, val);
                 }
 
@@ -242,26 +233,19 @@ namespace RachisTests.DatabaseCluster
                     DeletePrevious = false,
                     RunInMemory = false,
                     PartialPath = nodeInfo.DataDir,
-                    CustomSettings = new Dictionary<string, string>
-                    {
-                        [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = nodeInfo.Url
-                    }
+                    CustomSettings = new Dictionary<string, string> {[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = nodeInfo.Url}
                 });
 
-                var preferredCount = new Dictionary<string, int>
-                {
-                    ["A"] = 0,
-                    ["B"] = 0,
-                    ["C"] = 0
-                };
+                var preferredCount = new Dictionary<string, int> {["A"] = 0, ["B"] = 0, ["C"] = 0};
 
                 // wait for recovery of all of the nodes back to member
                 foreach (string name in names)
                 {
-                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize, extendedTimeout);
+                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize);
                     Assert.Equal(clusterSize, val);
 
                     var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(name));
+                    Assert.Equal(clusterSize, res.Topology.Members.Count);
 
                     var preferred = res.Topology.Members[0];
                     preferredCount[preferred]++;

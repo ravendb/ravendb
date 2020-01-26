@@ -133,6 +133,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value, flattenArrays: false, engine: documentToProcess.Engine, context: indexContext);
                     newFields += GetRegularFields(instance, field, value, indexContext, nestedArray: true);
+
+                    if (value is IDisposable toDispose)
+                    {
+                        // the value was converted to a lucene field and isn't needed anymore
+                        toDispose.Dispose();
+                    }
                 }
             }
 

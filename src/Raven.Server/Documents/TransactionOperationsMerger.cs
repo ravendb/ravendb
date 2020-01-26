@@ -22,6 +22,7 @@ using Sparrow.Platform;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
+using Voron;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
@@ -849,6 +850,7 @@ namespace Raven.Server.Documents
                                 rejectedBuffer.Add(operationToReject);
                             }
                             NotifyOnThreadPool(rejectedBuffer);
+                            GlobalFlushingBehavior.GlobalFlusher.Value?.MaybeFlushEnvironment(context.Environment); // commit stage 2 won't trigger so we need to ask for flush here
                             break;
                         }
                         _lastHighDirtyMemCheck = now; // reset timer for next check only if no errors (otherwise check every single write until back to normal)
