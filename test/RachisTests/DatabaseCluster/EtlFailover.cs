@@ -35,6 +35,7 @@ namespace RachisTests.DatabaseCluster
             var dstRaft = await CreateRaftClusterAndGetLeader(1);
             var srcNodes = await CreateDatabaseInCluster(srcDb, 3, srcRaft.WebUrl);
             var destNode = await CreateDatabaseInCluster(dstDb, 1, dstRaft.WebUrl);
+            var node = srcNodes.Servers.First(x => x.ServerStore.NodeTag != srcRaft.ServerStore.NodeTag).ServerStore.NodeTag;
 
             using (var src = new DocumentStore
             {
@@ -65,7 +66,7 @@ namespace RachisTests.DatabaseCluster
                         }
                     },
                     LoadRequestTimeoutInSec = 30,
-                    MentorNode = "B"
+                    MentorNode = node
                 };
                 var connectionString = new RavenConnectionString
                 {
@@ -78,7 +79,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.NotNull(result.RaftCommandIndex);
 
                 src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
-                var originalTaskNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == "B");
+                var originalTaskNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == node);
                 
                 using (var session = src.OpenSession())
                 {
@@ -91,7 +92,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
-                await srcRaft.ServerStore.RemoveFromClusterAsync("B");
+                await srcRaft.ServerStore.RemoveFromClusterAsync(node);
                 await originalTaskNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
 
                 using (var session = src.OpenSession())
