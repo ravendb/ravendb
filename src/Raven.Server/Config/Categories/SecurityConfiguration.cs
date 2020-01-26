@@ -142,6 +142,24 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.WellKnownIssuerHashes.Admin", ConfigurationEntryScope.ServerWideOnly)]
         public string[] WellKnownIssuerHashes { get; set; }
 
+        [Description("EXPERT: A command or executable to validate a server authentication request. " +
+                     "RavenDB will execute: command [user-arg-1] ... [user-arg-n] <sender-url> <base64-certificate> <errors>. " +
+                     "The executable will return a case-insensitive boolean string through the standard output (e.g. true, false) indicating whether to approve the connection.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Validation.Exec", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateValidationExec { get; set; }
+
+        [Description("EXPERT: The optional user arguments for the 'Security.Certificate.Validation.Exec' command or executable. The arguments must be escaped for the command line.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Validation.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateValidationExecArguments { get; set; }
+
+        [Description("The number of seconds to wait for the 'Security.Certificate.Validation.Exec' executable to exit. Default: 5 seconds")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Security.Certificate.Validation.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting CertificateValidationExecTimeout { get; set; }
+
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 
         internal string UnsecureAccessWarningMessage { get; private set; }

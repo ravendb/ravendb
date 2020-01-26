@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                WaitForIndexing(store, allowErrors: true);
 
                 Assert.True(SpinWait.SpinUntil(() =>
                 {
@@ -119,7 +119,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                WaitForIndexing(store, allowErrors: true);
 
                 Assert.True(SpinWait.SpinUntil(() =>
                 {

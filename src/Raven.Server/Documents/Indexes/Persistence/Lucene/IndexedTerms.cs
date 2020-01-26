@@ -28,8 +28,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             public ConditionalWeakTable<IndexReader, CachedIndexedTerms> TermsCachePerReader = new ConditionalWeakTable<IndexReader, CachedIndexedTerms>();
 
-            public List<WeakReference<IndexReader>> Keys = new List<WeakReference<IndexReader>>();
-
             public WeakCache()
             {
                 LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
@@ -37,16 +35,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public void LowMemory()
             {
-                lock (this)
-                {
-                    foreach (var reference in Keys)
-                    {
-                        if (reference.TryGetTarget(out IndexReader target))
-                            TermsCachePerReader.Remove(target);
-                    }
-
-                    Keys.Clear();
-                }
+                TermsCachePerReader.Clear();
             }
 
             public void LowMemoryOver()

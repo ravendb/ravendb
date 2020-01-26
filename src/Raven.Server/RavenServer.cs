@@ -10,7 +10,6 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -22,11 +21,9 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
-using Raven.Client;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -54,17 +51,13 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
-using Raven.Server.Web.Authentication;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.LowMemory;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
-using Sparrow.Server.Utils;
 using Sparrow.Threading;
+using DateTime = System.DateTime;
 
 namespace Raven.Server
 {
@@ -91,6 +84,7 @@ namespace Raven.Server
         private IWebHost _redirectingWebHost;
 
         private readonly Logger _tcpLogger;
+        private readonly ExternalCertificateValidator _externalCertificateValidator;
 
         public event Action AfterDisposal;
 
@@ -122,6 +116,7 @@ namespace Raven.Server
             MetricCacher = new ServerMetricCacher(this);
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
+            _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
         }
 
         public TcpListenerStatus GetTcpServerStatus()
@@ -253,6 +248,8 @@ namespace Raven.Server
                         // errors here, it all goes to the log anyway
                     }
 
+                    _externalCertificateValidator.Initialize();
+
                     var port = new Uri(Configuration.Core.ServerUrls[0]).Port;
                     if (port == 443 && Configuration.Security.DisableHttpsRedirection == false)
                     {
@@ -328,6 +325,12 @@ namespace Raven.Server
                     Logger.Operations("Could not start server", e);
                 throw;
             }
+        }
+        
+        public void ClearExternalCertificateValidationCache()
+        {
+            // Can be called from the Admin JS Console
+            _externalCertificateValidator?.ClearCache();
         }
 
         public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
