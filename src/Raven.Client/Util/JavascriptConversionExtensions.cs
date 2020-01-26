@@ -2435,7 +2435,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class TimeSeriesSupport<T> : JavascriptConversionExtension
+        internal class TimeSeriesSupport<T> : JavascriptConversionExtension
         {
             private readonly RavenQueryProviderProcessor<T> _queryProviderProcessor;
 

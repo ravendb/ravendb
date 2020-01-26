@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     internal class TimeSeriesQueryVisitor<T>
     {
         private readonly RavenQueryProviderProcessor<T> _providerProcessor;
-        private TimeSeriesWhereClausVisitor<T> _whereVisitor;
+        private TimeSeriesWhereClauseVisitor<T> _whereVisitor;
         private StringBuilder _selectFields;
         private string _src, _between, _where, _groupBy, _loadTag;
 
@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                   unary.Operand is LambdaExpression lambda))
                 throw new NotSupportedException("Unsupported expression in Where clause " + expression);
 
-            _whereVisitor = new TimeSeriesWhereClausVisitor<T>(lambda.Parameters[0].Name, _providerProcessor.DocumentQuery);
+            _whereVisitor = new TimeSeriesWhereClauseVisitor<T>(lambda.Parameters[0].Name, _providerProcessor.DocumentQuery);
 
             if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
                 LoadTag(lambda.Parameters[1].Name);

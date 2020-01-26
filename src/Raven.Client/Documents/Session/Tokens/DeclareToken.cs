@@ -5,38 +5,37 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public class DeclareToken : QueryToken
     {
-        public enum DeclarationType
-        {
-            Function,
-            TimeSeries
-        }
-
         public string Name { get; }
 
         public string Parameters { get; }
 
         public string Body { get; }
 
-        public DeclarationType Type { get; }
+        private readonly bool _timeSeries;
 
-        private DeclareToken(string name, string body, string parameters, DeclarationType type)
+        private DeclareToken(string name, string body, string parameters, bool timeSeries)
         {
             Name = name;
             Body = body;
             Parameters = parameters;
-            Type = type;
+            _timeSeries = timeSeries;
         }
 
-        public static DeclareToken Create(string name, string body, string parameters = null, DeclarationType type = DeclarationType.Function)
+        public static DeclareToken CreateFunction(string name, string body, string parameters = null)
         {
-            return new DeclareToken(name, body, parameters, type);
+            return new DeclareToken(name, body, parameters, timeSeries: false);
+        }
+
+        public static DeclareToken CreateTimeSeries(string name, string body, string parameters = null)
+        {
+            return new DeclareToken(name, body, parameters, timeSeries: true);
         }
 
         public override void WriteTo(StringBuilder writer)
         {
             writer
                 .Append("declare ")
-                .Append(Type == DeclarationType.Function ? "function " : "timeseries ")
+                .Append(_timeSeries ? "timeseries " : "function ")
                 .Append(Name)
                 .Append('(')
                 .Append(Parameters)

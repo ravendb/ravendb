@@ -2423,7 +2423,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             _declareTokens ??= new List<DeclareToken>();
-            var declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
+            var declareToken = DeclareToken.CreateFunction("output", _declareBuilder.ToString(), paramBuilder.ToString());
             _declareTokens.Add(declareToken);
             _jsSelectBody = $"output({declareToken.Parameters})";
         }
@@ -2796,7 +2796,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var tsFunctionName = Constants.TimeSeries.QueryFunction + _declareTokens.Count;
 
-            _declareTokens.Add(DeclareToken.Create(tsFunctionName, tsQueryText, parameters, type: DeclareToken.DeclarationType.TimeSeries));
+            _declareTokens.Add(DeclareToken.CreateTimeSeries(tsFunctionName, tsQueryText, parameters));
 
             return $"{tsFunctionName}({parameters})";
         }
