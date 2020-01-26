@@ -6,7 +6,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
-    internal class TimeSeriesWhereClausVisitor<T> : ExpressionVisitor
+    internal class TimeSeriesWhereClauseVisitor<T> : ExpressionVisitor
     {
         private readonly string _alias;
 
@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         internal List<string> Parameters;
 
-        public TimeSeriesWhereClausVisitor(string alias, IAbstractDocumentQuery<T> documentQuery)
+        public TimeSeriesWhereClauseVisitor(string alias, IAbstractDocumentQuery<T> documentQuery)
         {
             _alias = alias;
             _documentQuery = documentQuery;
