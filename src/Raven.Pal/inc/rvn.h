@@ -1,7 +1,8 @@
 #ifndef RVN_H
 #define RVN_H
-
-//#define PRINTF_DEBUG
+/*
+#define PRINTF_DEBUG
+*/
 
 #ifdef __APPLE__
 #define EXPORT __attribute__((visibility("default")))
