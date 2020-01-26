@@ -32,7 +32,16 @@ rvn_file_sync(void *handle, int32_t *detailed_error_code)
     struct map_file_handle* mfh = (struct map_file_handle *)handle;
     int32_t rc = _flush_file(mfh->fd);
     if (rc != SUCCESS)
+    {
         *detailed_error_code = errno;
+#ifdef PRINTF_DEBUG
+        printf("rvn_file_sync() failed, error code = %d\n", *detailed_error_code);
+#endif
+    }
+
+#ifdef PRINTF_DEBUG
+        printf("rvn_file_sync(), rc = %d\n", rc);
+#endif
     return rc;
 }
 
@@ -41,10 +50,17 @@ PRIVATE void free_map_file_handle(struct map_file_handle *handle)
 {
     if (handle->path != NULL)
     {
+        #ifdef PRINTF_DEBUG
+        printf("free_map_file_handle(), invoke free() on path = %s\n", handle->path);
+        #endif
+
         free((void *)(handle->path));
         (handle)->path = NULL;
     }
 
+    #ifdef PRINTF_DEBUG
+    printf("free_map_file_handle(), invoke on fd = %d\n", handle->fd);
+    #endif
     free((void *)handle);
 }
 
@@ -57,7 +73,9 @@ rvn_create_file(const char *path,
     int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
-
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s\n", path);
+#endif
     assert(path);
     assert(path[0] != '\0');
     assert(initial_file_size > 0);
@@ -67,6 +85,9 @@ rvn_create_file(const char *path,
     if(mfh == NULL)
     {
         rc = FAIL_CALLOC;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, failed to allocate map_file_handle (FAIL_CALLOC)\n", path);
+#endif
         goto error_clean_with_error;
     }
 
@@ -74,29 +95,49 @@ rvn_create_file(const char *path,
     if (dup_path == NULL)
     {
         rc = FAIL_NOMEM;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, failed to duplicate path (FAIL_NOMEM)\n", path);
+#endif
         goto error_clean_with_error;
     }
+
     char *directory = dirname(dup_path);
     rc = _ensure_path_exists(directory, detailed_error_code);
     free(dup_path);
-    if (rc != SUCCESS) 
+    if (rc != SUCCESS)
+    {
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, _ensure_path_exists() failed, rc = %d\n", path, rc);
+#endif
         goto error_clean_with_error;
+    }
 
     mfh->path = strdup(path);
     if (mfh->path == NULL)
     {
         rc = FAIL_CALLOC;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, failed to duplicate mfh->path (FAIL_CALLOC)\n", path);
+#endif
         goto error_clean_with_error;
     }
     mfh->flags = flags;
     int32_t largefile = 0;
      if (sizeof(void*) == 4) /* 32 bits */
+     {
         largefile = O_LARGEFILE;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, 32-bit process detected, setting O_LARGEFILE flag on flags\n", path);
+#endif
+     }
 
     mfh->fd = open(path, O_RDWR | O_CREAT | largefile, S_IWUSR | S_IRUSR);
     if (mfh->fd == -1)
     {
         rc = FAIL_OPEN_FILE;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, failed to open file (FAIL_OPEN_FILE)\n", path);
+#endif
         goto error_clean_with_error;
     }
 
@@ -104,6 +145,9 @@ rvn_create_file(const char *path,
     if (fstat(mfh->fd, &st) == -1)
     {
         rc = FAIL_STAT_FILE;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, fstat() failed (FAIL_STAT_FILE)\n", path);
+#endif
         goto error_clean_with_error;
     }
 
@@ -113,6 +157,9 @@ rvn_create_file(const char *path,
     if (sys_page_size == -1)
     {
         rc = FAIL_SYSCONF;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, sysconf(_SC_PAGE_SIZE) failed (FAIL_SYSCONF)\n", path);
+#endif
         goto error_clean_with_error;
     }
 
@@ -123,21 +170,42 @@ rvn_create_file(const char *path,
     {
         sz = _nearest_size_to_page_size(rvn_max(initial_file_size, sz), ALLOCATION_GRANULARITY);
     }
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, calculated desired size for the file is %lld\n", path, sz);
+#endif
 
     if(sz != st.st_size)
-    {
+    {        
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, desired size is not its actual size (%lld != %ld), will attempt to resize the file\n", path, sz, st.st_size);
+#endif
+
         rc = _allocate_file_space(mfh->fd, sz, detailed_error_code);
         if (rc != SUCCESS)
+        {
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, _allocate_file_space() failed, rc = %d\n", path, rc);
+#endif
+
             goto error_clean;
+        }
         if (_sync_directory_allowed(mfh->fd) == SYNC_DIR_ALLOWED)
         {
             rc = _sync_directory_for(path, detailed_error_code);
             if (rc != SUCCESS)
+            {
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, _sync_directory_for() failed, rc = %d\n", path, rc);
+#endif
                 goto error_clean;
+            }
         }
     }
 
     *actual_file_size = sz;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, finished successfully, actual_file_size = %lld\n", path, sz);
+#endif
 
     return rc; /* SUCCESS */
 
@@ -184,13 +252,24 @@ rvn_allocate_more_space(
 
     rc = _allocate_file_space(mfh->fd, new_length_after_adjustment, detailed_error_code);
     if (rc != SUCCESS)
+    {
+#ifdef PRINTF_DEBUG
+    printf("rvn_allocate_more_space(), path = %s, _allocate_file_space() failed, detailed_error_code = %d\n", mfh->path, *detailed_error_code);
+#endif
         return rc;
+    }
 
     if (_sync_directory_allowed(mfh->fd) == SYNC_DIR_ALLOWED)
     {
         rc = _sync_directory_for(mfh->path, detailed_error_code);
         if (rc != SUCCESS)
+        {
+#ifdef PRINTF_DEBUG
+    printf("rvn_allocate_more_space(), path = %s, _sync_directory_for() failed, detailed_error_code = %d\n", mfh->path, *detailed_error_code);
+#endif
+
             return rc;
+        }
     }
 
     if (map_after_allocation_flag != 0)
@@ -203,8 +282,17 @@ rvn_allocate_more_space(
         
         rc = rvn_mmap_file(new_length_after_adjustment, mfh->flags, handle, 0L, new_address, detailed_error_code);
         if (rc == FAIL_MMAP64)
+        {
+#ifdef PRINTF_DEBUG
+    printf("rvn_allocate_more_space(), path = %s, rvn_mmap_file() failed, detailed_error_code = %d\n", mfh->path, *detailed_error_code);
+#endif
             goto error_cleanup_without_errno;
+        }
     }
+#ifdef PRINTF_DEBUG
+    printf("rvn_allocate_more_space(), path = %s, finished successfully.", mfh->path);
+#endif
+
     return SUCCESS;
 
 error_cleanup_without_errno:
@@ -221,8 +309,12 @@ rvn_unmap(int32_t flags, void *address, int64_t size, int32_t *detailed_error_co
     int32_t rc = munmap(address, size);
 
     if (rc != 0)
+    {
         *detailed_error_code = errno;
-
+#ifdef PRINTF_DEBUG
+    printf("rvn_unmap(), address = %p, size = %lld, execution failed, detailed_error_code = %d\n", address, size, errno);
+#endif
+    }
     return rc;
 }
 
@@ -234,6 +326,9 @@ rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code, bool shouldF
     
     if (mfh->fd == -1)
     {
+#ifdef PRINTF_DEBUG
+    printf("rvn_mmap_dispose_handle() failed, passed an invalid handle (FAIL_INVALID_HANDLE)\n");
+#endif
         rc = FAIL_INVALID_HANDLE;
         goto error_cleanup;
     }
@@ -244,6 +339,10 @@ rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code, bool shouldF
         if (unlink_rc != 0)
         {
             /* record the error and continue to close */
+#ifdef PRINTF_DEBUG
+    printf("rvn_mmap_dispose_handle(), path = %s, unlink() failed, detailed_error_code = %d (FAIL_UNLINK)\n", mfh->path, errno);
+#endif
+
             rc = FAIL_UNLINK;
             *detailed_error_code = errno;
         }
@@ -283,17 +382,34 @@ rvn_discard_virtual_memory(void* address, int64_t size, int32_t* detailed_error_
 EXPORT int32_t
 rvn_remap(void *base_address, void **new_address, void *handle, int64_t size, int32_t flags, int64_t offset, int32_t *detailed_error_code)
 {
+#ifdef PRINTF_DEBUG
+    struct map_file_handle *mfh = (struct map_file_handle *)handle;
+    printf("rvn_remap() started, path = %s, starting execution\n", mfh->path);
+#endif
+
     int32_t rc = rvn_unmap(MMOPTIONS_NONE, base_address, ALLOCATION_GRANULARITY, detailed_error_code);
-    if (rc != SUCCESS)    
+    if (rc != SUCCESS)
+    {
+#ifdef PRINTF_DEBUG
+    printf("rvn_remap(), path = %s, rvn_unmap() failed, rc = %d\n", mfh->path, rc);
+#endif
         return rc;
+    }
 
     int64_t sz = _nearest_size_to_page_size(size, ALLOCATION_GRANULARITY);
-    rc = rvn_mmap_file(sz, flags, handle, offset, new_address, detailed_error_code);    
+    rc = rvn_mmap_file(sz, flags, handle, offset, new_address, detailed_error_code);
+    if(rc != SUCCESS)
+    {
+#ifdef PRINTF_DEBUG
+    printf("rvn_remap(), path = %s, rvn_mmap_file() failed, rc = %d\n", mfh->path, rc);
+#endif       
+    }
+
     return rc;
 }
 
 EXPORT int32_t
-rvn_mmap_file(int64_t sz, int64_t flags, void *handle, int64_t offset, void **addr, int32_t *detailed_error_code)
+rvn_mmap_file(int64_t sz, int32_t flags, void *handle, int64_t offset, void **addr, int32_t *detailed_error_code)
 {
     struct map_file_handle* mfh = (struct map_file_handle *)handle;
     int32_t mmap_flags = 0;
@@ -306,6 +422,10 @@ rvn_mmap_file(int64_t sz, int64_t flags, void *handle, int64_t offset, void **ad
     if (*addr == MAP_FAILED)
     {
         *detailed_error_code = errno;
+#ifdef PRINTF_DEBUG
+    printf("rvn_mmap_file(), path = %s, rvn_mmap() failed, detailed_error_code = %d\n", mfh->path, errno);
+#endif
+
         return FAIL_MMAP64;
     }
     return SUCCESS;
@@ -317,6 +437,11 @@ rvn_flush_file(void *handle, int32_t *detailed_error_code)
     struct map_file_handle* mfh = (struct map_file_handle *)handle;
     int32_t rc = _flush_file(mfh->fd);
     if (rc != SUCCESS)
+    {
+#ifdef PRINTF_DEBUG
+    printf("rvn_flush_file(), path = %s, _flush_file() failed, detailed_error_code = %d\n", mfh->path, errno);
+#endif
         *detailed_error_code = errno;
+    }
     return rc;
 }
