@@ -47,6 +47,12 @@ namespace Raven.Client.Documents.Operations.Replication
             ConnectionStringName = connectionStringName;
         }
 
+        public void AssertValidReplication()
+        {
+            if (string.IsNullOrEmpty(ConnectionStringName))
+                throw new ArgumentNullException(nameof(ConnectionStringName));
+        }
+
         public static void RemoveExternalReplication<T>(List<T> replicationTasks, long taskId) where T : ExternalReplicationBase
         {
             foreach (var task in replicationTasks)
@@ -92,12 +98,24 @@ namespace Raven.Client.Documents.Operations.Replication
             if (other is ExternalReplicationBase externalReplication)
             {
                 return string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase) &&
-                       TaskId == externalReplication.TaskId &&
-                       string.Equals(externalReplication.Name, Name, StringComparison.OrdinalIgnoreCase) &&
-                       string.Equals(externalReplication.Database, Database, StringComparison.OrdinalIgnoreCase);
+                       string.Equals(externalReplication.Database, Database, StringComparison.OrdinalIgnoreCase) &&
+                       TaskId == externalReplication.TaskId;
             }
 
             return false;
+        }
+
+        public bool Equals(ExternalReplicationBase other) => IsEqualTo(other);
+        
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
+            return IsEqualTo((ExternalReplicationBase)obj);
         }
 
         public string GetMentorNode()

@@ -1,20 +1,12 @@
-﻿using System;
-using System.IO;
-using FastTests;
+﻿using System.IO;
 using Raven.Client.Documents.Conventions;
 using Raven.Embedded;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EmbeddedTests
 {
-    public class BasicTests : RavenTestBase
+    public class BasicTests : EmbeddedTestBase
     {
-        public BasicTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
         public void TestEmbedded()
         {
@@ -87,23 +79,14 @@ namespace EmbeddedTests
             if (Directory.Exists(dataDirectory) == false)
                 Directory.CreateDirectory(dataDirectory);
 
-            foreach (var extention in new[] {"*.dll", "*.so", "*.dylib"})
-            {
-                foreach (var file in Directory.GetFiles(AppContext.BaseDirectory, extention))
-                {
-                    var fileInfo = new FileInfo(file);
-                    File.Copy(file, Path.Combine(serverDirectory, fileInfo.Name));
-                }
-            }
-
 #if DEBUG
-            var runtimeConfigPath = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp2.2/Raven.Server.runtimeconfig.json";
+            var runtimeConfigPath = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp3.1/Raven.Server.runtimeconfig.json";
             if (File.Exists(runtimeConfigPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                runtimeConfigPath = @"../../../../../src/Raven.Server/bin/Debug/netcoreapp2.2/Raven.Server.runtimeconfig.json";
+                runtimeConfigPath = @"../../../../../src/Raven.Server/bin/Debug/netcoreapp3.1/Raven.Server.runtimeconfig.json";
 #else
-                var runtimeConfigPath = @"../../../../../src/Raven.Server/bin/x64/Release/netcoreapp2.2/Raven.Server.runtimeconfig.json";
+                var runtimeConfigPath = @"../../../../../src/Raven.Server/bin/x64/Release/netcoreapp3.1/Raven.Server.runtimeconfig.json";
                 if (File.Exists(runtimeConfigPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                    runtimeConfigPath = @"../../../../../src/Raven.Server/bin/Release/netcoreapp2.2/Raven.Server.runtimeconfig.json";
+                    runtimeConfigPath = @"../../../../../src/Raven.Server/bin/Release/netcoreapp3.1/Raven.Server.runtimeconfig.json";
 #endif
 
             var runtimeConfigFileInfo = new FileInfo(runtimeConfigPath);
@@ -112,7 +95,36 @@ namespace EmbeddedTests
 
             File.Copy(runtimeConfigPath, Path.Combine(serverDirectory, runtimeConfigFileInfo.Name));
 
+            foreach (var extension in new[] { "*.dll", "*.so", "*.dylib", "*.deps.json" })
+            {
+                foreach (var file in Directory.GetFiles(runtimeConfigFileInfo.DirectoryName, extension))
+                {
+                    var fileInfo = new FileInfo(file);
+                    File.Copy(file, Path.Combine(serverDirectory, fileInfo.Name), true);
+                }
+            }
+
+            var runtimesSource = Path.Combine(runtimeConfigFileInfo.DirectoryName, "runtimes");
+            var runtimesDestination = Path.Combine(serverDirectory, "runtimes");
+
+            foreach (string dirPath in Directory.GetDirectories(runtimesSource, "*",
+                SearchOption.AllDirectories))
+                Directory.CreateDirectory(dirPath.Replace(runtimesSource, runtimesDestination));
+
+            foreach (string newPath in Directory.GetFiles(runtimesSource, "*.*",
+                SearchOption.AllDirectories))
+                File.Copy(newPath, newPath.Replace(runtimesSource, runtimesDestination), true);
+
             return (serverDirectory, dataDirectory);
+        }
+
+
+
+        private class Person
+        {
+            public string Id { get; set; }
+
+            public string Name { get; set; }
         }
     }
 }

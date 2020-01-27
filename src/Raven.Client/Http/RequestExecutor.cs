@@ -1730,7 +1730,7 @@ namespace Raven.Client.Http
                 try
                 {
                     if (setSslProtocols)
-                        httpMessageHandler.SslProtocols = SslProtocols.Tls12;
+                        httpMessageHandler.SslProtocols = TcpUtils.SupportedSslProtocols;
                 }
                 catch (PlatformNotSupportedException)
                 {

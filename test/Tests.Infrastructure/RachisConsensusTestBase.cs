@@ -40,7 +40,7 @@ namespace Tests.Infrastructure
             XunitLogging.RedirectStreams = false;
             XunitLogging.Init();
             XunitLogging.EnableExceptionCapture();
-            
+
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             JsonDeserializationCluster.Commands.Add(nameof(TestCommand), JsonDeserializationBase.GenerateJsonDeserializationRoutine<TestCommand>());
         }
@@ -150,18 +150,21 @@ namespace Tests.Infrastructure
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
-            var ch = (char)(66 + _count++);
+            char ch;
             if (bootstrap)
             {
                 ch = (char)65;
-                _count--;
+            }
+            else
+            {
+                ch = (char)(65 + Interlocked.Increment(ref _count));
             }
 
-            var url = "tcp://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/?" + caller + "#" + ch;
+            var url = $"tcp://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}/?{caller}#{ch}";
 
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
 
-            int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
+            int seed = PredictableSeeds ? _random.Next(int.MaxValue) : (int)Interlocked.Read(ref _count);
             var configuration = RavenConfiguration.CreateForServer(caller);
             configuration.Initialize();
             configuration.Core.RunInMemory = true;
@@ -314,7 +317,7 @@ namespace Tests.Infrastructure
         {
             var retires = 5;
             Exception lastException;
-            
+
             do
             {
                 try
@@ -345,10 +348,12 @@ namespace Tests.Infrastructure
         protected readonly List<RachisConsensus<CountingStateMachine>> RachisConsensuses = new List<RachisConsensus<CountingStateMachine>>();
         private readonly List<Task> _mustBeSuccessfulTasks = new List<Task>();
         private readonly Random _random = new Random();
-        private int _count;
+        private long _count;
 
-        public void Dispose()
+        public override void Dispose()
         {
+            base.Dispose();
+
             foreach (var rc in RachisConsensuses)
             {
                 rc.Dispose();

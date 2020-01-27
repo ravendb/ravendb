@@ -288,7 +288,7 @@ namespace SlowTests.Server.Replication
             DebuggerAttachedTimeout.DisableLongTimespan = true;
 
             var definitionName = $"pull-replication {GetDatabaseName()}";
-            var timeout = 3_000;
+            var timeout = 10_000;
 
             using (var sink = GetDocumentStore())
             using (var hub = GetDocumentStore())

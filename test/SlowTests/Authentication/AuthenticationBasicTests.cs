@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using FastTests;
 using Raven.Client.Documents;
@@ -74,6 +75,40 @@ namespace SlowTests.Authentication
                 AdminCertificate = adminCert,
                 ClientCertificate = userCert,
                 ModifyDatabaseName = s => dbName
+            }))
+            {
+                StoreSampleDoc(store, "test/1");
+
+                dynamic test1Doc;
+                using (var session = store.OpenSession())
+                    test1Doc = session.Load<dynamic>("test/1");
+
+                Assert.NotNull(test1Doc);
+            }
+        }
+
+        [Theory]
+        [InlineData(null)] // framework default
+        [InlineData("1.1")]
+        [InlineData("2.0")]
+        public void CanGetDocWithValidPermissionAndHttpVersion(string httpVersion)
+        {
+            var version = httpVersion != null ? new Version(httpVersion) : null;
+
+            var certificates = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName] = DatabaseAccess.ReadWrite
+            });
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDocumentStore = s => s.Conventions.HttpVersion = version
             }))
             {
                 StoreSampleDoc(store, "test/1");

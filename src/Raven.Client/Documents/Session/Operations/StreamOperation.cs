@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Session.Operations
             return enumerator;
         }
 
-        public async Task<IAsyncEnumerator<BlittableJsonReaderObject>> SetResultAsync(StreamResult response)
+        public async Task<Raven.Client.Util.IAsyncEnumerator<BlittableJsonReaderObject>> SetResultAsync(StreamResult response)
         {
             var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isAsync: true, _statistics);
             await enumerator.InitializeAsync().ConfigureAwait(false);
@@ -90,7 +90,7 @@ namespace Raven.Client.Documents.Session.Operations
             return enumerator;
         }
 
-        private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
+        private class YieldStreamResults : Raven.Client.Util.IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
         {
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isAsync, StreamQueryStatistics streamQueryStatistics)
             {

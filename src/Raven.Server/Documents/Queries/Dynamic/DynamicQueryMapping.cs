@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries.AST;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {

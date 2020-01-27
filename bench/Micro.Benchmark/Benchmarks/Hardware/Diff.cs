@@ -3610,21 +3610,21 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                         if (started == false)
                         {
                             // Write the start index of the run based from the start of the page we are diffing.
-                            Sse2.StoreNonTemporal((long*)(writePtr + 0), ptr - (byte*)originalBuffer);
+                            Sse2.StoreNonTemporal((int*)(writePtr + 0), (int)(ptr - (byte*)originalBuffer));
                             started = true;
                         }
 
                         // Execute a write on the current offset pointer.    
                         byte* auxWritePtr = writePtr + writePtrOffset;
-                        Sse2.StoreNonTemporal((long*)(auxWritePtr + 0), *(long*)(ptr + offset + 0));
-                        Sse2.StoreNonTemporal((long*)(auxWritePtr + 16), *(long*)(ptr + offset + 16));
+                        Sse2.StoreNonTemporal((int*)(auxWritePtr + 0), *(int*)(ptr + offset + 0));
+                        Sse2.StoreNonTemporal((int*)(auxWritePtr + 16), *(int*)(ptr + offset + 16));
 
                         writePtrOffset += 32;
                     }
                     else if (started) // our block is untouched here. 
                     {
                         // We write the actual size of the stored data.
-                        Sse2.StoreNonTemporal((long*)(writePtr + 8), writePtrOffset - 16);
+                        Sse2.StoreNonTemporal((int*)(writePtr + 8), (int)(writePtrOffset - 16));
 
                         // We advance the write pointer to the start of the next.
                         writePtr += writePtrOffset;
@@ -3641,7 +3641,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 if (started)
                 {
                     // We write the actual size of the stored data.
-                    Sse2.StoreNonTemporal((long*)(writePtr + 8), writePtrOffset - 16);
+                    Sse2.StoreNonTemporal((int*)(writePtr + 8), (int)(writePtrOffset - 16));
                     writePtr += writePtrOffset;
                 }
 
@@ -3675,7 +3675,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                         if (started == false)
                         {
                             // Write the start index of the run based from the start of the page we are diffing.
-                            Sse2.StoreNonTemporal((long*)(writePtr + 0), ptr - (byte*)originalBuffer);
+                            Sse2.StoreNonTemporal((int*)(writePtr + 0), (int)(ptr - (byte*)originalBuffer));
                             started = true;
                         }
 
@@ -3686,7 +3686,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     else if (started) // our block is untouched here. 
                     {
                         // We write the actual size of the stored data.
-                        Sse2.StoreNonTemporal((long*)(writePtr + 8), writePtrOffset - 16);
+                        Sse2.StoreNonTemporal((int*)(writePtr + 8), (int)(writePtrOffset - 16));
 
                         // We advance the write pointer to the start of the next.
                         writePtr += writePtrOffset;
@@ -3703,7 +3703,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 if (started)
                 {
                     // We write the actual size of the stored data.
-                    Sse2.StoreNonTemporal((long*)(writePtr + 8), writePtrOffset - 16);
+                    Sse2.StoreNonTemporal((int*)(writePtr + 8), (int)(writePtrOffset - 16));
                     writePtr += writePtrOffset;
                 }
 

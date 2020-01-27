@@ -236,7 +236,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             //       we can use that we know we are running on little endian hardware and the very first bit set 
             //       will correspond to the first byte which is different. 
 
-            bpx += Popcnt.PopCount((ulong)((long)xor & -(long)xor) - 1) >> 3;
+            bpx += Popcnt.PopCount((uint)((long)xor & -(long)xor) - 1) >> 3;
             return *bpx - *(bpx + offset);
         }
 
@@ -321,7 +321,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             //       we can use that we know we are running on little endian hardware and the very first bit set 
             //       will correspond to the first byte which is different. 
 
-            bpx += Popcnt.PopCount((ulong)((long)xor & -(long)xor) - 1) >> 3;
+            bpx += Popcnt.PopCount((uint)((long)xor & -(long)xor) - 1) >> 3;
             return *bpx - *(bpx + offset);
         }
 
@@ -402,7 +402,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             //       we can use that we know we are running on little endian hardware and the very first bit set 
             //       will correspond to the first byte which is different. 
 
-            bpx += Popcnt.PopCount((ulong)((long)xor & -(long)xor) - 1) >> 3;
+            bpx += Popcnt.PopCount((uint)((long)xor & -(long)xor) - 1) >> 3;
             return *bpx - *(bpx + offset);
         }
 
