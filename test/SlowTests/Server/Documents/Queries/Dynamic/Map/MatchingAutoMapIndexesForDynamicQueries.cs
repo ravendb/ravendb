@@ -10,6 +10,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
 using Xunit.Abstractions;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 {

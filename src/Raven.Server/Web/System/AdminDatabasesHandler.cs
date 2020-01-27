@@ -57,6 +57,7 @@ using Sparrow.Server.Utils;
 using Voron.Util.Settings;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
+using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Web.System

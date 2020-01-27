@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
-    <RuntimeFrameworkVersion>2.2.8</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>3.1.1</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>EmbeddedTests</AssemblyName>
     <PackageId>EmbeddedTests</PackageId>
@@ -9,11 +8,22 @@
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <TargetFrameworks>netcoreapp3.1;net461</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Include="..\..\src\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Data\testing.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
@@ -25,9 +35,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Embedded\Raven.Embedded.csproj" />
-    <ProjectReference Include="..\FastTests\FastTests.csproj" />
-    <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
-    <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
@@ -36,6 +44,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <PackageReference Include="xunit" Version="2.4.1" />
-    <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build9999" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build10000" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Data\testing.ravendbdump" />
   </ItemGroup>
 </Project>

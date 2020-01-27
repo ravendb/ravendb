@@ -831,7 +831,7 @@ namespace FastTests
         protected void PutSecrectKeyForDatabaseInServersStore(string dbName, RavenServer ravenServer)
         {
             var base64key = CreateMasterKey(out _);
-            var base64KeyClone = string.Copy(base64key);
+            var base64KeyClone = new string(base64key.ToCharArray());
             EnsureServerMasterKeyIsSetup(ravenServer);
             ravenServer.ServerStore.PutSecretKey(base64key, dbName, true);
             _serverDatabaseToMasterKey.Add((ravenServer, dbName), base64KeyClone);

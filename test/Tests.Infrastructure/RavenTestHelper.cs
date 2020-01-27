@@ -15,6 +15,7 @@ using Sparrow.Collections;
 using Sparrow.Platform;
 using Sparrow.Utils;
 using Xunit;
+using System.Text;
 
 namespace FastTests
 {
@@ -111,16 +112,41 @@ namespace FastTests
         public static void AssertNoIndexErrors(IDocumentStore store, string databaseName = null)
         {
             var errors = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexErrorsOperation());
+            StringBuilder sb = null;
+            foreach (var indexErrors in errors)
+            {
+                if (indexErrors == null || indexErrors.Errors == null || indexErrors.Errors.Length == 0)
+                    continue;
 
-            Assert.Empty(errors.SelectMany(x => x.Errors));
+                if (sb == null)
+                    sb = new StringBuilder();
+
+                sb.AppendLine($"Index Errors for '{indexErrors.Name}' ({indexErrors.Errors.Length})");
+                foreach (var indexError in indexErrors.Errors)
+                {
+                    sb.AppendLine($"- {indexError}");
+                }
+                sb.AppendLine();
+            }
+
+            if (sb == null)
+                return;
+
+            throw new InvalidOperationException(sb.ToString());
         }
 
         public static void AssertEqualRespectingNewLines(string expected, string actual)
         {
-            var regex = new Regex("\r*\n");
-            var converted = regex.Replace(expected, Environment.NewLine);
+            var converted = ConvertRespectingNewLines(expected);
 
             Assert.Equal(converted, actual);
+        }
+
+        public static void AssertStartsWithRespectingNewLines(string expected, string actual)
+        {
+            var converted = ConvertRespectingNewLines(expected);
+
+            Assert.StartsWith(converted, actual);
         }
 
         public static void AreEquivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual)
@@ -132,6 +158,15 @@ namespace FastTests
                 forMonitor.Remove(e);
             });
             Assert.Empty(forMonitor);
+        }
+
+        private static string ConvertRespectingNewLines(string toConvert)
+        {
+            if (string.IsNullOrEmpty(toConvert))
+                return toConvert;
+
+            var regex = new Regex("\r*\n");
+            return regex.Replace(toConvert, Environment.NewLine);
         }
     }
 }

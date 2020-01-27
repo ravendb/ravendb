@@ -766,7 +766,9 @@ namespace SlowTests.MailingList
                             DictionarySumOne = listOfUsers[i].DictionaryOfIntegers.GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value)).Sum(x => x.Value),
                             DictionaryAggregateTwo = listOfUsers[i].DictionaryOfIntegers.ToDictionary(y => y.Key, y => y.Value).Aggregate(0, (x1, x2) => x1 + x2.Value),
                             DictionarySumTwo = listOfUsers[i].DictionaryOfIntegers.GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value)).Sum(x => x.Value),
+#pragma warning disable CS0183 // 'is' expression's given expression is always of the provided type
                             IsDictionaryOfInt = listOfUsers[i].DictionaryOfIntegers.All(x => (int)x.Value is int),
+#pragma warning restore CS0183 // 'is' expression's given expression is always of the provided type
                             LongCount = listOfUsers[i].DictionaryOfIntegers.LongCount(pair => pair.Value > 50)
                         };
                         Assert.Equal(expectedResult.Id, results[i].Id);
@@ -829,7 +831,9 @@ namespace SlowTests.MailingList
                                         DictionaryAggregateOne = dicDic.Aggregate(0, (x1, x2) => x1 + x2.Value),
                                         DictionarySumOne = dicDic.Sum(x => x.Value),
                                         DictionaryOfIntegers = null,
+#pragma warning disable CS0183 // 'is' expression's given expression is always of the provided type
                                         IsDictionaryOfInt = dic.All(x => (int)x.Value is int),
+#pragma warning restore CS0183 // 'is' expression's given expression is always of the provided type
                                         LongCount = dic.LongCount(pair => pair.Value > 50)
                                     };
             }

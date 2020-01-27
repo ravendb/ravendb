@@ -12,19 +12,18 @@ using Sparrow.Server.Exceptions;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
-using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Util.Settings;
 
 namespace Voron.Platform.Posix
 {
-    public class PosixHelper
+    public static class PosixHelper
     {
         public static unsafe void AllocateFileSpace(StorageEnvironmentOptions options, int fd, long size, string file)
         {
             bool usingLseek;
             var result = Syscall.AllocateFileSpace(fd, size, file, out usingLseek);
-            
+
             if (result == (int)Errno.ENOSPC)
             {
                 var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(file);
@@ -59,8 +58,6 @@ namespace Voron.Platform.Posix
             return filesystem;
         }
 
-   
-
         public static unsafe bool TryReadFileHeader(FileHeader* header, VoronPathSetting path)
         {
             var fd = Syscall.open(path.FullPath, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
@@ -69,15 +66,15 @@ namespace Voron.Platform.Posix
                 if (fd == -1)
                 {
                     var lastError = Marshal.GetLastWin32Error();
-                    if (((Errno) lastError) == Errno.EACCES)
+                    if (((Errno)lastError) == Errno.EACCES)
                         return false;
                     Syscall.ThrowLastError(lastError);
                 }
                 int remaining = sizeof(FileHeader);
-                var ptr = ((byte*) header);
+                var ptr = ((byte*)header);
                 while (remaining > 0)
                 {
-                    var read = Syscall.read(fd, ptr, (ulong) remaining);
+                    var read = Syscall.read(fd, ptr, (ulong)remaining);
                     if (read == -1)
                     {
                         var err = Marshal.GetLastWin32Error();
@@ -87,7 +84,7 @@ namespace Voron.Platform.Posix
                     if (read == 0)
                         return false; // truncated file?
 
-                    remaining -= (int) read;
+                    remaining -= (int)read;
                     ptr += read;
                 }
                 return true;

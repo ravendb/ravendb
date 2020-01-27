@@ -8,7 +8,7 @@ namespace Raven.Server.Config.Categories
     public class EtlConfiguration : ConfigurationCategory
     {
         [Description("Number of seconds after which SQL command will timeout. Default: null (use provider default). Can be overriden by setting CommandTimeout property value in SQL ETL configuration.")]
-        [DefaultValue(typeof(string), null)]
+        [DefaultValue(null)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("ETL.SQL.CommandTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting? SqlCommandTimeout { get; set; }

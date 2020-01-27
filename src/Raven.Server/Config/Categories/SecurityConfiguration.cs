@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
@@ -94,7 +95,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Change.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateChangeExecArguments { get; set; }
-        
+
         [Description("The number of seconds to wait for the certificate executable to exit. Default: 30 seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
@@ -159,6 +160,11 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Security.Certificate.Validation.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CertificateValidationExecTimeout { get; set; }
+
+        [Description("EXPERT: Defines a list of supported TLS Cipher Suites. Values must be semicolon separated. Default: null (Operating System defaults)")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.TlsCipherSuites", ConfigurationEntryScope.ServerWideOnly)]
+        public TlsCipherSuite[] TlsCipherSuites { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 

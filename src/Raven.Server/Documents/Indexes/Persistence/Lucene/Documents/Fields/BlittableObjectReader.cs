@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Json;
 
@@ -8,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
     public class BlittableObjectReader : IDisposable
     {
-        private readonly StreamReader _reader;
+        private readonly NonDisposableStreamReader _reader;
         private readonly MemoryStream _ms;
 
         private StringBuilder _sb;
@@ -28,14 +30,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
         public BlittableObjectReader()
         {
             _ms = new MemoryStream();
-            _reader = new StreamReader(_ms, Encodings.Utf8, true, 1024, leaveOpen: true);
+            _reader = new NonDisposableStreamReader(new StreamReader(_ms, Encodings.Utf8, true, 1024, leaveOpen: true));
         }
 
         public TextReader GetTextReaderFor(BlittableJsonReaderObject value)
         {
-            _reader.DiscardBufferedData();
+            _reader.InnerReader.DiscardBufferedData();
 
-            var ms = _reader.BaseStream;
+            var ms = _reader.InnerReader.BaseStream;
 
             ms.Position = 0;
             value.WriteJsonTo(ms);
@@ -64,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
             do
             {
-                read = _reader.ReadBlock(_readBuffer, 0, _readBuffer.Length);
+                read = _reader.InnerReader.ReadBlock(_readBuffer, 0, _readBuffer.Length);
                 _sb.Append(_readBuffer, 0, read);
 
             } while (read == _readBuffer.Length);
@@ -74,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         public void ResetCapacity()
         {
-            _reader.DiscardBufferedData();
+            _reader.InnerReader.DiscardBufferedData();
 
             if (_sb != null)
             {
@@ -88,8 +90,123 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         public void Dispose()
         {
-            _reader?.Dispose();
+            _reader?.TrulyDispose();
             _ms?.Dispose();
+        }
+
+        private class NonDisposableStreamReader : TextReader
+        {
+            public readonly StreamReader InnerReader;
+
+            public NonDisposableStreamReader(StreamReader reader)
+            {
+                InnerReader = reader ?? throw new ArgumentNullException(nameof(reader));
+            }
+
+            public override void Close()
+            {
+                // do nothing
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                // do nothing
+            }
+
+            public override int Peek()
+            {
+                return InnerReader.Peek();
+            }
+
+            public override int Read()
+            {
+                return InnerReader.Read();
+            }
+
+            public override int Read(char[] buffer, int index, int count)
+            {
+                return InnerReader.Read(buffer, index, count);
+            }
+
+            public override int Read(Span<char> buffer)
+            {
+                return InnerReader.Read(buffer);
+            }
+
+            public override Task<int> ReadAsync(char[] buffer, int index, int count)
+            {
+                return InnerReader.ReadAsync(buffer, index, count);
+            }
+
+            public override ValueTask<int> ReadAsync(Memory<char> buffer, CancellationToken cancellationToken = new CancellationToken())
+            {
+                return InnerReader.ReadAsync(buffer, cancellationToken);
+            }
+
+            public override int ReadBlock(char[] buffer, int index, int count)
+            {
+                return InnerReader.ReadBlock(buffer, index, count);
+            }
+
+            public override int ReadBlock(Span<char> buffer)
+            {
+                return InnerReader.ReadBlock(buffer);
+            }
+
+            public override Task<int> ReadBlockAsync(char[] buffer, int index, int count)
+            {
+                return InnerReader.ReadBlockAsync(buffer, index, count);
+            }
+
+            public override ValueTask<int> ReadBlockAsync(Memory<char> buffer, CancellationToken cancellationToken = new CancellationToken())
+            {
+                return InnerReader.ReadBlockAsync(buffer, cancellationToken);
+            }
+
+            public override string ReadLine()
+            {
+                return InnerReader.ReadLine();
+            }
+
+            public override Task<string> ReadLineAsync()
+            {
+                return InnerReader.ReadLineAsync();
+            }
+
+            public override string ReadToEnd()
+            {
+                return InnerReader.ReadToEnd();
+            }
+
+            public override Task<string> ReadToEndAsync()
+            {
+                return InnerReader.ReadToEndAsync();
+            }
+
+            public override object InitializeLifetimeService()
+            {
+                return InnerReader.InitializeLifetimeService();
+            }
+
+            public override bool Equals(object obj)
+            {
+                return InnerReader.Equals(obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return InnerReader.GetHashCode();
+            }
+
+            public override string ToString()
+            {
+                return InnerReader.ToString();
+            }
+
+            public void TrulyDispose()
+            {
+                InnerReader?.Dispose();
+            }
         }
     }
 }

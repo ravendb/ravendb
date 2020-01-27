@@ -408,6 +408,9 @@ namespace Raven.Server.Documents.Replication
                         if (_reconnectQueue.TryRemove(failure) == false)
                             continue;
 
+                        if (_outgoingFailureInfo.Values.Contains(failure) == false)
+                            continue; // this connection is no longer exists
+
                         if (failure.RetryOn > DateTime.UtcNow)
                         {
                             _reconnectQueue.Add(failure);
@@ -662,7 +665,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private (List<ExternalReplicationBase> AddedDestinations, List<ExternalReplicationBase> RemovedDestiantions) FindExternalReplicationChanges(
-            HashSet<ExternalReplicationBase> current, 
+            HashSet<ExternalReplicationBase> current,
             List<ExternalReplicationBase> newDestinations)
         {
             if (newDestinations == null)
@@ -676,7 +679,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (newDestination.Disabled)
                     continue;
-
+                
                 removedDestinations.Remove(newDestination);
                 if (current.TryGetValue(newDestination, out var actual))
                 {
@@ -710,33 +713,53 @@ namespace Raven.Server.Documents.Replication
         private void HandleExternalReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
         {
             var externalReplications = newRecord.ExternalReplications.Concat<ExternalReplicationBase>(newRecord.SinkPullReplications).ToList();
+            SetExternalReplicationProperties(newRecord, externalReplications);
+
             var changes = FindExternalReplicationChanges(_externalDestinations, externalReplications);
 
             DropOutgoingConnections(changes.RemovedDestiantions, instancesToDispose);
             DropIncomingConnections(changes.RemovedDestiantions, instancesToDispose);
 
-            var newDestinations = changes.AddedDestinations.Where(configuration =>
+            var newDestinations = GetMyNewDestinations(newRecord, changes.AddedDestinations);
+
+            Task.Run(() =>
             {
-                var taskStatus = GetExternalReplicationState(_server, Database.Name, configuration.TaskId);
-                var whoseTaskIsIt = Database.WhoseTaskIsIt(newRecord.Topology, configuration, taskStatus);
-                return whoseTaskIsIt == _server.NodeTag;
-            }).ToList();
-            foreach (var externalReplication in newDestinations.ToList())
-            {
-                if (ValidateConnectionString(newRecord, externalReplication, out var connectionString) == false)
-                {
-                    newDestinations.Remove(externalReplication);
-                    continue;
-                }
-                externalReplication.ConnectionString = connectionString;
-            }
-            StartOutgoingConnections(newDestinations, external: true);
+                // here we might have blocking calls to fetch the tcp info.
+                StartOutgoingConnections(newDestinations, external: true);
+            });
 
             _externalDestinations.RemoveWhere(changes.RemovedDestiantions.Contains);
             foreach (var newDestination in newDestinations)
             {
                 _externalDestinations.Add(newDestination);
             }
+        }
+
+        private void SetExternalReplicationProperties(DatabaseRecord newRecord, List<ExternalReplicationBase> externalReplications)
+        {
+            foreach (var externalReplication in externalReplications)
+            {
+                if (ValidateConnectionString(newRecord, externalReplication, out var connectionString) == false)
+                {
+                    continue;
+                }
+
+                externalReplication.Database = connectionString.Database;
+                externalReplication.ConnectionString = connectionString;
+            }
+        }
+
+        private List<ExternalReplicationBase> GetMyNewDestinations(DatabaseRecord newRecord, List<ExternalReplicationBase> added)
+        {
+            return added.Where(configuration =>
+            {
+                if (ValidateConnectionString(newRecord, configuration, out _) == false)
+                    return false;
+
+                var taskStatus = GetExternalReplicationState(_server, Database.Name, configuration.TaskId);
+                var whoseTaskIsIt = Database.WhoseTaskIsIt(newRecord.Topology, configuration, taskStatus);
+                return whoseTaskIsIt == _server.NodeTag;
+            }).ToList();
         }
 
         public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
@@ -1049,6 +1072,7 @@ namespace Raven.Server.Documents.Replication
 
                 }
 
+                shutdownInfo.OnError(e);
                 _reconnectQueue.TryAdd(shutdownInfo);
             }
 
@@ -1180,6 +1204,7 @@ namespace Raven.Server.Documents.Replication
 
                 instance.Failed -= OnIncomingReceiveFailed;
                 instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
+
                 if (_log.IsInfoEnabled)
                     _log.Info($"Incoming replication handler has thrown an unhandled exception. ({instance.FromToString})", e);
             }

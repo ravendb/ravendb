@@ -141,9 +141,6 @@ namespace SlowTests.Server.Replication
                 var userByName = new UserByNameIndex();
                 userByName.Execute(source);
 
-
-                await SetupReplicationAsync(source, destination);
-
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
@@ -156,6 +153,8 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(2, destIndexNames.Length);
                 Assert.True(destIndexNames.Contains(userByAge.IndexName));
                 Assert.True(destIndexNames.Contains(userByName.IndexName));
+
+                WaitForUserToContinueTheTest(source);
             }
         }
     }

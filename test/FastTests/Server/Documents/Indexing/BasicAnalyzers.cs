@@ -21,6 +21,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 using Xunit;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace FastTests.Server.Documents.Indexing
 {
