@@ -63,7 +63,7 @@ namespace Voron.Data.BTrees
 
                 if (_disposed)
                     throw new ObjectDisposedException("PageIterator");
-                if (_page.LastSearchPosition< 0  || _page.LastSearchPosition >= _page.NumberOfEntries)
+                if (_page.LastSearchPosition < 0 || _page.LastSearchPosition >= _page.NumberOfEntries)
                     throw new InvalidOperationException("No current page was set");
                 return _page.GetNode(_page.LastSearchPosition);
             }
@@ -90,7 +90,7 @@ namespace Voron.Data.BTrees
         }
 
 
-       private bool _requireValidation;
+        private bool _requireValidation;
         public bool DoRequireValidation
         {
             get { return _requireValidation; }
@@ -100,7 +100,7 @@ namespace Voron.Data.BTrees
         public Slice RequiredPrefix
         {
             get { return _requiredPrefix; }
-            
+
         }
 
         public void SetRequiredPrefix(Slice prefix)
@@ -137,11 +137,16 @@ namespace Voron.Data.BTrees
         public bool Skip(long count)
         {
             if (count > int.MaxValue)
-                throw new InvalidOperationException($"Cannot skip by '{count}' because it is more than int.MaxValue");
+                ThrowSkipTooBig(count);
 
             _page.LastSearchPosition += (int)count;
-            
+
             return TrySetPosition();
+        }
+
+        private static void ThrowSkipTooBig(long count)
+        {
+            throw new InvalidOperationException($"Cannot skip by '{count}' because it is more than int.MaxValue");
         }
 
         private bool TrySetPosition()
