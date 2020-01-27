@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Nito.AsyncEx;
 
 namespace Sparrow.Server.Utils
 {
@@ -9,65 +10,44 @@ namespace Sparrow.Server.Utils
     /// </summary>
     public class DisposeLock
     {
-        private bool _disposed;
         private readonly string _name;
-        private readonly ReaderWriterLockSlim _lock;
+        private readonly AsyncReaderWriterLock _lock;
+        private readonly CancellationTokenSource _cts;
 
         public DisposeLock(string name)
         {
             _name = name;
-            _lock = new ReaderWriterLockSlim();
-            _disposed = false;
+            _cts = new CancellationTokenSource();
+            _lock = new AsyncReaderWriterLock();
         }
 
-        public struct ReadRelease : IDisposable
+        public IDisposable EnsureNotDisposed()
         {
-            private DisposeLock _parent;
-
-            public ReadRelease(DisposeLock parent)
+            IDisposable disposable = null;
+            try
             {
-                _parent = parent;
+                disposable = _lock.ReaderLock(_cts.Token);
             }
-
-            public void Dispose()
+            catch
             {
-                _parent._lock.ExitReadLock();
+               // ignore
             }
-        }
-
-        public struct WriteRelease : IDisposable
-        {
-            private DisposeLock _parent;
-
-            public WriteRelease(DisposeLock parent)
+            
+            if (disposable == null || 
+                _cts.IsCancellationRequested)
             {
-                _parent = parent;
-            }
-
-            public void Dispose()
-            {
-                _parent._lock.ExitWriteLock();
-            }
-        }
-
-        public ReadRelease EnsureNotDisposed()
-        {
-            _lock.EnterReadLock();
-
-            if (_disposed)
-            {
-                _lock.ExitReadLock();
+                disposable?.Dispose();
                 ThrowDisposed();
             }
 
-            return new ReadRelease(this);
+            return disposable;
         }
 
-        public WriteRelease StartDisposing()
+        public IDisposable StartDisposing()
         {
-            _lock.EnterWriteLock();
-            _disposed = true;
-            return new WriteRelease(this);
+            var disposable = _lock.WriterLock(_cts.Token);
+            _cts.Cancel();
+            return disposable;
         }
 
         private void ThrowDisposed()
