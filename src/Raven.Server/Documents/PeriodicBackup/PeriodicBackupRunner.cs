@@ -165,10 +165,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             TimeSpan nextBackupTimeSpan;
             if (timeSpan.Ticks <= 0)
             {
-                var nodeTag = backupStatus.NodeTag ?? configuration.GetMentorNode();
-
-                // overdue backup from this node or first backup without mentorNode
-                if (nodeTag == null || nodeTag == _serverStore.NodeTag)
+                // overdue backup of current node or first backup
+                if (backupStatus.NodeTag == _serverStore.NodeTag || backupStatus.NodeTag == null)
                 {
                     // the backup will run now
                     nextBackupTimeSpan = TimeSpan.Zero;
@@ -176,7 +174,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 else
                 {
-                    // overdue backup from other node or first backup with mentorNode, wait one minute
+                    // overdue backup from other node
                     nextBackupTimeSpan = TimeSpan.FromMinutes(1);
                     nextBackupTimeLocal = nowLocalTime + nextBackupTimeSpan;
                 }
