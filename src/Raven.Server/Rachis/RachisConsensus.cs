@@ -1072,7 +1072,7 @@ namespace Raven.Server.Rachis
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(_tag, stream, CurrentTerm, disconnect);
+                remoteConnection = new RemoteConnection(_tag, CurrentTerm, stream, disconnect);
                 try
                 {
                     RachisHello initialMessage;

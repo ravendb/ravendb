@@ -10,6 +10,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Utils;
+using Sparrow.Threading;
 
 namespace Raven.Server.Rachis.Remote
 {
@@ -17,23 +18,32 @@ namespace Raven.Server.Rachis.Remote
     {
         private string _destTag;
         private string _src;
-        private Stream _stream;
+        private readonly Stream _stream;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
         private Logger _log;
-        private Action _disconnect;
-        private DisposeLock _disposerLock = new DisposeLock("RemoteConnection");
+        private readonly Action _disconnect;
+        private readonly DisposeLock _disposerLock = new DisposeLock(nameof(RemoteConnection));
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         public string Source => _src;
         public Stream Stream => _stream;
         public string Dest => _destTag;
 
-        public RemoteConnection(string src, Stream stream, long term, Action disconnect, [CallerMemberName] string caller = null)
+        public RemoteConnection(string src, long term, Stream stream, Action disconnect, [CallerMemberName] string caller = null)
+            : this(dest: "?", src, term, stream, disconnect, caller)
         {
-            _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{src} > [? discovering... ? ]");
+        }
+
+        public RemoteConnection(string dest, string src, long term, Stream stream, Action disconnect, [CallerMemberName] string caller = null)
+        {
+            _destTag = dest;
+            _src = src;
             _stream = stream;
             _disconnect = disconnect;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
-            RegisterConnection("?", term, caller);
+            _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
+            _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{src} > {dest}");
+            RegisterConnection(dest, term, caller);
         }
 
         public class RemoteConnectionInfo
@@ -46,19 +56,10 @@ namespace Raven.Server.Rachis.Remote
         }
 
         private RemoteConnectionInfo _info;
-        private static int _connectionNumber = 0; 
+        private static int _connectionNumber = 0;
         public static ConcurrentSet<RemoteConnectionInfo> RemoteConnectionsList = new ConcurrentSet<RemoteConnectionInfo>();
 
-        public RemoteConnection(string dest, string src, long term, Stream stream, Action disconnect, [CallerMemberName] string caller = null)
-        {
-            _destTag = dest;
-            _src = src;
-            _disconnect = disconnect;
-            _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
-            _stream = stream;
-            _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
-            RegisterConnection(dest, term, caller);
-        }
+
 
         public void Send(JsonOperationContext context, RachisHello helloMsg)
         {
@@ -88,22 +89,11 @@ namespace Raven.Server.Rachis.Remote
             }
         }
 
-     //   private static ConcurrentDictionary<string, Lazy<StreamWriter>> _writers = new ConcurrentDictionary<string, Lazy<StreamWriter>>();
-
         private void Send(JsonOperationContext context, BlittableJsonReaderObject msg)
         {
-            using(_disposerLock.EnsureNotDisposed())
+            using (_disposerLock.EnsureNotDisposed())
             using (var writer = new BlittableJsonTextWriter(context, _stream))
             {
-       /*         var streamWriter = _writers.GetOrAdd(_dest, d => new Lazy<StreamWriter>(() => File.CreateText(d + ".log")))
-                    .Value;
-                lock (streamWriter)
-                {
-                    streamWriter.WriteLine($"{DateTime.UtcNow:O} {_src} > {_dest}: - {msg}");
-                    streamWriter.Flush();
-                }
-                //Console.WriteLine($"{DateTime.UtcNow:O} {_src} > {_dest}: - {msg}");
-                */
                 context.Write(writer, msg);
             }
         }
@@ -273,9 +263,9 @@ namespace Raven.Server.Rachis.Remote
         {
             using (_disposerLock.EnsureNotDisposed())
             {
-                if (_buffer.Used < _buffer.Valid) 
+                if (_buffer.Used < _buffer.Valid)
                     return ReadFromBuffer(buffer, offset, count);
-                
+
                 return _stream.Read(buffer, offset, count);
             }
         }
@@ -295,7 +285,7 @@ namespace Raven.Server.Rachis.Remote
         {
             return new RemoteSnapshotReader(this);
         }
-        
+
         public SnapshotReader CreateReaderToStream(Stream stream)
         {
             return new RemoteToStreamSnapshotReader(this, stream);
@@ -360,8 +350,8 @@ namespace Raven.Server.Rachis.Remote
                 throw;
             }
         }
-        
-        
+
+
         public void Send(JsonOperationContext context, AppendEntriesResponse aer)
         {
             if (_log.IsInfoEnabled)
@@ -384,11 +374,17 @@ namespace Raven.Server.Rachis.Remote
                 [nameof(AppendEntriesResponse.CurrentTerm)] = aer.CurrentTerm,
                 [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex,
             };
-            
+
             Send(context, msg);
         }
 
+
         public void Dispose()
+        {
+            _disposeOnce.Dispose();
+        }
+
+        private void DisposeInternal()
         {
             try
             {
@@ -431,8 +427,8 @@ namespace Raven.Server.Rachis.Remote
             return $"Remote connection (cluster) : {_src} > {_destTag}";
         }
 
-        
-        
+
+
         private void RegisterConnection(string dest, long term, string caller)
         {
             var number = Interlocked.Increment(ref _connectionNumber);
@@ -462,7 +458,7 @@ namespace Raven.Server.Rachis.Remote
                     json.TryGet("Message", out string message);
                     throw new TopologyMismatchException(message);
                 }
-                
+
             }
             throw new InvalidDataException(
                 $"Expected to get type of \'{expectedType}\' message, but got \'{type}\' message.", new Exception(json.ToString()));
