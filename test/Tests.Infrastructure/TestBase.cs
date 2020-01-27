@@ -264,8 +264,6 @@ namespace FastTests
             return tmp;
         }
 
-        private static int _serverCounter;
-
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
@@ -636,7 +634,7 @@ namespace FastTests
         {
             if (suffix != null)
                 prefix += suffix;
-            var path = RavenTestHelper.NewDataPath(prefix, _serverCounter, forceCreateDir);
+            var path = RavenTestHelper.NewDataPath(prefix, 0, forceCreateDir);
 
             GlobalPathsToDelete.Add(path);
             _localPathsToDelete.Add(path);

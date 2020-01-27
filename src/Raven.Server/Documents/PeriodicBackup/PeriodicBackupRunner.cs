@@ -165,9 +165,21 @@ namespace Raven.Server.Documents.PeriodicBackup
             TimeSpan nextBackupTimeSpan;
             if (timeSpan.Ticks <= 0)
             {
-                // the backup will run now
-                nextBackupTimeSpan = TimeSpan.Zero;
-                nextBackupTimeLocal = nowLocalTime;
+                var nodeTag = backupStatus.NodeTag ?? configuration.GetMentorNode();
+
+                // overdue backup from this node or first backup without mentorNode
+                if (nodeTag == null || nodeTag == _serverStore.NodeTag)
+                {
+                    // the backup will run now
+                    nextBackupTimeSpan = TimeSpan.Zero;
+                    nextBackupTimeLocal = nowLocalTime;
+                }
+                else
+                {
+                    // overdue backup from other node or first backup with mentorNode, wait one minute
+                    nextBackupTimeSpan = TimeSpan.FromMinutes(1);
+                    nextBackupTimeLocal = nowLocalTime + nextBackupTimeSpan;
+                }
             }
             else
             {
@@ -762,36 +774,38 @@ namespace Raven.Server.Documents.PeriodicBackup
             var previousConfiguration = existingBackupState.Configuration;
             existingBackupState.Configuration = newConfiguration;
 
-            if (existingBackupState.RunningTask != null)
+            switch (taskState)
             {
-                // a backup is already running 
-                // the next one will be re-scheduled by the backup task if needed
-                return;
-            }
+                case TaskStatus.Disabled:
+                case TaskStatus.ActiveByOtherNode:
+                    // the task is disabled or this node isn't responsible for the backup task
+                    existingBackupState.DisableFutureBackups();
+                    return;
+                case TaskStatus.ClusterDown:
+                    // this node cannot connect to cluster, the task will continue on this node
+                    return;
+                case TaskStatus.ActiveByCurrentNode:
+                    // a backup is already running, the next one will be re-scheduled by the backup task if needed
+                    if (existingBackupState.RunningTask != null)
+                        return;
 
-            if (taskState != TaskStatus.ActiveByCurrentNode)
-            {
-                // this node isn't responsible for the backup task
-                existingBackupState.DisableFutureBackups();
-                return;
-            }
+                    // backup frequency hasn't changed, and we have a scheduled backup
+                    if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false && existingBackupState.HasScheduledBackup())
+                        return;
 
-            if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false &&
-                existingBackupState.HasScheduledBackup())
-            {
-                // backup frequency hasn't changed
-                // and we have a scheduled backup
-                return;
+                    existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus));
+                    return;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(taskState), taskState, null);
             }
-
-            existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus));
         }
 
         private enum TaskStatus
         {
             Disabled,
             ActiveByCurrentNode,
-            ActiveByOtherNode
+            ActiveByOtherNode,
+            ClusterDown
         }
 
         private TaskStatus GetTaskStatus(
@@ -821,7 +835,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var backupStatus = GetBackupStatus(configuration.TaskId);
             var whoseTaskIsIt = _database.WhoseTaskIsIt(topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
             if (whoseTaskIsIt == null)
-                return TaskStatus.Disabled;
+                return TaskStatus.ClusterDown;
 
             if (whoseTaskIsIt == _serverStore.NodeTag)
                 return TaskStatus.ActiveByCurrentNode;
