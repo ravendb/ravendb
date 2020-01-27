@@ -513,12 +513,6 @@ namespace Raven.Server.Web.System
             var backupDestinations = backupConfiguration.GetDestinations();
             var tag = Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
 
-            if (tag == null && backupStatus.NodeTag == null)
-            {
-                // backup didn't run yet
-                tag = backupConfiguration.GetMentorNode();
-            }
-
             return new OngoingTaskBackup
             {
                 TaskId = backupConfiguration.TaskId,
