@@ -34,7 +34,6 @@ namespace Raven.Server.ServerWide.Maintenance
         public readonly TimeSpan WorkerSamplePeriod;
         private PoolOfThreads.LongRunningWork _collectingTask;
         public readonly TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
-        private readonly LowMemoryMonitor _lowMemoryMonitor;
         private readonly float _temporaryDirtyMemoryAllowedPercentage;
 
         public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore, string leader, long term)
@@ -45,7 +44,6 @@ namespace Raven.Server.ServerWide.Maintenance
             _server = serverStore;
             _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>(serverStore.NodeTag);
             _name = $"Heartbeats worker connection to leader {leader} in term {term}";
-            _lowMemoryMonitor = new LowMemoryMonitor();
             _temporaryDirtyMemoryAllowedPercentage = _server.Server.ServerStore.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage;
 
             WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
@@ -142,12 +140,11 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private void HeartbeatVersion42000(TransactionOperationContext ctx, MaintenanceReport report)
         {
-            var memoryInfo = _lowMemoryMonitor.GetMemoryInfo(extended: false);
             report.ServerReport = new ServerReport
             {
                 OutOfCpuCredits = _server.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised(),
-                EarlyOutOfMemory = _lowMemoryMonitor.IsEarlyOutOfMemory(memoryInfo, out _),
-                HighDirtyMemory = MemoryInformation.IsHighDirtyMemory(_temporaryDirtyMemoryAllowedPercentage, out _)
+                EarlyOutOfMemory = LowMemoryNotification.Instance.IsEarlyOutOfMemory,
+                HighDirtyMemory = LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty
             };
 
             using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
@@ -363,7 +360,6 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             _cts.Cancel();
             _tcp.Dispose();
-            _lowMemoryMonitor?.Dispose();
 
             try
             {
