@@ -80,6 +80,9 @@ EXPORT int32_t
 rvn_allocate_more_space(int32_t map_after_allocation_flag, int64_t new_length_after_adjustment, void *handle, void **new_address, int32_t *detailed_error_code);
 
 EXPORT int32_t
+rvn_allocate_more_space32(int32_t map_after_allocation_flag, int64_t new_length_after_adjustment, void *handle, void **new_address, int32_t *detailed_error_code);
+
+EXPORT int32_t
 rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int64_t initial_file_size, int32_t durability_support, void **handle, int64_t *actual_size, int32_t *detailed_error_code);
 
 EXPORT int32_t
@@ -114,6 +117,9 @@ rvn_mmap_file(int64_t sz, int32_t flags, void *handle, int64_t offset, void **ad
 
 EXPORT int32_t
 rvn_create_file(const char *path, int64_t initial_file_size, int32_t flags, void **handle, int64_t *actual_file_size, int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_create_file32(const char *path, int64_t initial_file_size, int32_t flags, void **handle, int64_t *actual_file_size, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_flush_file(void *handle, int32_t *detailed_error_code);

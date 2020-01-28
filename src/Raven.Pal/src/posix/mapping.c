@@ -65,6 +65,149 @@ PRIVATE void free_map_file_handle(struct map_file_handle *handle)
 }
 
 EXPORT int32_t
+rvn_create_file32(const char *path,
+    int64_t initial_file_size,
+    int32_t flags,
+    void **handle,    
+    int64_t *actual_file_size,
+    int32_t *detailed_error_code)
+{
+    int32_t rc = SUCCESS;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s\n", path);
+#endif
+    assert(path);
+    assert(path[0] != '\0');
+    assert(initial_file_size > 0);
+
+    struct map_file_handle *mfh = calloc(1, sizeof(struct map_file_handle));
+    *handle = mfh;
+    if(mfh == NULL)
+    {
+        rc = FAIL_CALLOC;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, failed to allocate map_file_handle (FAIL_CALLOC)\n", path);
+#endif
+        goto error_clean_with_error;
+    }
+
+    char* dup_path = strdup(path);
+    if (dup_path == NULL)
+    {
+        rc = FAIL_NOMEM;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, failed to duplicate path (FAIL_NOMEM)\n", path);
+#endif
+        goto error_clean_with_error;
+    }
+
+    char *directory = dirname(dup_path);
+    rc = _ensure_path_exists(directory, detailed_error_code);
+    free(dup_path);
+    if (rc != SUCCESS)
+    {
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, _ensure_path_exists() failed, rc = %d\n", path, rc);
+#endif
+        goto error_clean_with_error;
+    }
+
+    mfh->path = strdup(path);
+    if (mfh->path == NULL)
+    {
+        rc = FAIL_CALLOC;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, failed to duplicate mfh->path (FAIL_CALLOC)\n", path);
+#endif
+        goto error_clean_with_error;
+    }
+    mfh->flags = flags;
+    int32_t largefile = 0;
+     if (sizeof(void*) == 4) /* 32 bits */
+     {
+        largefile = O_LARGEFILE;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, 32-bit process detected, setting O_LARGEFILE flag on flags\n", path);
+#endif
+     }
+
+    mfh->fd = open(path, O_RDWR | O_CREAT | largefile, S_IWUSR | S_IRUSR);
+    if (mfh->fd == -1)
+    {
+        rc = FAIL_OPEN_FILE;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, failed to open file (FAIL_OPEN_FILE)\n", path);
+#endif
+        goto error_clean_with_error;
+    }
+
+    struct stat st;
+    if (fstat(mfh->fd, &st) == -1)
+    {
+        rc = FAIL_STAT_FILE;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, fstat() failed (FAIL_STAT_FILE)\n", path);
+#endif
+        goto error_clean_with_error;
+    }
+
+   
+    int64_t totalAllocationSize = st.st_size;
+
+    if(totalAllocationSize == 0 && initial_file_size != 0)
+    {
+        totalAllocationSize = _nearest_size_to_page_size(initial_file_size, ALLOCATION_GRANULARITY);
+    }
+
+    if(totalAllocationSize == 0 || totalAllocationSize % ALLOCATION_GRANULARITY != 0 ||
+        totalAllocationSize != st.st_size)
+    {
+        totalAllocationSize = _nearest_size_to_page_size(totalAllocationSize, ALLOCATION_GRANULARITY);
+        rc = _allocate_file_space(mfh->fd, st.st_size, (totalAllocationSize - st.st_size), detailed_error_code);
+        if (rc != SUCCESS)
+        {
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, _allocate_file_space() failed, rc = %d\n", path, rc);
+#endif
+
+            goto error_clean;
+        }
+    }
+
+    if (_sync_directory_allowed(mfh->fd) == SYNC_DIR_ALLOWED)
+    {
+        rc = _sync_directory_for(path, detailed_error_code);
+        if (rc != SUCCESS)
+        {
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, _sync_directory_for() failed, rc = %d\n", path, rc);
+#endif
+            goto error_clean;
+        }
+    }
+    
+    *actual_file_size = totalAllocationSize;
+#ifdef PRINTF_DEBUG
+    printf("rvn_create_file(), path = %s, finished successfully, actual_file_size = %lld\n", path, sz);
+#endif
+
+    return rc; /* SUCCESS */
+
+error_clean_with_error:
+    *detailed_error_code=errno;
+error_clean:
+    if (mfh != NULL)
+    {
+        if (mfh->fd != -1)
+            close(mfh->fd);
+        free_map_file_handle(mfh);
+        *handle = NULL;
+    }
+    return rc;
+}
+
+
+EXPORT int32_t
 rvn_create_file(const char *path,
     int64_t initial_file_size,
     int32_t flags,
@@ -153,16 +296,6 @@ rvn_create_file(const char *path,
 
     int64_t sz = st.st_size;
 
-    int64_t sys_page_size = sysconf(_SC_PAGE_SIZE);
-    if (sys_page_size == -1)
-    {
-        rc = FAIL_SYSCONF;
-#ifdef PRINTF_DEBUG
-    printf("rvn_create_file(), path = %s, sysconf(_SC_PAGE_SIZE) failed (FAIL_SYSCONF)\n", path);
-#endif
-        goto error_clean_with_error;
-    }
-
     if (initial_file_size < ALLOCATION_GRANULARITY)
         initial_file_size = ALLOCATION_GRANULARITY;
 
@@ -180,7 +313,7 @@ rvn_create_file(const char *path,
     printf("rvn_create_file(), path = %s, desired size is not its actual size (%lld != %ld), will attempt to resize the file\n", path, sz, st.st_size);
 #endif
 
-        rc = _allocate_file_space(mfh->fd, sz, detailed_error_code);
+        rc = _allocate_file_space(mfh->fd, 0, sz, detailed_error_code);
         if (rc != SUCCESS)
         {
 #ifdef PRINTF_DEBUG
@@ -249,8 +382,8 @@ rvn_allocate_more_space(
 {
     struct map_file_handle* mfh = (struct map_file_handle *)handle;
     int32_t rc = SUCCESS;
-
-    rc = _allocate_file_space(mfh->fd, new_length_after_adjustment, detailed_error_code);
+    
+    rc = _allocate_file_space(mfh->fd, 0, new_length_after_adjustment, detailed_error_code);
     if (rc != SUCCESS)
     {
 #ifdef PRINTF_DEBUG
@@ -296,6 +429,87 @@ rvn_allocate_more_space(
     return SUCCESS;
 
 error_cleanup_without_errno:
+    return rc;
+}
+
+EXPORT int32_t
+rvn_allocate_more_space32(
+    int32_t map_after_allocation_flag,
+    int64_t new_length_after_adjustment, 
+    void *handle,
+    void **new_address, 
+    int32_t *detailed_error_code)
+{
+    struct map_file_handle* mfh = (struct map_file_handle *)handle;
+    int32_t rc = SUCCESS;
+
+    struct stat st;
+    if (fstat(mfh->fd, &st) == -1)
+    {
+        rc = FAIL_STAT_FILE;
+        
+#ifdef PRINTF_DEBUG
+    printf("rvn_allocate_more_space32(), path = %s, fstat() failed (FAIL_STAT_FILE)\n", mfh->path);
+#endif
+        goto error_clean_with_error;
+    }
+
+    rc = _allocate_file_space(mfh->fd, st.st_size , new_length_after_adjustment - st.st_size, detailed_error_code);
+    if (rc != SUCCESS)
+    {
+#ifdef PRINTF_DEBUG
+    printf("rvn_allocate_more_space(), path = %s, _allocate_file_space() failed, detailed_error_code = %d\n", mfh->path, *detailed_error_code);
+#endif
+        return rc;
+    }
+
+    if (_sync_directory_allowed(mfh->fd) == SYNC_DIR_ALLOWED)
+    {
+        rc = _sync_directory_for(mfh->path, detailed_error_code);
+        if (rc != SUCCESS)
+        {
+#ifdef PRINTF_DEBUG
+    printf("rvn_allocate_more_space(), path = %s, _sync_directory_for() failed, detailed_error_code = %d\n", mfh->path, *detailed_error_code);
+#endif
+
+            return rc;
+        }
+    }
+
+    if (map_after_allocation_flag != 0)
+    {
+        int32_t mmap_flags = 0;
+        if (mfh->flags & MMOPTIONS_COPY_ON_WRITE)
+            mmap_flags |= MAP_PRIVATE;
+        else
+            mmap_flags |= MAP_SHARED;
+        
+        rc = rvn_mmap_file(new_length_after_adjustment, mfh->flags, handle, 0L, new_address, detailed_error_code);
+        if (rc == FAIL_MMAP64)
+        {
+#ifdef PRINTF_DEBUG
+    printf("rvn_allocate_more_space(), path = %s, rvn_mmap_file() failed, detailed_error_code = %d\n", mfh->path, *detailed_error_code);
+#endif
+            goto error_cleanup_without_errno;
+        }
+    }
+#ifdef PRINTF_DEBUG
+    printf("rvn_allocate_more_space(), path = %s, finished successfully.", mfh->path);
+#endif
+
+    return SUCCESS;
+
+error_cleanup_without_errno:
+    return rc;
+error_clean_with_error:
+    *detailed_error_code=errno;
+error_clean:
+    if (mfh != NULL)
+    {
+        if (mfh->fd != -1)
+            close(mfh->fd);
+        free_map_file_handle(mfh);        
+    }
     return rc;
 }
 
@@ -408,8 +622,7 @@ rvn_remap(void *base_address, void **new_address, void *handle, int64_t size, in
     return rc;
 }
 
-EXPORT int32_t
-rvn_mmap_file(int64_t sz, int32_t flags, void *handle, int64_t offset, void **addr, int32_t *detailed_error_code)
+EXPORT int32_t rvn_mmap_file(int64_t sz, int32_t flags, void *handle, int64_t offset, void **addr, int32_t *detailed_error_code)
 {
     struct map_file_handle* mfh = (struct map_file_handle *)handle;
     int32_t mmap_flags = 0;

@@ -50,13 +50,13 @@ _pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *deta
 }
 
 PRIVATE int32_t
-_allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
+_allocate_file_space(int32_t fd, int64_t offset, int64_t size, int32_t *detailed_error_code)
 {
     int32_t result;
     int32_t retries;
     for (retries = 0; retries < 1024; retries++)
     {        
-        result = _rvn_fallocate(fd, 0, size);
+        result = _rvn_fallocate(fd, offset, size);
 
         switch (result)
         {
@@ -220,7 +220,7 @@ _resize_file(int32_t fd, int64_t size, int32_t *detailed_error_code)
 
     if(size > st.st_size)
     {
-        int32_t rc = _allocate_file_space(fd, size, detailed_error_code);
+        int32_t rc = _allocate_file_space(fd, 0, size, detailed_error_code);
         if(rc != SUCCESS)
             return rc;
     }

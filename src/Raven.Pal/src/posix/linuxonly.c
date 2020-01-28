@@ -87,7 +87,7 @@ rvn_test_storage_durability(
         goto error_cleanup;
     }
 
-    rc = _allocate_file_space(fd, 64 * 1024, detailed_error_code);
+    rc = _allocate_file_space(fd, 0, 64 * 1024, detailed_error_code);
     if ( rc != SUCCESS )
     {
         rc = FAIL_ALLOC_FILE;

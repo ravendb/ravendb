@@ -174,6 +174,14 @@ namespace Sparrow.Server.Platform
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_allocate_more_space32(
+            Int32 mapAfterAllocationFlag,
+            Int64 newLengthAfterAdjustment,
+            SafeMmapHandle handle,
+            out void* newAddress,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_open_journal_for_writes(
             string fileName,
             PalFlags.JournalMode mode,
@@ -274,6 +282,15 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_create_file(
+            string path,
+            Int64 initialFileSize,
+            PalFlags.MmapOptions flags,
+            out SafeMmapHandle handle,
+            out Int64 actualFileSize,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_create_file32(
             string path,
             Int64 initialFileSize,
             PalFlags.MmapOptions flags,

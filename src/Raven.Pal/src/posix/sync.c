@@ -39,11 +39,14 @@ _sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
     }
 
     rc = _sync_directory_allowed(fd);
-
+    /*
+    TODO: add fsync for Linux environments as it is missing from this version and exists in old 32bit pager
+    TODO: add handling for symlinks folders, currently it is missing but exists in old 32bit pager
+    */
     if (rc == FAIL)
     {
         goto error_cleanup;
-    }
+    }    
 
     if (rc == SYNC_DIR_NOT_ALLOWED)
     {

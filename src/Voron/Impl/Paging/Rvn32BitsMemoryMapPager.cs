@@ -49,7 +49,7 @@ namespace Voron.Impl.Paging
             if (initialFileSize.HasValue == false)
                 initialFileSize = AllocationGranularity;
 
-            var rc = rvn_create_file(
+            var rc = rvn_create_file32(
                 file.FullPath,
                 initialFileSize.Value,
                 mmapOptions,
@@ -72,7 +72,6 @@ namespace Voron.Impl.Paging
             }
 
             _handle.Use64BitSemantics = false;
-
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
             SetPagerState(new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold));
         }
@@ -271,7 +270,10 @@ namespace Voron.Impl.Paging
                 }
 
 
-                var rc = rvn_mmap_file(size, _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None, _handle, offset, out var startingBaseAddressPtr,
+                var rc = rvn_mmap_file(size, 
+                    _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None, 
+                    _handle, offset, 
+                    out var startingBaseAddressPtr,
                     out var errorCode);
 
                 if (rc != FailCodes.Success)
@@ -515,10 +517,10 @@ namespace Voron.Impl.Paging
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            var rc = rvn_allocate_more_space(mapAfterAllocationFlag: 0, _totalAllocationSize + allocationSize, _handle, out var _, out var errorCode);
+            var rc = rvn_allocate_more_space32(mapAfterAllocationFlag: 0, _totalAllocationSize + allocationSize, _handle, out var _, out var errorCode);
             if (rc != FailCodes.Success)
             {
-                PalHelper.ThrowLastError(rc, errorCode, $"Unable to rvn_allocate_more_space {FileName}, new size after adjustment: {_totalAllocationSize + allocationSize}");
+                PalHelper.ThrowLastError(rc, errorCode, $"Unable to rvn_allocate_more_space32() {FileName}, new size after adjustment: {_totalAllocationSize + allocationSize}");
             }
 
 
