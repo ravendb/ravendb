@@ -66,9 +66,15 @@ namespace SlowTests.Cluster
                         {
                             sb.AppendLine(value);
 
-                            const string expectedValue = "Exception occurred while reading the report from the connection";
-                            if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
-                                throw new InvalidOperationException($"Exception occurred while reading the report from the connection. Buffer: {sb}");
+                            var fullText = sb.ToString();
+
+                            const string expectedValue1 = "InvalidDataException: Cannot have";
+                            const string expectedValue2 = "InvalidStartOfObjectException";
+                            if (value.Contains(expectedValue1) || 
+                                fullText.Contains(expectedValue1) ||
+                                value.Contains(expectedValue2) ||
+                                fullText.Contains(expectedValue2))
+                                throw new InvalidOperationException($"Exception occurred while reading the report from the connection. Buffer: {fullText}");
                         }
                     }
                 });
