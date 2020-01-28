@@ -2,21 +2,18 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace StressTests.Issues
 {
     public class RavenDB_12151 : RavenTestBase
     {
@@ -145,6 +142,7 @@ namespace SlowTests.Issues
                 RunTest(store, "Reached transaction size limit");
             }
         }
+
         private void RunTest(DocumentStore store, string endOfPatchReason)
         {
             using (var bulk = store.BulkInsert())
@@ -186,7 +184,7 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    var count = session.Query<Order, SimpleIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(2))).Count();
+                    var count = session.Query<Order, SimpleIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Count();
 
                     Assert.Equal(4000, count);
                 }
@@ -235,7 +233,6 @@ namespace SlowTests.Issues
 
         private void RunTest32(DocumentStore store, string endOfPatchReason)
         {
-
             using (var bulk = store.BulkInsert())
             {
                 for (int i = 0; i < 2000; i++)
@@ -322,22 +319,22 @@ namespace SlowTests.Issues
                                 from item in order.Lines
                                 select new
                                 {
-                                    Company = order.Company,
-                                    Employee = order.Employee,
-                                    Product = item.Product,
-                                    ProductName = item.ProductName,
+                                    order.Company,
+                                    order.Employee,
+                                    item.Product,
+                                    item.ProductName,
                                     Count = 1,
-                                    Total = ((item.Quantity * item.PricePerUnit) * (1 - item.Discount))
+                                    Total = item.Quantity * item.PricePerUnit * (1 - item.Discount)
                                 };
 
                 Reduce = results => from result in results
                                     group result by new { result.Company, result.Employee, result.Product, result.ProductName } into g
                                     select new
                                     {
-                                        Company = g.Key.Company,
-                                        Employee = g.Key.Employee,
-                                        Product = g.Key.Product,
-                                        ProductName = g.Key.ProductName,
+                                        g.Key.Company,
+                                        g.Key.Employee,
+                                        g.Key.Product,
+                                        g.Key.ProductName,
                                         Count = g.Sum(x => x.Count),
                                         Total = g.Sum(x => x.Total)
                                     };

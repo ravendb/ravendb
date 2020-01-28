@@ -18,6 +18,7 @@ using Raven.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ETL;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -141,6 +142,8 @@ namespace SlowTests.Server.Replication
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, true));
+
+                await WaitForRaftCommandToBeAppliedInCluster(cluster.Leader, nameof(UpdatePeriodicBackupStatusCommand));
 
                 total = 0L;
                 foreach (var server in cluster.Nodes)
