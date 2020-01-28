@@ -26,7 +26,6 @@ namespace Raven.Client.Documents.Session.Tokens
             return new FromToken(indexName, collectionName, alias);
         }
 
-        private static readonly char[] _whiteSpaceChars = { ' ', '\t', '\r', '\n', '\v' };
         public override void WriteTo(StringBuilder writer)
         {
             if (IndexName == null && CollectionName == null)
@@ -36,19 +35,12 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 writer
                     .Append("from ");
-                if (CollectionName.IndexOfAny(_whiteSpaceChars) != -1)
-                {
-                    if (CollectionName.IndexOf('"') != -1)
-                    {
-                        ThrowInvalidCollectionName();
-                    }
-                    writer.Append('"').Append(CollectionName).Append('"');
-                }
+
+                if (RequiresQuotes(CollectionName, out var escapedCollectionName))
+                    writer.Append("'").Append(escapedCollectionName).Append("'");
                 else
-                {
                    WriteField(writer, CollectionName);
                 }
-            }
             else
             {
                 writer
@@ -63,9 +55,34 @@ namespace Raven.Client.Documents.Session.Tokens
             }
         }
 
-        private void ThrowInvalidCollectionName()
+        private static bool RequiresQuotes(string collectionName, out string escapedCollectionName)
         {
-            throw new ArgumentException("Collection name cannot contain a quote, but was: " + CollectionName);
+            var requiresQuotes = false;
+            for (var i = 0; i < collectionName.Length; i++)
+            {
+                var ch = collectionName[i];
+
+                if (i == 0 && char.IsDigit(ch))
+                {
+                    requiresQuotes = true;
+                    break;
+        }
+
+                if (char.IsLetterOrDigit(ch) == false && ch != '_')
+                {
+                    requiresQuotes = true;
+                    break;
+    }
+}
+
+            if (requiresQuotes)
+            {
+                escapedCollectionName = collectionName.Replace("'", "\\'");
+                return true;
+            }
+
+            escapedCollectionName = null;
+            return false;
         }
     }
 }

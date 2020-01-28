@@ -29,7 +29,7 @@ namespace SlowTests.Smuggler
             using (var store = GetDocumentStore(new Options() { CreateDatabase = false }))
             {
                 var o = await store.Maintenance.Server.SendAsync(new OfflineMigrationOperation(config));
-                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => db.DatabaseName }))
                 {
@@ -67,7 +67,7 @@ namespace SlowTests.Smuggler
             using (var store = GetDocumentStore(new Options() { CreateDatabase = false }))
             {
                 var o = await store.Maintenance.Server.SendAsync(new OfflineMigrationOperation(config));
-                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => db.DatabaseName }))
                 {
@@ -89,7 +89,7 @@ namespace SlowTests.Smuggler
             using (var store = GetDocumentStore(new Options() { CreateDatabase = false }))
             {
                 var o = await store.Maintenance.Server.SendAsync(new OfflineMigrationOperation(config));
-                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => db.DatabaseName }))
                 {
@@ -111,7 +111,7 @@ namespace SlowTests.Smuggler
             using (var store = GetDocumentStore(new Options() { CreateDatabase = false }))
             {
                 var o = await store.Maintenance.Server.SendAsync(new OfflineMigrationOperation(config));
-                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => db.DatabaseName }))
                 {
