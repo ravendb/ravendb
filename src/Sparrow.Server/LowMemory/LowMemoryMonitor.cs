@@ -37,6 +37,11 @@ namespace Sparrow.Server.LowMemory
             return MemoryInformation.IsEarlyOutOfMemory(memInfo, out commitChargeThreshold);
         }
 
+        public override DirtyMemoryState GetDirtyMemoryState()
+        {
+            return MemoryInformation.GetDirtyMemoryState();
+        }
+
         public override void AssertNotAboutToRunOutOfMemory()
         {
             MemoryInformation.AssertNotAboutToRunOutOfMemory();

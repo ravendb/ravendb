@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             return new DynamicJsonValue
             {
-                [nameof(OutOfCpuCredits)] = true,
+                [nameof(OutOfCpuCredits)] = OutOfCpuCredits,
                 [nameof(EarlyOutOfMemory)] = EarlyOutOfMemory,
                 [nameof(HighDirtyMemory)] = HighDirtyMemory
             };

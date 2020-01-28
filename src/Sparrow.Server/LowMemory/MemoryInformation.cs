@@ -658,14 +658,16 @@ namespace Sparrow.LowMemory
             LowLastFiveMinutes = lowLastFiveMinutes;
         }
 
-        public static bool IsHighDirtyMemory(double percentageFromPhysicalMem, out long totalScratchMemory)
+        public static DirtyMemoryState GetDirtyMemoryState()
         {
-            totalScratchMemory = GetTotalScratchAllocatedMemory();
+            var totalScratchMemory = GetTotalScratchAllocatedMemory();
 
-            if (totalScratchMemory <= TotalPhysicalMemory.GetValue(SizeUnit.Bytes) * percentageFromPhysicalMem)
-                return false;
-
-            return true;
+            return new DirtyMemoryState
+            {
+                IsHighDirty = totalScratchMemory > TotalPhysicalMemory.GetValue(SizeUnit.Bytes) *
+                              LowMemoryNotification.Instance.TemporaryDirtyMemoryAllowedPercentage,
+                TotalDirtyInBytes = totalScratchMemory
+            };
         }
     }
 
