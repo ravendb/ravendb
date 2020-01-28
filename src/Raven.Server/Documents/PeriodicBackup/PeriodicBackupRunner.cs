@@ -434,6 +434,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                     };
                 }
 
+                if (LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty)
+                {
+                    throw new BackupDelayException(
+                        $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
+                        $"The task cannot run because the server is in high dirty memory state.")
+                    {
+                        DelayPeriod = _serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
+                    };
+                }
+
                 if (_serverStore.ConcurrentBackupsSemaphore.Wait(0) == false)
                 {
                     throw new BackupDelayException(
