@@ -1333,7 +1333,9 @@ namespace Raven.Server.Documents
                     {
                         if (databaseTopology.Rehabs.Contains(lastResponsibleNode) &&
                             databaseTopology.PromotablesStatus.TryGetValue(lastResponsibleNode, out var status) &&
-                            status == DatabasePromotionStatus.OutOfCpuCredits)
+                            (status == DatabasePromotionStatus.OutOfCpuCredits || 
+                             status == DatabasePromotionStatus.EarlyOutOfMemory ||
+                             status == DatabasePromotionStatus.HighDirtyMemory))
                         {
                             return lastResponsibleNode;
                         }
