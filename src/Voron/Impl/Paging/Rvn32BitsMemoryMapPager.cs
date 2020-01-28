@@ -161,7 +161,7 @@ namespace Voron.Impl.Paging
 
                 if (numberOfPages + distanceFromStart > NumberOfPagesInAllocationGranularity)
                 {
-                    var sizeToMap = (numberOfPages + distanceFromStart) * Constants.Storage.PageSize;
+                    var sizeToMap = NearestSizeToAllocationGranularity((numberOfPages + distanceFromStart) * Constants.Storage.PageSize);
                     rc = rvn_remap(baseAddress, out newAddress, _handle, sizeToMap, mmapOptions, offset, out var errorCodeRemap);
                     if (rc != FailCodes.Success)
                     {
