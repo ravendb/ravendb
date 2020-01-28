@@ -845,6 +845,12 @@ namespace Raven.Server.ServerWide.Maintenance
                     case ClusterNodeStatusReport.ReportStatus.OutOfCredits:
                         reason = $"Node in rehabilitation because it run out of CPU credits.{Environment.NewLine}";
                         break;
+                    case ClusterNodeStatusReport.ReportStatus.EarlyOutOfMemory:
+                        reason = $"Node in rehabilitation because of early out of memory.{Environment.NewLine}";
+                        break;
+                    case ClusterNodeStatusReport.ReportStatus.HighDirtyMemory:
+                        reason = $"Node in rehabilitation because of high dirty memory.{Environment.NewLine}";
+                        break;
                     default:
                         reason = $"Node in rehabilitation due to last report status being '{nodeStats.Status}'.{Environment.NewLine}";
                         break;
@@ -875,10 +881,26 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             topology.DemotionReasons[member] = reason;
-            topology.PromotablesStatus[member] = nodeStats?.ServerReport.OutOfCpuCredits == true ?
-                DatabasePromotionStatus.OutOfCpuCredits : DatabasePromotionStatus.NotResponding;
+            topology.PromotablesStatus[member] = GetStatus();
 
             LogMessage($"Node {member} of database '{dbName}': {reason}", database: dbName);
+
+            DatabasePromotionStatus GetStatus()
+            {
+                if (nodeStats != null)
+                {
+                    if (nodeStats.ServerReport.OutOfCpuCredits == true)
+                        return DatabasePromotionStatus.OutOfCpuCredits;
+
+                    if (nodeStats.ServerReport.EarlyOutOfMemory == true)
+                        return DatabasePromotionStatus.EarlyOutOfMemory;
+
+                    if (nodeStats.ServerReport.HighDirtyMemory == true)
+                        return DatabasePromotionStatus.HighDirtyMemory;
+                }
+
+                return DatabasePromotionStatus.NotResponding;
+            }
 
             return true;
         }
@@ -933,6 +955,18 @@ namespace Raven.Server.ServerWide.Maintenance
             if (promotableClusterStats.ServerReport.OutOfCpuCredits == true)
             {
                 LogMessage($"Can't promote node {promotable}, it doesn't have enough CPU credits", database: dbName);
+                return (false, null);
+            }
+
+            if (promotableClusterStats.ServerReport.EarlyOutOfMemory == true)
+            {
+                LogMessage($"Can't promote node {promotable}, it's in an early out of memory state", database: dbName);
+                return (false, null);
+            }
+
+            if (promotableClusterStats.ServerReport.HighDirtyMemory == true)
+            {
+                LogMessage($"Can't promote node {promotable}, it's in high dirty memory state", database: dbName);
                 return (false, null);
             }
 

@@ -18,7 +18,9 @@ namespace Raven.Client.ServerWide
         ChangeVectorNotMerged,
         WaitingForResponse,
         Ok,
-        OutOfCpuCredits
+        OutOfCpuCredits,
+        EarlyOutOfMemory,
+        HighDirtyMemory
     }
 
     public interface IDatabaseTask
