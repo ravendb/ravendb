@@ -29,9 +29,7 @@ namespace Raven.Server.Documents.Handlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var shardId = ShardedContext.GetShardId(context, id);
-
-                var index = ShardedContext.GetShardIndex(shardId);
+                var index = ShardedContext.GetShardIndex(context, id);
 
                 var cmd = new ShardedHeadCommand
                 {
@@ -62,9 +60,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                var shardId = ShardedContext.GetShardId(context, id);
-
-                var index = ShardedContext.GetShardIndex(shardId);
+                var index = ShardedContext.GetShardIndex(context, id);
 
                 var cmd = new ShardedCommand
                 {
@@ -81,6 +77,53 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
 
+                cmd.Result.WriteJsonTo(ResponseBodyStream());
+            }
+        }
+
+        [RavenShardedAction("/databases/*/docs", "PATCH")]
+        public async Task Patch()
+        {
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var isTest = GetBoolValueQueryString("test", required: false) ?? false;
+            var debugMode = GetBoolValueQueryString("debug", required: false) ?? isTest;
+            var skipPatchIfChangeVectorMismatch = GetBoolValueQueryString("skipPatchIfChangeVectorMismatch", required: false) ?? false;
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
+                var patch = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+                var url = new StringBuilder($"/docs?id={Uri.EscapeUriString(id)}");
+                if (isTest)
+                {
+                    url.Append("&test=true");
+                }
+
+                if (debugMode)
+                {
+                    url.Append("&debug=true");
+                }
+
+                if (skipPatchIfChangeVectorMismatch)
+                {
+                    url.Append("&skipPatchIfChangeVectorMismatch=true");
+                }
+
+                var index = ShardedContext.GetShardIndex(context, id);
+
+                var cmd = new ShardedCommand
+                {
+                    Method = HttpMethod.Patch,
+                    Url = url.ToString(),
+                    Content = patch,
+                    Headers =
+                    {
+                        ["If-Match"] = changeVector
+                    }
+                };
+
+                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                 cmd.Result.WriteJsonTo(ResponseBodyStream());
             }
         }
@@ -104,12 +147,14 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             var sb = new StringBuilder();
             var cmds = new List<ShardedCommand>();
+            List<ShardedCommand> oldCmds = null;
+
             var tasks = new List<Task>();
             try
             {
-                await FetchDocumentsFromShards(ids, context, sb, includePaths, cmds, tasks);
+                await FetchDocumentsFromShards(ids, metadataOnly, context, sb, includePaths, cmds, tasks);
 
-                if (cmds.Count == 1)
+                if (cmds.Count == 1 && includePaths.Any() == false)
                 {
                     var singleEtag = cmds[0].Response?.Headers?.ETag?.Tag;
                     if (etag == singleEtag)
@@ -164,15 +209,7 @@ namespace Raven.Server.Documents.Handlers
                             IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes);
                         }
 
-                        if (metadataOnly)
-                        {
-                            //TODO: Generate metadata
-                        }
-                        else
-                        {
-                            //TODO: Need to deal with conflicts and null here
-                            results[match] = result;
-                        }
+                        results[match] = result;
                     }
                 }
 
@@ -183,7 +220,8 @@ namespace Raven.Server.Documents.Handlers
 
                 if (missingIncludes.Count > 0)
                 {
-                    await FetchMissingIncludes(cmds, tasks, missingIncludes, context, sb, includePaths, includesMap);
+                    oldCmds = cmds; //fetch missing includes will override the cmds and we can't dispose of them yet
+                    await FetchMissingIncludes(cmds, tasks, missingIncludes, context, sb, includePaths, includesMap, metadataOnly);
                 }
 
                 using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), ServerStore.ServerShutdown))
@@ -204,6 +242,14 @@ namespace Raven.Server.Documents.Handlers
             }
             finally
             {
+                if (oldCmds != null)
+                {
+                    foreach (ShardedCommand cmd in oldCmds)
+                    {
+                        cmd.Disposable.Dispose();
+                    }
+                }
+
                 foreach (ShardedCommand cmd in cmds)
                 {
                     cmd.Disposable.Dispose();
@@ -264,16 +310,12 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private async Task FetchMissingIncludes(List<ShardedCommand> cmds, List<Task> tasks, HashSet<string> missingIncludes, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
-            Dictionary<string, BlittableJsonReaderObject> includesMap)
+            Dictionary<string, BlittableJsonReaderObject> includesMap, bool metadataOnly)
         {
-            foreach (var cmd in cmds)
-            {
-                cmd.Disposable.Dispose();
-            }
-            cmds.Clear();
+            cmds = new List<ShardedCommand>();
             tasks.Clear();
             var missingList = missingIncludes.ToList();
-            await FetchDocumentsFromShards(missingList, context, sb.Clear(), includePaths, cmds, tasks, ignoreIncludes: true);
+            await FetchDocumentsFromShards(missingList, metadataOnly, context, sb.Clear(), includePaths, cmds, tasks, ignoreIncludes: true);
             foreach (var cmd in cmds)
             {
                 if (cmd.Response == null)
@@ -288,7 +330,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task FetchDocumentsFromShards(IList<string> ids, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
+        private async Task FetchDocumentsFromShards(IList<string> ids,bool metadataOnly, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
             List<ShardedCommand> cmds, List<Task> tasks, bool ignoreIncludes = false)
         {
             var shards = ShardLocator.GetDocumentIdsShards(ids, ShardedContext, context);
@@ -302,6 +344,11 @@ namespace Raven.Server.Documents.Handlers
                     {
                         sb.Append("&include=").Append(Uri.EscapeDataString(includePath));
                     }
+                }
+
+                if (metadataOnly)
+                {
+                    sb.Append("&metadataOnly=true");
                 }
 
                 var matches = new List<int>();
