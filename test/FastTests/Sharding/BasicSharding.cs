@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -88,6 +89,45 @@ namespace FastTests.Sharding
             }
         }
 
+        [Fact]
+        public void CanPatch()
+        {
+            using (var store = GetShardedDocumentStore())
+            using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
+            {
+                string id = "users/1";
+                string petId = "pets/1";
+                PutEntity(store, new DynamicJsonValue { ["Name"] = "Oren", }, id);
+                PutEntity(store, new DynamicJsonValue
+                {
+                    ["Name"] = "Arava",
+                    ["Type"] = "Dog"
+                }, petId);
+
+                var command = new PatchOperation.PatchCommand(
+                    store.Conventions,
+                    context,
+                    id,
+                    null,
+                    new PatchRequest
+                    {
+                        Script = $@"this.Pet = ""{petId}"""
+                    },
+                    patchIfMissing: null,
+                    skipPatchIfChangeVectorMismatch: false,
+                    returnDebugInformation: true,
+                    test: false);
+
+                store.GetRequestExecutor().Execute(command, context);
+
+                using (var s = store.OpenSession())
+                {
+                    var user = s.Load<User>(id, b => b.IncludeDocuments(u => u.Pet));
+                    var pet = s.Load<Pet>(user.Pet);
+                    Assert.Equal("Arava", pet.Name);
+                }
+            }
+        }
 
         [Fact]
         public void CanPutAndGetMultipleItemsWithIncludes()
