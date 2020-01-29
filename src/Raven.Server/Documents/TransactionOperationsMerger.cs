@@ -60,6 +60,8 @@ namespace Raven.Server.Documents
             _maxTimeToWaitForPreviousTxInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTx.AsTimeSpan.TotalMilliseconds;
             _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
+            _timeToCheckHighDirtyMemory = _parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriod;
+            _lastHighDirtyMemCheck = _parent.Time.GetUtcNow();
         }
 
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(DatabasePerformanceMetrics.MetricType.GeneralWait, 256, 1);
@@ -875,8 +877,13 @@ namespace Raven.Server.Documents
                 var dirtyMemoryState = LowMemoryNotification.Instance.DirtyMemoryState;
                 if (dirtyMemoryState.IsHighDirty)
                 {
-                    // we need to ask for a flush here
-                    GlobalFlushingBehavior.GlobalFlusher.Value?.MaybeFlushEnvironment(context.Environment);
+                    var now = _parent.Time.GetUtcNow();
+                    if (now - _lastHighDirtyMemCheck > _timeToCheckHighDirtyMemory.AsTimeSpan)
+                    {
+                        // we need to ask for a flush here
+                        GlobalFlushingBehavior.GlobalFlusher.Value?.MaybeFlushEnvironment(context.Environment);
+                        _lastHighDirtyMemCheck = now;
+                    }
 
                     throw new HighDirtyMemoryException(
                         $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
@@ -1147,6 +1154,8 @@ namespace Raven.Server.Documents
         }
 
         private RecordingTx _recording = default;
+        private DateTime _lastHighDirtyMemCheck;
+        private readonly TimeSetting _timeToCheckHighDirtyMemory;
 
         private struct RecordingTx
         {
