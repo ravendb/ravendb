@@ -19,17 +19,16 @@ namespace Raven.Server.ServerWide.Commands
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Topology = Topology;
-            if (record.IsSharded == false)
-            {
-                SetLeaderStampForTopology(record.Topology, etag);
-            }
-            else
+            SetLeaderStampForTopology(record.Topology, etag);
+
+            if (record.IsSharded)
             {
                 for (var i = 0; i < record.Shards.Length; i++)
                 {
                     SetLeaderStampForTopology(record.Shards[i], etag);
                 }
             }
+
             return null;
         }
 
