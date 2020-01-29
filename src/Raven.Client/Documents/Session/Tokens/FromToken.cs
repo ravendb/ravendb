@@ -34,12 +34,9 @@ namespace Raven.Client.Documents.Session.Tokens
             if (IsDynamic)
             {
                 writer
-                    .Append("from ");
-
-                if (RequiresQuotes(CollectionName, out var escapedCollectionName))
-                    writer.Append("'").Append(escapedCollectionName).Append("'");
-                else
-                    WriteField(writer, CollectionName);
+                    .Append("from '")
+                    .Append(CollectionName.Replace("'", "\\'"))
+                    .Append("'");
             }
             else
             {
@@ -53,36 +50,6 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 writer.Append(" as ").Append(Alias);
             }
-        }
-
-        private static bool RequiresQuotes(string collectionName, out string escapedCollectionName)
-        {
-            var requiresQuotes = false;
-            for (var i = 0; i < collectionName.Length; i++)
-            {
-                var ch = collectionName[i];
-
-                if (i == 0 && char.IsDigit(ch))
-                {
-                    requiresQuotes = true;
-                    break;
-                }
-
-                if (char.IsLetterOrDigit(ch) == false && ch != '_')
-                {
-                    requiresQuotes = true;
-                    break;
-                }
-            }
-
-            if (requiresQuotes)
-            {
-                escapedCollectionName = collectionName.Replace("'", "\\'");
-                return true;
-            }
-
-            escapedCollectionName = null;
-            return false;
         }
     }
 }
