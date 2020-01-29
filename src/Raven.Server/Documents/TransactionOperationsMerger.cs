@@ -510,8 +510,6 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        var txId = tx?.InnerTransaction.LowLevelTransaction.Id ?? -1;
-
                         // need to dispose here since we are going to open new tx for each operation
                         if (tx != null)
                         {
@@ -519,15 +517,15 @@ namespace Raven.Server.Documents
                             tx.Dispose();
                         }
 
-                        if (e is HighDirtyMemoryException dirtyMemoryException)
+                        if (e is HighDirtyMemoryException highDirtyMemoryException)
                         {
                             if (_log.IsInfoEnabled)
                             {
-                                var errorMessage = $"{pendingOps.Count:#,#0} operations were cancelled because of high dirty memory, details: {dirtyMemoryException.Message}";
-                                _log.Info(errorMessage, dirtyMemoryException);
+                                var errorMessage = $"{pendingOps.Count:#,#0} operations were cancelled because of high dirty memory, details: {highDirtyMemoryException.Message}";
+                                _log.Info(errorMessage, highDirtyMemoryException);
                             }
 
-                            NotifyHighDirtyMemoryFailure(pendingOps, dirtyMemoryException.Message, txId);
+                            NotifyHighDirtyMemoryFailure(pendingOps, highDirtyMemoryException);
                         }
                         else
                         {
@@ -593,15 +591,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyHighDirtyMemoryFailure(List<MergedTransactionCommand> pendingOps, string details, long transactionId)
+        private void NotifyHighDirtyMemoryFailure(List<MergedTransactionCommand> pendingOps, HighDirtyMemoryException exception)
         {
-            var highDirtyMemory = new HighDirtyMemoryException(
-                $"Operation was cancelled by the transaction merger for transaction #{transactionId} due to high dirty memory in scratch files." +
-                $" This might be caused by a slow IO storage. Current memory usage: {details}");
-
             // set all pending ops exception
             foreach (var pendingOp in pendingOps)
-                pendingOp.Exception = highDirtyMemory;
+                pendingOp.Exception = exception;
 
             NotifyOnThreadPool(pendingOps);
 
@@ -609,7 +603,7 @@ namespace Raven.Server.Documents
             var rejectedBuffer = GetBufferForPendingOps();
             while (_operations.TryDequeue(out var operationToReject))
             {
-                operationToReject.Exception = highDirtyMemory;
+                operationToReject.Exception = exception;
                 rejectedBuffer.Add(operationToReject);
             }
 
@@ -737,15 +731,15 @@ namespace Raven.Server.Documents
                             }
                         }
 
-                        if (e is HighDirtyMemoryException dirtyMemoryException)
+                        if (e is HighDirtyMemoryException highDirtyMemoryException)
                         {
                             if (_log.IsInfoEnabled)
                             {
-                                var errorMessage = $"{currentPendingOps.Count:#,#0} operations were cancelled because of high dirty memory, details: {dirtyMemoryException.Message}";
-                                _log.Info(errorMessage, dirtyMemoryException);
+                                var errorMessage = $"{currentPendingOps.Count:#,#0} operations were cancelled because of high dirty memory, details: {highDirtyMemoryException.Message}";
+                                _log.Info(errorMessage, highDirtyMemoryException);
                             }
 
-                            NotifyHighDirtyMemoryFailure(currentPendingOps, dirtyMemoryException.Message, current.Transaction.InnerTransaction.LowLevelTransaction.Id);
+                            NotifyHighDirtyMemoryFailure(currentPendingOps, highDirtyMemoryException);
                         }
                         else
                         {
@@ -884,12 +878,12 @@ namespace Raven.Server.Documents
                     // we need to ask for a flush here
                     GlobalFlushingBehavior.GlobalFlusher.Value?.MaybeFlushEnvironment(context.Environment);
 
-                    var details =
+                    throw new HighDirtyMemoryException(
+                        $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
+                        $" This might be caused by a slow IO storage. Current memory usage: " +
                         $"Total Physical Memory: {MemoryInformation.TotalPhysicalMemory}, " +
                         $"Total Scratch Allocated Memory: {new Size(dirtyMemoryState.TotalDirtyInBytes, SizeUnit.Bytes)} " +
-                        $"(which is above {_parent.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage * 100}%)";
-
-                    throw new HighDirtyMemoryException(details);
+                        $"(which is above {_parent.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage * 100}%)");
                 }
 
                 meter.IncrementCounter(1);
