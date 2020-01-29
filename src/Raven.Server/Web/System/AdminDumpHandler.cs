@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Properties;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
@@ -27,8 +28,7 @@ namespace Raven.Server.Web.System
 
             using (var process = Process.GetCurrentProcess())
             {
-                var extension = PlatformDetails.RunningOnPosix == false ? ".dmp" : string.Empty;
-                string fileName = GetFileName(extension);
+                string fileName = GetFileName(".dmp");
                 path = Path.Combine(path, fileName);
                 HttpContext.Response.RegisterForDispose(new DeleteFile(path));
 
@@ -123,7 +123,16 @@ namespace Raven.Server.Web.System
                 ? "Unknown"
                 : ServerStore.NodeTag;
 
-            return $"RavenDB_Dump_{nodeTag}_{DateTime.Now.ToString("ddMMyyyy_HHmmss")}{extension}";
+            var platform = PlatformDetails.RunningOnPosix
+                ? ".linux"
+                : ".win";
+
+            if (PlatformDetails.Is32Bits)
+                platform += "-x86";
+            else
+                platform += "-x64";
+
+            return $"RavenDB_{RavenVersionAttribute.Instance.BuildVersion}_{nodeTag}_{DateTime.Now.ToString("ddMMyyyy_HHmmss")}{platform}{extension}";
         }
 
         private class DeleteFile : IDisposable
