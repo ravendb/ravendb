@@ -15,10 +15,13 @@ namespace Raven.Server.Documents.Sharding
 
         private readonly DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
+        private long _lastClientConfigurationIndex;
 
         public ShardedContext(ServerStore server, DatabaseRecord record)
         {
             _record = record;
+            _lastClientConfigurationIndex = server.LastClientConfigurationIndex;
+
             RequestExecutors = new RequestExecutor[record.Shards.Length];
             for (int i = 0; i < record.Shards.Length; i++)
             {
@@ -91,6 +94,18 @@ namespace Raven.Server.Documents.Sharding
             }
 
             return _record.ShardAllocations[_record.ShardAllocations.Count - 1].Shard;
+        }
+
+        public bool HasTopologyChanged(long etag)
+        {
+            return _record.Topology.Stamp?.Index > etag;
+        }
+
+        public bool HasClientConfigurationChanged(long clientConfigurationEtag)
+        {
+            var lastClientConfigurationIndex = _record.Client?.Etag ?? -1;
+            var actual = Hashing.Combine(lastClientConfigurationIndex, _lastClientConfigurationIndex);
+            return actual > clientConfigurationEtag;
         }
     }
 }
