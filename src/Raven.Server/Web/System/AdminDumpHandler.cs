@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow.Platform;
+using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
 
 namespace Raven.Server.Web.System
@@ -28,18 +30,18 @@ namespace Raven.Server.Web.System
 
             using (var process = Process.GetCurrentProcess())
             {
-                string fileName = GetFileName(".dmp");
-                path = Path.Combine(path, fileName);
+                var fileNames = GetFileNames(".dmp");
+                path = Path.Combine(path, fileNames.FileName);
                 HttpContext.Response.RegisterForDispose(new DeleteFile(path));
 
-                Execute($"dump --type {type}", process.Id, path);
+                Execute($"dump --type {type}", process.Id, path, wait: true);
 
                 using (var file = File.OpenRead(path))
+                using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
                 {
-                    HttpContext.Response.Headers["Content-Disposition"] = "attachment; filename=" + Uri.EscapeDataString(fileName);
+                    HttpContext.Response.Headers["Content-Disposition"] = "attachment; filename=" + Uri.EscapeDataString(fileNames.GzipFileName);
 
-                    using (var stream = ResponseBodyStream())
-                        await file.CopyToAsync(stream);
+                    await file.CopyToAsync(gzipStream);
                 }
             }
         }
@@ -55,24 +57,24 @@ namespace Raven.Server.Web.System
 
             using (var process = Process.GetCurrentProcess())
             {
-                string fileName = GetFileName(".gcdump");
-                path = Path.Combine(path, fileName);
+                var fileNames = GetFileNames(".gcdump");
+                path = Path.Combine(path, fileNames.FileName);
                 HttpContext.Response.RegisterForDispose(new DeleteFile(path));
 
-                Execute($"gcdump --timeout {timeout}", process.Id, path);
+                Execute($"gcdump --timeout {timeout}", process.Id, path, wait: false);
 
                 using (var file = File.OpenRead(path))
+                using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
                 {
-                    HttpContext.Response.Headers["Content-Disposition"] = "attachment; filename=" + Uri.EscapeDataString(fileName);
+                    HttpContext.Response.Headers["Content-Disposition"] = "attachment; filename=" + Uri.EscapeDataString(fileNames.GzipFileName);
 
-                    using (var stream = ResponseBodyStream())
-                        await file.CopyToAsync(stream);
+                    await file.CopyToAsync(gzipStream);
                 }
             }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private static void Execute(string args, int processId, string output)
+        private static void Execute(string args, int processId, string output, bool wait)
         {
             var ravenDebugExec = Path.Combine(AppContext.BaseDirectory,
                 PlatformDetails.RunningOnPosix ? "Raven.Debug" : "Raven.Debug.exe"
@@ -82,6 +84,9 @@ namespace Raven.Server.Web.System
                 throw new FileNotFoundException($"Could not find debugger tool at '{ravenDebugExec}'");
 
             var sb = new StringBuilder($"{args} --pid {processId} --output {CommandLineArgumentEscaper.EscapeSingleArg(output)}");
+
+            if (wait && PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
+                sb.Append(" --wait");
 
             var startup = new ProcessStartInfo
             {
@@ -109,15 +114,34 @@ namespace Raven.Server.Web.System
             process.Start();
 
             process.BeginErrorReadLine();
-            process.BeginOutputReadLine();
 
-            process.WaitForExit();
+            if (wait && PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
+            {
+                // enable this process to attach to us
+                Syscall.prctl(Syscall.PR_SET_PTRACER, new UIntPtr((uint)process.Id), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
+
+                process.StandardInput.WriteLine("go");// value is meaningless, just need a new line
+                process.StandardInput.Flush();
+            }
+
+            try
+            {
+                process.WaitForExit();
+            }
+            finally
+            {
+                if (wait && PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
+                {
+                    // disable attachments 
+                    Syscall.prctl(Syscall.PR_SET_PTRACER, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
+                }
+            }
 
             if (process.ExitCode != 0)
                 throw new InvalidOperationException($"Could not read stack traces, exit code: {process.ExitCode}, error: {sb}");
         }
 
-        private string GetFileName(string extension)
+        private (string FileName, string GzipFileName) GetFileNames(string extension)
         {
             var nodeTag = ServerStore.NodeTag == RachisConsensus.InitialTag
                 ? "Unknown"
@@ -132,7 +156,11 @@ namespace Raven.Server.Web.System
             else
                 platform += "-x64";
 
-            return $"RavenDB_{RavenVersionAttribute.Instance.BuildVersion}_{nodeTag}_{DateTime.Now.ToString("ddMMyyyy_HHmmss")}{platform}{extension}";
+            var fileWithoutExtension = $"RavenDB_{RavenVersionAttribute.Instance.BuildVersion}_{nodeTag}_{DateTime.Now.ToString("ddMMyyyy_HHmmss")}{platform}";
+            var fileName = fileWithoutExtension + extension;
+            var gzipFileName = fileName + ".gz";
+
+            return (fileName, gzipFileName);
         }
 
         private class DeleteFile : IDisposable
