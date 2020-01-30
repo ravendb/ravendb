@@ -123,7 +123,7 @@ namespace SlowTests.Issues
                                     NestedQuery = o.Lines.Where(x => x.PricePerUnit < line.PricePerUnit).Select(y => y.ProductName).ToList()
                                 };
                     
-                    Assert.Equal("from Orders as o select { " +
+                    Assert.Equal("from 'Orders' as o select { " +
                                  "Any : o.Lines.some(function(x){return x.ProductName===$p0;}), " +
                                  "NestedQuery : o.Lines.filter(function(x){return x.PricePerUnit<$p1;}).map(function(y){return y.ProductName;}) }", 
                                  query.ToString());

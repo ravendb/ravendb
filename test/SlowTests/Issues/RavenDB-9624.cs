@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                                     Company = order.Company,
                                 };
 
-                    Assert.Equal("from Orders as 'order' select { Employee : load(order.Employee), Company : order.Company }"
+                    Assert.Equal("from 'Orders' as 'order' select { Employee : load(order.Employee), Company : order.Company }"
                         , query.ToString());
 
                     var result = query.ToList();
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                                     Company = function.Company,
                                 };
 
-                    Assert.Equal("from Orders as _function select { " +
+                    Assert.Equal("from 'Orders' as _function select { " +
                                  "Employee : load(_function.Employee), Company : _function.Company }"
                                 , query.ToString());
 
@@ -133,7 +133,7 @@ namespace SlowTests.Issues
                                     Company = load.Company,
                                 };
 
-                    Assert.Equal("from Orders as _load select { Employee : load(_load.Employee), Company : _load.Company }"
+                    Assert.Equal("from 'Orders' as _load select { Employee : load(_load.Employee), Company : _load.Company }"
                         , query.ToString());
 
                     var result = query.ToList();
@@ -584,7 +584,7 @@ from Orders as o load o.Company as _function select output(o, _function)", query
 
                     var result = query.ToList();
 
-                    Assert.Equal("from Orders select Company as 'Load', Employee as 'Include'", query.ToString());
+                    Assert.Equal("from 'Orders' select Company as 'Load', Employee as 'Include'", query.ToString());
 
                     Assert.Equal("companies/1-A", result[0].Load);
                     Assert.Equal("employees/1-A", result[0].Include);
@@ -619,7 +619,7 @@ from Orders as o load o.Company as _function select output(o, _function)", query
 
                     var result = query.ToList();
 
-                    Assert.Equal("from Orders as o select " +
+                    Assert.Equal("from 'Orders' as o select " +
                                  "{ Update : o.Company.substr(10), Include : o.Employee.substr(10) }", query.ToString());
 
                     Assert.Equal("1-A", result[0].Update);
