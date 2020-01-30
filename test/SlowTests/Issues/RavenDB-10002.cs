@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                                     HasProperties = x.Properties.Any()
                                 }; 
                     
-                    Assert.Equal("from Articles as x select { HasProperties : x.Properties.length > 0 }", query.ToString());
+                    Assert.Equal("from 'Articles' as x select { HasProperties : x.Properties.length > 0 }", query.ToString());
 
                     var result = query.ToList();
                     
