@@ -70,9 +70,8 @@
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li>
-                                <a href="#" data-bind="click: generateClass, enable: !isSaveEnabled()">View the C# Class </a>
-                            </li>
+                            <li data-bind="visible: !canViewCSharpClass()" class="disabled"><a class="disabled">View the C# Class</a></li>
+                            <li data-bind="visible: canViewCSharpClass()"><a data-bind="click: generateClass" href="#">View the C# Class</a></li>
                         </ul>
                     </div>
                 </div>
