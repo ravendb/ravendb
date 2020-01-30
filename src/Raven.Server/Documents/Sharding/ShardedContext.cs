@@ -98,12 +98,12 @@ namespace Raven.Server.Documents.Sharding
 
         public bool HasTopologyChanged(long etag)
         {
-            return _record.Topology.Stamp?.Index > etag;
+            return _record.Topology?.Stamp?.Index > etag;
         }
 
         public bool HasClientConfigurationChanged(long clientConfigurationEtag)
         {
-            var lastClientConfigurationIndex = _record.Client?.Etag ?? -1;
+            var lastClientConfigurationIndex = _record.Client?.Etag ?? 0;
             var actual = Hashing.Combine(lastClientConfigurationIndex, _lastClientConfigurationIndex);
             return actual > clientConfigurationEtag;
         }
