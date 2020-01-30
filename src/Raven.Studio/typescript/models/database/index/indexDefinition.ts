@@ -93,13 +93,7 @@ class indexDefinition {
         this.additionalSources(_.map(dto.AdditionalSources, (code, name) => additionalSource.create(name, code)));
 
         this.hasDuplicateFieldsNames = ko.pureComputed(() => {
-            let hasDuplicates = false;
-
-            if (_.uniqBy(this.fields(), field => field.name()).length !== this.fields().length) {
-                hasDuplicates = true;
-            }
-
-            return hasDuplicates;
+            return _.uniqBy(this.fields(), field => field.name()).length !== this.fields().length;
         });
         
         if (!this.isAutoIndex()) {
