@@ -34,7 +34,10 @@ class indexDefinition {
     maps = ko.observableArray<mapItem>();
     reduce = ko.observable<string>();
     //isTestIndex = ko.observable<boolean>(false);
+    
     fields = ko.observableArray<indexFieldOptions>();
+    hasDuplicateFieldsNames: KnockoutComputed<boolean>;
+    
     additionalSources = ko.observableArray<additionalSource>();
     defaultFieldOptions = ko.observable<indexFieldOptions>(null);
     isAutoIndex = ko.observable<boolean>(false);
@@ -88,6 +91,16 @@ class indexDefinition {
         this.configuration(this.parseConfiguration(dto.Configuration));
 
         this.additionalSources(_.map(dto.AdditionalSources, (code, name) => additionalSource.create(name, code)));
+
+        this.hasDuplicateFieldsNames = ko.pureComputed(() => {
+            let hasDuplicates = false;
+
+            if (_.uniqBy(this.fields(), field => field.name()).length !== this.fields().length) {
+                hasDuplicates = true;
+            }
+
+            return hasDuplicates;
+        });
         
         if (!this.isAutoIndex()) {
             this.initValidation();
@@ -117,6 +130,14 @@ class indexDefinition {
                     async: true,
                     validator: generalUtils.debounceAndFunnel(checkIndexName)
                 }]
+        });
+        
+        this.fields.extend({
+           validation: [
+               {
+                   validator: () => !this.hasDuplicateFieldsNames()
+               }
+           ] 
         });
 
         this.reduce.extend({
@@ -148,7 +169,8 @@ class indexDefinition {
             name: this.name,
             reduce: this.reduce,
             reduceOutputCollectionName: this.reduceOutputCollectionName,
-            patternForReferencesToReduceOutputCollection: this.patternForReferencesToReduceOutputCollection
+            patternForReferencesToReduceOutputCollection: this.patternForReferencesToReduceOutputCollection,
+            fields: this.fields
         });
     }
 
