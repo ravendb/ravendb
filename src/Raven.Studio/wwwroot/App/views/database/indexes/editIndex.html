@@ -142,9 +142,12 @@
             </ul>
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane fade in active" id="fields">
-                    <div class="margin-bottom">
+                    <div class="margin-bottom flex-horizontal">
                         <button class="btn btn-default" data-bind="click: addField"><i class="icon-plus"></i><span>Add field</span></button>
                         <button class="btn btn-info" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions()"><i class="icon-plus"></i><span>Add default field options</span></button>
+                        <span class="has-error margin-left margin-left-sm" data-bind="visible: editedIndex().hasDuplicateFieldsNames()">
+                            <span class="help-block"><i class="icon-warning"></i> Fields contain duplicate names</span>
+                        </span>
                     </div>
                     <div class="panel panel-info" data-bind="with: editedIndex().defaultFieldOptions">
                         <div data-bind="template: { name: 'field-template'}"></div>
