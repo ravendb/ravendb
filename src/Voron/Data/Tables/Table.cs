@@ -1297,7 +1297,7 @@ namespace Voron.Data.Tables
         public IEnumerable<TableValueHolder> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, long skip)
         {
             var fst = GetFixedSizeTree(index);
-
+            
             using (var it = fst.Iterate())
             {
                 if (it.Seek(key) == false)

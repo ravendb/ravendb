@@ -73,6 +73,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     return new CounterReplicationItem {Type = type, Reader = reader};
                 case ReplicationItemType.TimeSeriesSegment:
                     return new TimeSeriesReplicationItem {Type = type, Reader = reader};
+                case ReplicationItemType.DeletedTimeSeriesRange:
+                    return new TimeSeriesDeletedRangeItem {Type = type, Reader = reader};
                 default:
                     throw new ArgumentOutOfRangeException(type.ToString());
             }
@@ -151,7 +153,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             CounterTombstone = 8,
 
             CounterGroup = 9,
-            TimeSeriesSegment = 10
+            TimeSeriesSegment = 10,
+            DeletedTimeSeriesRange = 11
         }
 
         public void ToDispose(ByteStringContext.InternalScope obj)
