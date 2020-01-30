@@ -92,29 +92,15 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
+
                 var patch = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
-                var url = new StringBuilder($"/docs?id={Uri.EscapeUriString(id)}");
-                if (isTest)
-                {
-                    url.Append("&test=true");
-                }
-
-                if (debugMode)
-                {
-                    url.Append("&debug=true");
-                }
-
-                if (skipPatchIfChangeVectorMismatch)
-                {
-                    url.Append("&skipPatchIfChangeVectorMismatch=true");
-                }
 
                 var index = ShardedContext.GetShardIndex(context, id);
 
                 var cmd = new ShardedCommand
                 {
                     Method = HttpMethod.Patch,
-                    Url = url.ToString(),
+                    Url = $"/docs{HttpContext.Request.QueryString.ToString()}",
                     Content = patch,
                     Headers =
                     {

@@ -18,17 +18,17 @@ namespace Raven.Server.Documents.Sharding
             //TODO: We probably want to put it in the ShardedContext, not use the server one 
             ContextPool = context.RavenServer.ServerStore.ContextPool;
 
-
+            
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && ShardedContext.HasTopologyChanged(topologyEtag.Value))
             {
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
             }
-                
 
             var clientConfigurationEtag = GetLongFromHeaders(Constants.Headers.ClientConfigurationEtag);
             if (clientConfigurationEtag.HasValue && ShardedContext.HasClientConfigurationChanged(clientConfigurationEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
+            
         }
     }
 }
