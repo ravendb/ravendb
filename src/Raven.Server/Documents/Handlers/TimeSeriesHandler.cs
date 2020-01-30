@@ -296,13 +296,17 @@ namespace Raven.Server.Documents.Handlers
                     {
                         foreach (var removal in operation.Removals)
                         {
-                            LastChangeVector = tss.RemoveTimestampRange(context,
-                                operation.DocumentId,
-                                docCollection,
-                                removal.Name,
-                                removal.From,
-                                removal.To
-                            );
+                            var deletionRange = new TimeSeriesStorage.DeletionRangeRequest
+                            {
+                                DocumentId = operation.DocumentId,
+                                Collection = docCollection,
+                                Name = removal.Name,
+                                From = removal.From,
+                                To = removal.To
+                            };
+
+                            LastChangeVector = tss.RemoveTimestampRange(context, deletionRange);
+                            
                             changes++;
                         }
                     }

@@ -975,6 +975,10 @@ namespace Raven.Server.Documents.Replication
                         var rcvdChangeVector = item.ChangeVector;
                         context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
 
+                        TimeSeriesStorage tss;
+                        LazyStringValue docId;
+                        LazyStringValue name;
+
                         switch (item)
                         {
                             case AttachmentReplicationItem attachment:
@@ -1008,9 +1012,25 @@ namespace Raven.Server.Documents.Replication
                             case CounterReplicationItem counter:
                                 database.DocumentsStorage.CountersStorage.PutCounters(context, counter.Id, counter.Collection, counter.ChangeVector, counter.Values);
                                 break;
+                            case TimeSeriesDeletedRangeItem deletedRange:
+                                tss = database.DocumentsStorage.TimeSeriesStorage;
+
+                                TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out docId, out name);
+
+                                var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
+                                {
+                                    DocumentId = docId,
+                                    Collection = deletedRange.Collection,
+                                    Name = name,
+                                    From = deletedRange.From,
+                                    To = deletedRange.To
+                                };
+
+                                tss.RemoveTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
+                                break;
                             case TimeSeriesReplicationItem segment:
-                                var tss = database.DocumentsStorage.TimeSeriesStorage;
-                                TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out var docId, out var name, out var baseline);
+                                tss = database.DocumentsStorage.TimeSeriesStorage;
+                                TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out name, out var baseline);
 
                                 if (tss.TryAppendEntireSegment(context, segment, baseline))
                                 {

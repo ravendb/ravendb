@@ -441,7 +441,8 @@ namespace Raven.Server.Documents.TimeSeries
             Name,
             BaseLine
         }
-        public static void ParseTimeSeriesKey(byte* ptr, int size, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name, out DateTime baseLine)
+
+        public static void ParseTimeSeriesKey(byte* ptr, int size, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name)
         {
             docId = null;
             name = null;
@@ -449,7 +450,7 @@ namespace Raven.Server.Documents.TimeSeries
             var bytes = new Span<byte>(ptr, size);
             var order = ParsingOrder.Id;
             var next = -1;
-            for (int i = 0; i < bytes.Length - sizeof(long); i++)
+            for (int i = 0; i < bytes.Length; i++)
             {
                 var val = bytes[i];
                 if (val != SpecialChars.RecordSeparator)
@@ -458,22 +459,38 @@ namespace Raven.Server.Documents.TimeSeries
                 switch (order)
                 {
                     case ParsingOrder.Id:
-                       docId = context.GetLazyString(ptr, i);
-                       break;
+                        docId = context.GetLazyString(ptr, i);
+                        break;
 
                     case ParsingOrder.Name:
                         name = context.GetLazyString(ptr + next, i - next);
                         break;
-
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
                 next = i + 1;
                 order++;
+
+                if (order == ParsingOrder.BaseLine)
+                    break;
             }
 
+            Debug.Assert(docId != null);
+            Debug.Assert(name != null);
+        }
+
+        public static void ParseTimeSeriesKey(byte* ptr, int size, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name, out DateTime baseLine)
+        {
+            ParseTimeSeriesKey(ptr, size, context, out docId, out name);
+
+            var bytes = new Span<byte>(ptr, size);
             var ticks = MemoryMarshal.Read<long>(bytes.Slice(bytes.Length - sizeof(long), sizeof(long)));
             baseLine = new DateTime(Bits.SwapBytes(ticks) * 10_000);
+        }
+
+        public static void ParseTimeSeriesKey(Slice key, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name)
+        {
+            ParseTimeSeriesKey(key.Content.Ptr, key.Size, context, out docId, out name);
         }
 
         public static void ParseTimeSeriesKey(Slice key, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name, out DateTime baseLine)

@@ -37,6 +37,9 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
+
+                WaitForUserToContinueTheTest(storeA);
+
                 EnsureReplicating(storeA, storeB);
 
                 using (var session = storeB.OpenSession())
@@ -106,6 +109,8 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
+
+                WaitForUserToContinueTheTest(storeA);
 
                 EnsureReplicating(storeA, storeB);
                 EnsureReplicating(storeB, storeA);
@@ -380,6 +385,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
 
+                await Task.Delay(3000); // wait for replication ping-pong to settle down
+
                 EnsureReplicating(storeA, storeB);
                 EnsureReplicating(storeB, storeA);
 
@@ -457,6 +464,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                         .Remove("Heartrate", baseline.AddMinutes(10));
                     session.SaveChanges();
                 }
+
+                WaitForUserToContinueTheTest(storeA);
 
                 EnsureReplicating(storeA, storeB);
 

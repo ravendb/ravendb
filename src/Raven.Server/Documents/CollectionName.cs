@@ -47,6 +47,7 @@ namespace Raven.Server.Documents
         private readonly string _counters;
         private readonly string _counterGroups;
         private readonly string _timeseries;
+        private readonly string _deletedRanges;
 
 
         private bool? _isHiLo;
@@ -70,6 +71,7 @@ namespace Raven.Server.Documents
 #pragma warning restore 618
             _counterGroups = GetName(CollectionTableType.CounterGroups);
             _timeseries = GetName(CollectionTableType.TimeSeries);
+            _deletedRanges = GetName(CollectionTableType.DeletedRanges);
 
         }
 
@@ -93,6 +95,8 @@ namespace Raven.Server.Documents
                     return _counterGroups;
                 case CollectionTableType.TimeSeries:
                     return _timeseries;
+                case CollectionTableType.DeletedRanges:
+                    return _deletedRanges;
 
                 default:
                     throw new NotSupportedException($"Collection table type '{type}' is not supported.");
@@ -217,6 +221,7 @@ namespace Raven.Server.Documents
         [Obsolete("For migration purposes only from versions where Counters were experimental feature (prior to 4.2)")]
         Counters,
         CounterGroups,
-        TimeSeries
+        TimeSeries,
+        DeletedRanges
     }
 }
