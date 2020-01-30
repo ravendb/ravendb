@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                             user.Group
                         });
 
-                    Assert.Equal("from Users as __alias0 " +
+                    Assert.Equal("from 'Users' as __alias0 " +
                                  "select __alias0.'Group'"
                                 , query.ToString());
 
@@ -104,7 +104,7 @@ namespace SlowTests.Issues
                             user.LastName
                         });
 
-                    Assert.Equal("from Users as __alias0 " +
+                    Assert.Equal("from 'Users' as __alias0 " +
                                  "select __alias0.FirstName, " +
                                     "__alias0.'Group', " +
                                     "__alias0.LastName"
@@ -154,7 +154,7 @@ namespace SlowTests.Issues
                             Likes = RavenQuery.Counter(user, "likes")
                         });
 
-                    Assert.Equal("from Users as __alias0 " +
+                    Assert.Equal("from 'Users' as __alias0 " +
                                  "select __alias0.FirstName, " +
                                  "__alias0.'Group', " +
                                  "counter(__alias0, likes) as Likes"

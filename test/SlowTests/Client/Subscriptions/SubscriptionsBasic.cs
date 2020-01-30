@@ -42,7 +42,7 @@ namespace SlowTests.Client.Subscriptions
                 subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
 
                 Assert.Equal(1, subscriptionDocuments.Count);
-                Assert.Equal("from Users as doc", subscriptionDocuments[0].Query);
+                Assert.Equal("from 'Users' as doc", subscriptionDocuments[0].Query);
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker(
                     new SubscriptionWorkerOptions(subscriptionDocuments[0].SubscriptionName) {

@@ -314,7 +314,7 @@ namespace SlowTests.Issues
                                 };
 
                     var queryAsString = query.ToString();
-                    Assert.Equal("from Users as user select { FullName : user.name+\" \"+user.lastName }", queryAsString);
+                    Assert.Equal("from 'Users' as user select { FullName : user.name+\" \"+user.lastName }", queryAsString);
 
                     var queryResult = query.ToList();
 

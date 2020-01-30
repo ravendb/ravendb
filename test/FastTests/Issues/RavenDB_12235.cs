@@ -24,8 +24,8 @@ namespace FastTests.Issues
                     q = q.Where(x => x.Name == "123");
                     q = q.Search(x => x.Age, "123");
 
-                    Assert.Equal("from Users where Name = $p0 and search(Age, $p1)", q.ToString());
-                    Assert.Equal("from Users", docQuery.ToString());
+                    Assert.Equal("from 'Users' where Name = $p0 and search(Age, $p1)", q.ToString());
+                    Assert.Equal("from 'Users'", docQuery.ToString());
                 }
 
                 using (var asyncSession = store.OpenAsyncSession())
@@ -35,8 +35,8 @@ namespace FastTests.Issues
                     q = q.Where(x => x.Name == "123");
                     q = q.Search(x => x.Age, "123");
 
-                    Assert.Equal("from Users where Name = $p0 and search(Age, $p1)", q.ToString());
-                    Assert.Equal("from Users", docQuery.ToString());
+                    Assert.Equal("from 'Users' where Name = $p0 and search(Age, $p1)", q.ToString());
+                    Assert.Equal("from 'Users'", docQuery.ToString());
                 }
             }
 

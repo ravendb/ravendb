@@ -94,7 +94,7 @@ namespace SlowTests.Issues
                         }
                 };
 
-            Assert.Equal("from Users as customer select { CustomerName : customer.Name, Phones : Object.map(customer.Phones, function(v, k){ return {Label:k,Prefix:v.CountryPrefix,Phone:v.Value};}) }", query.ToString());
+            Assert.Equal("from 'Users' as customer select { CustomerName : customer.Name, Phones : Object.map(customer.Phones, function(v, k){ return {Label:k,Prefix:v.CountryPrefix,Phone:v.Value};}) }", query.ToString());
 
             var res = await query.ToListAsync();
             Assert.Equal(5, res.Count);
