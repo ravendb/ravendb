@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                                     Name = location.Name
                                 };
 
-                    Assert.Equal("from Locations select id() as Id, LocationParents.Count as Depth, Name", query.ToString());
+                    Assert.Equal("from 'Locations' select id() as Id, LocationParents.Count as Depth, Name", query.ToString());
 
                     var result = query.ToList();
 
@@ -92,7 +92,7 @@ namespace SlowTests.Issues
                             Name = location.Name
                         };
 
-                    Assert.Equal("from Locations as location select " +
+                    Assert.Equal("from 'Locations' as location select " +
                                  "{ Id : id(location), Depth : location.LocationParents.length, Name : location.Name }"
                                  , query.ToString());
 
@@ -132,7 +132,7 @@ namespace SlowTests.Issues
                             Name = location.Name
                         };
 
-                    Assert.Equal("from Locations as location select { Id : id(location), " +
+                    Assert.Equal("from 'Locations' as location select { Id : id(location), " +
                                  "Depth : location.LocationParents.length, Depth2 : location.LocationParents.length, Name : location.Name }"
                         , query.ToString());
 

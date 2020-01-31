@@ -83,7 +83,7 @@ namespace SlowTests.Issues
                             StartDate = x.Start.ToString(CultureInfo.InvariantCulture)
                         });
 
-                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                    Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
                                  "select { StartDate : toStringWithFormat(x.Start) }"
                         , query.ToString());
 
@@ -123,7 +123,7 @@ namespace SlowTests.Issues
                             StartDate = x.Start.ToString(CultureInfo.CurrentCulture)
                         });
 
-                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                    Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
                                  $"select {{ StartDate : toStringWithFormat(x.Start, \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 
@@ -162,7 +162,7 @@ namespace SlowTests.Issues
                             StartDate = x.Start.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture)
                         });
 
-                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                    Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
                                  $"select {{ StartDate : toStringWithFormat(x.Start, \"dd.MM.yyyy\", \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 
@@ -202,7 +202,7 @@ namespace SlowTests.Issues
                             StartDate = x.Start.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)
                         });
 
-                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                    Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
                                  "select { StartDate : toStringWithFormat(x.Start, \"dd.MM.yyyy\") }"
                         , query.ToString());
 
@@ -241,7 +241,7 @@ namespace SlowTests.Issues
                             Number = x.Number.ToString("000")
                         });
 
-                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                    Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
                                  "select { Number : toStringWithFormat(x.Number, \"000\") }"
                         , query.ToString());
 
@@ -279,7 +279,7 @@ namespace SlowTests.Issues
                             Number = x.Number.ToString(CultureInfo.InvariantCulture)
                         });
 
-                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                    Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
                                  "select { Number : toStringWithFormat(x.Number) }"
                         , query.ToString());
 
@@ -318,7 +318,7 @@ namespace SlowTests.Issues
                             Number = x.Number.ToString(CultureInfo.CurrentCulture)
                         });
 
-                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                    Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
                                  $"select {{ Number : toStringWithFormat(x.Number, \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 
@@ -357,7 +357,7 @@ namespace SlowTests.Issues
                             Number = x.Number.ToString("000", CultureInfo.CurrentCulture)
                         });
 
-                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                    Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
                                  $"select {{ Number : toStringWithFormat(x.Number, \"000\", \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 

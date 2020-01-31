@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                             HasValue = d.NullableInt.HasValue //false
                         };
 
-                    Assert.Equal("from MyDocs as d order by id() select { HasValue : d.NullableInt != null }"
+                    Assert.Equal("from 'MyDocs' as d order by id() select { HasValue : d.NullableInt != null }"
                         , query.ToString());
 
                     var results = query.ToList();
