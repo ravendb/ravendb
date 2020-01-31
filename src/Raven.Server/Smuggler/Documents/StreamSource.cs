@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Policy;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
@@ -1034,6 +1035,9 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<DocumentItem> ReadDocuments(INewDocumentActions actions = null)
         {
+            var storeDocsForLaterMatchWithAttachments = new Dictionary<string, DocumentItem>();
+            var storeAttachmentsForLaterMatchWithDocs = new Dictionary<string, DocumentItem.AttachmentStream>();
+
             if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
@@ -1046,7 +1050,6 @@ namespace Raven.Server.Smuggler.Documents
             var builder = CreateBuilder(context, modifier);
             try
             {
-                List<DocumentItem.AttachmentStream> attachments = null;
                 while (true)
                 {
                     if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
@@ -1092,15 +1095,21 @@ namespace Raven.Server.Smuggler.Documents
                             continue;
                         }
 
-                        if (attachments == null)
-                            attachments = new List<DocumentItem.AttachmentStream>();
-
                         var attachment = new DocumentItem.AttachmentStream
                         {
                             Stream = actions.GetTempStream()
                         };
+
                         ProcessAttachmentStream(context, data, ref attachment);
-                        attachments.Add(attachment);
+
+                        if (TryMatchAttachmentToDocumentOrStoreForLaterMatching(
+                                storeDocsForLaterMatchWithAttachments,
+                                storeAttachmentsForLaterMatchWithDocs,
+                                attachment) == false)
+                        {
+                            // TODO: CreateOrphanAttachment(attachment, "Failed to decode attachment's tag");
+                        }
+
                         continue;
                     }
 
@@ -1125,20 +1134,58 @@ namespace Raven.Server.Smuggler.Documents
 
                     _result.LegacyLastDocumentEtag = modifier.LegacyEtag;
 
-                    yield return new DocumentItem
+                    if ((modifier.Flags & DocumentFlags.HasAttachments) != 0)
                     {
-                        Document = new Document
+                        storeDocsForLaterMatchWithAttachments.Add(modifier.Id.ToLowerInvariant(), new DocumentItem
                         {
-                            Data = data,
-                            Id = context.GetLazyString(modifier.Id),
-                            ChangeVector = modifier.ChangeVector,
-                            Flags = modifier.Flags,
-                            NonPersistentFlags = modifier.NonPersistentFlags,
-                            LastModified = modifier.LastModified ?? _database.Time.GetUtcNow(),
-                        },
-                        Attachments = attachments
-                    };
-                    attachments = null;
+                            Document = new Document
+                            {
+                                Data = data,
+                                Id = context.GetLazyString(modifier.Id),
+                                ChangeVector = modifier.ChangeVector,
+                                Flags = modifier.Flags,
+                                NonPersistentFlags = modifier.NonPersistentFlags,
+                                LastModified = modifier.LastModified ?? _database.Time.GetUtcNow(),
+                            },
+                            Attachments = null
+                        });
+                    }
+                    else
+                    {
+                        yield return new DocumentItem
+                        {
+                            Document = new Document
+                            {
+                                Data = data,
+                                Id = context.GetLazyString(modifier.Id),
+                                ChangeVector = modifier.ChangeVector,
+                                Flags = modifier.Flags,
+                                NonPersistentFlags = modifier.NonPersistentFlags,
+                                LastModified = modifier.LastModified ?? _database.Time.GetUtcNow(),
+                            },
+                            Attachments = null
+                        };
+                    }
+                }
+
+                foreach (var attachmentItem in storeAttachmentsForLaterMatchWithDocs)
+                {
+                    var successInIdExtraction = TryMatchAttachmentToDocumentOrStoreForLaterMatching(
+                        storeDocsForLaterMatchWithAttachments,
+                        storeAttachmentsForLaterMatchWithDocs,
+                        attachmentItem.Value,
+                        true);
+
+                    Debug.Assert(successInIdExtraction, "Already executed once so can't fail here");
+                }
+
+                foreach (var docItem in storeDocsForLaterMatchWithAttachments)
+                {
+                    if (docItem.Value.Attachments == null)
+                    {
+                        // TODO: what to do with docs reported to have attachments but attachments weren't found?
+                    }
+                    yield return docItem.Value;
                 }
             }
             finally
@@ -1146,6 +1193,45 @@ namespace Raven.Server.Smuggler.Documents
                 builder.Dispose();
                 modifier.Dispose();
             }
+        }
+
+        private bool TryMatchAttachmentToDocumentOrStoreForLaterMatching(
+            Dictionary<string, DocumentItem> storeDocsForLaterMatchWithAttachments,
+            Dictionary<string, DocumentItem.AttachmentStream> storeAttachmentsForLaterMatchWithDocs,
+            DocumentItem.AttachmentStream attachment,
+            bool reportOrphan = false)
+        {
+            if (attachment.Data.TryGetMember("Tag", out var tag))
+            {
+                var tagString = tag as LazyStringValue;
+                if (tagString != null)
+                {
+                    var relatedDocId = tagString.Substring(0, tagString.IndexOf('|'))?.ToLowerInvariant();
+                    if (relatedDocId != null)
+                    {
+                        if (storeDocsForLaterMatchWithAttachments.TryGetValue(relatedDocId, out var docItem))
+                        {
+                            if (docItem.Attachments == null)
+                                docItem.Attachments = new List<DocumentItem.AttachmentStream>();
+                            docItem.Attachments.Add(attachment);
+                        }
+                        else
+                        {
+                            if (reportOrphan == false)
+                            {
+                                storeAttachmentsForLaterMatchWithDocs.Add(relatedDocId, attachment);
+                            }
+                            else
+                            {
+                                // TODO: CreateOrphanAttachment(attachment, $"Attachment's tag contain not exists document {relatedDocId}");
+                            }
+                        }
+
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private IEnumerable<Tombstone> ReadTombstones(INewDocumentActions actions = null)
