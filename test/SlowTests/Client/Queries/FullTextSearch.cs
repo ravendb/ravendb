@@ -272,7 +272,7 @@ namespace SlowTests.Client.Queries
 
                     var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("from Images where (exists(Tags) and not search(Tags, $p0)) and (Name = $p1)", query.Query);
+                    Assert.Equal("from 'Images' where (exists(Tags) and not search(Tags, $p0)) and (Name = $p1)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
                     Assert.Equal("User", query.QueryParameters["p1"]);
 
@@ -568,7 +568,7 @@ namespace SlowTests.Client.Queries
 
                         var query = RavenTestHelper.GetIndexQuery(qry);
 
-                        Assert.Equal("from Images where search(Name, $p0)", query.Query);
+                        Assert.Equal("from 'Images' where search(Name, $p0)", query.Query);
                         Assert.Equal(specialCharacter.ToString(), query.QueryParameters["p0"]);
 
                         qry.ToList();
@@ -590,7 +590,7 @@ namespace SlowTests.Client.Queries
 
                     var query = RavenTestHelper.GetIndexQuery(qry);
 
-                    Assert.Equal("from Images where search(Name, $p0)", query.Query);
+                    Assert.Equal("from 'Images' where search(Name, $p0)", query.Query);
                     Assert.Equal("He said: hello there", query.QueryParameters["p0"]);
 
                     qry.ToList();
@@ -622,7 +622,7 @@ namespace SlowTests.Client.Queries
                     Assert.Equal(4, images.Count);
 
                     var query = RavenTestHelper.GetIndexQuery(imagesQuery);
-                    Assert.Equal("from Images where search(Name, $p0)", query.Query);
+                    Assert.Equal("from 'Images' where search(Name, $p0)", query.Query);
                     Assert.True(query.QueryParameters.TryGetValue("p0", out var searchTerms));
                     Assert.Equal("buddy sky raven rhino", searchTerms);
                 }
