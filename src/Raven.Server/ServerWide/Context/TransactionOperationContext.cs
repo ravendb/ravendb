@@ -10,6 +10,8 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly StorageEnvironment _environment;
 
+        public bool IgnoreStalenessDueToReduceOutputsToDelete;
+
         public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag) :
             base(initialSize, longLivedSize, lowMemoryFlag)
         {

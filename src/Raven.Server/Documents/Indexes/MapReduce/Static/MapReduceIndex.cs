@@ -30,7 +30,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         protected internal readonly StaticIndexBase _compiled;
-        private readonly ThreadLocal<bool> _ignoreStalenessDueToReduceOutputsToDelete = new ThreadLocal<bool>();
         private bool? _isSideBySide;
 
         private HandleReferences _handleReferences;
@@ -190,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     var name = definition.Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty,
                         StringComparison.OrdinalIgnoreCase);
 
-                    return x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && 
+                    return x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
                            x.Definition.ReduceOutputIndex != null; // legacy index definitions don't have this field - side by side indexing isn't supported then
                 });
 
@@ -346,20 +345,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return PutMapResults(lowerId, id, wrapper, indexContext, stats);
         }
 
-        private IDisposable IgnoreStalenessDueToReduceOutputsToDelete()
-        {
-            _ignoreStalenessDueToReduceOutputsToDelete.Value = true;
-
-            return new DisposableAction(() => _ignoreStalenessDueToReduceOutputsToDelete.Value = false);
-        }
-
         protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
 
             if (isStale == false && OutputReduceToCollection?.HasDocumentsToDelete(indexContext) == true)
             {
-                if (_ignoreStalenessDueToReduceOutputsToDelete.Value == false)
+                if (indexContext.IgnoreStalenessDueToReduceOutputsToDelete == false)
                 {
                     isStale = true;
                     stalenessReasons?.Add($"There are still some reduce output documents to delete from collection '{Definition.OutputReduceToCollection}'. ");
@@ -425,14 +417,22 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 using (indexContext.OpenReadTransaction())
                 using (databaseContext.OpenReadTransaction())
-                using (IgnoreStalenessDueToReduceOutputsToDelete())
                 {
-                    var canReplace = IsStale(databaseContext, indexContext) == false;
-                    if (canReplace)
-                        _isSideBySide = null;
+                    try
+                    {
+                        indexContext.IgnoreStalenessDueToReduceOutputsToDelete = true;
+                        var canReplace = IsStale(databaseContext, indexContext) == false;
+                        if (canReplace)
+                            _isSideBySide = null;
 
-                    return canReplace;
+                        return canReplace;
+                    }
+                    finally
+                    {
+                        indexContext.IgnoreStalenessDueToReduceOutputsToDelete = false;
+                    }
                 }
+
             }
         }
 
