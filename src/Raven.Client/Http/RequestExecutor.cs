@@ -9,14 +9,13 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.ExceptionServices;
-using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
@@ -292,10 +291,14 @@ namespace Raven.Client.Http
                 GlobalHttpClientWithoutCompression;
         }
 
+        private static readonly FieldInfo _getSocketsHttpHandler;
+
         private static readonly Exception ServerCertificateCustomValidationCallbackRegistrationException;
 
         static RequestExecutor()
         {
+            _getSocketsHttpHandler = typeof(HttpClientHandler).GetField("_socketsHttpHandler", BindingFlags.Instance | BindingFlags.NonPublic);
+
             try
             {
                 using (var handler = new HttpClientHandler())
@@ -1039,7 +1042,6 @@ namespace Raven.Client.Http
                             "since this command dependent on a cluster transaction which this node doesn't support");
                     }
                 }
-
             }
 
             return response;
@@ -1401,7 +1403,6 @@ namespace Raven.Client.Http
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, RequestContext requestContext = null, CancellationToken token = default)
         {
-
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, Exception>();
 
@@ -1732,6 +1733,13 @@ namespace Raven.Client.Http
                 ValidateClientKeyUsages(certificate);
             }
 
+#if NETCOREAPP
+            if (_getSocketsHttpHandler?.GetValue(httpMessageHandler) is SocketsHttpHandler socketsHttpHandler && socketsHttpHandler != null)
+            {
+                socketsHttpHandler.PooledConnectionLifetime = TimeSpan.FromMinutes(10);
+            }
+#endif
+
             return httpMessageHandler;
         }
 
@@ -1927,7 +1935,7 @@ namespace Raven.Client.Http
             if (string.IsNullOrEmpty(hostname))
                 throw new CertificateNameMismatchException(
                     $"The hostname of the server URL must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
-                
+
             throw new CertificateNameMismatchException(
                 $"You are trying to contact host {hostname} but the hostname must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
         }
@@ -1953,7 +1961,6 @@ namespace Raven.Client.Http
                 default:
                     hostname = string.Empty;
                     break;
-                    
             }
 
             return hostname;
