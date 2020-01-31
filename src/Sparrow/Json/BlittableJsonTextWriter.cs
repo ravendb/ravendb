@@ -800,11 +800,14 @@ namespace Sparrow.Json
             var p = (byte*)ptr.ToPointer();
             var leftToWrite = size;
             var totalWritten = 0;
+            var tmpPtr = _buffer;
+            tmpPtr += _pos;
             while (leftToWrite > 0)
             {
                 var toWrite = Math.Min(JsonOperationContext.ManagedPinnedBuffer.Size, leftToWrite);
-                Memory.Copy(_buffer, p + totalWritten, toWrite);
+                Memory.Copy(tmpPtr, p + totalWritten, toWrite);
                 _pos += toWrite;
+                tmpPtr += toWrite;
                 totalWritten += toWrite;
                 leftToWrite -= toWrite;
                 Flush();
