@@ -54,20 +54,20 @@ namespace RachisTests
         {
         }
 
-        private class TestParams: DataAttribute
+        private class TestParams : DataAttribute
         {
             public TestParams(int subscriptionsChainSize, int clusterSize, int dBGroupSize, bool shouldTrapRevivedNodesIntoCandidate)
             {
                 SubscriptionsChainSize = subscriptionsChainSize;
                 ClusterSize = clusterSize;
                 DBGroupSize = dBGroupSize;
-                ShouldTrapRevivedNodesIntoCandidate = shouldTrapRevivedNodesIntoCandidate;                
+                ShouldTrapRevivedNodesIntoCandidate = shouldTrapRevivedNodesIntoCandidate;
             }
 
             public int SubscriptionsChainSize { get; }
             public int ClusterSize { get; }
             public int DBGroupSize { get; }
-            public bool ShouldTrapRevivedNodesIntoCandidate { get; }            
+            public bool ShouldTrapRevivedNodesIntoCandidate { get; }
 
             public override IEnumerable<object[]> GetData(MethodInfo testMethod)
             {
@@ -91,19 +91,19 @@ namespace RachisTests
         [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
         [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
         [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 5, shouldTrapRevivedNodesIntoCandidate: false)]
-        public async Task SubscriptionsShouldFailoverCorrectrlyAndAllowThemselvesToBeTerminated(int subscriptionsChainSize, int clusterSize ,int dBGroupSize, bool shouldTrapRevivedNodesIntoCandidate)
+        public async Task SubscriptionsShouldFailoverCorrectrlyAndAllowThemselvesToBeTerminated(int subscriptionsChainSize, int clusterSize, int dBGroupSize, bool shouldTrapRevivedNodesIntoCandidate)
         {
             const int SubscriptionsCount = 10;
             const int DocsBatchSize = 10;
             var cluster = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
 
-            
+
             using (var cdeArray = new CountdownsArray(subscriptionsChainSize, SubscriptionsCount))
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = dBGroupSize,
-                ModifyDocumentStore = s=>s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin
+                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin
             }))
             {
                 using (var session = store.OpenSession())
@@ -130,7 +130,7 @@ namespace RachisTests
 
                     var i = 0;
 
-                    for (; i<cluster.Nodes.Count; i++)
+                    for (; i < cluster.Nodes.Count; i++)
                     {
                         if (cluster.Nodes[i].ServerStore.NodeTag == node.ClusterTag)
                             break;
@@ -147,10 +147,10 @@ namespace RachisTests
                 }
 
                 foreach (var curNode in cluster.Nodes)
-                {                    
+                {
                     await AssertNoSubscriptionLeftAlive(databaseName, SubscriptionsCount, curNode);
                 }
-                
+
                 await Task.WhenAll(workerTasks);
             }
         }
@@ -160,7 +160,7 @@ namespace RachisTests
         public void MakeSureAllNodesAreRoundRobined(int clusterSize)
         {
             var cluster = AsyncHelpers.RunSync(() => CreateRaftCluster(clusterSize, shouldRunInMemory: false));
-                        
+
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
@@ -182,7 +182,7 @@ namespace RachisTests
                 }
                 );
 
-                HashSet<string> redirects = new HashSet<string>();                
+                HashSet<string> redirects = new HashSet<string>();
 
                 subsWorker.OnSubscriptionConnectionRetry += ex =>
                 {
@@ -213,13 +213,16 @@ namespace RachisTests
 
                 while (clusterSize != redirects.Count)
                 {
-                    var curLeader = cluster.Nodes.FirstOrDefault(x => x.ServerStore.IsLeader());
-
-                    if (curLeader!=null)
-                        curLeader.ServerStore.Engine.CurrentLeader.StepDown();
+                    var leaderNode = cluster.Nodes.FirstOrDefault(x => x.ServerStore.IsLeader());
+                    if (leaderNode != null)
+                    {
+                        var currentLeader = leaderNode.ServerStore.Engine.CurrentLeader;
+                        if (currentLeader != null)
+                            currentLeader.StepDown();
+                    }
 
                     Thread.Sleep(16);
-                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(5));
+                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(5), "sp.Elapsed < TimeSpan.FromMinutes(5)");
                 }
 
                 Assert.Equal(clusterSize, redirects.Count);
@@ -367,9 +370,9 @@ namespace RachisTests
             }, null, 10000, true);
 
             for (int i = 0; i < 20; i++)
-            {                
+            {
                 await DropSubscriptions(databaseName, SubscriptionsCount, cluster);
-                
+
                 if (await mainTcs.Task.WaitAsync(1000))
                     break;
             }
@@ -385,7 +388,7 @@ namespace RachisTests
                 var rehabCount = 0;
                 var attempts = 20;
                 do
-                {                    
+                {
                     using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -454,7 +457,7 @@ namespace RachisTests
                 };
 
                 var dataDir = node.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-                
+
                 // if we want to make sure that the revived node will be trapped in candidate node, we should make sure that the election timeout value is different from the 
                 // rest of the node (note that this is a configuration value, therefore we need to define it in "settings" and nowhere else)
                 if (shouldTrapRevivedNodesIntoCandidate == false)
@@ -465,7 +468,7 @@ namespace RachisTests
                     DeletePrevious = false,
                     RunInMemory = false,
                     CustomSettings = settings,
-                    PartialPath = dataDir                    
+                    PartialPath = dataDir
                 });
 
                 Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
