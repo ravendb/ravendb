@@ -14,8 +14,8 @@ namespace Sparrow.Utils
     {
         public static Func<ulong> GetCurrentUnmanagedThreadId = () => 0xDEAD;
 
-        internal static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
-            () => new ThreadStats(), trackAllValues: true);
+        internal static readonly LightThreadLocal<ThreadStats> ThreadAllocations = new LightThreadLocal<ThreadStats>(
+            () => new ThreadStats());
 
         public static void NotifyCurrentThreadAboutToClose()
         {

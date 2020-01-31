@@ -19,13 +19,9 @@ namespace Voron.Util
         private const int WriterMarker = 0x01000000;
         private int _waiters;
 
-
         private SpinLock _readWaitLock = new SpinLock();
         private readonly ManualResetEventSlim _readerWait = new ManualResetEventSlim(false);
         private readonly AutoResetEvent _writerWait = new AutoResetEvent(false);
-
-        private readonly ThreadLocal<int> _localThreadIdCache =
-            new ThreadLocal<int>(() => Thread.CurrentThread.ManagedThreadId);
         private int _writeLockOwnerThreadId;
 
       
@@ -36,7 +32,7 @@ namespace Voron.Util
             var currentWaiters = Interlocked.Add(ref _waiters, WriterMarker);
 
             // try take ownership on lock
-            var currentLock = Interlocked.CompareExchange(ref _writeLockOwnerThreadId, _localThreadIdCache.Value, 0);
+            var currentLock = Interlocked.CompareExchange(ref _writeLockOwnerThreadId, Thread.CurrentThread.ManagedThreadId, 0);
             while (
                 ( currentWaiters & ReaderMask ) == 0 &&
                 currentLock != 0 
@@ -45,12 +41,12 @@ namespace Voron.Util
                 // we have readers, so we have to wait on them :-(
                 _writerWait.WaitOne();
                 currentWaiters = Volatile.Read(ref _waiters);
-                currentLock = Interlocked.CompareExchange(ref _writeLockOwnerThreadId, _localThreadIdCache.Value, 0);
+                currentLock = Interlocked.CompareExchange(ref _writeLockOwnerThreadId, Thread.CurrentThread.ManagedThreadId, 0);
             }
         }
 
 
-        public bool IsWriteLockHeld => _localThreadIdCache.Value == Volatile.Read(ref _writeLockOwnerThreadId);
+        public bool IsWriteLockHeld => Thread.CurrentThread.ManagedThreadId == Volatile.Read(ref _writeLockOwnerThreadId);
 
         public void ExitWriteLock()
         {
