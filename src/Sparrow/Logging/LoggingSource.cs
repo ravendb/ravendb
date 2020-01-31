@@ -38,7 +38,7 @@ namespace Sparrow.Logging
         private readonly ManualResetEventSlim _hasEntries = new ManualResetEventSlim(false);
         private readonly ManualResetEventSlim _readyToCompress = new ManualResetEventSlim(false);
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
-        private readonly ThreadLocal<LocalThreadWriterState> _localState;
+        private readonly LightThreadLocal<LocalThreadWriterState> _localState;
         private Thread _loggingThread;
         private Thread _compressLoggingThread;
         private int _generation;
@@ -151,7 +151,7 @@ namespace Sparrow.Logging
         {
             _path = path;
             _name = name;
-            _localState = new ThreadLocal<LocalThreadWriterState>(GenerateThreadWriterState);
+            _localState = new LightThreadLocal<LocalThreadWriterState>(GenerateThreadWriterState);
 
             SetupLogMode(logMode, path, retentionTime, retentionSize, compress);
         }
