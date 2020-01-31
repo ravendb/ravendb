@@ -34,7 +34,7 @@ namespace Raven.Server.Web.System
                 path = Path.Combine(path, fileNames.FileName);
                 HttpContext.Response.RegisterForDispose(new DeleteFile(path));
 
-                Execute($"dump --type {type}", process.Id, path, wait: true);
+                Execute($"dump --type {type}", process.Id, path);
 
                 using (var file = File.OpenRead(path))
                 using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
@@ -61,7 +61,7 @@ namespace Raven.Server.Web.System
                 path = Path.Combine(path, fileNames.FileName);
                 HttpContext.Response.RegisterForDispose(new DeleteFile(path));
 
-                Execute($"gcdump --timeout {timeout}", process.Id, path, wait: false);
+                Execute($"gcdump --timeout {timeout}", process.Id, path);
 
                 using (var file = File.OpenRead(path))
                 using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
@@ -74,7 +74,7 @@ namespace Raven.Server.Web.System
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private static void Execute(string args, int processId, string output, bool wait)
+        private static void Execute(string args, int processId, string output)
         {
             var ravenDebugExec = Path.Combine(AppContext.BaseDirectory,
                 PlatformDetails.RunningOnPosix ? "Raven.Debug" : "Raven.Debug.exe"
@@ -84,9 +84,6 @@ namespace Raven.Server.Web.System
                 throw new FileNotFoundException($"Could not find debugger tool at '{ravenDebugExec}'");
 
             var sb = new StringBuilder($"{args} --pid {processId} --output {CommandLineArgumentEscaper.EscapeSingleArg(output)}");
-
-            if (wait && PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
-                sb.Append(" --wait");
 
             var startup = new ProcessStartInfo
             {
@@ -115,30 +112,41 @@ namespace Raven.Server.Web.System
 
             process.BeginErrorReadLine();
 
-            if (wait && PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
-            {
-                // enable this process to attach to us
-                Syscall.prctl(Syscall.PR_SET_PTRACER, new UIntPtr((uint)process.Id), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
-
-                process.StandardInput.WriteLine("go");// value is meaningless, just need a new line
-                process.StandardInput.Flush();
-            }
-
-            try
-            {
-                process.WaitForExit();
-            }
-            finally
-            {
-                if (wait && PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
-                {
-                    // disable attachments 
-                    Syscall.prctl(Syscall.PR_SET_PTRACER, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
-                }
-            }
+            process.WaitForExit();
 
             if (process.ExitCode != 0)
                 throw new InvalidOperationException($"Could not read stack traces, exit code: {process.ExitCode}, error: {sb}");
+
+            AssertOutputExists(output, ravenDebugExec, sb.ToString());
+        }
+
+        private static void AssertOutputExists(string filePath, string ravenDebugExecPath, string ravenDebugExecOutput)
+        {
+            if (File.Exists(filePath))
+                return;
+
+            string desc;
+            if (PlatformDetails.RunningOnLinux == false)
+                desc = string.Empty;
+            else
+            {
+                var createDumpExecPath = Path.Combine(AppContext.BaseDirectory, "createdump");
+
+                desc =
+                    $"Make sure to {Environment.NewLine}" +
+                    $"sudo chown root:root {ravenDebugExecPath}{Environment.NewLine}" +
+                    $"sudo chown root:root {createDumpExecPath}{Environment.NewLine}" +
+                    $"sudo chmod +s {ravenDebugExecPath}{Environment.NewLine}" +
+                    $"sudo chmod +s {createDumpExecPath}{Environment.NewLine}" +
+                    $"sudo apt install libc6-dev{Environment.NewLine}" +
+                    $"sudo setcap cap_sys_ptrace=eip {ravenDebugExecPath}{Environment.NewLine}" +
+                    $"sudo setcap cap_sys_ptrace=eip {createDumpExecPath}{Environment.NewLine}";
+            }
+
+            throw new InvalidOperationException(
+                $"Raven.Debug execution failed.{Environment.NewLine}" +
+                desc + Environment.NewLine +
+                $"{ravenDebugExecOutput}");
         }
 
         private (string FileName, string GzipFileName) GetFileNames(string extension)
