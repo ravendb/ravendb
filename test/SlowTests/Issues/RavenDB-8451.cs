@@ -100,8 +100,8 @@ namespace SlowTests.Issues
 
                 // Temporary dump: RavenDB-13765
                 var msg = new StringBuilder();
-                if (databaseStatistics.CountOfAttachments + 1 != currentStats.CountOfAttachments ||
-                    databaseStatistics.CountOfDocuments + 1 != currentStats.CountOfDocuments)
+                if (databaseStatistics.CountOfAttachments != currentStats.CountOfAttachments ||
+                    databaseStatistics.CountOfDocuments != currentStats.CountOfDocuments)
                 {
                     using (var session = store.OpenSession())
                     {
@@ -148,9 +148,8 @@ namespace SlowTests.Issues
                     throw new Exception(msg.ToString());
                 }
                 
-                // + 1 as recovery adds some artificial items
-                Assert.Equal(databaseStatistics.CountOfAttachments + 1, currentStats.CountOfAttachments);
-                Assert.Equal(databaseStatistics.CountOfDocuments + 1, currentStats.CountOfDocuments);
+                Assert.Equal(databaseStatistics.CountOfAttachments, currentStats.CountOfAttachments);
+                Assert.Equal(databaseStatistics.CountOfDocuments, currentStats.CountOfDocuments);
             }
         }
     }

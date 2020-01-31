@@ -492,12 +492,6 @@ namespace Voron.Recovery
                     PrintRecoveryProgress(startOffset, mem, eof, DateTime.UtcNow);
 
                     ReportOrphanAttachmentsAndMissingAttachments(writer, documentsWriter, ct);
-                    //This will only be the case when we don't have orphan attachments and we wrote the last attachment after we wrote the 
-                    //last document
-                    if (_lastWriteIsDocument == false && _lastAttachmentInfo.HasValue)
-                    {
-                        WriteDummyDocumentForAttachment(documentsWriter, _lastAttachmentInfo.Value.hash, _lastAttachmentInfo.Value.size, _lastAttachmentInfo.Value.tag);
-                    }
 
                     ReportOrphanCountersAndMissingCounters(writer, documentsWriter, ct);
 
@@ -902,7 +896,7 @@ namespace Voron.Recovery
         private const string TagPrefix = "Recovered attachment #";
         private void WriteAttachment(BlittableJsonTextWriter writer, long totalSize, string hash, string tag = null)
         {
-            if (_documentWritten)
+            if (_documentWritten && _lastWriteIsDocument)
             {
                 writer.WriteComma();
             }
@@ -936,7 +930,6 @@ namespace Voron.Recovery
             }
             _attachmentsHashs.Add((hash, tag, totalSize));
             _lastWriteIsDocument = false;
-            _lastAttachmentInfo = (hash, totalSize, tag);
             _documentWritten = true;
         }
 
@@ -1312,7 +1305,6 @@ namespace Voron.Recovery
         private int _dummyDocNumber;
         private int _dummyAttachmentNumber;
         private bool _lastWriteIsDocument;
-        private (string hash, long size, string tag)? _lastAttachmentInfo;
         private Logger _logger;
         private readonly byte[] _masterKey;
         private int _InvalidChecksumWithNoneZeroMac;
