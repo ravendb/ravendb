@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace Sparrow.Utils
 {
     public class LightThreadLocal<T> : IDisposable
     {
         [ThreadStatic] private static CurrentThreadState _state;
-        private ConcurrentDictionary<CurrentThreadState, T> _values = new ConcurrentDictionary<CurrentThreadState, T>(ReferenceComparer<CurrentThreadState>.Instance);
+        private ConcurrentDictionary<CurrentThreadState, T> _values = 
+            new ConcurrentDictionary<CurrentThreadState, T>(ReferenceEqualityComparer<CurrentThreadState>.Default);
         private readonly Func<T> _generator;
 
         public LightThreadLocal(Func<T> generator)
@@ -40,33 +40,65 @@ namespace Sparrow.Utils
             }
         }
 
-        private sealed class ReferenceComparer<T2> : IEqualityComparer<T2>
-        {
-            public static readonly ReferenceComparer<T2> Instance = new ReferenceComparer<T2>();
-            public bool Equals(T2 x, T2 y)
-            {
-                return ReferenceEquals(x, y);
-            }
-
-            public int GetHashCode(T2 obj)
-            {
-                return RuntimeHelpers.GetHashCode(obj);
-            }
-        }
-
         public class CurrentThreadState
         {
-            private readonly HashSet<LightThreadLocal<T>> _parents = new HashSet<LightThreadLocal<T>>(ReferenceComparer<LightThreadLocal<T>>.Instance);
+            private readonly HashSet<WeakReferenceToLightThreadLocal> _parents 
+                = new HashSet<WeakReferenceToLightThreadLocal>();
+
+            private class WeakReferenceToLightThreadLocal : IEquatable<WeakReferenceToLightThreadLocal>
+            {
+                private readonly WeakReference<LightThreadLocal<T>> _weak;
+                private readonly int _hashCode;
+
+                public bool TryGetTarget(out LightThreadLocal<T> target)
+                {
+                    return _weak.TryGetTarget(out target);
+                }
+
+                public WeakReferenceToLightThreadLocal(LightThreadLocal<T> instance)
+                {
+                    _hashCode = instance.GetHashCode();
+                    _weak = new WeakReference<LightThreadLocal<T>>(instance);
+                }
+
+                public bool Equals(WeakReferenceToLightThreadLocal other)
+                {
+                    if (ReferenceEquals(null, other)) return false;
+                    if (ReferenceEquals(this, other)) return true;
+                    if (_hashCode != other._hashCode)
+                        return false;
+                    if (_weak.TryGetTarget(out var x) == false ||
+                       other._weak.TryGetTarget(out var y) == false)
+                        return false;
+                    return ReferenceEquals(x, y);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != this.GetType()) return false;
+                    return Equals((WeakReferenceToLightThreadLocal)obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return _hashCode;
+                }
+            }
+
             public void Register(LightThreadLocal<T> parent)
             {
-                _parents.Add(parent);
+                _parents.Add(new WeakReferenceToLightThreadLocal(parent));
             }
 
             ~CurrentThreadState()
             {
                 foreach (var parent in _parents)
                 {
-                    var copy = parent._values;
+                    if (parent.TryGetTarget(out var liveParent) == false)
+                        continue;
+                    var copy = liveParent._values;
                     if (copy == null)
                         continue;
                     if (copy.TryRemove(this, out var value)
@@ -79,6 +111,7 @@ namespace Sparrow.Utils
         }
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
             var copy = _values;
             _values = null;
             while (copy.Count > 0)
@@ -92,6 +125,11 @@ namespace Sparrow.Utils
                     }
                 }
             }
+        }
+
+        ~LightThreadLocal()
+        {
+            Dispose();
         }
     }
 }
