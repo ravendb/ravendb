@@ -207,7 +207,11 @@ namespace Sparrow.Server.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mprotect(IntPtr start, IntPtr size, ProtFlag protFlag);
 
-        public static void PwriteOrThrow(int fd, byte *buffer, ulong count, long offset, string file, string debug)
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int prctl(int option, UIntPtr arg2, UIntPtr arg3, UIntPtr arg4, UIntPtr arg5);
+        public const int PR_SET_PTRACER = 0x59616d61;
+
+        public static void PwriteOrThrow(int fd, byte* buffer, ulong count, long offset, string file, string debug)
         {
             Errno err = Errno.NONE;
             bool cifsRetryOccured = false;
@@ -235,7 +239,7 @@ namespace Sparrow.Server.Platform.Posix
 
                     actuallyWritten += result;
                     break; // successfully written
-                }                
+                }
             } while (actuallyWritten < (long)count);
 
             if (actuallyWritten != (long)count)
@@ -264,8 +268,8 @@ namespace Sparrow.Server.Platform.Posix
                         // fallocate is not supported, we'll use lseek instead
                         usingWrite = true;
                         byte b = 0;
-                        PwriteOrThrow(fd, &b, 1L, size - 1, file, "pwrite in order to fallocate where fallocate is not supported");                        
-                        return 0;                        
+                        PwriteOrThrow(fd, &b, 1L, size - 1, file, "pwrite in order to fallocate where fallocate is not supported");
+                        return 0;
                 }
 
                 if (result != (int)Errno.EINTR)
@@ -344,7 +348,7 @@ namespace Sparrow.Server.Platform.Posix
             return syncAllowed;
         }
 
-        private static int ReadLinkOrThrow(string path, byte *pBuff, int buffSize)
+        private static int ReadLinkOrThrow(string path, byte* pBuff, int buffSize)
         {
             var numOfBytes = readlink(path, pBuff, (UIntPtr)buffSize);
             var err = Marshal.GetLastWin32Error();
@@ -397,19 +401,19 @@ namespace Sparrow.Server.Platform.Posix
                     numOfBytes = ReadLinkOrThrow(dir, pBuff, buffSize);
                     if (numOfBytes == 0)
                         return 0; // non symlink dir
- 
+
                     if (numOfBytes >= buffSize) // 64 bytes are not enough for path legnth. lets try with 8192
                     {
                         buffSize = 8192; // usually PATH_MAX is 4096
                         ArrayPool<byte>.Shared.Return(realpathToDir);
                         realpathToDir = ArrayPool<byte>.Shared.Rent(buffSize);
-                        
+
                         fixed (byte* pBuff8K = realpathToDir)
                         {
                             numOfBytes = ReadLinkOrThrow(dir, pBuff8K, buffSize);
                             if (numOfBytes == 0)
                                 return 0; // non symlink dir
-                            
+
                             if (numOfBytes >= buffSize)
                             {
                                 throw new InvalidOperationException("readlink to " + dir +
@@ -419,7 +423,7 @@ namespace Sparrow.Server.Platform.Posix
                     }
                 }
 
-                var realpathString = Encoding.UTF8.GetString(realpathToDir,0, numOfBytes);
+                var realpathString = Encoding.UTF8.GetString(realpathToDir, 0, numOfBytes);
                 return SyncDirectory(realpathString, isRealPath: true);
             }
             finally
