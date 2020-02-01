@@ -38,7 +38,7 @@ namespace Raven.Server.Documents
                 var state = new JsonParserState();
                 var parser = new UnmanagedJsonParser(context, state, "file");
 
-                var commandsProgress = 0;
+                var commandsProgress = 0L;
                 var readers = UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer);
                 using (var readersItr = readers.GetEnumerator())
                 {

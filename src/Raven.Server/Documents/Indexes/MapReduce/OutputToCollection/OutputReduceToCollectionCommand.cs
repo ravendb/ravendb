@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             _reduceOutputIndex = reduceOutputIndex;
         }
 
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             if (_reduceDocumentsForReplayTransaction != null && _reduceDocumentsForReplayTransaction.Count > 0)
             {

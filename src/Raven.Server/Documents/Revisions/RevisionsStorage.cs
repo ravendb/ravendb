@@ -1236,7 +1236,7 @@ namespace Raven.Server.Documents.Revisions
                 _token = token;
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 foreach (var id in _ids)
                 {
@@ -1426,7 +1426,7 @@ namespace Raven.Server.Documents.Revisions
                 _token = token.Token;
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var documentsStorage = context.DocumentDatabase.DocumentsStorage;
                 foreach (var document in _list)

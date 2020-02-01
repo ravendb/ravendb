@@ -497,7 +497,7 @@ namespace Raven.Server.Documents.Handlers
                 _batch = batch;
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var global = context.LastDatabaseChangeVector ??
                              (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
@@ -730,7 +730,7 @@ namespace Raven.Server.Documents.Handlers
                 return false;
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 if (IsClusterTransaction)
                 {

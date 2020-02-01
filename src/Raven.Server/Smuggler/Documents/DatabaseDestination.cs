@@ -874,7 +874,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public DocumentsOperationContext Context => _context;
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#0} documents");
@@ -1179,7 +1179,7 @@ namespace Raven.Server.Smuggler.Documents
                 _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Trying to update {Ids.Count:#,#0} documents metadata if necessary");
@@ -1330,7 +1330,7 @@ namespace Raven.Server.Smuggler.Documents
                 _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Deleting {Ids.Count:#,#0} revisions");

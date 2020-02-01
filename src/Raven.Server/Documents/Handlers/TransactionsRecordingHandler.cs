@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Handlers
             _onStop = onStop;
         }
 
-        public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recordingState)
+        public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recordingState)
         {
             return ExecuteDirectly(context);
         }
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Handlers
             return null;
         }
 
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             _databaseTxMerger.StartRecording(_filePath, _onStop);
             return 0;
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Handlers
             _databaseTxMerger = databaseTxMerger;
         }
 
-        public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recordingState)
+        public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recordingState)
         {
             return ExecuteDirectly(context);
         }
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Handlers
             return null;
         }
 
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             _databaseTxMerger.StopRecording();
             return 0;
