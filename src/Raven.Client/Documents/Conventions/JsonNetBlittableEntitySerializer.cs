@@ -12,8 +12,8 @@ namespace Raven.Client.Documents.Conventions
 {
     internal class JsonNetBlittableEntitySerializer
     {
-        private readonly LightThreadLocal<BlittableJsonReader> _reader;                
-        private readonly LightThreadLocal<JsonSerializer> _deserializer;
+        private readonly LightWeightThreadLocal<BlittableJsonReader> _reader;                
+        private readonly LightWeightThreadLocal<JsonSerializer> _deserializer;
 
 
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
@@ -21,8 +21,8 @@ namespace Raven.Client.Documents.Conventions
         public JsonNetBlittableEntitySerializer(DocumentConventions conventions)
         {
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, null);            
-            _deserializer = new LightThreadLocal<JsonSerializer>(conventions.CreateDeserializer);
-            _reader = new LightThreadLocal<BlittableJsonReader>(() => new BlittableJsonReader());
+            _deserializer = new LightWeightThreadLocal<JsonSerializer>(conventions.CreateDeserializer);
+            _reader = new LightWeightThreadLocal<BlittableJsonReader>(() => new BlittableJsonReader());
         }
 
         public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
