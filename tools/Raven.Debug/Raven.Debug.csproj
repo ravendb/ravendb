@@ -6,6 +6,7 @@
     <RuntimeFrameworkVersion>3.1.1</RuntimeFrameworkVersion>
     <RuntimeIdentifiers>win7-x64;win8-x64;win81-x64;win10-x64;win7-x86;win8-x86;win81-x86;win10-x86;ubuntu.14.04-x64;ubuntu.16.04-x64;ubuntu.18.04-x64</RuntimeIdentifiers>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +15,9 @@
 
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="2.5.0" />
+    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.61701" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime-ravendb" Version="1.0.8" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.49" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="System.Collections.Immutable" Version="1.7.0" />

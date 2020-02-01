@@ -16,6 +16,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
+using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -156,7 +157,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 if (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
                 {
                     // enable this process to attach to us
-                    prctl(PR_SET_PTRACER, new UIntPtr((uint)process.Id), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
+                    Syscall.prctl(Syscall.PR_SET_PTRACER, new UIntPtr((uint)process.Id), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
 
                     process.StandardInput.WriteLine("go");// value is meaningless, just need a new line
                     process.StandardInput.Flush();
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     if (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
                     {
                         // disable attachments 
-                        prctl(PR_SET_PTRACER, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
+                        Syscall.prctl(Syscall.PR_SET_PTRACER, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
                     }
                 }
                 if (process.ExitCode != 0)
@@ -179,9 +180,5 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                                         $"exit code: {process.ExitCode}, error: {sb}");
             }
         }
-
-        [DllImport("libc", SetLastError = true)]
-        private static extern int prctl(int option, UIntPtr arg2, UIntPtr arg3, UIntPtr arg4, UIntPtr arg5);
-        private const int PR_SET_PTRACER = 0x59616d61;
     }
 }

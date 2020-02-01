@@ -146,6 +146,7 @@ class editDocument extends viewModelBase {
     canViewTimeSeries: KnockoutComputed<boolean>;
     canViewRevisions:  KnockoutComputed<boolean>;
     canViewRelated: KnockoutComputed<boolean>;
+    canViewCSharpClass: KnockoutComputed<boolean>;
     
     constructor() {
         super();
@@ -498,6 +499,10 @@ class editDocument extends viewModelBase {
         
         this.canViewRelated = ko.pureComputed(() => {
             return !this.isDeleteRevision();
+        });
+
+        this.canViewCSharpClass = ko.pureComputed(() => {
+            return !this.isCreatingNewDocument() && !this.inReadOnlyMode();
         });
     }
 
