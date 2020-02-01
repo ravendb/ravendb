@@ -100,7 +100,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public ClusterTransactionCommand() { }
 
-        public ClusterTransactionCommand(string databaseName, string recordId, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
+        public ClusterTransactionCommand(string databaseName, char identityPartsSeparator, string recordId, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
             ClusterTransactionOptions options, string uniqueRequestId) : base(uniqueRequestId)
         {
             DatabaseName = databaseName;
@@ -110,7 +110,7 @@ namespace Raven.Server.ServerWide.Commands
             foreach (var commandData in commandParsedCommands)
             {
                 var command = ClusterTransactionDataCommand.FromCommandData(commandData);
-                ClusterCommandValidation(command);
+                ClusterCommandValidation(command, identityPartsSeparator);
                 switch (commandData.Type)
                 {
                     case CommandType.PUT:
@@ -129,12 +129,12 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseCommandsCount = DatabaseCommands.Count;
         }
 
-        private static void ClusterCommandValidation(ClusterTransactionDataCommand command)
+        private static void ClusterCommandValidation(ClusterTransactionDataCommand command, char identityPartsSeparator)
         {
             var lastChar = command.Id[command.Id.Length - 1];
-            if (lastChar == '/' || lastChar == '|') // TODO [ppekrol]
+            if (lastChar == identityPartsSeparator || lastChar == '|')
             {
-                throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '/' as part of cluster transaction");
+                throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '{identityPartsSeparator}' as part of cluster transaction");
             }
         }
 

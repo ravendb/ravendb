@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Handlers
             var raftRequestId = GetRaftRequestIdFromQuery();
             var topology = ServerStore.LoadDatabaseTopology(Database.Name);
 
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, topology.DatabaseTopologyIdBase64, command.ParsedCommands, options, raftRequestId);
+            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology.DatabaseTopologyIdBase64, command.ParsedCommands, options, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
             if (result.Result is List<string> errors)
