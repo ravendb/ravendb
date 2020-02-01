@@ -15,12 +15,16 @@ namespace Raven.Server.Documents
         private readonly SemaphoreSlim _subscriptionsLocker = new SemaphoreSlim(1, 1);
 
         private readonly DocumentDatabase _documentDatabase;
+        private readonly int _numberOfTombstonesToDeleteInBatch;
 
         private readonly HashSet<ITombstoneAware> _subscriptions = new HashSet<ITombstoneAware>();
 
         public TombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
+            _numberOfTombstonesToDeleteInBatch = _documentDatabase.Is32Bits
+                ? 1024
+                : 10 * 1024;
         }
 
         public void Subscribe(ITombstoneAware subscription)
@@ -58,7 +62,7 @@ namespace Raven.Server.Documents
             await ExecuteCleanup();
         }
 
-        internal async Task ExecuteCleanup()
+        internal async Task ExecuteCleanup(long? numberOfTombstonesToDeleteInBatch = null)
         {
             try
             {
@@ -69,7 +73,14 @@ namespace Raven.Server.Documents
                 if (state.Tombstones.Count == 0)
                     return;
 
-                await _documentDatabase.TxMerger.Enqueue(new DeleteTombstonesCommand(state.Tombstones, state.MinAllDocsEtag, _documentDatabase, Logger));
+                while (CancellationToken.IsCancellationRequested == false)
+                {
+                    var command = new DeleteTombstonesCommand(state.Tombstones, state.MinAllDocsEtag, numberOfTombstonesToDeleteInBatch ?? _numberOfTombstonesToDeleteInBatch, _documentDatabase, Logger);
+                    await _documentDatabase.TxMerger.Enqueue(command);
+
+                    if (command.NumberOfTombstonesDeleted <= 0)
+                        break;
+                }
             }
             catch (Exception e)
             {
@@ -139,20 +150,26 @@ namespace Raven.Server.Documents
         {
             private readonly Dictionary<string, (string Component, long Value)> _tombstones;
             private readonly long _minAllDocsEtag;
+            private readonly long _numberOfTombstonesToDeleteInBatch;
             private readonly DocumentDatabase _database;
             private readonly Logger _logger;
 
-            public DeleteTombstonesCommand(Dictionary<string, (string Component, long Value)> tombstones, long minAllDocsEtag, DocumentDatabase database, Logger logger)
+            public long NumberOfTombstonesDeleted { get; private set; }
+
+            public DeleteTombstonesCommand(Dictionary<string, (string Component, long Value)> tombstones, long minAllDocsEtag, long numberOfTombstonesToDeleteInBatch, DocumentDatabase database, Logger logger)
             {
-                _tombstones = tombstones;
+                _tombstones = tombstones ?? throw new ArgumentNullException(nameof(tombstones));
                 _minAllDocsEtag = minAllDocsEtag;
-                _database = database;
-                _logger = logger;
+                _numberOfTombstonesToDeleteInBatch = numberOfTombstonesToDeleteInBatch;
+                _database = database ?? throw new ArgumentNullException(nameof(database));
+                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
-                var deletionCount = 0;
+                NumberOfTombstonesDeleted = 0;
+
+                var numberOfTombstonesToDeleteInBatch = _numberOfTombstonesToDeleteInBatch;
 
                 foreach (var tombstone in _tombstones)
                 {
@@ -163,11 +180,11 @@ namespace Raven.Server.Documents
                     if (_database.DatabaseShutdown.IsCancellationRequested)
                         break;
 
-                    deletionCount++;
-
                     try
                     {
-                        _database.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, minTombstoneValue, context);
+                        var numberOfEntriesDeleted = _database.DocumentsStorage.DeleteTombstonesBefore(context, tombstone.Key, minTombstoneValue, numberOfTombstonesToDeleteInBatch);
+                        numberOfTombstonesToDeleteInBatch -= numberOfEntriesDeleted;
+                        NumberOfTombstonesDeleted += numberOfEntriesDeleted;
                     }
                     catch (Exception e)
                     {
@@ -176,9 +193,12 @@ namespace Raven.Server.Documents
 
                         throw;
                     }
+
+                    if (numberOfTombstonesToDeleteInBatch <= 0)
+                        break;
                 }
 
-                return deletionCount;
+                return (int)NumberOfTombstonesDeleted;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
@@ -186,7 +206,8 @@ namespace Raven.Server.Documents
                 return new DeleteTombstonesCommandDto
                 {
                     Tombstones = _tombstones,
-                    MinAllDocsEtag = _minAllDocsEtag
+                    MinAllDocsEtag = _minAllDocsEtag,
+                    NumberOfTombstonesToDeleteInBatch = _numberOfTombstonesToDeleteInBatch
                 };
             }
         }
@@ -196,11 +217,12 @@ namespace Raven.Server.Documents
     {
         public Dictionary<string, (string Component, long Value)> Tombstones;
         public long MinAllDocsEtag;
+        public long? NumberOfTombstonesToDeleteInBatch;
 
         public TombstoneCleaner.DeleteTombstonesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var log = LoggingSource.Instance.GetLogger<TombstoneCleaner.DeleteTombstonesCommand>(database.Name);
-            var command = new TombstoneCleaner.DeleteTombstonesCommand(Tombstones, MinAllDocsEtag, database, log);
+            var command = new TombstoneCleaner.DeleteTombstonesCommand(Tombstones, MinAllDocsEtag, NumberOfTombstonesToDeleteInBatch ?? long.MaxValue, database, log);
             return command;
         }
     }
