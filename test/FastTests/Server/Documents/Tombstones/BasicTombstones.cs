@@ -188,7 +188,7 @@ namespace FastTests.Server.Documents.Tombstones
                     Assert.Equal(2, count);
                 }
 
-                await database.TombstoneCleaner.ExecuteCleanup();
+                await database.TombstoneCleaner.ExecuteCleanup(1);
 
                 using (context.OpenReadTransaction())
                 {
