@@ -31,8 +31,9 @@ namespace Voron.Util
         {
             var currentWaiters = Interlocked.Add(ref _waiters, WriterMarker);
 
+            int managedThreadId = Thread.CurrentThread.ManagedThreadId;
             // try take ownership on lock
-            var currentLock = Interlocked.CompareExchange(ref _writeLockOwnerThreadId, Thread.CurrentThread.ManagedThreadId, 0);
+            var currentLock = Interlocked.CompareExchange(ref _writeLockOwnerThreadId, managedThreadId, 0);
             while (
                 ( currentWaiters & ReaderMask ) == 0 &&
                 currentLock != 0 
@@ -41,7 +42,7 @@ namespace Voron.Util
                 // we have readers, so we have to wait on them :-(
                 _writerWait.WaitOne();
                 currentWaiters = Volatile.Read(ref _waiters);
-                currentLock = Interlocked.CompareExchange(ref _writeLockOwnerThreadId, Thread.CurrentThread.ManagedThreadId, 0);
+                currentLock = Interlocked.CompareExchange(ref _writeLockOwnerThreadId, managedThreadId, 0);
             }
         }
 
