@@ -73,12 +73,14 @@ namespace Raven.Server.Documents
                 if (state.Tombstones.Count == 0)
                     return;
 
+                var batchSize = numberOfTombstonesToDeleteInBatch ?? _numberOfTombstonesToDeleteInBatch;
+
                 while (CancellationToken.IsCancellationRequested == false)
                 {
-                    var command = new DeleteTombstonesCommand(state.Tombstones, state.MinAllDocsEtag, numberOfTombstonesToDeleteInBatch ?? _numberOfTombstonesToDeleteInBatch, _documentDatabase, Logger);
+                    var command = new DeleteTombstonesCommand(state.Tombstones, state.MinAllDocsEtag, batchSize, _documentDatabase, Logger);
                     await _documentDatabase.TxMerger.Enqueue(command);
 
-                    if (command.NumberOfTombstonesDeleted <= 0)
+                    if (command.NumberOfTombstonesDeleted < batchSize)
                         break;
                 }
             }
