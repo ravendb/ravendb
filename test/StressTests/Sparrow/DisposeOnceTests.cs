@@ -74,7 +74,7 @@ namespace StressTests.Sparrow
         /// </summary>
         private readonly int _concurrencyLevel;
         /// <summary>Whether we're processing tasks on the current thread.</summary>
-        private static ThreadLocal<bool> _taskProcessingThread = new ThreadLocal<bool>();
+        private static LightThreadLocal<bool> _taskProcessingThread = new LightThreadLocal<bool>();
 
         // ***
         // *** For when using a target scheduler

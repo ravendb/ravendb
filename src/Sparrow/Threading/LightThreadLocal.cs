@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Sparrow.Utils;
 
-namespace Sparrow.Utils
+namespace Sparrow.Threading
 {
     public class LightThreadLocal<T> : IDisposable
     {
@@ -11,7 +12,7 @@ namespace Sparrow.Utils
             new ConcurrentDictionary<CurrentThreadState, T>(ReferenceEqualityComparer<CurrentThreadState>.Default);
         private readonly Func<T> _generator;
 
-        public LightThreadLocal(Func<T> generator)
+        public LightThreadLocal(Func<T> generator = null)
         {
             _generator = generator;
         }

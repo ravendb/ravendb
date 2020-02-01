@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 
 namespace Sparrow.Utils
 {
