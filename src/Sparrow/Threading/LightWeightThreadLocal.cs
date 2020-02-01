@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow.Threading
 {
-    public class LightWeightThreadLocal<T> : IDisposable
+    public sealed class LightWeightThreadLocal<T> : IDisposable
     {
         [ThreadStatic] private static CurrentThreadState _state;
         private ConcurrentDictionary<CurrentThreadState, T> _values = new ConcurrentDictionary<CurrentThreadState, T>(ReferenceEqualityComparer<CurrentThreadState>.Default);
@@ -43,28 +44,26 @@ namespace Sparrow.Threading
 
         public void Dispose()
         {
-            if (_values == null)
+            var copy = _values;
+            if (copy == null)
                 return;
 
-            lock (this)
+            copy = Interlocked.CompareExchange(ref _values, null, copy);
+            if (copy == null)
+                return;
+
+            GC.SuppressFinalize(this);
+
+            _values = null;
+
+            while (copy.Count > 0)
             {
-                var copy = _values;
-                if (copy == null)
-                    return;
-
-                GC.SuppressFinalize(this);
-
-                _values = null;
-
-                while (copy.Count > 0)
+                foreach (var kvp in copy)
                 {
-                    foreach (var kvp in copy)
+                    if (copy.TryRemove(kvp.Key, out var item) &&
+                        item is IDisposable d)
                     {
-                        if (copy.TryRemove(kvp.Key, out var item) &&
-                            item is IDisposable d)
-                        {
-                            d.Dispose();
-                        }
+                        d.Dispose();
                     }
                 }
             }
@@ -75,58 +74,10 @@ namespace Sparrow.Threading
             Dispose();
         }
 
-        private class CurrentThreadState
+        private sealed class CurrentThreadState
         {
             private readonly HashSet<WeakReferenceToLightWeightThreadLocal> _parents
                 = new HashSet<WeakReferenceToLightWeightThreadLocal>();
-
-            private class WeakReferenceToLightWeightThreadLocal : IEquatable<WeakReferenceToLightWeightThreadLocal>
-            {
-                private readonly WeakReference<LightWeightThreadLocal<T>> _weak;
-                private readonly int _hashCode;
-
-                public bool TryGetTarget(out LightWeightThreadLocal<T> target)
-                {
-                    return _weak.TryGetTarget(out target);
-                }
-
-                public WeakReferenceToLightWeightThreadLocal(LightWeightThreadLocal<T> instance)
-                {
-                    _hashCode = instance.GetHashCode();
-                    _weak = new WeakReference<LightWeightThreadLocal<T>>(instance);
-                }
-
-                public bool Equals(WeakReferenceToLightWeightThreadLocal other)
-                {
-                    if (ReferenceEquals(null, other))
-                        return false;
-                    if (ReferenceEquals(this, other))
-                        return true;
-                    if (_hashCode != other._hashCode)
-                        return false;
-                    if (_weak.TryGetTarget(out var x) == false ||
-                       other._weak.TryGetTarget(out var y) == false)
-                        return false;
-                    return ReferenceEquals(x, y);
-                }
-
-                public override bool Equals(object obj)
-                {
-                    if (ReferenceEquals(null, obj))
-                        return false;
-                    if (ReferenceEquals(this, obj))
-                        return true;
-                    if (obj.GetType() != GetType())
-                        return false;
-                    return Equals((WeakReferenceToLightWeightThreadLocal)obj);
-                }
-
-                public override int GetHashCode()
-                {
-                    return _hashCode;
-                }
-            }
-
             public void Register(LightWeightThreadLocal<T> parent)
             {
                 _parents.Add(new WeakReferenceToLightWeightThreadLocal(parent));
@@ -149,5 +100,53 @@ namespace Sparrow.Threading
                 }
             }
         }
+
+        private sealed class WeakReferenceToLightWeightThreadLocal : IEquatable<WeakReferenceToLightWeightThreadLocal>
+        {
+            private readonly WeakReference<LightWeightThreadLocal<T>> _weak;
+            private readonly int _hashCode;
+
+            public bool TryGetTarget(out LightWeightThreadLocal<T> target)
+            {
+                return _weak.TryGetTarget(out target);
+            }
+
+            public WeakReferenceToLightWeightThreadLocal(LightWeightThreadLocal<T> instance)
+            {
+                _hashCode = instance.GetHashCode();
+                _weak = new WeakReference<LightWeightThreadLocal<T>>(instance);
+            }
+
+            public bool Equals(WeakReferenceToLightWeightThreadLocal other)
+            {
+                if (ReferenceEquals(null, other))
+                    return false;
+                if (ReferenceEquals(this, other))
+                    return true;
+                if (_hashCode != other._hashCode)
+                    return false;
+                if (_weak.TryGetTarget(out var x) == false ||
+                    other._weak.TryGetTarget(out var y) == false)
+                    return false;
+                return ReferenceEquals(x, y);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
+                if (obj.GetType() != GetType())
+                    return false;
+                return Equals((WeakReferenceToLightWeightThreadLocal)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return _hashCode;
+            }
+        }
+
     }
 }
