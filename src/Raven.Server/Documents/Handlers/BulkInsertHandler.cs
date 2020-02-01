@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Handlers
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
             public long TotalSize;
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 for (int i = 0; i < NumberOfCommands; i++)
                 {

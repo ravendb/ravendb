@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Queries
                 _afterExecuted = afterExecuted;
             }
 
-            public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
+            public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
             {
                 try
                 {
@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.Queries
                 throw new NotSupportedException($"ToDto() of {nameof(BulkOperationCommand<T>)} Should not be called");
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 throw new NotSupportedException("Should only call Execute() here");
             }

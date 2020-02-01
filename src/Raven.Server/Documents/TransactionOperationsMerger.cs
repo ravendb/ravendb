@@ -88,14 +88,14 @@ namespace Raven.Server.Documents
 
         public abstract class MergedTransactionCommand : IRecordableCommand
         {
-            protected abstract int ExecuteCmd(DocumentsOperationContext context);
+            protected abstract long ExecuteCmd(DocumentsOperationContext context);
 
-            internal int ExecuteDirectly(DocumentsOperationContext context)
+            internal long ExecuteDirectly(DocumentsOperationContext context)
             {
                 return ExecuteCmd(context);
             }
 
-            public virtual int Execute(DocumentsOperationContext context, RecordingState recordingState)
+            public virtual long Execute(DocumentsOperationContext context, RecordingState recordingState)
             {
                 recordingState?.Record(context, this);
 

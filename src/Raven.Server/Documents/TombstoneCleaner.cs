@@ -165,7 +165,7 @@ namespace Raven.Server.Documents
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 NumberOfTombstonesDeleted = 0;
 
@@ -198,7 +198,7 @@ namespace Raven.Server.Documents
                         break;
                 }
 
-                return (int)NumberOfTombstonesDeleted;
+                return NumberOfTombstonesDeleted;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
