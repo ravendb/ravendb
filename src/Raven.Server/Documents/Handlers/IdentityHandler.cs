@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers
             if (name[name.Length - 1] != '|')
                 name += '|';
 
-            var (_, _, newIdentityValue) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.Name, GetRaftRequestIdFromQuery());
+            var (_, _, newIdentityValue) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.IdentityPartsSeparator, Database.Name, GetRaftRequestIdFromQuery());
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

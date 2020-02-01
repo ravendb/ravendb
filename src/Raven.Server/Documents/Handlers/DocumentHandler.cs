@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (id[id.Length - 1] == '|')
                 {
-                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name, GetRaftRequestIdFromQuery());
+                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, Database.IdentityPartsSeparator, Database.Name, GetRaftRequestIdFromQuery());
                     id = clusterId;
                 }
 

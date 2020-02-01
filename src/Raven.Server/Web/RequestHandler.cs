@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -398,10 +399,16 @@ namespace Raven.Server.Web
                 return null;
             }
 
-            if (val[0].Length > 1)
-                throw new InvalidOperationException("TODO ppekrol");
+            var value = val[0];
+            if (value.Length > 1)
+                ThrowSingleCharacterRequired(name, value);
 
-            return val[0][0];
+            return value[0];
+        }
+
+        private static void ThrowSingleCharacterRequired(string name, string value)
+        {
+            throw new InvalidOperationException($"Query string {name} is expecting single character, but got '{value}'.");
         }
 
         private static void ThrowRequiredMember(string name)
