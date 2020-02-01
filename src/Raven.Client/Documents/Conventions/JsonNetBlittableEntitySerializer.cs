@@ -5,13 +5,15 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Json;
 using Sparrow.Json;
+using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Conventions
 {
     internal class JsonNetBlittableEntitySerializer
     {
-        private readonly ThreadLocal<BlittableJsonReader> _reader;                
-        private readonly ThreadLocal<JsonSerializer> _deserializer;
+        private readonly LightThreadLocal<BlittableJsonReader> _reader;                
+        private readonly LightThreadLocal<JsonSerializer> _deserializer;
 
 
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
@@ -19,8 +21,8 @@ namespace Raven.Client.Documents.Conventions
         public JsonNetBlittableEntitySerializer(DocumentConventions conventions)
         {
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, null);            
-            _deserializer = new ThreadLocal<JsonSerializer>(conventions.CreateDeserializer);
-            _reader = new ThreadLocal<BlittableJsonReader>(() => new BlittableJsonReader());
+            _deserializer = new LightThreadLocal<JsonSerializer>(conventions.CreateDeserializer);
+            _reader = new LightThreadLocal<BlittableJsonReader>(() => new BlittableJsonReader());
         }
 
         public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
