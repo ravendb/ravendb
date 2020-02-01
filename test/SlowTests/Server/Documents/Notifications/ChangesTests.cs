@@ -48,6 +48,7 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
+        [Fact]
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
             using (var store = GetDocumentStore())
@@ -60,7 +61,7 @@ namespace SlowTests.Server.Documents.Notifications
                 observableWithTask.Subscribe(list.Add);
                 await observableWithTask.EnsureSubscribedNow();
 
-                const int docsCount = 10000;
+                const int docsCount = 5000;
 
                 for (int j = 0; j < docsCount / 100; j++)
                 {
