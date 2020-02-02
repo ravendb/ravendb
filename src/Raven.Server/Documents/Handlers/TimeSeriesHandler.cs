@@ -4,7 +4,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
@@ -111,6 +110,9 @@ namespace Raven.Server.Documents.Handlers
             var fromList = GetStringValuesQueryString("from", required: false);
             var toList = GetStringValuesQueryString("to", required: false);
 
+            var skip = GetIntValueQueryString("skip", required: false) ?? 0;
+            var take = GetIntValueQueryString("take", required: false) ?? int.MaxValue;
+
             if (fromList.Count != toList.Count)
             {
                 throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
@@ -137,7 +139,7 @@ namespace Raven.Server.Documents.Handlers
 
                             if (fromList.Count == 0)
                             {
-                                WriteRange(context, writer, documentId, name, DateTime.MinValue, DateTime.MaxValue);
+                                WriteRange(context, writer, documentId, name, DateTime.MinValue, DateTime.MaxValue, ref skip, ref take);
                             }
                             else
                             {
@@ -146,7 +148,7 @@ namespace Raven.Server.Documents.Handlers
                                     var from = ParseDate(fromList[i], name);
                                     var to = ParseDate(toList[i], name);
 
-                                    WriteRange(context, writer, documentId, name, from, to);
+                                    WriteRange(context, writer, documentId, name, from, to, ref skip, ref take);
                                 }
                             }
 
@@ -176,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void WriteRange(DocumentsOperationContext context, BlittableJsonTextWriter writer, string docId, string name, DateTime from, DateTime to)
+        private void WriteRange(DocumentsOperationContext context, BlittableJsonTextWriter writer, string docId, string name, DateTime from, DateTime to, ref int skip, ref int take)
         {
             writer.WriteStartObject();
             {
@@ -204,15 +206,18 @@ namespace Raven.Server.Documents.Handlers
 
                     foreach (var item in reader.AllValues())
                     {
-                        if (first)
-                        {
-                            first = false;
-                        }
-                        else
-                        {
-                            writer.WriteComma();
-                        }
+                        if (skip-- > 0)
+                            continue;
+                        
+                        if (take-- <= 0)
+                            break;
 
+                        if (first)
+                            first = false;
+                        
+                        else
+                            writer.WriteComma();
+                        
                         writer.WriteStartObject();
 
                         writer.WritePropertyName(nameof(TimeSeriesEntry.Timestamp));
