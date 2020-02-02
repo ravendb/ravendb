@@ -130,7 +130,6 @@ namespace FastTests
 
         protected TestBase(ITestOutputHelper output) : base(output)
         {
-            TestResourcesAnalyzer.Start(Context);
         }
 
         protected string GetDatabaseName([CallerMemberName] string caller = null)
@@ -408,7 +407,6 @@ namespace FastTests
             }
             finally
             {
-                TestResourcesAnalyzer.Complete();
                 CheckServerLeak();
             }
         }
@@ -724,8 +722,6 @@ namespace FastTests
             ServersForDisposal = null;
 
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
-
-            TestResourcesAnalyzer.End(Context);
 
             exceptionAggregator.ThrowIfNeeded();
         }
