@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Queries.AST
                     range.Months += (int)duration;
                     return;
                 default:
-                    throw new ArgumentException("Unable to understand time range: " + source.Substring(offset));
+                    throw new ArgumentException($"Unable to understand time range: '{source}'");
             }
         }
 
