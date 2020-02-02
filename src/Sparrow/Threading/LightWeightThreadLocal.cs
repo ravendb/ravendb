@@ -201,7 +201,7 @@ namespace Sparrow.Threading
             }
         }
 
-        private class GlobalState
+        private sealed class GlobalState
         {
             public int Disposed;
             public readonly HashSet<LocalState> UsedThreads
@@ -217,7 +217,7 @@ namespace Sparrow.Threading
             }
         }
 
-        private class LocalState
+        private sealed class LocalState
         {
             public int ParentsDisposed;
         }
