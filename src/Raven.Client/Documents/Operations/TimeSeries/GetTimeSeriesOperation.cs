@@ -15,11 +15,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly string _docId;
         private readonly string _timeseries;
         private readonly IEnumerable<TimeSeriesRange> _ranges;
+        private readonly int? _skip;
+        private readonly int? _take;
 
-        public GetTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to)
+        public GetTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to, int? skip = null, int? take = null)
+            : this(docId, timeseries, skip, take)
         {
-            _docId = docId;
-            _timeseries = timeseries;
             _ranges = new List<TimeSeriesRange>
             {
                 new TimeSeriesRange
@@ -30,16 +31,23 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             };
         }
 
-        public GetTimeSeriesOperation(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges)
+        public GetTimeSeriesOperation(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges, int? skip = null, int? take = null) 
+            : this(docId, timeseries, skip, take)
+        {
+            _ranges = ranges;
+        }
+
+        private GetTimeSeriesOperation(string docId, string timeseries, int? skip, int? take)
         {
             _docId = docId;
             _timeseries = timeseries;
-            _ranges = ranges;
+            _skip = skip;
+            _take = take;
         }
 
         public RavenCommand<TimeSeriesDetails> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetTimeSeriesCommand(_docId, _timeseries, _ranges);
+            return new GetTimeSeriesCommand(_docId, _timeseries, _ranges, _skip, _take);
         }
 
         private class GetTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
@@ -47,12 +55,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             private readonly string _docId;
             private readonly string _timeseries;
             private readonly IEnumerable<TimeSeriesRange> _ranges;
+            private readonly int? _skip;
+            private readonly int? _take;
 
-            public GetTimeSeriesCommand(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges)
+            public GetTimeSeriesCommand(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges, int? skip, int? take)
             {
                 _docId = docId ?? throw new ArgumentNullException(nameof(docId));
                 _timeseries = timeseries ?? throw new ArgumentNullException(nameof(timeseries));
                 _ranges = ranges;
+                _skip = skip;
+                _take = take;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -66,6 +78,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     .Append("&name=")
                     .Append(Uri.EscapeDataString(_timeseries));
 
+                if (_skip.HasValue)
+                {
+                    pathBuilder.Append("&skip=")
+                        .Append(_skip.Value);
+                }
+
+                if (_take.HasValue)
+                {
+                    pathBuilder.Append("&take=")
+                        .Append(_take.Value);
+                }
+
                 if (_ranges != null)
                 {
                     foreach (var range in _ranges)
@@ -76,6 +100,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                             .Append(range.To.GetDefaultRavenFormat());
                     }
                 }
+
 
                 var request = new HttpRequestMessage
                 {
