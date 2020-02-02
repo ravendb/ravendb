@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NetTopologySuite.Utilities;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -1091,8 +1092,6 @@ namespace Raven.Server.Documents.Replication
 
                                         if (resolvedDocument != null)
                                         {
-                                            AttachmentsStorage.AssertAttachments(document, doc.Flags);
-
                                             database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
                                                 rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
                                         }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
@@ -1164,10 +1165,36 @@ namespace Raven.Server.Documents
             {
                 Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, document.Data);
                 DocumentPutAction.AssertMetadataWasFiltered(document.Data);
-                AttachmentsStorage.AssertAttachments(document.Data, document.Flags);
+                AssertMetadataKey(document.Data, document.Flags, DocumentFlags.HasAttachments, Constants.Documents.Metadata.Attachments);
+                AssertMetadataKey(document.Data, document.Flags, DocumentFlags.HasCounters, Constants.Documents.Metadata.Counters);
+                AssertMetadataKey(document.Data, document.Flags, DocumentFlags.HasTimeSeries, Constants.Documents.Metadata.TimeSeries);
             }
 #endif
             return document;
+        }
+
+        [Conditional("DEBUG")]
+        public static void AssertMetadataKey(BlittableJsonReaderObject document, DocumentFlags flags, DocumentFlags assertionFlag, string assertionKey)
+        {
+            if (document == null)
+                return;
+
+            if (flags.Contain(assertionFlag))
+            {
+                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                    metadata.TryGet(assertionKey, out BlittableJsonReaderArray _) == false)
+                {
+                    Debug.Assert(false, $"Found {DocumentFlags.HasAttachments} flag but {assertionKey} is missing from metadata.");
+                }
+            }
+            else
+            {
+                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                    metadata.TryGet(assertionKey, out BlittableJsonReaderArray values))
+                {
+                    Debug.Assert(false, $"Found {assertionKey}({values.Length}) in metadata but {flags} flag is missing.");
+                }
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
