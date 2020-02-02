@@ -4823,7 +4823,7 @@ select out(doc, e)
                     Assert.Equal(279, val.Max[0]);
                     Assert.Equal(269, val.Avg[0]);
 
-                    expectedFrom = expectedFrom.AddMonths(1);
+                    expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, val.From);
@@ -4941,7 +4941,7 @@ select out(doc)
                     Assert.Equal(279, val.Max[0]);
                     Assert.Equal(269, val.Avg[0]);
 
-                    expectedFrom = expectedFrom.AddMonths(1);
+                    expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, val.From);
@@ -4967,7 +4967,6 @@ select out(doc)
                 }
             }
         }
-
 
         [Fact]
         public void CanQueryTimeSeriesAggregation_WithComparisonBetweenValueAndFunctionArgumentInWhereClause()
