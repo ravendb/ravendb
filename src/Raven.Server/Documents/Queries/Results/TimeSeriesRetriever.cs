@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                     array.Add(new DynamicJsonValue
                     {
-                        [nameof(TimeSeriesEntry.Tag)] = singleResult.Tag.ToString(),
+                        [nameof(TimeSeriesEntry.Tag)] = singleResult.Tag?.ToString(),
                         [nameof(TimeSeriesEntry.Timestamp)] = singleResult.Timestamp,
                         [nameof(TimeSeriesEntry.Values)] = vals,
                         [nameof(TimeSeriesEntry.Value)] = singleResult.Values.Span[0]
