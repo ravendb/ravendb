@@ -816,5 +816,42 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
+        [Fact]
+        public void CanSkipAndTakeTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+
+                    for (int i = 0; i < 100; i++)
+                    {
+                        session.TimeSeriesFor("users/ayende")
+                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] { 100d + i });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue, skip: 5, take :20)
+                        .ToList();
+
+                    Assert.Equal(20, vals.Count);
+
+                    for (int i = 0; i < vals.Count; i++)
+                    {
+                        Assert.Equal(baseline.AddMinutes(5 + i), vals[i].Timestamp);
+                        Assert.Equal(105d + i, vals[i].Value);
+                    }
+                }
+            }
+        }
+
     }
 }
