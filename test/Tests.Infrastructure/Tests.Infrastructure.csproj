@@ -18,6 +18,7 @@
   <ItemGroup>
     <PackageReference Include="MongoDB.Driver" Version="2.10.2" />
     <PackageReference Include="xunit" Version="2.4.1" />
+    <PackageReference Include="xunit.runner.utility" Version="2.4.1" />
     <PackageReference Include="XunitLogger" Version="4.0.99" />
   </ItemGroup>
   <ItemGroup>
