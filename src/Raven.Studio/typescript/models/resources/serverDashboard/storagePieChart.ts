@@ -6,10 +6,11 @@ class storagePieChart {
 
     private width: number;
     private svg: d3.Selection<void>;
-    private colorClassScale: d3.scale.Ordinal<string, string>;
     private containerSelector: string;
     private highlightTable: (dbName: string) => void;
     
+    public static pieData: Array<d3.layout.pie.Arc<{ Database: string, Size: number }>>;
+
     constructor(containerSelector: string, highlightTable: (dbName: string) => void) {
         this.containerSelector = containerSelector;
         this.highlightTable = highlightTable;
@@ -28,9 +29,6 @@ class storagePieChart {
             .append("g")
             .attr("class", "pie")
             .attr("transform", "translate(" + (this.width / 2) + ", " + (this.width / 2) + ")");
-
-        this.colorClassScale = d3.scale.ordinal<string>()
-            .range(_.range(1, 11).map(x => "color-" + x));
         
         this.initHighlightEvents($container);
     }
@@ -81,10 +79,6 @@ class storagePieChart {
             .selectAll(".arc")
             .remove();
     }
-    
-    getColorClassProvider() {
-        return (dbName: string) => this.colorClassScale(dbName);
-    }
 
     onData(data: Array<{ Database: string, Size: number }>, withTween = false) {
         const group = this.svg.select(".pie");
@@ -96,9 +90,11 @@ class storagePieChart {
         const pie = d3.layout.pie<{ Database: string, Size: number }>()
             .value(x => x.Size)
             .sort(null);
-
+       
+        storagePieChart.pieData = pie(data);
+        
         const arcs = group.selectAll(".arc")
-            .data(pie(data));
+            .data(storagePieChart.pieData);
         
         arcs.exit().remove();
         
@@ -112,7 +108,7 @@ class storagePieChart {
         paths
             .attr("data-db-name", d => d.data.Database)
             .attr("d", d => arc(d as any))
-            .attr("class", d => this.colorClassScale(d.data.Database))
+            .attr("class", d => storagePieChart.getDatabaseColorForPie(d.data.Database))
             .each(function (d) { this._current = d; });
         
         paths
@@ -129,15 +125,18 @@ class storagePieChart {
             arcs.select("path")
                 .transition()
                 .attrTween("d", arcTween)
-                .attr("class",d => this.colorClassScale(d.data.Database));
+                .attr("class", d => storagePieChart.getDatabaseColorForPie(d.data.Database));
         } else {
             arcs.select("path")
                 .attr("d", d => arc(d as any))
-                .attr("class", d => this.colorClassScale(d.data.Database));
+                .attr("class", d => storagePieChart.getDatabaseColorForPie(d.data.Database));
         }
-
     }
-   
+    
+    public static getDatabaseColorForPie(dbName: string): string {        
+        return dbName === '<System>' ? "color-11" :
+               `color-${_.findIndex(storagePieChart.pieData, d => d.data.Database === dbName) % 10 + 1}`;        
+    }
 }
 
 export = storagePieChart;

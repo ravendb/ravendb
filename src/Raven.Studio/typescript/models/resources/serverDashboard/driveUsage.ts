@@ -1,5 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import driveUsageDetails = require("models/resources/serverDashboard/driveUsageDetails");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
@@ -8,6 +7,7 @@ import generalUtils = require("common/generalUtils");
 import appUrl = require("common/appUrl");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import databasesManager = require("common/shell/databasesManager");
+import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
 
 class legendColumn<T> implements virtualColumn {
     constructor(
@@ -60,10 +60,8 @@ class driveUsage {
     ravendbToUsedSpacePercentage: KnockoutComputed<number>;
 
     gridController = ko.observable<virtualGridController<driveUsageDetails>>();
-    private colorClassProvider: (name: string) => string;
     
-    constructor(dto: Raven.Server.Dashboard.MountPointUsage, colorClassProvider: (name: string) => string, includeTemp: KnockoutObservable<boolean>) {
-        this.colorClassProvider = colorClassProvider;
+    constructor(dto: Raven.Server.Dashboard.MountPointUsage, includeTemp: KnockoutObservable<boolean>) {
         this.includeTemp = includeTemp;
         this.update(dto);
         
@@ -118,7 +116,7 @@ class driveUsage {
             }), () => {
                 if (this.includeTemp()) {
                     return [
-                        new legendColumn<driveUsageDetails>(grid, x => this.colorClassProvider(x.database()), "", "26px"),
+                        new legendColumn<driveUsageDetails>(grid, x => storagePieChart.getDatabaseColorForPie(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(),  
                                                                      x => (x.database().toString() === '<System>') ? appUrl.forSystemStorageReport() : appUrl.forStatusStorageReport(x.database()), 
                                                                      "Database", "42%", {
@@ -140,8 +138,8 @@ class driveUsage {
                         })
                     ] 
                 } else {
-                    return [ 
-                        new legendColumn<driveUsageDetails>(grid, x => this.colorClassProvider(x.database()), "", "26px"),
+                    return [
+                        new legendColumn<driveUsageDetails>(grid, x => storagePieChart.getDatabaseColorForPie(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%", {
                             extraClass: d => isDisabled(d.database()) ? "disabled" : "",
                             sortable: "string",

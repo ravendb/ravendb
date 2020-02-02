@@ -15,7 +15,6 @@ import dashboardChart = require("models/resources/serverDashboard/dashboardChart
 import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
 import serverDashboardWebSocketClient = require("common/serverDashboardWebSocketClient");
 import clusterNode = require("models/database/cluster/clusterNode");
-import databasesManager = require("common/shell/databasesManager");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import serverTime = require("common/helpers/database/serverTime");
 import accessManager = require("common/shell/accessManager");
@@ -597,6 +596,7 @@ class driveUsageSection {
     includeTemporaryBuffers = ko.observable<boolean>(true);
     
     totalDocumentsSize: KnockoutComputed<number>;
+    private numberOfDatabasesPerMountPoint: dictionary<number> = {};
     
     constructor() {
         this.totalDocumentsSize = ko.pureComputed(() => {
@@ -646,7 +646,9 @@ class driveUsageSection {
     
     onResize() {
         this.table().forEach(item => {
-            item.gridController().reset(true);
+            if (item.gridController()) {
+                item.gridController().reset(true);
+            }
         });
         
         this.storageChart.onResize();
@@ -668,12 +670,23 @@ class driveUsageSection {
         });
 
         items.forEach(incomingItem => {
-            const matched = this.table().find(x => x.mountPoint() === incomingItem.MountPoint);
+            const incomingItemMountPoint = incomingItem.MountPoint;
+            const matched = this.table().find(x => x.mountPoint() === incomingItemMountPoint);
+            
             if (matched) {
                 matched.update(incomingItem);
             } else {
-                const usage = new driveUsage(incomingItem, this.storageChart.getColorClassProvider(), this.includeTemporaryBuffers);
+                const usage = new driveUsage(incomingItem, this.includeTemporaryBuffers);
                 this.table.push(usage);
+            }
+            
+            if (!(incomingItemMountPoint in this.numberOfDatabasesPerMountPoint)) {
+                this.numberOfDatabasesPerMountPoint[incomingItemMountPoint] = 0;
+            }
+            
+            if (incomingItem.Items.length !== this.numberOfDatabasesPerMountPoint[incomingItemMountPoint]) {
+                this.numberOfDatabasesPerMountPoint[incomingItemMountPoint] = incomingItem.Items.length;
+                this.onResize();
             }
         });
         
