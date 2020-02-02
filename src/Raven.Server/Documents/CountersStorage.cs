@@ -1456,27 +1456,6 @@ namespace Raven.Server.Documents
             return context.AllocateStringValue(null, p, sizeOfDocId);
         }
 
-        [Conditional("DEBUG")]
-        public static void AssertCounters(BlittableJsonReaderObject document, DocumentFlags flags)
-        {
-            if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
-            {
-                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _) == false)
-                {
-                    Debug.Assert(false, $"Found {DocumentFlags.HasCounters} flag but {Constants.Documents.Metadata.Counters} is missing from metadata.");
-                }
-            }
-            else
-            {
-                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
-                {
-                    Debug.Assert(false, $"Found {Constants.Documents.Metadata.Counters}({counters.Length}) in metadata but {DocumentFlags.HasCounters} flag is missing.");
-                }
-            }
-        }
-
         public string UpdateDocumentCounters(DocumentsOperationContext context, Document doc, string docId,
             SortedSet<string> countersToAdd, HashSet<string> countersToRemove, NonPersistentDocumentFlags nonPersistentDocumentFlags)
         {

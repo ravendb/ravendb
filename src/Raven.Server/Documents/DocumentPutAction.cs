@@ -560,7 +560,7 @@ namespace Raven.Server.Documents
 
             public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByAttachmentUpdate;
 
-            public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (o, flags) => AttachmentsStorage.AssertAttachments(o, flags);
+            public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (o, flags) => AssertMetadataKey(o, flags, DocumentFlags.HasAttachments, Constants.Documents.Metadata.Attachments);
 
             public bool IsReturningLowerCasedMetadata { get { return false; } } 
         }
@@ -587,7 +587,7 @@ namespace Raven.Server.Documents
 
             public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByCountersUpdate;
 
-            public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (o, flags) => CountersStorage.AssertCounters(o, flags);
+            public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (o, flags) => AssertMetadataKey(o, flags, DocumentFlags.HasCounters, Constants.Documents.Metadata.Counters);
 
             public bool IsReturningLowerCasedMetadata { get { return false; } }
         }
@@ -614,7 +614,7 @@ namespace Raven.Server.Documents
 
             public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByTimeSeriesUpdate;
 
-            public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (_, __) => { };
+            public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (o, flags) => AssertMetadataKey(o, flags, DocumentFlags.HasTimeSeries, Constants.Documents.Metadata.TimeSeries);
 
             public bool IsReturningLowerCasedMetadata { get { return true; } }
         }
