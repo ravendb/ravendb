@@ -1753,6 +1753,44 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact]
+        public void CanQueryTimeSeriesRaw_WithNullTag()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Age = 25
+                    }, "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), null, new[] { 59d });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Where(p => p.Age > 21)
+                        .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
+                            .ToList());
+
+                    var result = query.First();
+                    Assert.Equal(1, result.Count);
+
+                    var timeSeriesValues = result.Results;
+
+                    Assert.Equal(59, timeSeriesValues[0].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(61), timeSeriesValues[0].Timestamp);
+                }
+            }
+        }
+
+        [Fact]
         public void CanQueryTimeSeriesRaw_FromLoadedDocument()
         {
             using (var store = GetDocumentStore())
