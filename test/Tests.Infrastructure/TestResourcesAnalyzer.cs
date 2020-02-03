@@ -3,12 +3,14 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using CsvHelper;
+using Microsoft.CodeAnalysis.Operations;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Xunit.Abstractions;
 using XunitLogger;
 
 namespace Tests.Infrastructure
@@ -31,6 +33,21 @@ namespace Tests.Infrastructure
             _cpuUsageCalculator = CpuHelper.GetOSCpuUsageCalculator();
             _metricCacher = new TestResourcesAnalyzerMetricCacher(_cpuUsageCalculator);
             _timer = new Timer(ProcessQueue, null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+        }
+
+        private static string GetDisplayName(ITestMethod testMethod)
+            => $"{testMethod.TestClass.Class.Name}::{testMethod.Method.Name}()";
+
+        internal static void Start(ITestMethod testMethod)
+        {
+            if (_enabled)
+                _resources.Enqueue(TestResources.Create(GetDisplayName(testMethod), nameof(Start)));
+        }
+
+        internal static void End(ITestMethod testMethod)
+        {
+            if (_enabled)
+                _resources.Enqueue(TestResources.Create(GetDisplayName(testMethod), nameof(End)));
         }
 
         internal static void Start(Context context)
@@ -97,7 +114,7 @@ namespace Tests.Infrastructure
 
         private class TestResources
         {
-            public string TestName { get; private set; }
+            public string ResourceName { get; private set; }
             public string Comment { get; private set; }
             public string TimeStamp { get; private set; }
             public long MachineCpuUsage { get; private set; }
@@ -109,7 +126,10 @@ namespace Tests.Infrastructure
             public long CurrentCommitChargeInMb { get; private set; }
             public long SharedCleanMemoryInMb { get; private set; }
 
-            public static TestResources Create(Context context, string comment)
+            public static TestResources Create(Context context, string comment) => 
+                Create(context.UniqueTestName, comment);
+
+            public static TestResources Create(string resourceName, string comment, bool isFailed = false)
             {
                 var timeStamp = DateTime.Now;
                 var cpuUsage = _metricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, _cpuUsageCalculator.Calculate);
@@ -117,7 +137,7 @@ namespace Tests.Infrastructure
 
                 return new TestResources
                 {
-                    TestName = context.UniqueTestName,
+                    ResourceName = resourceName,
                     TimeStamp = timeStamp.ToString("o"),
                     Comment = comment,
                     MachineCpuUsage = (long)cpuUsage.MachineCpuUsage,

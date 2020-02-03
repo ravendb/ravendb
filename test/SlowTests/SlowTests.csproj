@@ -32,6 +32,7 @@
     <None Remove="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data.zip" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
