@@ -108,7 +108,7 @@ namespace Sparrow.Threading
 
             public void Register(LightWeightThreadLocal<T> parent)
             {
-                parent._globalState.UsedThreads.Add(_localState);
+                parent._globalState.UsedThreads.TryAdd(_localState, null);
                 _parents.Add(new WeakReferenceToLightWeightThreadLocal(parent));
                 int parentsDisposed = _localState.ParentsDisposed;
                 if (parentsDisposed > 0)
@@ -204,15 +204,15 @@ namespace Sparrow.Threading
         private sealed class GlobalState
         {
             public int Disposed;
-            public readonly HashSet<LocalState> UsedThreads
-                = new HashSet<LocalState>(ReferenceEqualityComparer<LocalState>.Default);
+            public readonly ConcurrentDictionary<LocalState, object> UsedThreads
+                = new ConcurrentDictionary<LocalState, object>(ReferenceEqualityComparer<LocalState>.Default);
 
             public void Dispose()
             {
                 Interlocked.Exchange(ref Disposed, 1);
                 foreach (var localState in UsedThreads)
                 {
-                    Interlocked.Increment(ref localState.ParentsDisposed);
+                    Interlocked.Increment(ref localState.Key.ParentsDisposed);
                 }
             }
         }
