@@ -493,7 +493,7 @@ namespace Sparrow.Server
 
     public struct ByteStringMemoryCache : IByteStringAllocator
     {
-        private static readonly ThreadLocal<StackHeader<UnmanagedGlobalSegment>> SegmentsPool;
+        private static readonly LightWeightThreadLocal<StackHeader<UnmanagedGlobalSegment>> SegmentsPool;
         private static readonly SharedMultipleUseFlag LowMemoryFlag;
         private static readonly LowMemoryHandler LowMemoryHandlerInstance = new LowMemoryHandler();
 
@@ -515,7 +515,7 @@ namespace Sparrow.Server
 
         static ByteStringMemoryCache()
         {
-            SegmentsPool = new ThreadLocal<StackHeader<UnmanagedGlobalSegment>>(() => new StackHeader<UnmanagedGlobalSegment>(), trackAllValues: true);
+            SegmentsPool = new LightWeightThreadLocal<StackHeader<UnmanagedGlobalSegment>>(() => new StackHeader<UnmanagedGlobalSegment>());
             LowMemoryFlag = new SharedMultipleUseFlag();
             Cleaner = new NativeMemoryCleaner<StackHeader<UnmanagedGlobalSegment>, UnmanagedGlobalSegment>(typeof(ByteStringMemoryCache), _ => SegmentsPool.Values, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 

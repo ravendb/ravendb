@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.TransactionCommands
             _catchConcurrencyErrors = catchConcurrencyErrors;
         }
 
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             try
             {

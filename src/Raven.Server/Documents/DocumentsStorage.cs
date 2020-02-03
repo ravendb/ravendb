@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -225,7 +224,6 @@ namespace Raven.Server.Documents
                      : DocumentDatabase.Configuration.Core.DataDirectory.FullPath));
             }
 
-
             var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification);
 
             options.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
@@ -402,7 +400,7 @@ namespace Raven.Server.Documents
 
             changeVector = parsed.SerializeVector();
             return true;
-        } 
+        }
 
         public string CreateNextDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
@@ -582,9 +580,9 @@ namespace Raven.Server.Documents
                 }
 
                 yield return doc;
-
             }
         }
+
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
             long start, long take, Reference<long> skip = null)
         {
@@ -1355,8 +1353,8 @@ namespace Raven.Server.Documents
                 EnsureLastEtagIsPersisted(context, etag);
 
                 // We have to raise the notification here because even though we have deleted
-                // a deleted value, we changed the change vector. And maybe we need to replicate 
-                // that. Another issue is that the last tombstone etag has changed, and we need 
+                // a deleted value, we changed the change vector. And maybe we need to replicate
+                // that. Another issue is that the last tombstone etag has changed, and we need
                 // to let the indexes catch up to us here, even if they'll just do a noop.
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
@@ -1430,7 +1428,6 @@ namespace Raven.Server.Documents
 
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
-
 
                 CountersStorage.DeleteCountersForDocument(context, id, collectionName);
                 TimeSeriesStorage.DeleteTimeSeriesForDocument(context, id, collectionName);
@@ -1606,7 +1603,7 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
-            
+
             try
             {
                 using (ModifyLowerIdIfNeeded(context, table, lowerId, out var nonConflictedLowerId))
@@ -1646,6 +1643,7 @@ namespace Raven.Server.Documents
 
             return (newEtag, changeVector);
         }
+
         private IDisposable ModifyLowerIdIfNeeded(DocumentsOperationContext context, Table table, Slice lowerId, out Slice nonConflictedLowerId)
         {
             if (table.ReadByKey(lowerId, out _) == false)
@@ -1720,7 +1718,7 @@ namespace Raven.Server.Documents
 
         public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, bool isTombstone)
         {
-            // we delete the data directly, without generating a tombstone, because we have a 
+            // we delete the data directly, without generating a tombstone, because we have a
             // conflict instead
             var tx = context.Transaction.InnerTransaction;
 
@@ -1859,7 +1857,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public void DeleteTombstonesBefore(string collection, long etag, DocumentsOperationContext context)
+        public long DeleteTombstonesBefore(DocumentsOperationContext context, string collection, long etag, long numberOfEntriesToDelete)
         {
             string tableName;
 
@@ -1872,20 +1870,22 @@ namespace Raven.Server.Documents
             {
                 var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
-                    return;
+                    return 0;
 
                 tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
             if (table == null)
-                return;
+                return 0;
 
-            var deleteCount = table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, long.MaxValue);
+            var deleteCount = table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, numberOfEntriesToDelete);
             if (_logger.IsInfoEnabled && deleteCount > 0)
                 _logger.Info($"Deleted {deleteCount:#,#;;0} tombstones earlier than {etag} in {collection}");
 
             EnsureLastEtagIsPersisted(context, etag);
+
+            return deleteCount;
         }
 
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
@@ -1995,7 +1995,7 @@ namespace Raven.Server.Documents
                 DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
                 TombstonesSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Tombstones), 16);
 
-                // Add to cache ONLY if the transaction was committed. 
+                // Add to cache ONLY if the transaction was committed.
                 // this would prevent NREs next time a PUT is run,since if a transaction
                 // is not committed, DocsSchema and TombstonesSchema will not be actually created..
                 // has to happen after the commit, but while we are holding the write tx lock

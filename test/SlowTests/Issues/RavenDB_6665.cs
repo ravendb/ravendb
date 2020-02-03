@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.ServerWide;
 using Xunit;
@@ -45,13 +44,13 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task WillTimeout()
+        public void WillTimeout()
         {
             using (var token = new OperationCancelToken(TimeSpan.FromSeconds(1), CancellationToken.None))
             {
                 Assert.False(token.Token.IsCancellationRequested);
 
-                await Task.Delay(TimeSpan.FromSeconds(2));
+                Thread.Sleep(TimeSpan.FromSeconds(2));
 
                 Assert.True(token.Token.IsCancellationRequested);
             }

@@ -88,14 +88,14 @@ namespace Raven.Server.Documents
 
         public abstract class MergedTransactionCommand : IRecordableCommand
         {
-            protected abstract int ExecuteCmd(DocumentsOperationContext context);
+            protected abstract long ExecuteCmd(DocumentsOperationContext context);
 
-            internal int ExecuteDirectly(DocumentsOperationContext context)
+            internal long ExecuteDirectly(DocumentsOperationContext context)
             {
                 return ExecuteCmd(context);
             }
 
-            public virtual int Execute(DocumentsOperationContext context, RecordingState recordingState)
+            public virtual long Execute(DocumentsOperationContext context, RecordingState recordingState)
             {
                 recordingState?.Record(context, this);
 
@@ -439,6 +439,7 @@ namespace Raven.Server.Documents
             {
                 DoCommandNotification(op);
             }
+
             pendingOperations.Clear();
             _opsBuffers.Enqueue(pendingOperations);
         }
@@ -511,13 +512,6 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        if (_log.IsInfoEnabled)
-                        {
-                            _log.Info(
-                                $"Failed to run merged transaction with {pendingOps.Count:#,#0}, will retry independently",
-                                e);
-                        }
-
                         // need to dispose here since we are going to open new tx for each operation
                         if (tx != null)
                         {
@@ -525,7 +519,26 @@ namespace Raven.Server.Documents
                             tx.Dispose();
                         }
 
-                        NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
+                        if (e is HighDirtyMemoryException highDirtyMemoryException)
+                        {
+                            if (_log.IsInfoEnabled)
+                            {
+                                var errorMessage = $"{pendingOps.Count:#,#0} operations were cancelled because of high dirty memory, details: {highDirtyMemoryException.Message}";
+                                _log.Info(errorMessage, highDirtyMemoryException);
+                            }
+
+                            NotifyHighDirtyMemoryFailure(pendingOps, highDirtyMemoryException);
+                        }
+                        else
+                        {
+                            if (_log.IsInfoEnabled)
+                            {
+                                _log.Info($"Failed to run merged transaction with {pendingOps.Count:#,#0}, will retry independently", e);
+                            }
+
+                            NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
+                        }
+
                         return;
                     }
 
@@ -580,6 +593,25 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void NotifyHighDirtyMemoryFailure(List<MergedTransactionCommand> pendingOps, HighDirtyMemoryException exception)
+        {
+            // set all pending ops exception
+            foreach (var pendingOp in pendingOps)
+                pendingOp.Exception = exception;
+
+            NotifyOnThreadPool(pendingOps);
+
+            // set operations that are waiting in queue
+            var rejectedBuffer = GetBufferForPendingOps();
+            while (_operations.TryDequeue(out var operationToReject))
+            {
+                operationToReject.Exception = exception;
+                rejectedBuffer.Add(operationToReject);
+            }
+
+            NotifyOnThreadPool(rejectedBuffer);
+        }
+
         internal void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
         {
             if (string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false)
@@ -604,10 +636,12 @@ namespace Raven.Server.Documents
                 NotifyOnThreadPool(pendingOps);
                 return;
             }
+
             if (_log.IsInfoEnabled)
             {
-                _log.Info($"Error when merging {0} transactions, will try running independently", e);
+                _log.Info($"Error when merging {pendingOps.Count} transactions, will try running independently", e);
             }
+
             RunEachOperationIndependently(pendingOps);
         }
 
@@ -680,13 +714,6 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        if (_log.IsInfoEnabled)
-                        {
-                            _log.Info(
-                                $"Failed to run merged transaction with {currentPendingOps.Count:#,#0} operations in async manner, will retry independently",
-                                e);
-                        }
-
                         using (current.Transaction)
                         using (currentReturnContext)
                         {
@@ -705,7 +732,27 @@ namespace Raven.Server.Documents
                                 throw;
                             }
                         }
-                        NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
+
+                        if (e is HighDirtyMemoryException highDirtyMemoryException)
+                        {
+                            if (_log.IsInfoEnabled)
+                            {
+                                var errorMessage = $"{currentPendingOps.Count:#,#0} operations were cancelled because of high dirty memory, details: {highDirtyMemoryException.Message}";
+                                _log.Info(errorMessage, highDirtyMemoryException);
+                            }
+
+                            NotifyHighDirtyMemoryFailure(currentPendingOps, highDirtyMemoryException);
+                        }
+                        else
+                        {
+                            if (_log.IsInfoEnabled)
+                            {
+                                _log.Info($"Failed to run merged transaction with {currentPendingOps.Count:#,#0} operations in async manner, will retry independently", e);
+                            }
+
+                            NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
+                        }
+
                         return;
                     }
 
@@ -809,9 +856,9 @@ namespace Raven.Server.Documents
             Task previousOperation, ref PerformanceMetrics.DurationMeasurement meter)
         {
             _alreadyListeningToPreviousOperationEnd = false;
-                    var percentageFromPhysicalMem = _parent.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage;
             context.TransactionMarkerOffset = 1;  // ensure that we are consistent here and don't use old values
             var sp = Stopwatch.StartNew();
+
             do
             {
                 // RavenDB-7732 - Even if we merged multiple separate operations into
@@ -827,34 +874,23 @@ namespace Raven.Server.Documents
 
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
 
-                if (_parent.Configuration.Memory.EnableHighTemporaryDirtyMemoryUse)
+                var dirtyMemoryState = LowMemoryNotification.Instance.DirtyMemoryState;
+                if (dirtyMemoryState.IsHighDirty)
                 {
                     var now = _parent.Time.GetUtcNow();
-                    if (now - _lastHighDirtyMemCheck > _timeToCheckHighDirtyMemory.AsTimeSpan) // we do not need to test scratch dirty mem every write
+                    if (now - _lastHighDirtyMemCheck > _timeToCheckHighDirtyMemory.AsTimeSpan)
                     {
-                        if (MemoryInformation.IsHighDirtyMemory(percentageFromPhysicalMem, out var details))
-                        {
-                            var highDirtyMemory = new HighDirtyMemoryException(
-                                $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
-                                $" This might be caused by a slow IO storage. Current memory usage: {details}");
-
-                            foreach (var pendingOp in pendingOps)
-                                pendingOp.Exception = highDirtyMemory;
-
-                            NotifyOnThreadPool(pendingOps);
-
-                            var rejectedBuffer = GetBufferForPendingOps();
-                            while (_operations.TryDequeue(out var operationToReject))
-                            {
-                                operationToReject.Exception = highDirtyMemory;
-                                rejectedBuffer.Add(operationToReject);
-                            }
-                            NotifyOnThreadPool(rejectedBuffer);
-                            GlobalFlushingBehavior.GlobalFlusher.Value?.MaybeFlushEnvironment(context.Environment); // commit stage 2 won't trigger so we need to ask for flush here
-                            break;
-                        }
-                        _lastHighDirtyMemCheck = now; // reset timer for next check only if no errors (otherwise check every single write until back to normal)
+                        // we need to ask for a flush here
+                        GlobalFlushingBehavior.GlobalFlusher.Value?.MaybeFlushEnvironment(context.Environment);
+                        _lastHighDirtyMemCheck = now;
                     }
+
+                    throw new HighDirtyMemoryException(
+                        $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
+                        $" This might be caused by a slow IO storage. Current memory usage: " +
+                        $"Total Physical Memory: {MemoryInformation.TotalPhysicalMemory}, " +
+                        $"Total Scratch Allocated Memory: {new Size(dirtyMemoryState.TotalDirtyInBytes, SizeUnit.Bytes)} " +
+                        $"(which is above {_parent.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage * 100}%)");
                 }
 
                 meter.IncrementCounter(1);
@@ -1022,6 +1058,7 @@ namespace Raven.Server.Documents
         {
             if (cmds == null)
                 return;
+
             TaskExecutor.Execute(DoCommandsNotification, cmds);
         }
 

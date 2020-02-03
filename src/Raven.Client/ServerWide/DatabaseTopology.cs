@@ -18,7 +18,9 @@ namespace Raven.Client.ServerWide
         ChangeVectorNotMerged,
         WaitingForResponse,
         Ok,
-        OutOfCpuCredits
+        OutOfCpuCredits,
+        EarlyOutOfMemory,
+        HighDirtyMemory
     }
 
     public interface IDatabaseTask
@@ -191,6 +193,34 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
             Members = members;
         }
 
+
+        internal bool TryUpdateByPriorityOrder()
+        {
+            if (IsReorderNeeded() == false)
+                return false;
+
+            var originalOrder = new List<string>(Members);
+            ReorderMembers();
+
+            if (originalOrder.SequenceEqual(Members))
+                return false; // members hasn't changed after the reorder
+
+            return true;
+        }
+        private bool IsReorderNeeded()
+        {
+            if (PriorityOrder == null || PriorityOrder.Count == 0)
+                return false;
+
+            for (var index = 0; index < Math.Min(Members.Count, PriorityOrder.Count); index++)
+            {
+                var member = Members[index];
+                if (PriorityOrder[index] == member)
+                    return true;
+            }
+
+            return false;
+        }
 
         public bool RelevantFor(string nodeTag)
         {

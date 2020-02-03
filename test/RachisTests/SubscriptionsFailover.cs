@@ -757,7 +757,7 @@ namespace RachisTests
         {
             const int nodesAmount = 2;
             var leader = await CreateRaftClusterAndGetLeader(nodesAmount, shouldRunInMemory:false);
-
+            var indexLeader = Servers.FindIndex(x => x == leader);
             var leaderDataDir = leader.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
             var leaderUrl = leader.WebUrl;
 
@@ -830,7 +830,7 @@ namespace RachisTests
                     Assert.True(await subscriptionRetryBegins.WaitAsync(TimeSpan.FromSeconds(30)));
                     Assert.True(await subscriptionRetryBegins.WaitAsync(TimeSpan.FromSeconds(30)));
 
-                    leader = Servers[0] = 
+                    leader = Servers[indexLeader] = 
                         GetNewServer(new ServerCreationOptions
                         {
                             CustomSettings = new Dictionary<string, string>

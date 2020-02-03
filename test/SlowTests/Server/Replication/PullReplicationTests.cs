@@ -170,7 +170,7 @@ namespace SlowTests.Server.Replication
                 var pullTasks = await SetupPullReplicationAsync(definitionName1, sink, hub);
                 Assert.True(WaitForDocument(sink, "hub1/1", timeout), sink.Identifier);
 
-                
+
                 var pull = new PullReplicationAsSink(hub2.Database, $"ConnectionString2-{sink.Database}", definitionName2)
                 {
                     TaskId = pullTasks[0].TaskId
@@ -348,82 +348,6 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task PullExternalReplicationWithCertificateShouldWork()
-        {
-            var hubSettings = new ConcurrentDictionary<string, string>();
-            var sinkSettings = new ConcurrentDictionary<string, string>();
-
-            var hubCertificates = GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var hubCerts = SetupServerAuthentication(hubSettings, certificates: hubCertificates);
-
-            var sinkCertificates = GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var sinkCerts = SetupServerAuthentication(sinkSettings, certificates: sinkCertificates);
-
-            var hubDB = GetDatabaseName();
-            var sinkDB = GetDatabaseName();
-            var pullReplicationName = $"{hubDB}-pull";
-
-            var hubServer = GetNewServer(new ServerCreationOptions{CustomSettings = hubSettings, RegisterForDisposal = true});
-            var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true});
-
-            var dummy = GenerateAndSaveSelfSignedCertificate(true);
-            var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
-            Assert.True(pullReplicationCertificate.HasPrivateKey);
-
-            using (var hubStore = GetDocumentStore(new Options
-            {
-                ClientCertificate = hubCerts.ServerCertificate.Value,
-                Server = hubServer,
-                ModifyDatabaseName = _ => hubDB
-            }))
-            using (var sinkStore = GetDocumentStore(new Options
-            {
-                ClientCertificate = sinkCerts.ServerCertificate.Value,
-                Server = sinkServer,
-                ModifyDatabaseName = _ => sinkDB
-            }))
-            {
-                await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)
-                {
-                    Certificates = new Dictionary<string, string>
-                    {
-                        [pullReplicationCertificate.Thumbprint] = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Cert))
-                    }
-                }));
-
-                var configurationResult = await SetupPullReplicationAsync(pullReplicationName, sinkStore, pullReplicationCertificate, hubStore);
-                var sinkTaskId = configurationResult[0].TaskId;
-                using (var hubSession = hubStore.OpenSession())
-                {
-                    hubSession.Store(new User(), "foo/bar");
-                    hubSession.SaveChanges();
-                }
-
-                var timeout = 3000;
-                Assert.True(WaitForDocument(sinkStore, "foo/bar", timeout), sinkStore.Identifier);
-                
-                // test if certificate is retained when we don't send one
-                // sending null as cert - but it should copy old one
-                await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
-                {
-                    TaskId = sinkTaskId,
-                    Name = pullReplicationName,
-                    HubDefinitionName = pullReplicationName,
-                    ConnectionStringName = "ConnectionString-" + hubStore.Database
-                }));
-                
-                using (var hubSession = hubStore.OpenSession())
-                {
-                    hubSession.Store(new User(), "foo/bar2");
-                    hubSession.SaveChanges();
-                }
-
-                Assert.True(WaitForDocument(sinkStore, "foo/bar2", timeout), sinkStore.Identifier);
-                
-            }
-        }
-
-        [Fact]
         public async Task FailoverOnHubNodeFail()
         {
             var clusterSize = 3;
@@ -557,7 +481,7 @@ namespace SlowTests.Server.Replication
 
 
                 // add pull replication with invalid discovery url to test the failover on database topology discovery
-                var pullReplication = new PullReplicationAsSink(hubDB, $"ConnectionString-{hubDB}",name)
+                var pullReplication = new PullReplicationAsSink(hubDB, $"ConnectionString-{hubDB}", name)
                 {
                     MentorNode = "B", // this is the node were the data will be replicated to.
                 };
@@ -601,7 +525,7 @@ namespace SlowTests.Server.Replication
                 Assert.Equal("Karmel2", user.Name);
             }
         }
-        
+
         //TODO write test for deletion! - make sure replication is stopped after we delete hub!
 
         public Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, params DocumentStore[] hub)
@@ -615,7 +539,7 @@ namespace SlowTests.Server.Replication
             var resList = new List<ModifyOngoingTaskResult>();
             foreach (var store in hub)
             {
-                var pull = new PullReplicationAsSink(store.Database,$"ConnectionString-{store.Database}",remoteName);
+                var pull = new PullReplicationAsSink(store.Database, $"ConnectionString-{store.Database}", remoteName);
                 if (certificate != null)
                 {
                     pull.CertificateWithPrivateKey = Convert.ToBase64String(certificate.Export(X509ContentType.Pfx));

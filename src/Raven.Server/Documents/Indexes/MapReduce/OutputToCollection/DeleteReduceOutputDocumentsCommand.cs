@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public long DeleteCount { get; set; }
 
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             List<DocumentsStorage.DeleteOperationResult> deleteResults;
             Dictionary<string, HashSet<string>> idsToDeleteByReferenceDocumentId = null;

@@ -207,13 +207,21 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (indexContext.OpenReadTransaction())
                 using (databaseContext.OpenReadTransaction())
-                using ((index as MapReduceIndex)?.IgnoreStalenessDueToReduceOutputsToDelete())
                 {
-                    var canReplace = index.IsStale(databaseContext, indexContext) == false;
-                    if (canReplace)
-                        isSideBySide = null;
+                    indexContext.IgnoreStalenessDueToReduceOutputsToDelete = true;
 
-                    return canReplace;
+                    try
+                    {
+                        var canReplace = index.IsStale(databaseContext, indexContext) == false;
+                        if (canReplace)
+                            isSideBySide = null;
+
+                        return canReplace;
+                    }
+                    finally
+                    {
+                        indexContext.IgnoreStalenessDueToReduceOutputsToDelete = false;
+                    }
                 }
             }
         }

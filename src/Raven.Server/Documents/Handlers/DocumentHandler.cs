@@ -612,7 +612,7 @@ namespace Raven.Server.Documents.Handlers
             _shouldValidateAttachments = shouldValidateAttachments;
         }
 
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             if (_shouldValidateAttachments)
             {

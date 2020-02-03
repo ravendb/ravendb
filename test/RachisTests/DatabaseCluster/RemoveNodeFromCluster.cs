@@ -248,13 +248,16 @@ namespace RachisTests.DatabaseCluster
 
             var cluster = await CreateRaftCluster(2, shouldRunInMemory: false);
 
+            var leaderNode = cluster.Leader.ServerStore.NodeTag;
+            var memberNode = cluster.Nodes.First(x => x != cluster.Leader).ServerStore.NodeTag;
+
             await CreateDatabaseInCluster(new DatabaseRecord(dbName)
             {
                 Topology = new DatabaseTopology
                 {
                     Members = new List<string>
                     {
-                        "A"
+                        leaderNode
                     },
                     ReplicationFactor = 1
                 }
@@ -266,7 +269,7 @@ namespace RachisTests.DatabaseCluster
                 Database = dbName,
             }.Initialize())
             {
-                await cluster.Leader.ServerStore.RemoveFromClusterAsync("B");
+                await cluster.Leader.ServerStore.RemoveFromClusterAsync(memberNode);
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
                 cluster.Leader = GetNewServer(new ServerCreationOptions
                 {

@@ -40,9 +40,9 @@ namespace Raven.Server.Documents
 
         public bool NeedWait { get; private set; }
 
-        public int Processed { get; private set; }
+        public long Processed { get; private set; }
 
-        public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
+        public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
         {
 
             while (_documentIds.Count > 0)
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents
             throw new NotSupportedException($"ToDto() of {nameof(ExecuteRateLimitedOperations<T>)} Should not be called");
         }
 
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             throw new NotSupportedException("Should only call Execute() here");
         }

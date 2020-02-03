@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 
 namespace Sparrow.Utils
 {
@@ -14,8 +15,8 @@ namespace Sparrow.Utils
     {
         public static Func<ulong> GetCurrentUnmanagedThreadId = () => 0xDEAD;
 
-        internal static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
-            () => new ThreadStats(), trackAllValues: true);
+        internal static readonly LightWeightThreadLocal<ThreadStats> ThreadAllocations = new LightWeightThreadLocal<ThreadStats>(
+            () => new ThreadStats());
 
         public static void NotifyCurrentThreadAboutToClose()
         {

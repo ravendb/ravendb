@@ -36,11 +36,17 @@ namespace Raven.Server.ServerWide.Maintenance
     {
         public bool? OutOfCpuCredits;
 
+        public bool? EarlyOutOfMemory;
+
+        public bool? HighDirtyMemory;
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(OutOfCpuCredits)] = OutOfCpuCredits
+                [nameof(OutOfCpuCredits)] = OutOfCpuCredits,
+                [nameof(EarlyOutOfMemory)] = EarlyOutOfMemory,
+                [nameof(HighDirtyMemory)] = HighDirtyMemory
             };
         }
     }
@@ -123,7 +129,9 @@ namespace Raven.Server.ServerWide.Maintenance
             Timeout,
             Error,
             Ok,
-            OutOfCredits
+            OutOfCredits,
+            EarlyOutOfMemory,
+            HighDirtyMemory
         }
 
         public readonly Dictionary<string, DatabaseStatusReport> Report;
@@ -154,9 +162,9 @@ namespace Raven.Server.ServerWide.Maintenance
             Error = error;
             UpdateDateTime = updateDateTime;
 
-            if (ServerReport.OutOfCpuCredits == true)
+            if (ServerReport.OutOfCpuCredits ?? ServerReport.EarlyOutOfMemory ?? ServerReport.HighDirtyMemory ?? false)
             {
-                // we don't want to give any grace time if the node is out of credits
+                // we don't want to give any grace time if the node is out of credits, early out of memory or high dirty memory
                 LastSuccessfulUpdateDateTime = DateTime.MinValue;
             }
             else

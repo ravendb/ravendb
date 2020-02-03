@@ -399,7 +399,7 @@ namespace Raven.Server.Documents.Handlers
             public Stream Stream;
             public string Hash;
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 try
                 {
@@ -435,7 +435,7 @@ namespace Raven.Server.Documents.Handlers
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 try
                 {

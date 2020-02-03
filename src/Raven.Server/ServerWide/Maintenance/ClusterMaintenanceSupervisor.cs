@@ -345,17 +345,27 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         var maintenanceReport = JsonDeserializationServer.MaintenanceReport(rawReport);
 
-                        var status = maintenanceReport.ServerReport.OutOfCpuCredits == true
-                            ? ClusterNodeStatusReport.ReportStatus.OutOfCredits
-                            : ClusterNodeStatusReport.ReportStatus.Ok;
-
                         return new ClusterNodeStatusReport(
                             maintenanceReport.ServerReport,
                             maintenanceReport.DatabasesReport,
-                            status,
+                            GetStatus(),
                             null,
                             DateTime.UtcNow,
                             _lastSuccessfulReceivedReport);
+
+                        ClusterNodeStatusReport.ReportStatus GetStatus()
+                        {
+                            if (maintenanceReport.ServerReport.OutOfCpuCredits == true)
+                                return ClusterNodeStatusReport.ReportStatus.OutOfCredits;
+
+                            if (maintenanceReport.ServerReport.EarlyOutOfMemory == true)
+                                return ClusterNodeStatusReport.ReportStatus.EarlyOutOfMemory;
+
+                            if (maintenanceReport.ServerReport.HighDirtyMemory == true)
+                                return ClusterNodeStatusReport.ReportStatus.HighDirtyMemory;
+
+                            return ClusterNodeStatusReport.ReportStatus.Ok;
+                        }
                     }
 
                     var report = new Dictionary<string, DatabaseStatusReport>();

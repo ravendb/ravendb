@@ -92,7 +92,7 @@ namespace SlowTests.Issues
                 RunBackup(backupOperationResult2.TaskId, documentDatabase);
 
                 //force tombstone cleanup - now, after backup, tombstones should be cleaned
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup(1);
 
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -110,7 +110,7 @@ namespace SlowTests.Issues
                 }
 
                 RunBackup(backupOperationResult1.TaskId, documentDatabase);
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup(1);
 
                 //since we ran only one of backup tasks, only tombstones with minimal last etag get cleaned
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -145,7 +145,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup(1);
 
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -159,7 +159,7 @@ namespace SlowTests.Issues
                 RunBackup(result.TaskId, documentDatabase);
 
                 //force tombstone cleanup - now, after backup, tombstones should be cleaned
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup(1);
 
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -193,7 +193,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup(1);
 
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -214,7 +214,7 @@ namespace SlowTests.Issues
                 RunBackup(result.TaskId, documentDatabase);
 
                 //force tombstone cleanup - now, after backup, tombstones should be cleaned
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup(1);
 
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())

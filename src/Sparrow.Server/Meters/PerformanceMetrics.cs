@@ -196,7 +196,7 @@ namespace Sparrow.Server.Meters
             }
 
             public void IncrementCounter(long incVal) => _counter += incVal;
-            public void IncrementCommands(int incVal) => _commandsCounter += incVal;
+            public void IncrementCommands(long incVal) => _commandsCounter += incVal;
             public void MarkInternalWindowStart() => _parent.MarkInternalWindowStart();
             public void MarkInternalWindowEnd() => _parent.MarkInternalWindowEnd();
             public void Dispose() => _parent.Mark(_counter, _commandsCounter, _start, DateTime.UtcNow);
