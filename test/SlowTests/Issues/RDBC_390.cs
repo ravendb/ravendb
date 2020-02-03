@@ -37,7 +37,7 @@ namespace SlowTests.Issues
 
                     var query = facetQuery.ToString();
 
-                    Assert.Equal("from Companies select facet('Colour with space') as 'Alias with space', facet(Ability)", query);
+                    Assert.Equal("from 'Companies' select facet('Colour with space') as 'Alias with space', facet(Ability)", query);
                 }
             }
         }
