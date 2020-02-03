@@ -80,6 +80,8 @@ namespace RachisTests
             }
         }
 
+        private bool _toggled;
+
         [Theory(Skip = "Uprobable, intermediate state")]
         [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: true)]
         public async Task SkippedSubscriptionsShouldFailoverAndReturnToOriginalNodes(int subscriptionsChainSize, int clusterSize, int dBGroupSize, bool shouldMaintainElectionTimeout)
@@ -125,20 +127,15 @@ namespace RachisTests
                 });
 
                 var dbNodesCountToToggle = Math.Max(Math.Min(dBGroupSize - 1, dBGroupSize / 2 + 1), 1);
-                foreach (var node in store.GetRequestExecutor().TopologyNodes.Take(dbNodesCountToToggle))
+                var nodesToToggle = store.GetRequestExecutor().TopologyNodes.Select(x => x.ClusterTag).Take(dbNodesCountToToggle);
+
+                foreach (var node in nodesToToggle)
                 {
-                    var i = 0;
-
-                    for (; i < cluster.Nodes.Count; i++)
-                    {
-                        if (cluster.Nodes[i].ServerStore.NodeTag == node.ClusterTag)
-                            break;
-                    }
-
-                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, i, shouldTrapRevivedNodesIntoCandidate);
+                    var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == node);
+                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, nodeIndex, shouldTrapRevivedNodesIntoCandidate);
                 }
 
-                Assert.All(cdeArray.GetArray(), cde => Assert.Equal(cde.CurrentCount, SubscriptionsCount));
+                Assert.All(cdeArray.GetArray(), cde => Assert.Equal(SubscriptionsCount, cde.CurrentCount));
 
                 foreach (var cde in cdeArray.GetArray())
                 {
@@ -156,7 +153,7 @@ namespace RachisTests
 
         [Theory]
         [InlineData(5)]
-        public void MakeSureAllNodesAreRoundRobined(int clusterSize)
+        public async Task MakeSureAllNodesAreRoundRobined(int clusterSize)
         {
             var cluster = AsyncHelpers.RunSync(() => CreateRaftCluster(clusterSize, shouldRunInMemory: false));
 
@@ -191,37 +188,26 @@ namespace RachisTests
 
                 var sp = Stopwatch.StartNew();
 
-                foreach (var node in store.GetRequestExecutor().TopologyNodes)
+                var nodes = store.GetRequestExecutor().TopologyNodes.Select(x => x.ClusterTag).ToList();
+                Assert.Equal(clusterSize, cluster.Nodes.Count);
+                Assert.Equal(clusterSize, nodes.Count);
+
+                foreach (var node in nodes)
                 {
-                    try
-                    {
-                        var i = 0;
+                    var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == node);
+                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, nodeIndex, shouldTrapRevivedNodesIntoCandidate: true);
 
-                        for (; i < cluster.Nodes.Count; i++)
-                        {
-                            if (cluster.Nodes[i].ServerStore.NodeTag == node.ClusterTag)
-                                break;
-                        }
-                        AsyncHelpers.RunSync(() => ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, i, true));
-                    }
-                    catch (Exception)
-                    {
-                        // noop, we might hit a leader here
-                    }
                 }
-
                 while (clusterSize != redirects.Count)
                 {
-                    var leaderNode = cluster.Nodes.FirstOrDefault(x => x.ServerStore.IsLeader());
-                    if (leaderNode != null)
+                    await ActionWithLeader((l) =>
                     {
-                        var currentLeader = leaderNode.ServerStore.Engine.CurrentLeader;
-                        if (currentLeader != null)
-                            currentLeader.StepDown();
-                    }
+                        l.ServerStore.Engine.CurrentLeader?.StepDown();
+                        return Task.CompletedTask;
+                    });
 
                     Thread.Sleep(16);
-                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(5), "sp.Elapsed < TimeSpan.FromMinutes(5)");
+                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(5), $"sp.Elapsed < TimeSpan.FromMinutes(5), redirects count : {redirects.Count}, leaderNodeTag: {cluster.Leader.ServerStore.NodeTag}, missing: {string.Join(", ", cluster.Nodes.Select(x => x.ServerStore.NodeTag).Except(redirects))}");
                 }
 
                 Assert.Equal(clusterSize, redirects.Count);
@@ -292,13 +278,21 @@ namespace RachisTests
             node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
             cluster.Nodes[index] = node;
 
-            await WaitForRehab(databaseName, cluster);
+            _toggled = true;
+            await WaitForRehab(databaseName, index, cluster);
+            _toggled = false;
         }
 
-        internal static async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store)
+        private async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store)
         {
             while (false == store.WasDisposed)
             {
+                if (_toggled)
+                {
+                    await Task.Delay(200);
+                    continue;
+                }
+
                 try
                 {
                     var ids = new List<string>();
@@ -378,8 +372,9 @@ namespace RachisTests
             mainTI.Unregister(mainSubscribersCDE.WaitHandle);
         }
 
-        private static async Task WaitForRehab(string dbName, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
+        private static async Task WaitForRehab(string dbName, int index, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
         {
+            var toggled = cluster.Nodes[index].ServerStore.NodeTag;
             for (var i = 0; i < cluster.Nodes.Count; i++)
             {
                 var curNode = cluster.Nodes[i];
@@ -404,7 +399,7 @@ namespace RachisTests
                     }
                 }
                 while (--attempts > 0 && rehabCount > 0);
-                Assert.True(attempts >= 0 && rehabCount == 0, "waited for rehab for too long");
+                Assert.True(attempts >= 0 && rehabCount == 0, $"waited for rehab for too long, current node: {cluster.Nodes[i].ServerStore.NodeTag}, toggled node: {toggled}, rehabs: {rehabCount}, attempts: {attempts}");
             }
         }
 
