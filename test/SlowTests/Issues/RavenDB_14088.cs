@@ -24,7 +24,7 @@ namespace SlowTests.Issues
                         .WhereExists("SomeField")
                         .ToString();
 
-                    Assert.Equal("from Companies where true and not exists(SomeField)", query);
+                    Assert.Equal("from 'Companies' where true and not exists(SomeField)", query);
                 }
             }
         }

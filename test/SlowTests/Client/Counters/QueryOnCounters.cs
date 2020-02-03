@@ -1269,7 +1269,7 @@ namespace SlowTests.Client.Counters
 	var c = counter(user, ""Downloads"");
 	return { Name : user.Name, Downloads : c };
 }
-from Users as user select output(user)", query.ToString());
+from 'Users' as user select output(user)", query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(3, queryResult.Count);
@@ -1320,7 +1320,7 @@ from Users as user select output(user)", query.ToString());
 	var c = counter(user, ""Downloads"");
 	return { Name : user.Name, Downloads : c };
 }
-from Users as user select output(user)", query.ToString());
+from 'Users' as user select output(user)", query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(3, queryResult.Count);
