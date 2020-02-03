@@ -365,7 +365,7 @@ namespace Raven.Client.Documents.Subscriptions
                         }
                     }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine,reasonsDictionary.Select(x=>$"{x.Key}:{x.Value}"))}",
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine,reasonsDictionary.Select(x=>$"{x.Key}:{x.Value}"))}{Environment.NewLine}Message: {connectionStatus.Message}",
                         appropriateNode,
                         reasonsDictionary);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect:
