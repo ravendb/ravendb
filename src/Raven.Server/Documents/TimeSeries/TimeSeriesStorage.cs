@@ -1162,7 +1162,7 @@ namespace Raven.Server.Documents.TimeSeries
                     throw new InvalidOperationException($"After renewal of segment, was unable to append a new value. Shouldn't happen. Doc: {_docId}, name: {_name}");
             }
 
-            public void UpdateBaseline(int timestampDiff)
+            public void UpdateBaseline(long timestampDiff)
             {
                 Debug.Assert(timestampDiff > 0);
                 BaselineDate = BaselineDate.AddMilliseconds(timestampDiff);
@@ -1248,32 +1248,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 break;
                             }
 
-                            var segment = segmentHolder.ReadOnlySegment;
-
-                            if (segment.NumberOfValues != current.Values.Length)
-                            {
-                                if (segment.NumberOfValues > current.Values.Length)
-                                {
-                                    using (context.Allocator.Allocate(segment.NumberOfValues * sizeof(double), out ByteString fullValuesBuffer))
-                                    {
-                                        var fullValues = new Span<double>(fullValuesBuffer.Ptr, segment.NumberOfValues);
-                                        current.Values.Span.CopyTo(fullValues);
-                                        for (int i = current.Values.Length; i < fullValues.Length; i++)
-                                        {
-                                            fullValues[i] = double.NaN;
-                                        }
-
-                                        current.Values = new Memory<double>(fullValues.ToArray());
-                                    }
-                                }
-                                else
-                                {
-                                    // need to re-write the segment with the increased size
-                                    // have to take into account that the segment will split because of this
-                                    retry = SplitSegment(context, segmentHolder, appendEnumerator, current, updatedValuesNewSize: current.Values.Length - segment.NumberOfValues);
-                                    continue;
-                                }
-                            }
+                            EnsureNumberOfValues(context, segmentHolder.ReadOnlySegment.NumberOfValues, current);
 
                             if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, out var newValueFetched))
                                 break;
@@ -1284,7 +1259,14 @@ namespace Raven.Server.Documents.TimeSeries
                                 continue;
                             }
 
-                            retry = SplitSegment(context, segmentHolder, appendEnumerator, current, updatedValuesNewSize: 0);
+                            if (ValueTooFar(segmentHolder, current))
+                            {
+                                segmentHolder.UpdateBaseline((current.Timestamp - segmentHolder.BaselineDate).Ticks / 10_000);
+                                segmentHolder.AppendToNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagAsSpan(current.Tag), current.Status);
+                                break;
+                            }
+
+                            retry = SplitSegment(context, segmentHolder, appendEnumerator, current);
                         }
                     }
                 }
@@ -1309,6 +1291,32 @@ namespace Raven.Server.Documents.TimeSeries
             return context.LastDatabaseChangeVector;
         }
 
+        private bool ValueTooFar(TimeSeriesSegmentHolder segmentHolder, Reader.SingleResult current)
+        {
+            var deltaInMs = (current.Timestamp.Ticks / 10_000) - segmentHolder.BaselineMilliseconds;
+            return deltaInMs >= int.MaxValue;
+        }
+
+        private static bool EnsureNumberOfValues(DocumentsOperationContext context, int segmentNumberOfValues, Reader.SingleResult current)
+        {
+            if (segmentNumberOfValues > current.Values.Length)
+            {
+                using (context.Allocator.Allocate(segmentNumberOfValues * sizeof(double), out ByteString fullValuesBuffer))
+                {
+                    var fullValues = new Span<double>(fullValuesBuffer.Ptr, segmentNumberOfValues);
+                    current.Values.Span.CopyTo(fullValues);
+                    for (int i = current.Values.Length; i < fullValues.Length; i++)
+                    {
+                        fullValues[i] = double.NaN;
+                    }
+
+                    current.Values = new Memory<double>(fullValues.ToArray());
+                }
+            }
+
+            return segmentNumberOfValues == current.Values.Length;
+        }
+
         private bool TryAppendToCurrentSegment(
             DocumentsOperationContext context,
             TimeSeriesSegmentHolder segmentHolder,
@@ -1326,11 +1334,11 @@ namespace Raven.Server.Documents.TimeSeries
             newValueFetched = false;
             while (true)
             {
-                var canAppend = current.Timestamp > lastTimestamp;
+                var canAppend = current.Timestamp > lastTimestamp && segment.NumberOfValues == current.Values.Length;
                 var deltaInMs = (current.Timestamp.Ticks / 10_000) - segmentHolder.BaselineMilliseconds;
+                var inRange = deltaInMs < int.MaxValue;
 
-                if (canAppend &&
-                    deltaInMs < int.MaxValue) // if the range is too big (over 24.85 days, using ms precision), we need a new segment
+                if (canAppend && inRange) // if the range is too big (over 24.85 days, using ms precision), we need a new segment
                 {
                     // this is the simplest scenario, we can just add it.
                     if (newValueFetched == false)
@@ -1344,9 +1352,15 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         newValueFetched = true;
                         current = GetNext(appendEnumerator);
+                        if (current == null)
+                        {
+                            // we appended everything
+                            segmentHolder.AppendExistingSegment(newSegment);
+                            return true;
+                        }
 
-                        bool unchangedNumberOfValues = segment.NumberOfValues == current?.Values.Length;
-                        if (current?.Timestamp < nextSegmentBaseline && unchangedNumberOfValues)
+                        bool unchangedNumberOfValues = EnsureNumberOfValues(context, newSegment.NumberOfValues, current);
+                        if (current.Timestamp < nextSegmentBaseline && unchangedNumberOfValues)
                         {
                             continue;
                         }
@@ -1358,8 +1372,10 @@ namespace Raven.Server.Documents.TimeSeries
                 if (newValueFetched)
                 {
                     segmentHolder.AppendExistingSegment(newSegment);
+                    return false;
                 }
-                else if (canAppend)
+                
+                if (canAppend)
                 {
                     // either the range is too high to fit in a single segment (~50 days) or the 
                     // previous segment is full, we can just create a completely new segment with the 
@@ -1368,7 +1384,7 @@ namespace Raven.Server.Documents.TimeSeries
                     return true;
                 }
 
-                return current == null;
+                return false;
             }
         }
 
@@ -1376,8 +1392,7 @@ namespace Raven.Server.Documents.TimeSeries
             DocumentsOperationContext context,
             TimeSeriesSegmentHolder timeSeriesSegment,
             IEnumerator<Reader.SingleResult> reader,
-            Reader.SingleResult current,
-            int updatedValuesNewSize)
+            Reader.SingleResult current)
         {
             // here we have a complex scenario, we need to add it in the middle of the current segment
             // to do that, we have to re-create it from scratch.
@@ -1388,6 +1403,8 @@ namespace Raven.Server.Documents.TimeSeries
             var nextSegmentBaseline = BaselineOfNextSegment(timeSeriesSegment, current.Timestamp);
             var segmentToSplit = timeSeriesSegment.ReadOnlySegment;
             var changed = false;
+            var additionalValueSize = Math.Max(0, current.Values.Length - timeSeriesSegment.ReadOnlySegment.NumberOfValues);
+            var newNumberOfValues = additionalValueSize + timeSeriesSegment.ReadOnlySegment.NumberOfValues;
 
             using (context.Allocator.Allocate(segmentToSplit.NumberOfBytes, out var currentSegmentBuffer))
             {
@@ -1397,18 +1414,18 @@ namespace Raven.Server.Documents.TimeSeries
                 var splitSegment = new TimeSeriesValuesSegment(timeSeriesSegment.Allocator.Buffer.Ptr, MaxSegmentSize);
                 splitSegment.Initialize(current.Values.Span.Length);
 
-                using (context.Allocator.Allocate((readOnlySegment.NumberOfValues + updatedValuesNewSize) * sizeof(double), out var valuesBuffer))
+                using (context.Allocator.Allocate(newNumberOfValues * sizeof(double), out var valuesBuffer))
                 using (context.Allocator.Allocate(readOnlySegment.NumberOfValues * sizeof(TimestampState), out var stateBuffer))
                 {
                     Memory.Set(valuesBuffer.Ptr, 0, valuesBuffer.Length);
                     Memory.Set(stateBuffer.Ptr, 0, stateBuffer.Length);
 
                     var currentValues = new Span<double>(valuesBuffer.Ptr, readOnlySegment.NumberOfValues);
-                    var updatedValues = new Span<double>(valuesBuffer.Ptr, readOnlySegment.NumberOfValues + updatedValuesNewSize);
+                    var updatedValues = new Span<double>(valuesBuffer.Ptr, newNumberOfValues);
                     var state = new Span<TimestampState>(stateBuffer.Ptr, readOnlySegment.NumberOfValues);
                     var currentTag = new TimeSeriesValuesSegment.TagPointer();
 
-                    for (int i = readOnlySegment.NumberOfValues; i < readOnlySegment.NumberOfValues + updatedValuesNewSize; i++)
+                    for (int i = readOnlySegment.NumberOfValues; i < newNumberOfValues; i++)
                     {
                         updatedValues[i] = double.NaN;
                     }
@@ -1433,6 +1450,14 @@ namespace Raven.Server.Documents.TimeSeries
 
                                 changed = true;
                                 Debug.Assert(current != null);
+
+                                if (EnsureNumberOfValues(context, newNumberOfValues, current) == false)
+                                {
+                                    // the next value to append has a larger number of values, so we need to break and re-append in a new segment.
+                                    timeSeriesSegment.AppendExistingSegment(splitSegment);
+                                    return true;
+                                }
+
                                 timeSeriesSegment.AddValue(current, ref splitSegment);
 
                                 if (currentTime == current.Timestamp)
@@ -1474,6 +1499,9 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (localTime == remote.Timestamp)
             {
+                if (localValues.Length != remote.Values.Length)
+                    return localValues.Length > remote.Values.Length; // larger number of values wins
+
                 return holder.FromReplication && // if not from replication, other value overrides
                        localValues.SequenceCompareTo(remote.Values.Span) > 0; // if from replication, the largest value wins
             }
