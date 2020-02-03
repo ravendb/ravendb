@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Expiration
                 _forExpiration = forExpiration;
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 DeletionCount =
                     _forExpiration

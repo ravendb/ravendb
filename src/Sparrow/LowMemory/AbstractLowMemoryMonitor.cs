@@ -11,6 +11,8 @@ namespace Sparrow.LowMemory
 
         public abstract bool IsEarlyOutOfMemory(MemoryInfoResult memInfo, out Size commitChargeThreshold);
 
+        public abstract DirtyMemoryState GetDirtyMemoryState();
+
         public abstract void AssertNotAboutToRunOutOfMemory();
 
         internal static long GetManagedMemoryInBytes()

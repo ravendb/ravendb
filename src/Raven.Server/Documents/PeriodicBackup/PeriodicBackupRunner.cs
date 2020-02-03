@@ -165,9 +165,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             TimeSpan nextBackupTimeSpan;
             if (timeSpan.Ticks <= 0)
             {
-                // the backup will run now
-                nextBackupTimeSpan = TimeSpan.Zero;
-                nextBackupTimeLocal = nowLocalTime;
+                // overdue backup of current node or first backup
+                if (backupStatus.NodeTag == _serverStore.NodeTag || backupStatus.NodeTag == null)
+                {
+                    // the backup will run now
+                    nextBackupTimeSpan = TimeSpan.Zero;
+                    nextBackupTimeLocal = nowLocalTime;
+                }
+                else
+                {
+                    // overdue backup from other node
+                    nextBackupTimeSpan = TimeSpan.FromMinutes(1);
+                    nextBackupTimeLocal = nowLocalTime + nextBackupTimeSpan;
+                }
             }
             else
             {
@@ -429,6 +439,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                     throw new BackupDelayException(
                         $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
                         $"The task cannot run because the server is in low memory state.")
+                    {
+                        DelayPeriod = _serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
+                    };
+                }
+
+                if (LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty)
+                {
+                    throw new BackupDelayException(
+                        $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
+                        $"The task cannot run because the server is in high dirty memory state.")
                     {
                         DelayPeriod = _serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
                     };
@@ -752,36 +772,38 @@ namespace Raven.Server.Documents.PeriodicBackup
             var previousConfiguration = existingBackupState.Configuration;
             existingBackupState.Configuration = newConfiguration;
 
-            if (taskState != TaskStatus.ActiveByCurrentNode)
+            switch (taskState)
             {
-                // this node isn't responsible for the backup task
-                existingBackupState.DisableFutureBackups();
-                return;
-            }
+                case TaskStatus.Disabled:
+                case TaskStatus.ActiveByOtherNode:
+                    // the task is disabled or this node isn't responsible for the backup task
+                    existingBackupState.DisableFutureBackups();
+                    return;
+                case TaskStatus.ClusterDown:
+                    // this node cannot connect to cluster, the task will continue on this node
+                    return;
+                case TaskStatus.ActiveByCurrentNode:
+                    // a backup is already running, the next one will be re-scheduled by the backup task if needed
+                    if (existingBackupState.RunningTask != null)
+                        return;
 
-            if (existingBackupState.RunningTask != null)
-            {
-                // a backup is already running 
-                // the next one will be re-scheduled by the backup task
-                return;
-            }
+                    // backup frequency hasn't changed, and we have a scheduled backup
+                    if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false && existingBackupState.HasScheduledBackup())
+                        return;
 
-            if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false &&
-                existingBackupState.HasScheduledBackup())
-            {
-                // backup frequency hasn't changed
-                // and we have a scheduled backup
-                return;
+                    existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus));
+                    return;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(taskState), taskState, null);
             }
-
-            existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus));
         }
 
         private enum TaskStatus
         {
             Disabled,
             ActiveByCurrentNode,
-            ActiveByOtherNode
+            ActiveByOtherNode,
+            ClusterDown
         }
 
         private TaskStatus GetTaskStatus(
@@ -811,7 +833,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var backupStatus = GetBackupStatus(configuration.TaskId);
             var whoseTaskIsIt = _database.WhoseTaskIsIt(topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
             if (whoseTaskIsIt == null)
-                return TaskStatus.Disabled;
+                return TaskStatus.ClusterDown;
 
             if (whoseTaskIsIt == _serverStore.NodeTag)
                 return TaskStatus.ActiveByCurrentNode;

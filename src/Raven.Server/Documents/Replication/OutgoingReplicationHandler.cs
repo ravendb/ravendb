@@ -774,7 +774,7 @@ namespace Raven.Server.Documents.Replication
                 return true;
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 if (string.IsNullOrEmpty(context.LastDatabaseChangeVector))
                     context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);

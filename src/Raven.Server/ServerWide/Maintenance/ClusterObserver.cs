@@ -547,6 +547,9 @@ namespace Raven.Server.ServerWide.Maintenance
             var clusterTopology = state.ClusterTopology;
             var deletionInProgress = state.ReadDeletionInProgress();
 
+            var someNodesRequireMoreTime = false;
+            var rotatePreferredNode = false;
+
             foreach (var member in databaseTopology.Members)
             {
                 var status = None;
@@ -567,12 +570,12 @@ namespace Raven.Server.ServerWide.Maintenance
                     continue;
                 }
 
+                DatabaseStatusReport dbStats = null;
                 if (nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
-                    nodeStats.Report.TryGetValue(dbName, out var dbStats))
+                    nodeStats.Report.TryGetValue(dbName, out dbStats))
                 {
                     status = dbStats.Status;
                     if (status == Loaded ||
-                        status == Loading ||
                         status == Unloaded ||
                         status == NoChange)
                     {
@@ -588,15 +591,17 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
 
-                // Give one minute of grace before we move the node to a rehab
-                var grace = DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime);
-                if (nodeStats.LastSuccessfulUpdateDateTime == default)
+                if (ShouldGiveMoreTime(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime))
                 {
-                    if (grace < StartTime)
-                        continue;
-                }
-                if (grace < nodeStats.LastSuccessfulUpdateDateTime)
-                {
+                    // It seems that the node has some trouble.
+                    // We will give him more time before moving to rehab, but we need to make sure he isn't the preferred node.
+                    if (databaseTopology.Members.Count > 1 &&
+                        databaseTopology.Members[0] == member)
+                    {
+                        rotatePreferredNode = true;
+                    }
+
+                    someNodesRequireMoreTime = true;
                     continue;
                 }
 
@@ -612,6 +617,14 @@ namespace Raven.Server.ServerWide.Maintenance
                     databaseTopology.PromotablesStatus[member] = DatabasePromotionStatus.NotResponding;
                     return $"Node {member} is currently not responding with the status '{status}'";
                 }
+            }
+
+            if (hasLivingNodes && rotatePreferredNode)
+            {
+                var member = databaseTopology.Members[0];
+                databaseTopology.Members.Remove(member);
+                databaseTopology.Members.Add(member);
+                return $"The preferred Node {member} is currently not responding and moved to the end of the list";
             }
 
             if (hasLivingNodes == false)
@@ -652,6 +665,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, the database is unreachable.", dbName);
             }
+
+            if (someNodesRequireMoreTime == false &&
+                databaseTopology.TryUpdateByPriorityOrder())
+                return "Reordering the member nodes to ensure the priority order.";
 
             var shouldUpdateTopologyStatus = false;
             var updateTopologyStatusReason = new StringBuilder();
@@ -801,6 +818,25 @@ namespace Raven.Server.ServerWide.Maintenance
             return null;
         }
 
+        private bool ShouldGiveMoreTime(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
+        {
+            // Give one minute of grace before we move the node to a rehab
+            var grace = DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime);
+
+            if (lastSuccessfulUpdate == default)
+            {
+                if (grace < StartTime)
+                    return true;
+            }
+            
+            if (databaseUpTime == null) // database isn't loaded
+            {
+                return grace < StartTime;
+            }
+
+            return grace < lastSuccessfulUpdate;
+        }
+
         private int GetNumberOfRespondingNodes(DatabaseObservationState state)
         {
             var topology = state.DatabaseTopology;
@@ -825,9 +861,22 @@ namespace Raven.Server.ServerWide.Maintenance
             DatabaseStatusReport dbStats = null;
             if (current.TryGetValue(member, out var nodeStats) &&
                 nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
-                nodeStats.Report.TryGetValue(dbName, out dbStats) && dbStats.Status != Faulted)
+                nodeStats.Report.TryGetValue(dbName, out dbStats))
             {
-                return false;
+                switch (dbStats.Status)
+                {
+                    case Loaded:
+                    case Unloaded:
+                    case Shutdown:
+                    case NoChange:
+                        return false;
+
+                    case None:
+                    case Loading:
+                    case Faulted:
+                        // continue the function
+                        break;
+                }
             }
 
             string reason;
@@ -845,6 +894,12 @@ namespace Raven.Server.ServerWide.Maintenance
                     case ClusterNodeStatusReport.ReportStatus.OutOfCredits:
                         reason = $"Node in rehabilitation because it run out of CPU credits.{Environment.NewLine}";
                         break;
+                    case ClusterNodeStatusReport.ReportStatus.EarlyOutOfMemory:
+                        reason = $"Node in rehabilitation because of early out of memory.{Environment.NewLine}";
+                        break;
+                    case ClusterNodeStatusReport.ReportStatus.HighDirtyMemory:
+                        reason = $"Node in rehabilitation because of high dirty memory.{Environment.NewLine}";
+                        break;
                     default:
                         reason = $"Node in rehabilitation due to last report status being '{nodeStats.Status}'.{Environment.NewLine}";
                         break;
@@ -856,7 +911,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
             else
             {
-                reason = $"In rehabilitation because the node is reachable but had no report about the database.{Environment.NewLine}";
+                reason = $"In rehabilitation because the node is reachable but had no report about the database (Status: {dbStats?.Status}).{Environment.NewLine}";
             }
 
             if (nodeStats?.Error != null)
@@ -875,10 +930,26 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             topology.DemotionReasons[member] = reason;
-            topology.PromotablesStatus[member] = nodeStats?.ServerReport.OutOfCpuCredits == true ?
-                DatabasePromotionStatus.OutOfCpuCredits : DatabasePromotionStatus.NotResponding;
+            topology.PromotablesStatus[member] = GetStatus();
 
             LogMessage($"Node {member} of database '{dbName}': {reason}", database: dbName);
+
+            DatabasePromotionStatus GetStatus()
+            {
+                if (nodeStats != null)
+                {
+                    if (nodeStats.ServerReport.OutOfCpuCredits == true)
+                        return DatabasePromotionStatus.OutOfCpuCredits;
+
+                    if (nodeStats.ServerReport.EarlyOutOfMemory == true)
+                        return DatabasePromotionStatus.EarlyOutOfMemory;
+
+                    if (nodeStats.ServerReport.HighDirtyMemory == true)
+                        return DatabasePromotionStatus.HighDirtyMemory;
+                }
+
+                return DatabasePromotionStatus.NotResponding;
+            }
 
             return true;
         }
@@ -908,7 +979,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-
             if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
                 promotablePrevClusterStats.Report.TryGetValue(dbName, out var promotablePrevDbStats) == false)
             {
@@ -933,6 +1003,18 @@ namespace Raven.Server.ServerWide.Maintenance
             if (promotableClusterStats.ServerReport.OutOfCpuCredits == true)
             {
                 LogMessage($"Can't promote node {promotable}, it doesn't have enough CPU credits", database: dbName);
+                return (false, null);
+            }
+
+            if (promotableClusterStats.ServerReport.EarlyOutOfMemory == true)
+            {
+                LogMessage($"Can't promote node {promotable}, it's in an early out of memory state", database: dbName);
+                return (false, null);
+            }
+
+            if (promotableClusterStats.ServerReport.HighDirtyMemory == true)
+            {
+                LogMessage($"Can't promote node {promotable}, it's in high dirty memory state", database: dbName);
                 return (false, null);
             }
 

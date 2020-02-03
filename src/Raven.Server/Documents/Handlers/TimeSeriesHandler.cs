@@ -277,9 +277,9 @@ namespace Raven.Server.Documents.Handlers
                 _fromEtl = fromEtl;
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                int changes = 0;
+                var changes = 0L;
 
                 foreach (var operation in _operations)
                 {
@@ -439,11 +439,11 @@ namespace Raven.Server.Documents.Handlers
                 _dictionary = new Dictionary<string, List<TimeSeriesItem>>();
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
-                var changes = 0;
+                var changes = 0L;
 
                 foreach (var (docId, items) in _dictionary)
                 {

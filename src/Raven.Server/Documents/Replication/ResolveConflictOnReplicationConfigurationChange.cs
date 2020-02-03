@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Replication
                 _resolver = resolver;
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var count = 0;
 

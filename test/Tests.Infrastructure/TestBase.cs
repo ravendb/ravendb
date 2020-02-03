@@ -264,8 +264,6 @@ namespace FastTests
             return tmp;
         }
 
-        private static int _serverCounter;
-
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
@@ -498,6 +496,18 @@ namespace FastTests
                 }
             }
 
+            private string _nodeTag;
+
+            public string NodeTag
+            {
+                get => _nodeTag;
+                set
+                {
+                    AssertNotFrozen();
+                    _nodeTag = value;
+                }
+            }
+
             private readonly bool _frozen;
 
             private void AssertNotFrozen()
@@ -553,7 +563,7 @@ namespace FastTests
                 if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.DataDirectory)) == false)
                 {
                     configuration.Core.DataDirectory =
-                        configuration.Core.DataDirectory.Combine(options.PartialPath ?? $"Tests{Interlocked.Increment(ref _serverCounter)}");
+                        configuration.Core.DataDirectory.Combine(options.PartialPath ?? NewDataPath(prefix: $"GetNewServer-{options.NodeTag}", forceCreateDir: true));
                 }
 
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
@@ -624,7 +634,7 @@ namespace FastTests
         {
             if (suffix != null)
                 prefix += suffix;
-            var path = RavenTestHelper.NewDataPath(prefix, _serverCounter, forceCreateDir);
+            var path = RavenTestHelper.NewDataPath(prefix, 0, forceCreateDir);
 
             GlobalPathsToDelete.Add(path);
             _localPathsToDelete.Add(path);

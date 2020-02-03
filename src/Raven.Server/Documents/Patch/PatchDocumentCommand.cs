@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.Patch
             _ids = ids;
         }
 
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             if (_ids == null || _ids.Length == 0)
                 return 0;
@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Patch
                 throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
         }
 
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             ScriptRunner.SingleRun runIfMissing = null;
 

@@ -116,10 +116,23 @@ namespace Sparrow.LowMemory
 
         public bool LowMemoryState { get; private set; }
 
+        public bool IsEarlyOutOfMemory { get; private set; }
+
+        public DirtyMemoryState DirtyMemoryState { get; private set; } = new DirtyMemoryState {IsHighDirty = false};
+
         public Size LowMemoryThreshold { get; private set; }
+
         public bool UseTotalDirtyMemInsteadOfMemUsage { get; private set; }
 
-        public void Initialize(Size lowMemoryThreshold, bool useTotalDirtyMemInsteadOfMemUsage, AbstractLowMemoryMonitor monitor, CancellationToken shutdownNotification)
+        public float TemporaryDirtyMemoryAllowedPercentage { get; private set; }
+
+        public void Initialize(
+            Size lowMemoryThreshold, 
+            bool useTotalDirtyMemInsteadOfMemUsage,
+            bool enableHighTemporaryDirtyMemoryUse,
+            float temporaryDirtyMemoryAllowedPercentage,
+            AbstractLowMemoryMonitor monitor,
+            CancellationToken shutdownNotification)
         {
             if (_initialized)
                 return;
@@ -132,6 +145,9 @@ namespace Sparrow.LowMemory
                 _initialized = true;
                 LowMemoryThreshold = lowMemoryThreshold;
                 UseTotalDirtyMemInsteadOfMemUsage = useTotalDirtyMemInsteadOfMemUsage;
+                TemporaryDirtyMemoryAllowedPercentage = temporaryDirtyMemoryAllowedPercentage;
+                _enableHighTemporaryDirtyMemoryUse = enableHighTemporaryDirtyMemoryUse;
+
                 _lowMemoryMonitor = monitor;
 
                 var thread = new Thread(MonitorMemoryUsage)
@@ -151,6 +167,7 @@ namespace Sparrow.LowMemory
         private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(128);
         private AbstractLowMemoryMonitor _lowMemoryMonitor;
         private bool _initialized;
+        private bool _enableHighTemporaryDirtyMemoryUse;
 
         private LowMemoryNotification()
         {
@@ -242,6 +259,9 @@ namespace Sparrow.LowMemory
             (Size AvailableMemory, Size TotalScratchDirtyMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) stats;
             try
             {
+                if (_enableHighTemporaryDirtyMemoryUse)
+                    DirtyMemoryState = monitor.GetDirtyMemoryState();
+
                 totalUnmanagedAllocations = AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes();
                 isLowMemory = GetLowMemory(out stats, monitor);
             }
@@ -332,7 +352,8 @@ namespace Sparrow.LowMemory
                 isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
             }
 
-            isLowMemory |= monitor.IsEarlyOutOfMemory(memInfo, out commitChargeThreshold);
+            IsEarlyOutOfMemory = monitor.IsEarlyOutOfMemory(memInfo, out commitChargeThreshold);
+            isLowMemory |= IsEarlyOutOfMemory;
             return isLowMemory;
         }
 

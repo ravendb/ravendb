@@ -20,7 +20,6 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 
@@ -31,7 +30,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         protected internal readonly AbstractStaticIndexBase _compiled;
-        private readonly ThreadLocal<bool> _ignoreStalenessDueToReduceOutputsToDelete = new ThreadLocal<bool>();
         private bool? _isSideBySide;
 
         protected HandleReferences _handleReferences;
@@ -377,20 +375,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return PutMapResults(indexItem.LowerId, indexItem.Id, wrapper, indexContext, stats);
         }
 
-        internal IDisposable IgnoreStalenessDueToReduceOutputsToDelete()
-        {
-            _ignoreStalenessDueToReduceOutputsToDelete.Value = true;
-
-            return new DisposableAction(() => _ignoreStalenessDueToReduceOutputsToDelete.Value = false);
-        }
-
         internal override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
 
             if (isStale == false && OutputReduceToCollection?.HasDocumentsToDelete(indexContext) == true)
             {
-                if (_ignoreStalenessDueToReduceOutputsToDelete.Value == false)
+                if (indexContext.IgnoreStalenessDueToReduceOutputsToDelete == false)
                 {
                     isStale = true;
                     stalenessReasons?.Add($"There are still some reduce output documents to delete from collection '{Definition.OutputReduceToCollection}'. ");
