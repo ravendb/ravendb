@@ -457,7 +457,7 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var certificateList = new Dictionary<string, BlittableJsonReaderObject>();
+                var certificateList = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
 
                 try
                 {
@@ -990,7 +990,8 @@ namespace Raven.Server.Web.Authentication
                                 var cert = new X509Certificate2Collection();
                                 cert.Import(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
                                 // Exporting with the private key, but without the password
-                                certificate.Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Pkcs12));
+                                certBytes = cert.Export(X509ContentType.Pkcs12);
+                                certificate.Certificate = Convert.ToBase64String(certBytes);
                             }
                             catch (Exception e)
                             {

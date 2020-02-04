@@ -137,8 +137,6 @@ namespace Raven.Server.ServerWide
                 {
                     HttpContext = httpContext;
                     Headers = new HeaderDictionary();
-                    // ReSharper disable once VirtualMemberCallInConstructor
-                    //Cookies = new ResponseCookies(Headers, new DefaultObjectPool<StringBuilder>(new DefaultPooledObjectPolicy<StringBuilder>())); // TODO [ppekrol]
                     Body = new MemoryStream();
                     HasStarted = false;
                     StatusCode = 200;

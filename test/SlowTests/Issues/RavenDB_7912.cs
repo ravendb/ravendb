@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                         var stats = await leaderStore.Maintenance.SendAsync(new GetStatisticsOperation(), cts.Token);
                         Assert.NotNull(stats);
 
-                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1], cts.Token);
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
 
                         await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true), cts.Token);
 
