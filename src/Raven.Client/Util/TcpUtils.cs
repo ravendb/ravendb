@@ -15,7 +15,7 @@ namespace Raven.Client.Util
     internal static class TcpUtils
     {
         internal const SslProtocols SupportedSslProtocols =
-#if NETSTANDARD2_0 || NETCOREAPP2_1
+#if NETSTANDARD2_0 || NETSTANDARD2_1 ||  NETCOREAPP2_1
             SslProtocols.Tls12;
 #else
             SslProtocols.Tls13 | SslProtocols.Tls12;
