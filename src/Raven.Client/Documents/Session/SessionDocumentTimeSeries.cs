@@ -30,9 +30,9 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Append(timeseries, timestamp, tag, values);
         }
 
-        public IEnumerable<TimeSeriesEntry> Get(string timeseries, DateTime from, DateTime to, int? skip = null, int? take = null)
+        public IEnumerable<TimeSeriesEntry> Get(string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = 0)
         {
-            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(timeseries, from, to, skip, take));
+            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(timeseries, from, to, start, pageSize));
         }
 
         public void Remove(string timeseries, DateTime from, DateTime to)

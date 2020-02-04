@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(string timeseries, DateTime from, DateTime to, int? skip = null, int? take = null, CancellationToken token = default)
+        public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
             TimeSeriesDetails details;
             
@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Session
                     Session.IncrementRequestCount();
 
                     details = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation(DocId, timeseries, from, to, skip, take), Session.SessionInfo, token: token)
+                            new GetTimeSeriesOperation(DocId, timeseries, from, to, start, pageSize), Session.SessionInfo, token: token)
                         .ConfigureAwait(false);
 
                     if (Session.NoTracking == false)
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Session
                 }
 
                 var (servedFromCache, resultToUser, mergedValues, fromRangeIndex, toRangeIndex) = 
-                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(timeseries, from, to, ranges, skip, take, token)
+                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(timeseries, from, to, ranges, start, pageSize, token)
                         .ConfigureAwait(false);
 
                 if (servedFromCache == false && Session.NoTracking == false)
@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Session
             Session.IncrementRequestCount();
 
             details = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation(DocId, timeseries, from, to, skip, take), Session.SessionInfo, token: token)
+                    new GetTimeSeriesOperation(DocId, timeseries, from, to, start, pageSize), Session.SessionInfo, token: token)
                 .ConfigureAwait(false);
 
             if (Session.NoTracking == false)
@@ -138,8 +138,8 @@ namespace Raven.Client.Documents.Session
                 DateTime from,
                 DateTime to,
                 List<TimeSeriesRangeResult> ranges,
-                int? skip,
-                int? take,
+                int start,
+                int pageSize,
                 CancellationToken token)
         {
             // try to find a range in cache that contains [from, to]
@@ -213,7 +213,7 @@ namespace Raven.Client.Documents.Session
             Session.IncrementRequestCount();
 
             var details = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation(DocId, timeseries, rangesToGetFromServer, skip, take), Session.SessionInfo, token: token)
+                    new GetTimeSeriesOperation(DocId, timeseries, rangesToGetFromServer, start, pageSize), Session.SessionInfo, token: token)
                 .ConfigureAwait(false);
 
             // merge all the missing parts we got from server

@@ -15,11 +15,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly string _docId;
         private readonly string _timeseries;
         private readonly IEnumerable<TimeSeriesRange> _ranges;
-        private readonly int? _skip;
-        private readonly int? _take;
+        private readonly int _start;
+        private readonly int _pageSize;
 
-        public GetTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to, int? skip = null, int? take = null)
-            : this(docId, timeseries, skip, take)
+        public GetTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue)
+            : this(docId, timeseries, start, pageSize)
         {
             _ranges = new List<TimeSeriesRange>
             {
@@ -31,23 +31,23 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             };
         }
 
-        public GetTimeSeriesOperation(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges, int? skip = null, int? take = null) 
-            : this(docId, timeseries, skip, take)
+        public GetTimeSeriesOperation(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges, int start = 0, int pageSize = int.MaxValue) 
+            : this(docId, timeseries, start, pageSize)
         {
             _ranges = ranges;
         }
 
-        private GetTimeSeriesOperation(string docId, string timeseries, int? skip, int? take)
+        private GetTimeSeriesOperation(string docId, string timeseries, int start, int pageSize)
         {
             _docId = docId;
             _timeseries = timeseries;
-            _skip = skip;
-            _take = take;
+            _start = start;
+            _pageSize = pageSize;
         }
 
         public RavenCommand<TimeSeriesDetails> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetTimeSeriesCommand(_docId, _timeseries, _ranges, _skip, _take);
+            return new GetTimeSeriesCommand(_docId, _timeseries, _ranges, _start, _pageSize);
         }
 
         private class GetTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
@@ -55,16 +55,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             private readonly string _docId;
             private readonly string _timeseries;
             private readonly IEnumerable<TimeSeriesRange> _ranges;
-            private readonly int? _skip;
-            private readonly int? _take;
+            private readonly int _start;
+            private readonly int _pageSize;
 
-            public GetTimeSeriesCommand(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges, int? skip, int? take)
+            public GetTimeSeriesCommand(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges, int start, int pageSize)
             {
                 _docId = docId ?? throw new ArgumentNullException(nameof(docId));
                 _timeseries = timeseries ?? throw new ArgumentNullException(nameof(timeseries));
                 _ranges = ranges;
-                _skip = skip;
-                _take = take;
+                _start = start;
+                _pageSize = pageSize;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -78,16 +78,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     .Append("&name=")
                     .Append(Uri.EscapeDataString(_timeseries));
 
-                if (_skip.HasValue)
+                if (_start > 0)
                 {
-                    pathBuilder.Append("&skip=")
-                        .Append(_skip.Value);
+                    pathBuilder.Append("&start=")
+                        .Append(_start);
                 }
 
-                if (_take.HasValue)
+                if (_pageSize < int.MaxValue)
                 {
-                    pathBuilder.Append("&take=")
-                        .Append(_take.Value);
+                    pathBuilder.Append("&pageSize=")
+                        .Append(_pageSize);
                 }
 
                 if (_ranges != null)
