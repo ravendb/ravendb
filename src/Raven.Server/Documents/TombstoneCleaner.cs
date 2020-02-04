@@ -184,11 +184,11 @@ namespace Raven.Server.Documents
 
                     try
                     {
-                        _database.DocumentsStorage.TimeSeriesStorage.PurgeSegmentsAndDeletedRanges(tombstone.Key, minTombstoneValue, context);
-
-                        var numberOfEntriesDeleted = _database.DocumentsStorage.DeleteTombstonesBefore(context, tombstone.Key, minTombstoneValue, numberOfTombstonesToDeleteInBatch);
-                        numberOfTombstonesToDeleteInBatch -= numberOfEntriesDeleted;
-                        NumberOfTombstonesDeleted += numberOfEntriesDeleted;
+                        var deletedSegmentsOrRanges =_database.DocumentsStorage.TimeSeriesStorage.PurgeSegmentsAndDeletedRanges(context, tombstone.Key, minTombstoneValue, numberOfTombstonesToDeleteInBatch);
+                        var numberOfEntriesDeleted = _database.DocumentsStorage.DeleteTombstonesBefore(context, tombstone.Key, minTombstoneValue, numberOfTombstonesToDeleteInBatch - deletedSegmentsOrRanges);
+                        var totalDeleted = deletedSegmentsOrRanges + numberOfEntriesDeleted;
+                        numberOfTombstonesToDeleteInBatch -= totalDeleted;
+                        NumberOfTombstonesDeleted += totalDeleted;
                       
                     }
                     catch (Exception e)
