@@ -71,7 +71,7 @@ namespace Raven.Server.Documents
 #pragma warning restore 618
             _counterGroups = GetName(CollectionTableType.CounterGroups);
             _timeseries = GetName(CollectionTableType.TimeSeries);
-            _deletedRanges = GetName(CollectionTableType.DeletedRanges);
+            _deletedRanges = GetName(CollectionTableType.TimeSeriesDeletedRanges);
 
         }
 
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents
                     return _counterGroups;
                 case CollectionTableType.TimeSeries:
                     return _timeseries;
-                case CollectionTableType.DeletedRanges:
+                case CollectionTableType.TimeSeriesDeletedRanges:
                     return _deletedRanges;
 
                 default:
@@ -222,6 +222,6 @@ namespace Raven.Server.Documents
         Counters,
         CounterGroups,
         TimeSeries,
-        DeletedRanges
+        TimeSeriesDeletedRanges
     }
 }
