@@ -16,14 +16,26 @@ namespace Tests.Infrastructure.XunitExtensions
 
         protected override async void RunTestCases(IEnumerable<IXunitTestCase> testCases, IMessageSink executionMessageSink, ITestFrameworkExecutionOptions executionOptions)
         {
+            var resourceSnapshotEnabled = true; // bool.TryParse(Environment.GetEnvironmentVariable("TEST_RESOURCE_ANALYZER_ENABLE"), out var value) && value;
+            using var testResourceSnapshotWriter = new TestResourceSnapshotWriter();
+
+            if(resourceSnapshotEnabled)
+                testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestAssemblyStarted, TestAssembly.Assembly.Name);
+
             using var assemblyRunner = new PerfTestAssemblyRunner(
                 TestAssembly, 
                 testCases, 
                 DiagnosticMessageSink, 
                 executionMessageSink, 
-                executionOptions);
+                executionOptions,
+                testResourceSnapshotWriter,
+                resourceSnapshotEnabled);
             
             await assemblyRunner.RunAsync();
+
+            if(resourceSnapshotEnabled)
+                testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestAssemblyEnded, TestAssembly.Assembly.Name);
+
         }
     }
 }
