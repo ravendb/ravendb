@@ -1453,7 +1453,12 @@ namespace Raven.Server.Documents.TimeSeries
 
                                 if (EnsureNumberOfValues(context, newNumberOfValues, current) == false)
                                 {
-                                    // the next value to append has a larger number of values, so we need to break and re-append in a new segment.
+                                    // the next value to append has a larger number of values.
+                                    // we need to append the rest of the open segment and only then we can re-append this value.
+                                    timeSeriesSegment.AddValue(currentTime, updatedValues, currentTag.AsSpan(), ref splitSegment, localStatus);
+                                    while (enumerator.MoveNext(out currentTimestamp, currentValues, state, ref currentTag, out localStatus))
+                                        timeSeriesSegment.AddValue(currentTime, updatedValues, currentTag.AsSpan(), ref splitSegment, localStatus);
+
                                     timeSeriesSegment.AppendExistingSegment(splitSegment);
                                     return true;
                                 }

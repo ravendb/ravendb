@@ -189,7 +189,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(1, segmentsOrValues.Count);
                     Assert.True(segmentsOrValues[0].Segment.Start <= segmentsOrValues[0].Segment.End);
-                    Assert.Equal(4, segmentsOrValues[0].Segment.Values.Count());
+                    Assert.Equal(4, reader.AllValues().Count());
                 }
             }
         }
