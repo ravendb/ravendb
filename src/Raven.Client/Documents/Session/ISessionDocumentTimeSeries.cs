@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Return the time series values for the provided range
         /// </summary>
-        IEnumerable<TimeSeriesEntry> Get(string timeseries, DateTime from, DateTime to, int? skip = null, int? take = null);
+        IEnumerable<TimeSeriesEntry> Get(string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue);
 
     }
 }

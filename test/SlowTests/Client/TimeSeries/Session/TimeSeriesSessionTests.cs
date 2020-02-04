@@ -839,7 +839,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue, skip: 5, take :20)
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue, start: 5, pageSize :20)
                         .ToList();
 
                     Assert.Equal(20, vals.Count);

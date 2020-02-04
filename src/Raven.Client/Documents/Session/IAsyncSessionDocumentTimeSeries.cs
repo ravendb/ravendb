@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IAsyncSessionDocumentTimeSeries : ISessionDocumentTimeSeriesBase
     {
-        Task<IEnumerable<TimeSeriesEntry>> GetAsync(string timeseries, DateTime from, DateTime to, int? skip = null, int? take = null, CancellationToken token = default);
+        Task<IEnumerable<TimeSeriesEntry>> GetAsync(string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default);
 
     }
 }

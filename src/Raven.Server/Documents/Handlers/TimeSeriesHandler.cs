@@ -110,8 +110,8 @@ namespace Raven.Server.Documents.Handlers
             var fromList = GetStringValuesQueryString("from", required: false);
             var toList = GetStringValuesQueryString("to", required: false);
 
-            var skip = GetIntValueQueryString("skip", required: false) ?? 0;
-            var take = GetIntValueQueryString("take", required: false) ?? int.MaxValue;
+            var start = GetStart();
+            var pageSize = GetPageSize();
 
             if (fromList.Count != toList.Count)
             {
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Handlers
 
                             if (fromList.Count == 0)
                             {
-                                WriteRange(context, writer, documentId, name, DateTime.MinValue, DateTime.MaxValue, ref skip, ref take);
+                                WriteRange(context, writer, documentId, name, DateTime.MinValue, DateTime.MaxValue, ref start, ref pageSize);
                             }
                             else
                             {
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Handlers
                                     var from = ParseDate(fromList[i], name);
                                     var to = ParseDate(toList[i], name);
 
-                                    WriteRange(context, writer, documentId, name, from, to, ref skip, ref take);
+                                    WriteRange(context, writer, documentId, name, from, to, ref start, ref pageSize);
                                 }
                             }
 
@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void WriteRange(DocumentsOperationContext context, BlittableJsonTextWriter writer, string docId, string name, DateTime from, DateTime to, ref int skip, ref int take)
+        private void WriteRange(DocumentsOperationContext context, BlittableJsonTextWriter writer, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
         {
             writer.WriteStartObject();
             {
@@ -206,10 +206,10 @@ namespace Raven.Server.Documents.Handlers
 
                     foreach (var item in reader.AllValues())
                     {
-                        if (skip-- > 0)
+                        if (start-- > 0)
                             continue;
                         
-                        if (take-- <= 0)
+                        if (pageSize-- <= 0)
                             break;
 
                         if (first)
