@@ -72,6 +72,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _stabilizationTime = config.StabilizationTime.AsTimeSpan;
             _stabilizationTimeMs = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
             _moveToRehabTime = (long)config.MoveToRehabGraceTime.AsTimeSpan.TotalMilliseconds;
+            _rotateGraceTime = (long)config.RotatePreferredNodeGraceTime.AsTimeSpan.TotalMilliseconds;
             _breakdownTimeout = config.AddReplicaTimeout.AsTimeSpan;
             _hardDeleteOnReplacement = config.HardDeleteOnReplacement;
 
@@ -93,6 +94,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private long _iteration;
         private readonly long _term;
         private readonly long _moveToRehabTime;
+        private readonly long _rotateGraceTime;
         private long _lastIndexCleanupTimeInTicks;
         private long _lastTombstonesCleanupTimeInTicks;
         private bool _hasMoreTombstones = false;
@@ -591,16 +593,19 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
 
-                if (ShouldGiveMoreTime(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime))
+                if (ShouldGiveMoreTimeBeforeMovingToRehab(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime))
                 {
-                    // It seems that the node has some trouble.
-                    // We will give him more time before moving to rehab, but we need to make sure he isn't the preferred node.
-                    if (databaseTopology.Members.Count > 1 &&
-                        databaseTopology.Members[0] == member)
+                    if (ShouldGiveMoreTimeBeforeRotating(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime) == false)
                     {
-                        rotatePreferredNode = true;
+                        // It seems that the node has some trouble.
+                        // We will give him more time before moving to rehab, but we need to make sure he isn't the preferred node.
+                        if (databaseTopology.Members.Count > 1 &&
+                            databaseTopology.Members[0] == member)
+                        {
+                            rotatePreferredNode = true;
+                        }
                     }
-
+                    
                     someNodesRequireMoreTime = true;
                     continue;
                 }
@@ -818,17 +823,28 @@ namespace Raven.Server.ServerWide.Maintenance
             return null;
         }
 
-        private bool ShouldGiveMoreTime(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
+        private bool ShouldGiveMoreTimeBeforeMovingToRehab(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
         {
-            // Give one minute of grace before we move the node to a rehab
             var grace = DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime);
 
-            if (lastSuccessfulUpdate == default)
+            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, grace);
+        }
+
+        private bool ShouldGiveMoreTimeBeforeRotating(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
+        {
+            var grace = DateTime.UtcNow.AddMilliseconds(-_rotateGraceTime);
+
+            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, grace);
+        }
+
+        private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, DateTime grace)
+        {
+            if (lastSuccessfulUpdate == default) // the node hasn't send a single (good) report
             {
                 if (grace < StartTime)
                     return true;
             }
-            
+
             if (databaseUpTime == null) // database isn't loaded
             {
                 return grace < StartTime;
