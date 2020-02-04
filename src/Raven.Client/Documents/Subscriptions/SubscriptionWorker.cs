@@ -30,7 +30,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
-using IAsyncDisposable = Raven.Client.Util.IAsyncDisposable;
 
 namespace Raven.Client.Documents.Subscriptions
 {
@@ -78,15 +77,15 @@ namespace Raven.Client.Documents.Subscriptions
             if (_disposed)
                 return;
 
-            AsyncHelpers.RunSync(() => DisposeAsync(waitForSubscriptionTask));
+            AsyncHelpers.RunSync(() => DisposeAsync(waitForSubscriptionTask).AsTask());
         }
 
-        public Task DisposeAsync()
+        public ValueTask DisposeAsync()
         {
             return DisposeAsync(true);
         }
 
-        public async Task DisposeAsync(bool waitForSubscriptionTask)
+        public async ValueTask DisposeAsync(bool waitForSubscriptionTask)
         {
             try
             {

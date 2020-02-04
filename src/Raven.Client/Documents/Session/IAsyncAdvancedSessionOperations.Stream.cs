@@ -9,7 +9,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+#if NETSTANDARD2_0 || NETCOREAPP2_1
 using Raven.Client.Util;
+#else
+using System.Collections.Generic;
+#endif
 
 namespace Raven.Client.Documents.Session
 {
@@ -25,7 +29,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="query">Query to stream results for</param>
         /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default(CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default);
 
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
@@ -35,7 +39,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="query">Query to stream results for</param>
         /// <param name="streamQueryStats">Information about the performed query</param>
         /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default(CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default);
 
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
@@ -44,26 +48,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="query">Query to stream results for</param>
         /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        /// <param name="streamQueryStats">Information about the performed query</param>
-        /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default(CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, CancellationToken token = default);
 
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
@@ -73,7 +58,26 @@ namespace Raven.Client.Documents.Session
         /// <param name="query">Query to stream results for</param>
         /// <param name="streamQueryStats">Information about the performed query</param>
         /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default(CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default);
+
+        /// <summary>
+        ///     Stream the results on the query to the client, converting them to
+        ///     CLR types along the way.
+        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
+        /// </summary>
+        /// <param name="query">Query to stream results for</param>
+        /// <param name="token">The cancellation token.</param>
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default);
+
+        /// <summary>
+        ///     Stream the results on the query to the client, converting them to
+        ///     CLR types along the way.
+        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
+        /// </summary>
+        /// <param name="query">Query to stream results for</param>
+        /// <param name="streamQueryStats">Information about the performed query</param>
+        /// <param name="token">The cancellation token.</param>
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default);
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.
@@ -91,17 +95,17 @@ namespace Raven.Client.Documents.Session
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, string startAfter = null, CancellationToken token = default(CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, string startAfter = null, CancellationToken token = default);
 
         /// <summary>
         ///     Returns the results of a query directly into stream 
         /// </summary>
-        Task StreamIntoAsync<T>(IAsyncDocumentQuery<T> query, Stream output, CancellationToken token = default(CancellationToken));
-       
+        Task StreamIntoAsync<T>(IAsyncDocumentQuery<T> query, Stream output, CancellationToken token = default);
+
         /// <summary>
         ///     Returns the results of a query directly into stream 
         /// </summary>
-        Task StreamIntoAsync<T>(IAsyncRawDocumentQuery<T> query, Stream output, CancellationToken token = default(CancellationToken));
+        Task StreamIntoAsync<T>(IAsyncRawDocumentQuery<T> query, Stream output, CancellationToken token = default);
 
     }
 }

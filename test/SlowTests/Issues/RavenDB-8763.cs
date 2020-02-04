@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanAsyncStreamQueryWithMapReduceResult()
+        public async Task CanAsyncStreamQueryWithMapReduceResult()
         {
             using (var store = GetDocumentStore())
             {
@@ -34,10 +35,10 @@ namespace SlowTests.Issues
                     session.SaveChangesAsync().Wait();
                     WaitForIndexing(store);
                     var query = session.Query<ReduceMe>(index.IndexName);
-                    using (var stream = session.Advanced.StreamAsync(query).Result)
+                    await using (var stream = await session.Advanced.StreamAsync(query))
                     {
                         var streamNotEmpty = false;
-                        while (stream.MoveNextAsync().Result)
+                        while (await stream.MoveNextAsync())
                         {
                             var current = stream.Current;
                             Assert.Equal(5, current.Document.Amount);
@@ -60,19 +61,19 @@ namespace SlowTests.Issues
             public ReduceMeByTag()
             {
                 Map = docs => from doc in docs
-                    select new
-                    {
-                        doc.Tag,
-                        doc.Amount
-                    };
+                              select new
+                              {
+                                  doc.Tag,
+                                  doc.Amount
+                              };
                 Reduce = results => from r in results
-                    group r by r.Tag
+                                    group r by r.Tag
                     into g
-                    select new
-                    {
-                        Tag = g.Key,
-                        Amount = g.Sum(x => x.Amount)
-                    };
+                                    select new
+                                    {
+                                        Tag = g.Key,
+                                        Amount = g.Sum(x => x.Amount)
+                                    };
             }
         }
     }

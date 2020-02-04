@@ -20,7 +20,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Sparrow.Collections;
 using Sparrow.Json;
-using IAsyncDisposable = Raven.Client.Util.IAsyncDisposable;
 
 namespace Raven.Client.Documents.Subscriptions
 {
@@ -362,7 +361,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             foreach (var subscription in _subscriptions)
             {
-                tasks.Add(subscription.DisposeAsync());
+                tasks.Add(subscription.DisposeAsync().AsTask());
             }
 
             try

@@ -9,9 +9,14 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Util
 {
+#if NETSTANDARD2_0 || NETCOREAPP2_1
     public interface IAsyncEnumerator<out T> : IDisposable
     {
-        Task<bool> MoveNextAsync();
+        ValueTask<bool> MoveNextAsync();
+
         T Current { get; }
+
+        ValueTask DisposeAsync();
     }
+#endif
 }
