@@ -25,7 +25,8 @@ namespace RachisTests
             // we don't want to move the node to rehab, since it should be restored to the top of the list.
             var settings = new Dictionary<string, string>()
             {
-                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1"
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "15"
             };
 
             var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false, customSettings: settings);

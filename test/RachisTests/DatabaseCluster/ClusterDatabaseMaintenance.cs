@@ -269,6 +269,7 @@ namespace RachisTests.DatabaseCluster
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = 300.ToString(),
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "10",
+                [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "15",
             };
 
@@ -332,6 +333,7 @@ namespace RachisTests.DatabaseCluster
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = 300.ToString(),
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "10",
+                [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "15",
             };
 
