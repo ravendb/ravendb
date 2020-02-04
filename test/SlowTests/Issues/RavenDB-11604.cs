@@ -202,7 +202,7 @@ namespace SlowTests.Issues
                             user.Group.Order
                         });
 
-                    Assert.Equal("from User2s as __alias0 " +
+                    Assert.Equal("from 'User2s' as __alias0 " +
                                  "select __alias0.'Group'.Order as 'Order'"
                                 , query.ToString());
 
@@ -211,7 +211,7 @@ namespace SlowTests.Issues
 
                     for (var i = 0; i < results.Count; i++)
                     {
-                        Assert.Equal(results[i].Order, "orders/"+ i);
+                        Assert.Equal(results[i].Order, "orders/" + i);
                     }
                 }
             }

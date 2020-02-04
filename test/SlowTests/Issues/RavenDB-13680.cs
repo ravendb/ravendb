@@ -76,18 +76,18 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var q = from doc in session.Query<Order>()
-                        let p = doc.Lines.Select(y => RavenQuery.Load<Product>(y.Product))
-                        select new
-                        {
-                            p
-                        };
+                            let p = doc.Lines.Select(y => RavenQuery.Load<Product>(y.Product))
+                            select new
+                            {
+                                p
+                            };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(doc) {
 	var p = doc.Lines.map(function(y){return load(y.Product);});
 	return { p : p };
 }
-from Orders as doc select output(doc)", q.ToString());
+from 'Orders' as doc select output(doc)", q.ToString());
 
                     var result = q.ToList();
                     Assert.Equal(2, result.Count);
@@ -125,94 +125,94 @@ from Orders as doc select output(doc)", q.ToString());
 
                     var result =
                                (from doc in session.Query<PersonProfileDocument>()
-                               where (doc.Id == id)
-                               let person = RavenQuery.Load<PersonDocument>(doc.Person.DocumentId)
-                               let occupations = doc.UncoveredOccupationInfos.Select(y => RavenQuery.Load<PersonOccupationDocument>(y.Occupation.DocumentId))
-                               let projects = doc.UncoveredProjectInfos.Select(y => RavenQuery.Load<ProjectDocument>(y.Project.DocumentId))
-                               let publications = doc.UncoveredPublicationInfos.Select(y => RavenQuery.Load<PublicationDocument>(y.Publication.DocumentId))
-                               let classifications = publications.Select(y => RavenQuery.Load<ClassifierItemDocument>(y.Classification.DocumentId))
-                               let mentorshipsRunning = doc.UncoveredRunningMentorshipInfos.Select(y => RavenQuery.Load<MentorshipDocument>(y.Mentorship.DocumentId))
-                               let mentorshipsFinalized = doc.UncoveredFinalizedMentorshipInfos.Select(y => RavenQuery.Load<MentorshipDocument>(y.Mentorship.DocumentId))
-                               let mentorshipsDissertation = doc.UncoveredDissertationInfos.Select(y => RavenQuery.Load<MentorshipDocument>(y.Mentorship.DocumentId))
-                               select new PersonProfileTransformerInfo()
-                               {
-                                   IndexId = doc.Id.Split('/', StringSplitOptions.None).Last(),
-                                   IsPublic = doc.IsPublic,
-                                   IsConfirmed = doc.IsConfirmedEst,
-                                   IsConfirmedEng = doc.IsConfirmedEng,
-                                   HasPublicDataEst = doc.UserHasPublicDataEst,
-                                   HasPublicDataEng = doc.UserHasPublicDataEng,
-                                   PersonId = doc.Person.Id.ToString(),
-                                   PersonName = person.Name,
-                                   Occupations = doc.UncoveredOccupationInfos.Select(occ => new PersonProfileTransformerOccupationInfo()
-                                   {
-                                       DocumentId = occ.Occupation.Id.ToString(),
-                                       Period = RavenQuery.Load<PersonOccupationDocument>(occ.Occupation.DocumentId).Period,
-                                       IsActive = RavenQuery.Load<PersonOccupationDocument>(occ.Occupation.DocumentId).IsActive,
-                                       IsPublicEst = occ.IsPublic,
-                                       IsPublicEng = occ.IsEngPublic,
-                                       DisplayString = RavenQuery.Load<PersonOccupationDocument>(occ.Occupation.DocumentId).DisplayString,
-                                       DisplayStringEng = RavenQuery.Load<PersonOccupationDocument>(occ.Occupation.DocumentId).DisplayStringEng,
-                                   }),
-                                   Projects = doc.UncoveredProjectInfos.Select(pr => new PersonProfileTransformerProjectInfo()
-                                   {
-                                       DocumentId = pr.Project.Id.ToString(),
-                                       IsPublicEst = pr.IsPublic,
-                                       IsPublicEng = pr.IsEngPublic,
-                                       DisplayString = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).DisplayInfoEst,
-                                       DisplayStringEng = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).DisplayInfoEng,
-                                       IsActive = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).IsActive,
-                                       EndDate = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).General.EndDate,
-                                       PeriodIsActive = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).General.ProjectPeriod.IsActive
-                                   }),
-                                   Publications = doc.UncoveredPublicationInfos.Select(pr => new PersonProfileTransformerPublicationInfo()
-                                   {
-                                       DocumentId = pr.Publication.Id.ToString(),
-                                       IsPublicEst = pr.IsPublic,
-                                       IsPublicEng = pr.IsEngPublic,
-                                       DisplayString = RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).DisplayInfoHtml,
-                                       DisplayStringEng = RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).DisplayInfoHtmlEng,
+                                where (doc.Id == id)
+                                let person = RavenQuery.Load<PersonDocument>(doc.Person.DocumentId)
+                                let occupations = doc.UncoveredOccupationInfos.Select(y => RavenQuery.Load<PersonOccupationDocument>(y.Occupation.DocumentId))
+                                let projects = doc.UncoveredProjectInfos.Select(y => RavenQuery.Load<ProjectDocument>(y.Project.DocumentId))
+                                let publications = doc.UncoveredPublicationInfos.Select(y => RavenQuery.Load<PublicationDocument>(y.Publication.DocumentId))
+                                let classifications = publications.Select(y => RavenQuery.Load<ClassifierItemDocument>(y.Classification.DocumentId))
+                                let mentorshipsRunning = doc.UncoveredRunningMentorshipInfos.Select(y => RavenQuery.Load<MentorshipDocument>(y.Mentorship.DocumentId))
+                                let mentorshipsFinalized = doc.UncoveredFinalizedMentorshipInfos.Select(y => RavenQuery.Load<MentorshipDocument>(y.Mentorship.DocumentId))
+                                let mentorshipsDissertation = doc.UncoveredDissertationInfos.Select(y => RavenQuery.Load<MentorshipDocument>(y.Mentorship.DocumentId))
+                                select new PersonProfileTransformerInfo()
+                                {
+                                    IndexId = doc.Id.Split('/', StringSplitOptions.None).Last(),
+                                    IsPublic = doc.IsPublic,
+                                    IsConfirmed = doc.IsConfirmedEst,
+                                    IsConfirmedEng = doc.IsConfirmedEng,
+                                    HasPublicDataEst = doc.UserHasPublicDataEst,
+                                    HasPublicDataEng = doc.UserHasPublicDataEng,
+                                    PersonId = doc.Person.Id.ToString(),
+                                    PersonName = person.Name,
+                                    Occupations = doc.UncoveredOccupationInfos.Select(occ => new PersonProfileTransformerOccupationInfo()
+                                    {
+                                        DocumentId = occ.Occupation.Id.ToString(),
+                                        Period = RavenQuery.Load<PersonOccupationDocument>(occ.Occupation.DocumentId).Period,
+                                        IsActive = RavenQuery.Load<PersonOccupationDocument>(occ.Occupation.DocumentId).IsActive,
+                                        IsPublicEst = occ.IsPublic,
+                                        IsPublicEng = occ.IsEngPublic,
+                                        DisplayString = RavenQuery.Load<PersonOccupationDocument>(occ.Occupation.DocumentId).DisplayString,
+                                        DisplayStringEng = RavenQuery.Load<PersonOccupationDocument>(occ.Occupation.DocumentId).DisplayStringEng,
+                                    }),
+                                    Projects = doc.UncoveredProjectInfos.Select(pr => new PersonProfileTransformerProjectInfo()
+                                    {
+                                        DocumentId = pr.Project.Id.ToString(),
+                                        IsPublicEst = pr.IsPublic,
+                                        IsPublicEng = pr.IsEngPublic,
+                                        DisplayString = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).DisplayInfoEst,
+                                        DisplayStringEng = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).DisplayInfoEng,
+                                        IsActive = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).IsActive,
+                                        EndDate = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).General.EndDate,
+                                        PeriodIsActive = RavenQuery.Load<ProjectDocument>(pr.Project.DocumentId).General.ProjectPeriod.IsActive
+                                    }),
+                                    Publications = doc.UncoveredPublicationInfos.Select(pr => new PersonProfileTransformerPublicationInfo()
+                                    {
+                                        DocumentId = pr.Publication.Id.ToString(),
+                                        IsPublicEst = pr.IsPublic,
+                                        IsPublicEng = pr.IsEngPublic,
+                                        DisplayString = RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).DisplayInfoHtml,
+                                        DisplayStringEng = RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).DisplayInfoHtmlEng,
 
-                                       PublishingYear = RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).PublishingYear,
-                                       IsActive = RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).IsActive,
-                                       ClassificationCode = (RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification != null ? RavenQuery.Load<ClassifierItemView>(RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification.DocumentId).Code : ""),
-                                       ClassificationCodeName = (RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification != null ? RavenQuery.Load<ClassifierItemDocument>(RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification.DocumentId).FullName : ""),
-                                       ClassificationCodeNameEng = (RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification != null ? RavenQuery.Load<ClassifierItemDocument>(RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification.DocumentId).FullNameEng : "")
-                                   }),
-                                   Mentorships = doc.UncoveredRunningMentorshipInfos.Select(ms => new PersonProfileTransformerMentorshipInfo()
-                                   {
-                                       DocumentId = ms.Mentorship.Id.ToString(),
-                                       IsPublicEst = ms.IsPublic,
-                                       IsPublicEng = ms.IsEngPublic,
-                                       DisplayString = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEst,
-                                       DisplayStringEng = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEng,
-                                       IsActive = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).IsActive,
-                                       Degree = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).Degree,
-                                       DefenceYear = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DefenceYear
-                                   }),
-                                   MentorshipsFinalized = doc.UncoveredFinalizedMentorshipInfos.Select(ms => new PersonProfileTransformerMentorshipInfo()
-                                   {
-                                       DocumentId = ms.Mentorship.Id.ToString(),
-                                       IsPublicEst = ms.IsPublic,
-                                       IsPublicEng = ms.IsEngPublic,
-                                       DisplayString = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEst,
-                                       DisplayStringEng = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEng,
-                                       IsActive = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).IsActive,
-                                       Degree = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).Degree,
-                                       DefenceYear = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DefenceYear
-                                   }),
-                                   MentorshipsDissertation = doc.UncoveredDissertationInfos.Select(ms => new PersonProfileTransformerMentorshipInfo()
-                                   {
-                                       DocumentId = ms.Mentorship.Id.ToString(),
-                                       IsPublicEst = ms.IsPublic,
-                                       IsPublicEng = ms.IsEngPublic,
-                                       DisplayString = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEst,
-                                       DisplayStringEng = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEng,
-                                       IsActive = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).IsActive,
-                                       Degree = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).Degree,
-                                       DefenceYear = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DefenceYear
-                                   })
-                               }).FirstOrDefault();
+                                        PublishingYear = RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).PublishingYear,
+                                        IsActive = RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).IsActive,
+                                        ClassificationCode = (RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification != null ? RavenQuery.Load<ClassifierItemView>(RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification.DocumentId).Code : ""),
+                                        ClassificationCodeName = (RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification != null ? RavenQuery.Load<ClassifierItemDocument>(RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification.DocumentId).FullName : ""),
+                                        ClassificationCodeNameEng = (RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification != null ? RavenQuery.Load<ClassifierItemDocument>(RavenQuery.Load<PublicationDocument>(pr.Publication.DocumentId).Classification.DocumentId).FullNameEng : "")
+                                    }),
+                                    Mentorships = doc.UncoveredRunningMentorshipInfos.Select(ms => new PersonProfileTransformerMentorshipInfo()
+                                    {
+                                        DocumentId = ms.Mentorship.Id.ToString(),
+                                        IsPublicEst = ms.IsPublic,
+                                        IsPublicEng = ms.IsEngPublic,
+                                        DisplayString = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEst,
+                                        DisplayStringEng = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEng,
+                                        IsActive = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).IsActive,
+                                        Degree = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).Degree,
+                                        DefenceYear = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DefenceYear
+                                    }),
+                                    MentorshipsFinalized = doc.UncoveredFinalizedMentorshipInfos.Select(ms => new PersonProfileTransformerMentorshipInfo()
+                                    {
+                                        DocumentId = ms.Mentorship.Id.ToString(),
+                                        IsPublicEst = ms.IsPublic,
+                                        IsPublicEng = ms.IsEngPublic,
+                                        DisplayString = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEst,
+                                        DisplayStringEng = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEng,
+                                        IsActive = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).IsActive,
+                                        Degree = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).Degree,
+                                        DefenceYear = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DefenceYear
+                                    }),
+                                    MentorshipsDissertation = doc.UncoveredDissertationInfos.Select(ms => new PersonProfileTransformerMentorshipInfo()
+                                    {
+                                        DocumentId = ms.Mentorship.Id.ToString(),
+                                        IsPublicEst = ms.IsPublic,
+                                        IsPublicEng = ms.IsEngPublic,
+                                        DisplayString = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEst,
+                                        DisplayStringEng = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DisplayInfoEng,
+                                        IsActive = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).IsActive,
+                                        Degree = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).Degree,
+                                        DefenceYear = RavenQuery.Load<MentorshipDocument>(ms.Mentorship.DocumentId).DefenceYear
+                                    })
+                                }).FirstOrDefault();
 
                     Assert.NotNull(result);
                 }
@@ -278,7 +278,7 @@ from Orders as doc select output(doc)", q.ToString());
 
             public string DisplayStringEng { get; set; }
 
-        
+
         }
 
         private class UncoveredOccupationInfo
