@@ -354,7 +354,7 @@ namespace SlowTests.Server.Replication
                 etlStorage.EtlLoader.BatchCompleted += _ =>
                 {
                     sent.Set();
-                    mre.Wait();
+                    mre.Wait(TimeSpan.FromSeconds(30));
                 };
 
                 using (var session = store.OpenSession())
@@ -364,7 +364,7 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                if (sent.Wait(TimeSpan.FromSeconds(15)) == false)
+                if (sent.Wait(TimeSpan.FromSeconds(30)) == false)
                     Assert.False(true, "timeout!");
 
                 using (var session = store.OpenSession())

@@ -351,7 +351,7 @@ namespace Tests.Infrastructure
             Assert.True(mre.Wait(TimeSpan.FromMinutes(1)), $"Could not dispose server: {serverToDispose.WebUrl}");
         }
 
-        protected static async Task<(string DataDir, string Url)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose, CancellationToken token = default)
+        protected static async Task<(string DataDir, string Url)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
         {
             var mre = new AsyncManualResetEvent();
             var dataDir = serverToDispose.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
@@ -360,7 +360,8 @@ namespace Tests.Infrastructure
             serverToDispose.AfterDisposal += () => mre.Set();
             serverToDispose.Dispose();
 
-            await mre.WaitAsync(token).ConfigureAwait(false);
+            Assert.True(await mre.WaitAsync(TimeSpan.FromMinutes(1)), $"Could not dispose server: {serverToDispose.WebUrl}");
+
             return (dataDir, url);
         }
 
@@ -378,7 +379,7 @@ namespace Tests.Infrastructure
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false)
         {
-            return await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, customSettings, customSettingsList,                watcherCluster);
+            return await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, customSettings, customSettingsList, watcherCluster);
         }
 
         protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(
@@ -418,7 +419,7 @@ namespace Tests.Infrastructure
                 {
                     customSettings = customSettingsList[i];
                 }
-                
+
                 string serverUrl;
 
                 if (useSsl)

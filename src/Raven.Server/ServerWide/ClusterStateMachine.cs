@@ -2197,7 +2197,7 @@ namespace Raven.Server.ServerWide
                 if (take-- <= 0)
                     yield break;
 
-                yield return GetCurrentItem(context, result.Value);
+                yield return GetCertificate(context, result.Value);
             }
         }
 
