@@ -596,7 +596,6 @@ class driveUsageSection {
     includeTemporaryBuffers = ko.observable<boolean>(true);
     
     totalDocumentsSize: KnockoutComputed<number>;
-    private numberOfDatabasesPerMountPoint: dictionary<number> = {};
     
     constructor() {
         this.totalDocumentsSize = ko.pureComputed(() => {
@@ -670,23 +669,12 @@ class driveUsageSection {
         });
 
         items.forEach(incomingItem => {
-            const incomingItemMountPoint = incomingItem.MountPoint;
-            const matched = this.table().find(x => x.mountPoint() === incomingItemMountPoint);
-            
+            const matched = this.table().find(x => x.mountPoint() === incomingItem.MountPoint);
             if (matched) {
                 matched.update(incomingItem);
             } else {
-                const usage = new driveUsage(incomingItem, this.includeTemporaryBuffers);
+                const usage = new driveUsage(incomingItem, this.storageChart.getColorClassProvider(), this.includeTemporaryBuffers);
                 this.table.push(usage);
-            }
-            
-            if (!(incomingItemMountPoint in this.numberOfDatabasesPerMountPoint)) {
-                this.numberOfDatabasesPerMountPoint[incomingItemMountPoint] = 0;
-            }
-            
-            if (incomingItem.Items.length !== this.numberOfDatabasesPerMountPoint[incomingItemMountPoint]) {
-                this.numberOfDatabasesPerMountPoint[incomingItemMountPoint] = incomingItem.Items.length;
-                this.onResize();
             }
         });
         
@@ -702,7 +690,6 @@ class driveUsageSection {
 
         const includeTemp = this.includeTemporaryBuffers();
         
-        // group by database size
         data.Items.forEach(mountPointUsage => {
             mountPointUsage.Items.forEach(item => {
                 const sizeToUse = includeTemp ? item.Size + item.TempBuffersSize : item.Size;
@@ -724,7 +711,7 @@ class driveUsageSection {
             });
         });
 
-        this.storageChart.onData(result, withTween);
+        this.storageChart.onData(_.orderBy(result, x=> x.Size, ["desc"]), withTween);
     }
 }
 
