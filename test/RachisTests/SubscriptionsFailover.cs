@@ -70,9 +70,9 @@ namespace RachisTests
                 await GenerateDocuments(store);
 
                 (var subscription, var subsTask) = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre, batchSize);
-             
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountMre.WaitAsync()).WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
-                Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());                
+
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountMre.WaitAsync(TimeSpan.FromSeconds(60))).WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
+                Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
 
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
@@ -81,7 +81,7 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountMre.WaitAsync()).WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountMre.WaitAsync(TimeSpan.FromSeconds(60))).WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
 
                 usersCount.Clear();
@@ -91,7 +91,7 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountMre.WaitAsync()).WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountMre.WaitAsync(TimeSpan.FromSeconds(60))).WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
             }
         }
@@ -135,8 +135,7 @@ namespace RachisTests
 
                 GC.KeepAlive(subscription.Run(x => { }));
 
-                await reachedMaxDocCountMre.WaitAsync();
-
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(TimeSpan.FromSeconds(60)));
 
                 foreach (var ravenServer in Servers)
                 {
@@ -221,7 +220,7 @@ namespace RachisTests
                 await GenerateDocuments(store);
 
                 (var subscription, var subsTask) = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre, 20, mentor: mentor);
-                
+
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
 
                 usersCount.Clear();
@@ -299,7 +298,7 @@ namespace RachisTests
 
                     subscription.AfterAcknowledgment += async b =>
                     {
-                        await continueMre.WaitAsync();
+                        Assert.True(await continueMre.WaitAsync(TimeSpan.FromSeconds(60)));
 
                         try
                         {
@@ -309,7 +308,7 @@ namespace RachisTests
                                 ackSent.Set();
                             }
 
-                            await continueMre.WaitAsync();
+                            Assert.True(await continueMre.WaitAsync(TimeSpan.FromSeconds(60)));
                         }
                         catch (Exception)
                         {
@@ -329,7 +328,7 @@ namespace RachisTests
                         ackSent.SetException(t.Exception);
                     }, TaskContinuationOptions.OnlyOnFaulted);
 
-                    await Task.WhenAny(task, started.WaitAsync());
+                    await Task.WhenAny(task, started.WaitAsync(TimeSpan.FromSeconds(60)));
 
                     if (started.IsSet)
                         break;
@@ -516,16 +515,16 @@ namespace RachisTests
             {
                 MaxId = 0
             };
-            var subscriptionName = await store.Subscriptions.CreateAsync<User>(options:new SubscriptionCreationOptions
+            var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions
             {
                 MentorNode = mentor
             }).ConfigureAwait(false);
 
             var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
             {
-                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),                
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                 MaxDocsPerBatch = batchSize
-                
+
             });
             var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
             var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
@@ -570,9 +569,9 @@ namespace RachisTests
 
             var task = subscription.Run(a =>
             {
-                
+
             });
-           
+
 
             //await Task.WhenAny(task, Task.Delay(_reasonableWaitTime)).ConfigureAwait(false);
 
@@ -585,7 +584,7 @@ namespace RachisTests
             try
             {
                 while (sp.ElapsedMilliseconds < _reasonableWaitTime.TotalMilliseconds)
-                {                    
+                {
                     string tag = null;
                     var someServer = Servers.First(x => x.Disposed == false);
                     using (someServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -618,7 +617,7 @@ namespace RachisTests
             {
                 Assert.True(sp.ElapsedMilliseconds < _reasonableWaitTime.TotalMilliseconds);
             }
-            
+
         }
 
         private static async Task GenerateDocuments(IDocumentStore store)
@@ -648,7 +647,7 @@ namespace RachisTests
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
             string mentor = Servers.First(x => x.ServerStore.NodeTag != x.ServerStore.LeaderTag).ServerStore.NodeTag;
-            
+
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -656,13 +655,13 @@ namespace RachisTests
             }.Initialize())
             {
                 await GenerateDocuments(store);
-                
+
                 var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions
                 {
                     MentorNode = mentor
                 }).ConfigureAwait(false);
 
-              
+
                 var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
                 var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
                 var record = await store.Maintenance.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
@@ -736,7 +735,7 @@ namespace RachisTests
                 }))
                 {
                     var batchProccessed = new AsyncManualResetEvent();
-                  
+
                     var task = subscription.Run(async a =>
                     {
                         batchProccessed.Set();
@@ -756,7 +755,7 @@ namespace RachisTests
         public async Task SubscriptionShouldNotFailIfLeaderIsDownButItStillHasEnoughTimeToRetry()
         {
             const int nodesAmount = 2;
-            var leader = await CreateRaftClusterAndGetLeader(nodesAmount, shouldRunInMemory:false);
+            var leader = await CreateRaftClusterAndGetLeader(nodesAmount, shouldRunInMemory: false);
             var indexLeader = Servers.FindIndex(x => x == leader);
             var leaderDataDir = leader.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
             var leaderUrl = leader.WebUrl;
@@ -804,7 +803,7 @@ namespace RachisTests
                     var batchedAcked = new AsyncManualResetEvent();
                     var disposedOnce = false;
 
-                    subscription.AfterAcknowledgment+=  x=>
+                    subscription.AfterAcknowledgment += x =>
                     {
                         batchedAcked.Set();
                         return Task.CompletedTask;
@@ -830,7 +829,7 @@ namespace RachisTests
                     Assert.True(await subscriptionRetryBegins.WaitAsync(TimeSpan.FromSeconds(30)));
                     Assert.True(await subscriptionRetryBegins.WaitAsync(TimeSpan.FromSeconds(30)));
 
-                    leader = Servers[indexLeader] = 
+                    leader = Servers[indexLeader] =
                         GetNewServer(new ServerCreationOptions
                         {
                             CustomSettings = new Dictionary<string, string>
@@ -842,7 +841,7 @@ namespace RachisTests
                             DeletePrevious = false,
                             PartialPath = leaderDataDir
                         });
-                    
+
                     Assert.True(await batchProccessed.WaitAsync(TimeSpan.FromSeconds(60)));
                     Assert.True(await batchedAcked.WaitAsync(TimeSpan.FromSeconds(60)));
 
@@ -850,7 +849,7 @@ namespace RachisTests
             }
         }
 
-        protected static async Task ThrowsAsync<T>(Task task) where T:Exception
+        protected static async Task ThrowsAsync<T>(Task task) where T : Exception
         {
             var threw = false;
             try

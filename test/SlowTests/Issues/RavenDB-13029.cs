@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -28,14 +29,14 @@ namespace SlowTests.Issues
                     using (readCtx.OpenReadTransaction())
                     {
                         readEvent.Set();
-                        await writeEvent.WaitAsync();
+                        Assert.True(await writeEvent.WaitAsync(TimeSpan.FromSeconds(60)));
                         var collection = database.DocumentsStorage.GetCollections(readCtx);
                         Assert.Empty(collection);
                     }
                 });
                 var writeTask = Task.Run(async () =>
                 {
-                    await readEvent.WaitAsync();
+                    Assert.True(await readEvent.WaitAsync(TimeSpan.FromSeconds(60)));
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                     using (var tx = writeCtx.OpenWriteTransaction())
                     using (var doc = writeCtx.ReadObject(new DynamicJsonValue

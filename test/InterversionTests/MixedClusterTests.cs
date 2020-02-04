@@ -80,7 +80,7 @@ namespace InterversionTests
         [Fact]
         public async Task IncrementalUpgrade()
         {
-            var initialVersions = new[] {"4.0.11", "4.0.11", "4.0.11"};
+            var initialVersions = new[] { "4.0.11", "4.0.11", "4.0.11" };
             var v40 = new Version40X(this);
             var v41 = new Version41X(this);
 
@@ -96,7 +96,7 @@ namespace InterversionTests
         [Fact]
         public async Task UpgradeFromLatest40()
         {
-            var initialVersions = new[] {"4.0.11", "4.0.11", "4.0.11"};
+            var initialVersions = new[] { "4.0.11", "4.0.11", "4.0.11" };
             var upgradeTo = new List<string>
             {
                 "4.1.7",
@@ -120,10 +120,10 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
         private async Task ExecuteUpgradeTest(
-            string[] initialVersions, 
-            List<string> upgradeTo, 
-            UpgradeTestSuit before, 
-            UpgradeTestSuit during, 
+            string[] initialVersions,
+            List<string> upgradeTo,
+            UpgradeTestSuit before,
+            UpgradeTestSuit during,
             UpgradeTestSuit after)
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -365,7 +365,7 @@ namespace InterversionTests
                     session.SaveChanges();
                 }
 
-                foreach (var store in new []{ storeA, storeB })
+                foreach (var store in new[] { storeA, storeB })
                 {
                     using (var session = store.OpenSession(dbName))
                     {
@@ -464,7 +464,7 @@ namespace InterversionTests
                     }, "users/2");
                     session.SaveChanges();
                 }
-                
+
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
                     "users/1",
                     u => u.Name.Equals("aviv"),
@@ -692,7 +692,7 @@ namespace InterversionTests
                 storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
                 storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
             }
-        
+
         }
 
         [Fact(Skip = "WIP")]
@@ -987,7 +987,7 @@ namespace InterversionTests
 
                     subscription.AfterAcknowledgment += async b =>
                     {
-                        await continueMre.WaitAsync();
+                        Assert.True(await continueMre.WaitAsync(TimeSpan.FromSeconds(60)));
 
                         try
                         {
@@ -997,7 +997,7 @@ namespace InterversionTests
                                 ackSent.Set();
                             }
 
-                            await continueMre.WaitAsync();
+                            Assert.True(await continueMre.WaitAsync(TimeSpan.FromSeconds(60)));
                         }
                         catch (Exception)
                         {
@@ -1012,7 +1012,7 @@ namespace InterversionTests
                         HandleSubscriptionBatch(nodesAmount, b, uniqueDocs, ref docsCount, uniqueRevisions, reachedMaxDocCountMre, ref revisionsCount);
                     });
 
-                    await Task.WhenAny(task, started.WaitAsync());
+                    await Task.WhenAny(task, started.WaitAsync(TimeSpan.FromSeconds(60)));
 
                     if (started.IsSet)
                         break;
