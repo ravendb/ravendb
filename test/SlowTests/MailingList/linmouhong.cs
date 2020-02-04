@@ -44,7 +44,7 @@ namespace SlowTests.MailingList
 
                     s = session.Advanced.DocumentQuery<Item>().WhereEquals(x => x.Product.Name, "test").GetIndexQuery();
 
-                    Assert.Equal("from Items where Product.Name = $p0", s.Query);
+                    Assert.Equal("from 'Items' where Product.Name = $p0", s.Query);
                     Assert.Equal("test", s.QueryParameters["p0"]);
                 }
             }

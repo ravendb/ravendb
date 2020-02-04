@@ -51,7 +51,7 @@ namespace SlowTests.Issues
 	var detail = load(detailId);
 	return { Name : name, DetailId : detailId, Detail : detail };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -59,10 +59,10 @@ from Users as u select output(u)", query.ToString());
                     Assert.Equal("Jerry", queryResult[0].Name);
                     Assert.Equal("details/1-A", queryResult[0].DetailId);
                     Assert.Equal(15, queryResult[0].Detail.Number);
-
                 }
             }
         }
+
         private class Detail
         {
             public int Number { get; set; }

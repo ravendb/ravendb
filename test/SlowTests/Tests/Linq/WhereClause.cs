@@ -38,7 +38,7 @@ namespace SlowTests.Tests.Linq
                     var q = Queryable.Where(session.Query<Renamed>(), x => x.Name == "red");
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from Renameds where Yellow = $p0", iq.Query);
+                    Assert.Equal("from 'Renameds' where Yellow = $p0", iq.Query);
                     Assert.Equal("red", iq.QueryParameters["p0"]);
                 }
             }
