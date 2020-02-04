@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private long PurgeDeletedRanged(in long upto, DocumentsOperationContext context, CollectionName collectionName, long numberOfEntriesToDelete)
         {
-            var tableName = collectionName.GetTableName(CollectionTableType.DeletedRanges);
+            var tableName = collectionName.GetTableName(CollectionTableType.TimeSeriesDeletedRanges);
             var table = context.Transaction.InnerTransaction.OpenTable(DeleteRangesSchema, tableName);
 
             if (table == null || table.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
@@ -1766,7 +1766,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private Table GetOrCreateDeleteRangesTable(Transaction tx, CollectionName collection)
         {
-            return GetOrCreateTable(tx, DeleteRangesSchema, collection, CollectionTableType.DeletedRanges);
+            return GetOrCreateTable(tx, DeleteRangesSchema, collection, CollectionTableType.TimeSeriesDeletedRanges);
         }
 
         private Table GetOrCreateTable(Transaction tx, TableSchema tableSchema, CollectionName collection, CollectionTableType type)

@@ -185,11 +185,18 @@ namespace Raven.Server.Documents
                     try
                     {
                         var deletedSegmentsOrRanges =_database.DocumentsStorage.TimeSeriesStorage.PurgeSegmentsAndDeletedRanges(context, tombstone.Key, minTombstoneValue, numberOfTombstonesToDeleteInBatch);
-                        var numberOfEntriesDeleted = _database.DocumentsStorage.DeleteTombstonesBefore(context, tombstone.Key, minTombstoneValue, numberOfTombstonesToDeleteInBatch - deletedSegmentsOrRanges);
-                        var totalDeleted = deletedSegmentsOrRanges + numberOfEntriesDeleted;
-                        numberOfTombstonesToDeleteInBatch -= totalDeleted;
-                        NumberOfTombstonesDeleted += totalDeleted;
-                      
+                        numberOfTombstonesToDeleteInBatch -= deletedSegmentsOrRanges;
+                        NumberOfTombstonesDeleted += deletedSegmentsOrRanges;
+
+                        if (numberOfTombstonesToDeleteInBatch <= 0)
+                            break;
+
+                        var numberOfEntriesDeleted = _database.DocumentsStorage.DeleteTombstonesBefore(context, tombstone.Key, minTombstoneValue, numberOfTombstonesToDeleteInBatch);
+                        numberOfTombstonesToDeleteInBatch -= numberOfEntriesDeleted;
+                        NumberOfTombstonesDeleted += numberOfEntriesDeleted;
+
+                        if (numberOfTombstonesToDeleteInBatch <= 0)
+                            break;
                     }
                     catch (Exception e)
                     {
@@ -198,9 +205,6 @@ namespace Raven.Server.Documents
 
                         throw;
                     }
-
-                    if (numberOfTombstonesToDeleteInBatch <= 0)
-                        break;
                 }
 
                 return NumberOfTombstonesDeleted;
