@@ -3,6 +3,7 @@ import timeSeriesQueryResult = require("models/database/timeSeries/timeSeriesQue
 import viewModelBase = require("viewmodels/viewModelBase");
 import d3 = require("d3");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import colorsManager = require("common/colorsManager");
 
 type timeSeriesItem = {
     document: document;
@@ -79,8 +80,8 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
         const valuesCount = groupedValues[0][seriesPrefixNames[0]].length; //TODO: scan through all values!
         const seriesValuesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
         
-        const dateFromPoints = groupedValues.map(x => moment.utc(x.From).toDate());
-        const dateToPoints = groupedValues.map(x => moment.utc(x.To).toDate());
+        const dateFromPoints = groupedValues.map(x => new Date(x.From));
+        const dateToPoints = groupedValues.map(x => new Date(x.To));
         
         const series = [] as Array<graphSeries<dataRangePoint>>;
         
@@ -114,7 +115,7 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
         const valuesCount = rawValues[0].Values.length;
         const seriesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
         
-        const datePoints = rawValues.map(x => moment.utc(x.Timestamp).toDate());
+        const datePoints = rawValues.map(x => new Date(x.Timestamp));
         
         this.series(seriesName.map((name, seriesNameIdx) => {
             const dataPoints: dataPoint[] = rawValues.map((v, valuesIdx) => ({
@@ -132,11 +133,24 @@ class timeSeriesDetails extends viewModelBase {
     
     private readonly margin = {
         top: 40,
-        left: 40,
+        left: 70,
         right: 40,
         bottom: 40,
         betweenGraphs: 50
     };
+    
+    colors = {
+        "color-1": undefined as string,
+        "color-2": undefined as string,
+        "color-3": undefined as string,
+        "color-4": undefined as string,
+        "color-5": undefined as string,
+        "color-6": undefined as string,
+        "color-7": undefined as string,
+        "color-8": undefined as string,
+        "color-9": undefined as string,
+        "color-10": undefined as string
+    } as Record<string, string>;
     
     private readonly heightBrush = 80;
     
@@ -146,6 +160,8 @@ class timeSeriesDetails extends viewModelBase {
 
     private containerWidth: number;
     private containerHeight: number;
+    
+    private cachedData: graphData;
     
     private width: number;
     private heightGraph: number;
@@ -161,17 +177,18 @@ class timeSeriesDetails extends viewModelBase {
     private yAxis: d3.svg.Axis;
     
     private brush: d3.svg.Brush<void>;
+
+    private focusCanvas: d3.Selection<any>;
+    private contextCanvas: d3.Selection<any>;
     
     private svg: d3.Selection<void>;
     private focus: d3.Selection<void>;
     private context: d3.Selection<void>;
-    private line: d3.svg.Line<dataPoint>;
-    private lineBrush: d3.svg.Line<dataPoint>;
     
     private zoom: d3.behavior.Zoom<void>;
     private rect: d3.Selection<any>;
-    private colorClassPointScale: d3.scale.Ordinal<string, string>;
-    private colorClassRangeScale: d3.scale.Ordinal<string, string>;
+    private readonly colorClassPointScale: d3.scale.Ordinal<string, keyof this["colors"]>;
+    private readonly colorClassRangeScale: d3.scale.Ordinal<string, keyof this["colors"]>;
     
     constructor(timeSeries: Array<timeSeriesItem>, initialMode: viewMode = "plot") { //TODO: support modes!
         super();
@@ -195,10 +212,10 @@ class timeSeriesDetails extends viewModelBase {
         this.mode(initialMode);
 
         this.colorClassPointScale = d3.scale.ordinal<string>()
-            .range(_.range(1, 10).map(x => "color-" + x));
+            .range(_.range(1, 12).map(x => "color-" + x));
 
         this.colorClassRangeScale = d3.scale.ordinal<string>()
-            .range(_.range(1, 10).map(x => "color-" + x));
+            .range(_.range(10, 0).map(x => "color-" + x));
     }
     
     get allTimeSeries() {
@@ -207,11 +224,13 @@ class timeSeriesDetails extends viewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
+
+        colorsManager.setup(".time-series-details", this.colors);
         
         this.initGraph();
         this.draw(true, true);
     }
-
+    
     private initGraph() {
         [this.containerWidth, this.containerHeight] = viewHelpers.getPageHostDimenensions();
         
@@ -247,18 +266,32 @@ class timeSeriesDetails extends viewModelBase {
             .x(this.xBrush as any)
             .on("brush", () => this.onBrushed());
         
-        this.line = d3.svg.line<dataPoint>()
-            .x(x => this.x(x.date))
-            .y(x => this.y(x.value));
+        const container = d3.select(".time-series-details .dynamic-container");
+
+        this.contextCanvas = container
+            .append("canvas")
+            .attr("class", "context-canvas")
+            .attr("width", this.width)
+            .attr("height", this.heightBrush)
+            .style({
+                "top": (this.margin.top + this.heightGraph + this.margin.betweenGraphs) + "px",
+                "left": this.margin.left + "px"
+            });
         
-        this.lineBrush = d3.svg.line<dataPoint>()
-            .x(x => this.xBrush(x.date))
-            .y(x => this.yBrush(x.value));
-        
-        this.svg = d3.select(".time-series-details .dynamic-container")
+        this.svg = container
             .append("svg:svg")
             .attr("width", this.containerWidth)
             .attr("height", this.containerHeight);
+
+        this.focusCanvas = container
+            .append("canvas")
+            .attr("class", "focus-canvas")
+            .attr("width", this.width)
+            .attr("height", this.heightGraph)
+            .style({
+                "top": this.margin.top + "px",
+                "left": this.margin.left + "px"
+            });
         
         this.svg
             .append("defs")
@@ -286,24 +319,12 @@ class timeSeriesDetails extends viewModelBase {
             .on("zoom", () => this.draw(false, false));
 
         this.focus.append("g")
-            .attr("class", "data-lines");
-        
-        this.focus.append("g")
-            .attr("class", "data-range");
-
-        this.focus.append("g")
             .attr("class", "x axis")
             .attr("transform", "translate(0," + this.heightGraph + ")");
 
         this.focus.append("g")
             .attr("class", "y axis");
         
-        this.context.append("g")
-            .attr("class", "data-lines");
-        
-        this.context.append("g")
-            .attr("class", "data-range");
-
         this.context.append("g")
             .attr("class", "x axis")
             .attr("transform", "translate(0," + this.heightBrush + ")");
@@ -316,7 +337,6 @@ class timeSeriesDetails extends viewModelBase {
             .attr("height", this.heightGraph)
             .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")")
             .call(this.zoom);
-
 
         this.context.append("g")
             .attr("class", "x brush")
@@ -336,21 +356,18 @@ class timeSeriesDetails extends viewModelBase {
     }
     
     private draw(dataUpdated: boolean, resetXScale: boolean) {
-        const data = dataUpdated ? this.getDataToPlot() : undefined;
+        if (dataUpdated) {
+            this.cachedData = this.getDataToPlot();
+        }
         
-        const areaGenerator = <T>(d: graphSeries<dataRangePoint>, line: d3.svg.Line<dataPoint>) => {
-            const mappedPoints = d.points.map(point => (line([ {
-                    date: point.from,
-                    value: point.value
-                }, {
-                    date: point.to,
-                    value: point.value
-                }])
-            ));
+        const data = this.cachedData;
 
-            return mappedPoints.join(" ");
-        };
+        const focusCanvas = this.focusCanvas.node() as HTMLCanvasElement;
+        const focusContext = focusCanvas.getContext("2d");
 
+        const contextCanvas = this.contextCanvas.node() as HTMLCanvasElement;
+        const contextContext = contextCanvas.getContext("2d");
+        
         if (dataUpdated) {
             if (data.pointSeries.length || data.rangeSeries.length) {
                 const extents = timeSeriesDetails.computeExtents(data);
@@ -385,76 +402,103 @@ class timeSeriesDetails extends viewModelBase {
             .call(this.yAxis);
         
         if (dataUpdated) {
-            // areas should go beneath lines
-            const focusAreas = this.focus
-                .select(".data-range")
-                .selectAll(".area")
-                .data(data.rangeSeries);
+            contextContext.clearRect(0, 0, this.width, this.heightGraph);
 
-            focusAreas.enter()
-                .append("path")
-                .attr("class", d => "area " + this.colorClassRangeScale(d.uniqueId));
+            try {
+                contextContext.save();
 
-            focusAreas.exit()
-                .remove();
-            
-            const contextAreas = this.context
-                .select(".data-range")
-                .selectAll(".area")
-                .data(data.rangeSeries);
-            
-            contextAreas.exit()
-                .remove();
-            
-            contextAreas
-                .attr("d", d => areaGenerator(d, this.lineBrush));
-            
-            contextAreas
-                .enter()
-                .append("path")
-                .attr("class", d => "area " + this.colorClassPointScale(d.uniqueId))
-                .attr("d", d => areaGenerator(d, this.lineBrush));
-            
-            // and draw lines above
-            const focusLines = this.focus
-                .select(".data-lines")
-                .selectAll(".line")
-                .data(data.pointSeries);
+                // range series
+                for (let i = 0; i < data.rangeSeries.length; i++) {
+                    const series = data.rangeSeries[i];
+                    contextContext.beginPath();
+                    contextContext.strokeStyle = this.colors[this.colorClassRangeScale(series.uniqueId)];
+                    contextContext.lineWidth = 2;
+                    for (let p = 0; p < series.points.length; p++) {
+                        const point = series.points[p];
+                        const yValue = this.yBrush(point.value);
+                        contextContext.moveTo(this.xBrush(point.from), yValue);
+                        contextContext.lineTo(this.xBrush(point.to), yValue);
+                    }
+                    contextContext.stroke();
+                }
 
-            focusLines.enter()
-                .append("path")
-                .attr("class", d => "line " + this.colorClassPointScale(d.uniqueId));
+                const pixelTimeDelta = this.xBrush.invert(1).getTime() - this.xBrush.invert(0).getTime();
+                
+                // point series
+                for (let i = 0; i < data.pointSeries.length; i++) {
+                    const points = data.pointSeries[i];
 
-            focusLines.exit()
-                .remove();
-            
-            const contextLines = this.context
-                .select(".data-lines")
-                .selectAll(".line")
-                .data(data.pointSeries);
-            
-            contextLines.exit()
-                .remove();
+                    if (points.points.length) {
+                        contextContext.beginPath();
+                        contextContext.strokeStyle = this.colors[this.colorClassPointScale(points.uniqueId)];
+                        contextContext.lineWidth = 2;
+                        const renderer = new quantizedLineRenderer(contextContext, pixelTimeDelta, this.xBrush, this.yBrush);
+                        renderer.draw(points.points[0].date, points.points[0].value);
 
-            contextLines
-                .attr("d", d => this.lineBrush(d.points));
-            
-            contextLines
-                .enter()
-                .append("path")
-                .attr("class", d => "line " + this.colorClassPointScale(d.uniqueId))
-                .attr("d", d => this.lineBrush(d.points));
+                        for (let p = 0; p < points.points.length; p++) {
+                            const point = points.points[p];
+                            renderer.draw(point.date, point.value);
+                        }
+
+                        renderer.flush();
+                        contextContext.stroke();
+                    }
+                }
+            } finally {
+                contextContext.restore();
+            }
         }
 
-        this.focus
-            .select(".data-lines")
-            .selectAll<graphSeries<dataPoint>>(".line")
-            .attr("d", d => this.line(d.points));
-        
-        this.focus
-            .select(".data-range")
-            .selectAll<graphSeries<dataRangePoint>>(".area")
-            .attr("d", d => areaGenerator(d, this.line));
+        focusContext.clearRect(0, 0, this.width, this.heightGraph);
+
+        try {
+            focusContext.save();
+            const visibleRange = [this.x.invert(0), this.x.invert(this.width)];
+            
+            // range series
+            for (let i = 0; i < data.rangeSeries.length; i++) {
+                const series = data.rangeSeries[i];
+                focusContext.beginPath();
+                focusContext.strokeStyle = this.colors[this.colorClassRangeScale(series.uniqueId)];
+                focusContext.lineWidth = 2;
+                for (let p = 0; p < series.points.length; p++) {
+                    const point = series.points[p];
+                    const yValue = this.y(point.value);
+                    focusContext.moveTo(this.x(point.from), yValue);
+                    focusContext.lineTo(this.x(point.to), yValue);
+                }
+                focusContext.stroke();
+            }
+
+            const pixelTimeDelta = this.x.invert(1).getTime() - this.x.invert(0).getTime();
+            
+            // point series
+            for (let i = 0; i < data.pointSeries.length; i++) {
+                const points = data.pointSeries[i];
+                
+                const startIdx = Math.max(_.sortedIndexBy(points.points, { date: visibleRange[0] }, x => x.date) - 1, 0); 
+                const endIdx = Math.min(points.points.length, _.sortedIndexBy(points.points, { date: visibleRange[1] }, x => x.date) + 1); 
+                
+                if (points.points.length) {
+                    focusContext.beginPath();
+                    focusContext.strokeStyle = this.colors[this.colorClassPointScale(points.uniqueId)];
+                    focusContext.lineWidth = 2;
+                    const renderer = new quantizedLineRenderer(focusContext, pixelTimeDelta, this.x, this.y);
+                    renderer.draw(points.points[startIdx].date, points.points[startIdx].value);
+
+                    for (let p = startIdx; p < endIdx; p++) {
+                        const point = points.points[p];
+                        renderer.draw(point.date, point.value);
+                    }
+                    
+                    renderer.flush();
+                    focusContext.stroke();
+                }
+            }
+            
+        } finally {
+            focusContext.restore();
+        }
         
         this.brush.extent(this.x.domain() as any);
         
@@ -582,6 +626,72 @@ class timeSeriesDetails extends viewModelBase {
         });
         
         return result;
+    }
+}
+
+
+class quantizedLineRenderer {
+    
+    private first = true;
+    
+    private queue: {
+        values: number[],
+        date: Date
+    };
+    
+    constructor(private context: CanvasRenderingContext2D, 
+                private quantizationOffset: number, 
+                private xScale: d3.time.Scale<number, number>, 
+                private yScale: d3.scale.Linear<number, number>) {
+    }
+    
+    private flushQueue() {
+        if (!this.queue) {
+            return;
+        }
+        
+        if (this.queue.values.length > 1) {
+            // compute extend to avoid drawing average line
+            const [localMin, localMax] = d3.extent(this.queue.values);
+            const xValue = this.xScale(this.queue.date);
+            
+            this.context.lineTo(xValue, this.yScale(localMin));
+            this.context.lineTo(xValue, this.yScale(localMax));
+        } else {
+            this.context.lineTo(this.xScale(this.queue.date), this.yScale(this.queue.values[0]));
+        }
+        
+        this.queue = null;
+    }
+    
+    draw(date: Date, value: number) {
+        if (this.first) {
+            this.first = false;
+            this.context.moveTo(this.xScale(date), this.yScale(value));
+        } else {
+            if (this.queue) {
+                const shouldFlush = this.queue.date.getTime() + this.quantizationOffset < date.getTime();
+                if (shouldFlush) {
+                    this.flushQueue();
+                    this.queue = {
+                        values: [value],
+                        date: date
+                    }
+                } else {
+                    this.queue.values.push(value);
+                }
+            } else {
+                // queue is empty - append item
+                this.queue = {
+                    values: [value],
+                    date: date
+                };
+            }
+        }
+    }
+    
+    flush() {
+        this.flushQueue();
     }
 }
 
