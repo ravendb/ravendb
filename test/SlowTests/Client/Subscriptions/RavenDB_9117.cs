@@ -1,21 +1,21 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Xunit;
-using Raven.Client.Extensions;
-using System;
-using System.Diagnostics;
-using Raven.Client.Exceptions.Documents.Subscriptions;
 using Sparrow.Server;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
-    public class RavenDB_9117: RavenTestBase
+    public class RavenDB_9117 : RavenTestBase
     {
         public RavenDB_9117(ITestOutputHelper output) : base(output)
         {
@@ -51,13 +51,15 @@ namespace SlowTests.Client.Subscriptions
                 var signalWhenForcefullyUpdatedCV = new AsyncManualResetEvent();
                 var signalWhenStartedProcessingDoc = new AsyncManualResetEvent();
 
-                worker.OnSubscriptionConnectionRetry += e => {
+                worker.OnSubscriptionConnectionRetry += e =>
+                {
                     tcs.SetException(e);
-                    };
-                _ = worker.Run(async x => 
+                };
+                _ = worker.Run(async x =>
                     {
                         signalWhenStartedProcessingDoc.Set();
-                        await signalWhenForcefullyUpdatedCV.WaitAsync();                    
+
+                        Assert.True(await signalWhenForcefullyUpdatedCV.WaitAsync(TimeSpan.FromSeconds(60)));
                     });
 
                 Assert.True(await signalWhenStartedProcessingDoc.WaitAsync(_reasonableWaitTime));
@@ -81,8 +83,7 @@ namespace SlowTests.Client.Subscriptions
 
                 await database.RachisLogIndexNotifications.WaitForIndexNotification(index.Result, database.ServerStore.Engine.OperationTimeout).WaitWithTimeout(_reasonableWaitTime);
                 signalWhenForcefullyUpdatedCV.Set();
-                Assert.True(await Assert.ThrowsAsync<SubscriptionChangeVectorUpdateConcurrencyException>(()=>tcs.Task).WaitWithTimeout(_reasonableWaitTime));
-                
+                Assert.True(await Assert.ThrowsAsync<SubscriptionChangeVectorUpdateConcurrencyException>(() => tcs.Task).WaitWithTimeout(_reasonableWaitTime));
             }
         }
     }
