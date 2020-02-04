@@ -129,8 +129,6 @@ class textColumn<T> implements virtualColumn {
         }
 
         if (_.isArray(cellValue)) {
-            const value = generalUtils.escapeHtml(JSON.stringify(cellValue, null, 2));
-
             return {
                 rawText: "[ ... ]",
                 typeCssClass: "token array"
@@ -138,8 +136,6 @@ class textColumn<T> implements virtualColumn {
         }
 
         if (_.isObject(cellValue)) {
-            const value = generalUtils.escapeHtml(JSON.stringify(cellValue, null, 2));
-
             return {
                 rawText: "{ ... }",
                 typeCssClass: "token object"
