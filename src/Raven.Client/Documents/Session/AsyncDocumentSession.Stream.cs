@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -37,10 +38,15 @@ namespace Raven.Client.Documents.Session
 
             public void Dispose()
             {
-                _enumerator.Dispose();
+                AsyncHelpers.RunSync(() => DisposeAsync().AsTask());
             }
 
-            public async Task<bool> MoveNextAsync()
+            public ValueTask DisposeAsync()
+            {
+                return _enumerator.DisposeAsync();
+            }
+
+            public async ValueTask<bool> MoveNextAsync()
             {
                 _prev?.Dispose(); // dispose the previous instance
 
@@ -48,7 +54,7 @@ namespace Raven.Client.Documents.Session
 
                 while (true)
                 {
-                    if (await _enumerator.MoveNextAsync().WithCancellation(_token).ConfigureAwait(false) == false)
+                    if (await _enumerator.MoveNextAsync().AsTask().WithCancellation(_token).ConfigureAwait(false) == false)
                         return false;
 
                     _prev = _enumerator.Current;

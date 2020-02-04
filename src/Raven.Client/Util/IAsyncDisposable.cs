@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Util
 {
+#if NETSTANDARD2_0 || NETCOREAPP2_1
     internal interface IAsyncDisposable
     {
-        Task DisposeAsync();
+        ValueTask DisposeAsync();
     }
+#endif
 }

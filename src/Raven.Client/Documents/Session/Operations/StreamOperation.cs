@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Session.Operations
             return enumerator;
         }
 
-        public async Task<Raven.Client.Util.IAsyncEnumerator<BlittableJsonReaderObject>> SetResultAsync(StreamResult response)
+        public async Task<IAsyncEnumerator<BlittableJsonReaderObject>> SetResultAsync(StreamResult response)
         {
             var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isAsync: true, _statistics);
             await enumerator.InitializeAsync().ConfigureAwait(false);
@@ -90,7 +90,7 @@ namespace Raven.Client.Documents.Session.Operations
             return enumerator;
         }
 
-        private class YieldStreamResults : Raven.Client.Util.IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
+        private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
         {
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isAsync, StreamQueryStatistics streamQueryStatistics)
             {
@@ -119,10 +119,27 @@ namespace Raven.Client.Documents.Session.Operations
             private int _docsCountOnCachedRenewSession;
             private bool _cachedItemsRenew;
 
+            public async ValueTask DisposeAsync()
+            {
+#if NETSTANDARD2_0 || NETCOREAPP2_1
+                Dispose();
+#else
+                await _response.Stream.DisposeAsync().ConfigureAwait(false);
+
+                DisposeInternal();
+#endif
+            }
+
             public void Dispose()
             {
-                _response.Response.Dispose();
                 _response.Stream.Dispose();
+
+                DisposeInternal();
+            }
+
+            private void DisposeInternal()
+            {
+                _response.Response.Dispose();
                 _parser.Dispose();
                 _returnBuffer.Dispose();
                 _peepingTomStream.Dispose();
@@ -160,7 +177,7 @@ namespace Raven.Client.Documents.Session.Operations
                 }
             }
 
-            public async Task<bool> MoveNextAsync()
+            public async ValueTask<bool> MoveNextAsync()
             {
                 AssertInitialized();
 
