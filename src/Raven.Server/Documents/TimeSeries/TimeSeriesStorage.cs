@@ -115,45 +115,46 @@ namespace Raven.Server.Documents.TimeSeries
             tx.CreateTree(DeletedRangesKey);
         }
 
-        public void PurgeSegmentsAndDeletedRanges(string collection, long upto, DocumentsOperationContext context)
+        public long PurgeSegmentsAndDeletedRanges(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
-                return;
+                return 0;
 
-            PurgeSegments(upto, context, collectionName);
-            PurgeDeletedRanged(upto, context, collectionName);
+            var deletedSegments = PurgeSegments(upto, context, collectionName, numberOfEntriesToDelete);
+            var deletedRanges = PurgeDeletedRanged(upto, context, collectionName, numberOfEntriesToDelete - deletedSegments);
+            return deletedRanges + deletedSegments;
         }
 
-        private void PurgeDeletedRanged(in long upto, DocumentsOperationContext context, CollectionName collectionName)
+        private long PurgeDeletedRanged(in long upto, DocumentsOperationContext context, CollectionName collectionName, long numberOfEntriesToDelete)
         {
             var tableName = collectionName.GetTableName(CollectionTableType.DeletedRanges);
             var table = context.Transaction.InnerTransaction.OpenTable(DeleteRangesSchema, tableName);
 
-            if (table == null || table.NumberOfEntries == 0)
-                return;
+            if (table == null || table.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
+                return 0;
 
-            table.DeleteBackwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], upto, long.MaxValue);
+            return table.DeleteBackwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], upto, numberOfEntriesToDelete);
         }
 
-        private void PurgeSegments(long upto, DocumentsOperationContext context, CollectionName collectionName)
+        private long PurgeSegments(long upto, DocumentsOperationContext context, CollectionName collectionName, long numberOfEntriesToDelete)
         {
             var tableName = collectionName.GetTableName(CollectionTableType.TimeSeries);
             var table = context.Transaction.InnerTransaction.OpenTable(TimeSeriesSchema, tableName);
 
-            if (table == null || table.NumberOfEntries == 0)
-                return;
+            if (table == null || table.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
+                return 0;
 
             var pendingDeletion = context.Transaction.InnerTransaction.CreateTree(PendingDeletionSegments);
             var deleted = new List<Slice>();
             var hasMore = true;
-
+            var deletedCount = 0;
             while (hasMore)
             {
                 using (var it = pendingDeletion.MultiRead(collectionName.Name))
                 {
                     if (it.Seek(Slices.BeforeAllKeys) == false)
-                        return;
+                        return deletedCount;
 
                     do
                     {
@@ -164,10 +165,11 @@ namespace Raven.Server.Documents.TimeSeries
                         if (table.DeleteByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag))
                         {
                             deleted.Add(it.CurrentKey.Clone(context.Allocator));
+                            deletedCount++;
                         }
 
                         hasMore = it.MoveNext();
-                    } while (hasMore && deleted.Count < 1000);
+                    } while (hasMore && deleted.Count < numberOfEntriesToDelete);
                 }
 
                 foreach (var etagSlice in deleted)
@@ -177,6 +179,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 deleted.Clear();
             }
+
+            return deletedCount;
         }
 
         public class DeletionRangeRequest
