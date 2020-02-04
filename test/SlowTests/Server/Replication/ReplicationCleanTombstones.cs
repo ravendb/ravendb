@@ -58,11 +58,11 @@ namespace SlowTests.Server.Replication
 
                 Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
                 //Assert.Equal(4, WaitForValue(() => storage1.ReplicationLoader.MinimalEtagForReplication, 4));
-                
+
                 EnsureReplicating(store1, store2);
-                
+
                 await storage1.TombstoneCleaner.ExecuteCleanup();
-                
+
                 Assert.Equal(0, WaitForValue(() => WaitUntilHasTombstones(store1, 0).Count, 0));
             }
         }
@@ -285,7 +285,7 @@ namespace SlowTests.Server.Replication
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
-                    session.Store(new User (), "marker2");
+                    session.Store(new User(), "marker2");
                     session.SaveChanges();
                 }
 
@@ -317,7 +317,7 @@ namespace SlowTests.Server.Replication
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
-                ModifyDocumentStore = s => s.Conventions = new DocumentConventions() ,
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions(),
                 ReplicationFactor = 3
             }))
             using (var dest = GetDocumentStore())
@@ -353,7 +353,7 @@ namespace SlowTests.Server.Replication
                 etlStorage.EtlLoader.BatchCompleted += _ =>
                 {
                     sent.Set();
-                    mre.Wait();
+                    mre.Wait(TimeSpan.FromSeconds(30));
                 };
 
                 using (var session = store.OpenSession())
@@ -363,8 +363,8 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                if (sent.Wait(TimeSpan.FromSeconds(15)) == false)
-                    Assert.False(true,"timeout!");
+                if (sent.Wait(TimeSpan.FromSeconds(30)) == false)
+                    Assert.False(true, "timeout!");
 
                 using (var session = store.OpenSession())
                 {
@@ -379,7 +379,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                   await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
                 }
 
                 var total = 0L;
@@ -475,7 +475,7 @@ namespace SlowTests.Server.Replication
                 using (storage1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    Assert.Equal(2,storage1.DocumentsStorage.GetNumberOfTombstones(ctx));
+                    Assert.Equal(2, storage1.DocumentsStorage.GetNumberOfTombstones(ctx));
                 }
 
                 using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -510,7 +510,7 @@ namespace SlowTests.Server.Replication
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
-                using (var ms = new MemoryStream(new byte[]{1,2,3,4,5}))
+                using (var ms = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     session.Store(new User { Name = "Karmel" }, "foo/bar");
                     session.Advanced.Attachments.Store("foo/bar", "dummy", ms);
@@ -646,14 +646,14 @@ namespace SlowTests.Server.Replication
                 };
 
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                
+
                 await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, result.TaskId));
-                Assert.Equal(1,await WaitForValueAsync(() =>
-                {
-                    var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1));
+                Assert.Equal(1, await WaitForValueAsync(() =>
+                 {
+                     var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
+                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                     return getPeriodicBackupResult.Status?.LastEtag;
+                 }, 1));
 
                 using (var session = store.OpenSession())
                 {
@@ -680,19 +680,19 @@ namespace SlowTests.Server.Replication
                 }
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, result.TaskId));
-                Assert.Equal(5,await WaitForValueAsync(() =>
-                {
-                    var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    Assert.Null(getPeriodicBackupResult.Status.Error);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 5));
+                Assert.Equal(5, await WaitForValueAsync(() =>
+                 {
+                     var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
+                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                     Assert.Null(getPeriodicBackupResult.Status.Error);
+                     return getPeriodicBackupResult.Status?.LastEtag;
+                 }, 5));
 
                 var databaseName = GetDatabaseName();
 
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(), 
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
                 }))
                 {
