@@ -126,6 +126,12 @@ interface timeSeriesItem {
     numberOfEntries: number;
 }
 
+interface timeSeriesPlotItem {
+    documentId: string;
+    name: string;
+    value: timeSeriesQueryResultDto;
+}
+
 type timeSeriesDeleteMode =  "all" | "range" | "selection";
 
 interface timeSeriesDeleteCriteria {

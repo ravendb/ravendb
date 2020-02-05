@@ -4,11 +4,7 @@ import d3 = require("d3");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import colorsManager = require("common/colorsManager");
 
-type timeSeriesItem = {
-    documentId: string;
-    name: string;
-    value: timeSeriesQueryResultDto;
-}
+
 
 interface graphData {
     pointSeries: graphSeries<dataPoint>[];
@@ -50,7 +46,7 @@ abstract class timeSeriesContainer<T> {
     onChange: () => void;
     series = ko.observableArray<graphSeries<T>>();
     
-    protected constructor(item: timeSeriesItem, onChange: () => void) {
+    protected constructor(item: timeSeriesPlotItem, onChange: () => void) {
         this.documentId = item.documentId;
         this.name = item.name;
         this.value = item.value;
@@ -70,7 +66,7 @@ abstract class timeSeriesContainer<T> {
 class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
     type: timeSeriesResultType = "grouped";
     
-    constructor(item: timeSeriesItem, onChange: () => void) {
+    constructor(item: timeSeriesPlotItem, onChange: () => void) {
         super(item, onChange);
 
         const groupedValues = this.value.Results as Array<timeSeriesQueryGroupedItemResultDto>;
@@ -104,7 +100,7 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
 class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
     type: timeSeriesResultType = "raw";
 
-    constructor(item: timeSeriesItem, onChange: () => void) {
+    constructor(item: timeSeriesPlotItem, onChange: () => void) {
         super(item, onChange);
 
         this.prepareSeries();
@@ -190,7 +186,7 @@ class timeSeriesDetails extends viewModelBase {
     private readonly colorClassPointScale: d3.scale.Ordinal<string, keyof this["colors"]>;
     private readonly colorClassRangeScale: d3.scale.Ordinal<string, keyof this["colors"]>;
     
-    constructor(timeSeries: Array<timeSeriesItem>, initialMode: viewMode = "plot") { //TODO: support modes!
+    constructor(timeSeries: Array<timeSeriesPlotItem>, initialMode: viewMode = "plot") { //TODO: support modes!
         super();
         
         const onChange = () => this.draw(true, false);
