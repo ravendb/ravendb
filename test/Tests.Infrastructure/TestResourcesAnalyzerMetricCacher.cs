@@ -16,9 +16,9 @@ namespace Tests.Infrastructure
             if (PlatformDetails.RunningOnLinux)
                 _smapsReader = new SmapsReader(new[] { new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize] });
 
-            Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromSeconds(1), cpuUsageCalculator.Calculate);
-            Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromSeconds(1), CalculateMemoryInfo);
-            Register(MetricCacher.Keys.Server.MemoryInfoExtended, TimeSpan.FromSeconds(1), CalculateMemoryInfoExtended);
+            Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromMilliseconds(25), cpuUsageCalculator.Calculate);
+            Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromMilliseconds(25), CalculateMemoryInfo);
+            Register(MetricCacher.Keys.Server.MemoryInfoExtended, TimeSpan.FromMilliseconds(25), CalculateMemoryInfoExtended);
         }
 
         private object CalculateMemoryInfo()

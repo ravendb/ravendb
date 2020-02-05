@@ -1,0 +1,10 @@
+﻿{
+  "profiles": {
+    "Tests.ResourceSnapshotAggregator": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
