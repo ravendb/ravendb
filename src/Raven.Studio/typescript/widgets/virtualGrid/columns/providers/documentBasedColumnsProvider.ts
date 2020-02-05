@@ -90,6 +90,7 @@ class documentBasedColumnsProvider {
         let columnNames = this.findColumnNames(results, Math.floor(viewportWidth / documentBasedColumnsProvider.minColumnWidth), prioritizedColumns);
         const timeSeriesColumns = this.findTimeSeriesColumns(results);
         
+        const hasTimeSeries = !!timeSeriesColumns.length;
         const includeInlineTimeSeriesColumn = timeSeriesColumns.length === 1 
             && timeSeriesColumns[0] === documentBasedColumnsProvider.rootedTimeSeriesResultMarker; 
         
@@ -103,7 +104,7 @@ class documentBasedColumnsProvider {
         // Insert the row selection checkbox column as necessary.
         const initialColumns: virtualColumn[] = [];
 
-        if (this.showRowSelectionCheckbox) {
+        if (this.showRowSelectionCheckbox || hasTimeSeries) {
             initialColumns.push(new checkedColumn(this.showSelectAllCheckbox));
         }
 

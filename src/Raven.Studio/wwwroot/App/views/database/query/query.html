@@ -129,17 +129,19 @@
                     </small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">
-                    <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': !canDeleteDocumentsMatchingQuery() ? 'Available only for map indexes' : '' }">
-                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
+                    <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': deleteDocumentDisableReason }, visible: currentTab() === 'results'">
+                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery">
+                            <i class="icon-trash"></i> <span>Delete documents</span>
+                        </button>
                     </div>
                     <button type="button" class="btn btn-default" title="Export query results as CSV"
-                        data-bind="click: exportCsv, enable: totalResultsForUi()">
+                        data-bind="click: exportCsv, enable: canExportCsv, visible: currentTab() === 'results'">
                         <i class="icon-csv-export"></i> <span>Export CSV</span>
                     </button>
-                    <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats">
+                    <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats, visible: currentTab() === 'results'">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
-                    <div class="btn-group dropdown-right">
+                    <div class="btn-group dropdown-right" data-bind="visible: !showTimeSeriesGraph()">
                         <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
@@ -151,6 +153,11 @@
                     <button class="btn btn-default" data-bind="click: toggleResults">
                         <i data-bind="attr: { class: resultsExpanded() ? 'icon-fold' : 'icon-unfold'} "></i>
                         <span data-bind="text: resultsExpanded() ? 'Collapse results' : 'Expand results'"></span>
+                    </button>
+                </div>
+                <div class="btn-group-label active pull-right margin-right margin-right-sm" data-label="Selection" role="group" data-bind="visible: showPlotButton">
+                    <button type="button" class="btn btn-sm btn-default" title="Plot time series data" data-bind="click: plotTimeSeries">
+                        <i class="icon-stats"></i> <span>Plot time series</span>
                     </button>
                 </div>
             </div>

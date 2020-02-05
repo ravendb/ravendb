@@ -161,6 +161,8 @@ class query extends viewModelBase {
     timings = ko.observable<Raven.Client.Documents.Queries.Timings.QueryTimings>();
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
+    deleteDocumentDisableReason: KnockoutComputed<string>;
+    canExportCsv: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
     isCollectionQuery: KnockoutComputed<boolean>;
     isGraphQuery: KnockoutComputed<boolean>;
@@ -169,6 +171,7 @@ class query extends viewModelBase {
     
     showVirtualTable: KnockoutComputed<boolean>;
     showTimeSeriesGraph: KnockoutComputed<boolean>;
+    showPlotButton: KnockoutComputed<boolean>;
     
     timeSeriesGraphs = ko.observableArray<timeSeriesDetails>([]);
 
@@ -232,7 +235,7 @@ class query extends viewModelBase {
         this.initValidation();
 
         this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", 
-            "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults", "goToTimeSeriesTab",
+            "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults", "goToTimeSeriesTab", "plotTimeSeries",
             "closeTimeSeriesTab");
     }
 
@@ -339,7 +342,41 @@ class query extends viewModelBase {
         this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {
             const mapReduce = this.isMapReduceIndex();
             const graphQuery = this.isGraphQuery();
-            return !mapReduce && !graphQuery;
+            const hasAnyItemSelected = this.gridController() ? this.gridController().getSelectedItems().length > 0 : false;
+            return !mapReduce && !graphQuery && !hasAnyItemSelected;
+        });
+        
+        this.canExportCsv = ko.pureComputed(() => {
+            const hasNonEmptyResult = this.totalResultsForUi() > 0;
+
+            if (!hasNonEmptyResult) {
+                return false;
+            }
+
+            const hasAnyItemSelected = this.gridController() ? this.gridController().getSelectedItems().length > 0 : false;
+            return !hasAnyItemSelected;
+        });
+        
+        this.deleteDocumentDisableReason = ko.pureComputed(() => {
+            const hasAnyItemSelected = this.gridController() ? this.gridController().getSelectedItems().length > 0 : false;
+            if (hasAnyItemSelected) {
+                return "Please unselect all items before deleting documents";
+            }
+            
+            const canDelete = this.canDeleteDocumentsMatchingQuery();
+            if (canDelete) {
+                return "";
+            } else {
+                return "Available only for map indexes";
+            }
+        });
+        
+        this.showPlotButton = ko.pureComputed(() => {
+            const onResultsTab = this.currentTab() === "results";
+            if (!onResultsTab) {
+                return false;
+            }
+            return this.gridController() ? this.gridController().getSelectedItems().length > 0 : false;
         });
 
         this.containsAsterixQuery = ko.pureComputed(() => this.criteria().queryText().includes("*.*"));
@@ -996,6 +1033,34 @@ class query extends viewModelBase {
                });
             });
         });
+    }
+    
+    plotTimeSeries() {
+        const selection = this.gridController().getSelectedItems();
+        
+        const timeSeries = [] as timeSeriesPlotItem[];
+        
+        selection.forEach((item: document) => {
+            const documentId = item.getId();
+            
+            const allColumns = this.columnsSelector.allVisibleColumns();
+            
+            allColumns.forEach(columnItem => {
+                const column = columnItem.virtualColumn();
+                if (column instanceof timeSeriesColumn) {
+                    timeSeries.push({
+                        documentId,
+                        name: column.header,
+                        value: column.getCellValue(item)
+                    });
+                }
+            });
+        });
+        
+        const chart = new timeSeriesDetails(timeSeries, "plot");
+        this.timeSeriesGraphs.push(chart);
+        this.goToTimeSeriesTab(chart);
+        
     }
 
     refresh() {
