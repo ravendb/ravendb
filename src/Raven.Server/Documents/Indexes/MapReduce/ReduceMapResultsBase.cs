@@ -335,7 +335,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         _index.ErrorIndexIfCriticalException(e);
 
-                        HandleReductionError(e, reduceKeyHash, writer, stats, updateStats: parentPage == -1, page: leafPage);
+                        HandleReductionError(e, reduceKeyHash, writer, stats, updateStats: true, page: leafPage);
                     }
                 }
             }
