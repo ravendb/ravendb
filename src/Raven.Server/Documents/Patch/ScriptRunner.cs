@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,6 +23,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -208,6 +210,10 @@ namespace Raven.Server.Documents.Patch
 
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
 
+                //TimeSeries
+                ScriptEngine.SetValue("appendTs", new ClrFunctionInstance(ScriptEngine, "appendTs", AppendTimeSeries));
+                ScriptEngine.SetValue("deleteRangeTs", new ClrFunctionInstance(ScriptEngine, "deleteRangeTs", DeleteRangeTimeSeries));
+                ScriptEngine.SetValue("getRangeTs", new ClrFunctionInstance(ScriptEngine, "getRangeTs", GetRangeTimeSeries));
 
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
@@ -230,6 +236,97 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
+            private JsValue AppendTimeSeries(JsValue self, JsValue[] args)
+            {
+                const string signature = "appendTs(this, timeseries, timestamp, tag, values)";
+                const int requiredArgs = 5;
+                
+                if (args.Length != requiredArgs)
+                    throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
+                
+                var (id, doc) = GetIdAndDocFromFirstArg(args[0], signature);
+
+                if(args[1].IsString() == false)
+                    throw new ArgumentException($"{signature}: The timeseries argument should be a string, but got {args[1].GetType().Name}");
+                var timeseries = args[1].AsString();
+                
+                var timestamp = GetDateArg(args[2], signature, "timestamp");
+                
+                if(args[3].IsString() == false)
+                    throw new ArgumentException($"{signature}: The tag argument should be a string, but got {args[3].GetType().Name}");
+                var tag = args[3].AsString();
+                
+                if(args[4].IsArray() == false)
+                    throw new ArgumentException($"{signature}: The tag argument should be an array but it is, but got {args[4].GetType().Name}");
+
+                ArrayInstance jsValues = args[4].AsArray();
+                var values = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
+                try
+                {
+                    FillDoubleArrayFromJsArray(values, jsValues, signature);
+                    _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(
+                        _docsCtx,
+                        id,
+                        CollectionName.GetCollectionName(doc),
+                        timeseries,
+                        new []{new TimeSeriesStorage.Reader.SingleResult
+                        {
+                            Values = new Memory<double>(values, 0, (int)jsValues.Length),
+                            Tag = _docsCtx.GetLazyString(tag),
+                            Timestamp = timestamp,
+                            Status = TimeSeriesValuesSegment.Live
+                        }});
+                }
+                finally                
+                {
+                    ArrayPool<double>.Shared.Return(values);
+                }
+                
+                return Undefined.Instance;
+            }
+
+            private void FillDoubleArrayFromJsArray(double[] array, ArrayInstance jsArray, string signature)
+            {
+                var i = 0;
+                foreach (var (key, value) in jsArray.GetOwnProperties())
+                {
+                    if (key == "length")
+                        continue;
+                    if (value.Value.IsNumber() == false)
+                        throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {value.Value.GetType().Name} key({key}) value({value})");
+                    array[i] = value.Value.AsNumber();
+                    ++i;
+                }
+            }
+            
+            private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromFirstArg(JsValue firstArgs, string signature)
+            {
+                if (firstArgs.IsObject() && firstArgs.AsObject() is BlittableObjectInstance doc)
+                    return (doc.DocumentId, doc.Blittable);
+
+                if (firstArgs.IsString())
+                {
+                    var id = firstArgs.AsString();
+                    var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                    if (document == null)
+                        throw new DocumentDoesNotExistException(id, "Cannot operate on a missing document.");
+
+                    return (id, document.Data);
+                }
+
+                throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+            }
+
+            private JsValue DeleteRangeTimeSeries(JsValue self, JsValue[] args)
+            {
+                throw new NotImplementedException();
+            }
+            
+            private JsValue GetRangeTimeSeries(JsValue self, JsValue[] args)
+            {
+                throw new NotImplementedException();
+            }
+            
             private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName]string caller = null)
             {
                 void Swap()
@@ -995,8 +1092,9 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    date1 = GetDateArg(args[0]);
-                    date2 = GetDateArg(args[1]);
+                    const string signature = "compareDates(date1, date2, binaryOp)";
+                    date1 = GetDateArg(args[0], signature, "date1");
+                    date2 = GetDateArg(args[1], signature, "date2");
                 }
 
                 switch (binaryOperationType)
@@ -1021,36 +1119,26 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private static unsafe DateTime GetDateArg(JsValue arg)
+            private static unsafe DateTime GetDateArg(JsValue arg, string signature, string argName)
             {
                 if (arg.IsDate())
-                {
                     return arg.AsDate().ToDateTime();
-                }
 
                 if (arg.IsString() == false)
-                {
-                    ThrowInvalidArgumentForCompareDates();
-                }
+                    ThrowInvalidDateArgument();
 
                 var s = arg.AsString();
                 fixed (char* pValue = s)
                 {
                     var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
-                    switch (result)
-                    {
-                        case LazyStringParser.Result.DateTime:
-                            return dt;
-                        default:
-                            ThrowInvalidArgumentForCompareDates();
-                            return DateTime.MinValue; // never hit
-                    }
+                    if(result != LazyStringParser.Result.DateTime)
+                        ThrowInvalidDateArgument();
+    
+                    return dt;
                 }
-            }
-
-            private static void ThrowInvalidArgumentForCompareDates()
-            {
-                throw new InvalidOperationException("compareDates(date1, date2, binaryOp) : 'date1', 'date2' must be of type 'DateInstance' or a DateTime string");
+                
+                void ThrowInvalidDateArgument() =>
+                    throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string");
             }
 
             private static unsafe JsValue ToStringWithFormat(JsValue self, JsValue[] args)
