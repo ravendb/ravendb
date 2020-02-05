@@ -31,7 +31,7 @@ namespace SlowTests.Bugs.Indexing
                     
                     var query = RavenTestHelper.GetIndexQuery(queryable);
                     
-                    Assert.Equal("from Clients where (((FirstName != $p0 and LastName = $p1)) and BirthDate = $p2) and Country = $p3", query.Query);
+                    Assert.Equal("from 'Clients' where (((FirstName != $p0 and LastName = $p1)) and BirthDate = $p2) and Country = $p3", query.Query);
                     Assert.Equal("Ayende", query.QueryParameters["p0"]);
                     Assert.Equal("Rahien", query.QueryParameters["p1"]);
                     Assert.Equal(birthDate, query.QueryParameters["p2"]);
@@ -61,7 +61,7 @@ namespace SlowTests.Bugs.Indexing
 
                     var query = RavenTestHelper.GetIndexQuery(queryable);
 
-                    Assert.Equal("from Clients where ((FirstName = $p0 and LastName = $p1) and BirthDate = $p2) and Country = $p3", query.Query);
+                    Assert.Equal("from 'Clients' where ((FirstName = $p0 and LastName = $p1) and BirthDate = $p2) and Country = $p3", query.Query);
                     Assert.Equal("Ayende", query.QueryParameters["p0"]);
                     Assert.Equal("Rahien", query.QueryParameters["p1"]);
                     Assert.Equal(birthDate, query.QueryParameters["p2"]);

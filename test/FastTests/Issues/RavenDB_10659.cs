@@ -123,7 +123,7 @@ namespace FastTests.Issues
                                     TestList5 = x.Elements.Select(a => a.Decimal).Average()
                                 };
 
-                    //Assert.Equal("from Articles as x select { Round : Math.round(x.Value), Round2 : Math.round(x.Value * Math.pow(10, 2)) / Math.pow(10, 2), Round4 : Math.round(x.Value * Math.pow(10, 4)) / Math.pow(10, 4) }", query.ToString());
+                    //Assert.Equal("from 'Articles' as x select { Round : Math.round(x.Value), Round2 : Math.round(x.Value * Math.pow(10, 2)) / Math.pow(10, 2), Round4 : Math.round(x.Value * Math.pow(10, 4)) / Math.pow(10, 4) }", query.ToString());
 
                     var result = query.ToList();
 

@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                             x.Limit
                         });
 
-                    Assert.Equal("from TestDocs as __alias0 select __alias0.'Limit'", q.ToString());
+                    Assert.Equal("from 'TestDocs' as __alias0 select __alias0.'Limit'", q.ToString());
 
                     var results = q.ToList();
 
@@ -87,7 +87,7 @@ namespace SlowTests.Issues
                             x.Offset
                         });
 
-                    Assert.Equal("from TestDocs as __alias0 select __alias0.'Offset'", q.ToString());
+                    Assert.Equal("from 'TestDocs' as __alias0 select __alias0.'Offset'", q.ToString());
 
                     var results = q.ToList();
 

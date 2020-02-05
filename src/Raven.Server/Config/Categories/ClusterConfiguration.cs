@@ -60,7 +60,13 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Cluster.TimeBeforeMovingToRehabInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MoveToRehabGraceTime{ get; set; }
-        
+
+        [Description("The grace time we give to the preferred node before we move him to the end of the members list.")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Cluster.TimeBeforeRotatingPreferredNodeInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting RotatePreferredNodeGraceTime { get; set; }
+
         [Description("Tcp connection read/write timeout.")]
         [DefaultValue(15 * 1000)]
         [TimeUnit(TimeUnit.Milliseconds)]

@@ -54,7 +54,7 @@ namespace SlowTests.Issues
 
                     var result = q.First();
 
-                    Assert.Equal("from Orders as x select " +
+                    Assert.Equal("from 'Orders' as x select " +
                                  "{ SortedLines : x.Lines.sort(" +
                                  "function (a, b){ return a.Quantity - b.Quantity;}) }"
                         , q.ToString());
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
                         SortedLines = x.Lines.OrderBy(l => l.ProductName).ToList()
                     });
 
-                    Assert.Equal("from Orders as x select { " +
+                    Assert.Equal("from 'Orders' as x select { " +
                                  "SortedLines : x.Lines.sort(function (a, b){ " +
                                  "return ((a.ProductName < b.ProductName) " +
                                  "? -1 : (a.ProductName > b.ProductName)? 1 : 0);}) }"
@@ -157,7 +157,7 @@ namespace SlowTests.Issues
                         SortedOrdersByDate = x.Orders.OrderBy(o => o.OrderedAt).ToList()
                     });
 
-                    Assert.Equal("from MultiOrders as x select { " +
+                    Assert.Equal("from 'MultiOrders' as x select { " +
                                  "SortedOrdersByDate : x.Orders.sort(function (a, b){ " +
                                  "return ((a.OrderedAt < b.OrderedAt) " +
                                  "? -1 : (a.OrderedAt > b.OrderedAt)? 1 : 0);}) }"
@@ -218,7 +218,7 @@ namespace SlowTests.Issues
                     {
                         OrderedBy = x.Info.OrderBy(i => i.Address.ZipCode).ToList()
                     });
-                    Assert.Equal("from MultiOrders as x select { " +
+                    Assert.Equal("from 'MultiOrders' as x select { " +
                                  "OrderedBy : x.Info.sort(" +
                                  "function (a, b){ return a.Address.ZipCode - b.Address.ZipCode;}) }"
                         , q.ToString());
@@ -276,7 +276,7 @@ namespace SlowTests.Issues
                     {
                         OrderedBy = x.Info.OrderBy(i => i.Address.City).ToList()
                     });
-                    Assert.Equal("from MultiOrders as x select { " +
+                    Assert.Equal("from 'MultiOrders' as x select { " +
                                  "OrderedBy : x.Info.sort(function (a, b){ " +
                                  "return ((a.Address.City < b.Address.City) " +
                                  "? -1 : (a.Address.City > b.Address.City)? 1 : 0);}) }"
@@ -328,7 +328,7 @@ namespace SlowTests.Issues
 
                     var result = q.First();
 
-                    Assert.Equal("from Orders as x select " +
+                    Assert.Equal("from 'Orders' as x select " +
                                  "{ OrderByDescending : x.Lines.sort(" +
                                  "function (a, b){ return b.Quantity - a.Quantity;}) }"
                         , q.ToString());
@@ -375,7 +375,7 @@ namespace SlowTests.Issues
                         OrderByDescending = x.Lines.OrderByDescending(l => l.ProductName).ToList()
                     });
 
-                    Assert.Equal("from Orders as x select { " +
+                    Assert.Equal("from 'Orders' as x select { " +
                                  "OrderByDescending : x.Lines.sort(function (a, b){ " +
                                  "return ((a.ProductName < b.ProductName) " +
                                  "? 1 : (a.ProductName > b.ProductName)? -1 : 0);}) }"

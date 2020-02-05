@@ -33,7 +33,6 @@ namespace SlowTests.Issues
         private class Bar
         {
             public float NumberOfBars;
-
         }
 
         private class FooIndex : AbstractIndexCreationTask<Foo>
@@ -91,7 +90,6 @@ namespace SlowTests.Issues
                     ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
-
             }))
             {
                 using (var session = store.OpenSession())
@@ -100,7 +98,6 @@ namespace SlowTests.Issues
                     session.Store(foo1, "foo/1");
                     session.Store(new Foo() { NameOfFoo = "b", Bars = new[] { new Bar() { NumberOfBars = 3.0f } } }, "foo/2");
                     session.SaveChanges();
-
                 }
 
                 using (var session = store.OpenSession())
@@ -114,7 +111,6 @@ namespace SlowTests.Issues
             }
         }
 
-
         [Fact]
         public void CanGetResultsUsingTermVectorsAndStorage()
         {
@@ -125,7 +121,6 @@ namespace SlowTests.Issues
                     ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
-
             }))
             {
                 string id;
@@ -314,7 +309,7 @@ namespace SlowTests.Issues
                                 };
 
                     var queryAsString = query.ToString();
-                    Assert.Equal("from Users as user select { FullName : user.name+\" \"+user.lastName }", queryAsString);
+                    Assert.Equal("from 'Users' as user select { FullName : user.name+\" \"+user.lastName }", queryAsString);
 
                     var queryResult = query.ToList();
 
@@ -363,7 +358,7 @@ namespace SlowTests.Issues
 	var format = function(){return first+"" ""+last;};
 	return { FullName : format() };
 }
-from Users as user select output(user)", queryAsString);
+from 'Users' as user select output(user)", queryAsString);
 
                     var queryResult = query.ToList();
 
@@ -494,7 +489,6 @@ from Users as user select output(user)", queryAsString);
             }
         }
 
-
         private static void AssetMoreLikeThisHasMatchesFor<T, TIndex>(IDocumentStore store, string documentKey)
             where TIndex : AbstractIndexCreationTask, new()
             where T : Identity
@@ -535,7 +529,6 @@ from Users as user select output(user)", queryAsString);
             public string Body { get; set; }
         }
 
-
         private static List<Data> GetDataList()
         {
             var list = new List<Data>
@@ -553,12 +546,10 @@ from Users as user select output(user)", queryAsString);
             return list;
         }
 
-
         private class DataIndex : AbstractIndexCreationTask<Data>
         {
             public DataIndex() : this(true, false)
             {
-
             }
 
             public DataIndex(bool termVector, bool store)
@@ -577,7 +568,6 @@ from Users as user select output(user)", queryAsString);
                         typeof (WhitespaceAnalyzer).FullName
                     }
                 };
-
 
                 if (store)
                 {
@@ -645,7 +635,6 @@ from Users as user select output(user)", queryAsString);
                     session.Store(entity);
                     session.SaveChanges();
                     id = session.Advanced.GetDocumentId(entity);
-
                 }
 
                 var expected = Status.Good;
@@ -905,7 +894,6 @@ from Users as user select output(user)", queryAsString);
 
             public string Name { get; set; }
 
-
             public string Id
             {
                 get { return string.Format("people/{0}", Name); }
@@ -953,8 +941,6 @@ from Users as user select output(user)", queryAsString);
                     };
             }
         }
-
-
 
         [Fact]
         public void ProjectInto_ShouldWork()
@@ -1148,7 +1134,6 @@ from Users as user select output(user)", queryAsString);
             }
         }
 
-
         [Fact]
         public void ShouldMergePatchCalls()
         {
@@ -1157,7 +1142,6 @@ from Users as user select output(user)", queryAsString);
             var user = new User { Numbers = new[] { 66 }, Stuff = stuff };
             var user2 = new User { Numbers = new[] { 1, 2, 3 }, Stuff = stuff };
             var docId2 = "users/2-A";
-
 
             using (var store = GetDocumentStore(options: new Options
             {
@@ -1225,6 +1209,5 @@ from Users as user select output(user)", queryAsString);
             Good,
             Bad
         }
-
     }
 }

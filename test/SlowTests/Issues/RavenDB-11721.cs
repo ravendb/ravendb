@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                                 u.Name,
                                 address.Country
                             };
-                    const string expected = "from Users as u " +
+                    const string expected = "from 'Users' as u " +
                                             "where u.Name = $p0 " +
                                             "load u.AddressId as address " +
                                             "select { Name : u.Name, Country : address.Country }";
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                                 u.Name,
                                 address.Country
                             };
-                    const string expected = "from Users as u " +
+                    const string expected = "from 'Users' as u " +
                                             "where u.Name = $p0 " +
                                             "load u.AddressId as address " +
                                             "select { Name : u.Name, Country : address.Country }";

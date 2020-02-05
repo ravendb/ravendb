@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                                     Company = order.Company,
                                 };
 
-                    Assert.Equal("from Orders as 'order' select { Employee : load(order.Employee), Company : order.Company }"
+                    Assert.Equal("from 'Orders' as 'order' select { Employee : load(order.Employee), Company : order.Company }"
                         , query.ToString());
 
                     var result = query.ToList();
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                                     Company = function.Company,
                                 };
 
-                    Assert.Equal("from Orders as _function select { " +
+                    Assert.Equal("from 'Orders' as _function select { " +
                                  "Employee : load(_function.Employee), Company : _function.Company }"
                                 , query.ToString());
 
@@ -133,7 +133,7 @@ namespace SlowTests.Issues
                                     Company = load.Company,
                                 };
 
-                    Assert.Equal("from Orders as _load select { Employee : load(_load.Employee), Company : _load.Company }"
+                    Assert.Equal("from 'Orders' as _load select { Employee : load(_load.Employee), Company : _load.Company }"
                         , query.ToString());
 
                     var result = query.ToList();
@@ -189,7 +189,7 @@ namespace SlowTests.Issues
 	var sum = order.Lines.map(function(l){return l.PricePerUnit*l.Quantity;}).reduce(function(a, b) { return a + b; }, 0);
 	return { Sum : sum };
 }
-from Orders as __alias0 where __alias0.Company = $p0 select output(__alias0)", query.ToString());
+from 'Orders' as __alias0 where __alias0.Company = $p0 select output(__alias0)", query.ToString());
 
                     var result = query.ToList();
 
@@ -269,7 +269,7 @@ from Orders as __alias0 where __alias0.Company = $p0 select output(__alias0)", q
 	var sum = order.Lines.map(function(l){return l.PricePerUnit*l.Quantity*_load.AccountsReceivable;}).reduce(function(a, b) { return a + b; }, 0);
 	return { Comapny : _load, Sum : sum, Employees : update.map(function(e){return e.FirstName;}) };
 }
-from Orders as __alias0 select output(__alias0)", query.ToString());
+from 'Orders' as __alias0 select output(__alias0)", query.ToString());
 
                     var result = query.ToList();
 
@@ -316,7 +316,7 @@ from Orders as __alias0 select output(__alias0)", query.ToString());
 	var update = __alias0;
 	return { Company : update.Name };
 }
-from Orders as o load o.Company as __alias0 select output(o, __alias0)", query.ToString());
+from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query.ToString());
 
                     var result = query.ToList();
 
@@ -368,7 +368,7 @@ from Orders as o load o.Company as __alias0 select output(o, __alias0)", query.T
 	var include = load(o.Employee);
 	return { Company : update.Name, Employee : include.FirstName };
 }
-from Orders as o load o.Company as __alias0 select output(o, __alias0)"
+from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)"
                 , query.ToString());
 
                     var result = query.ToList();
@@ -429,7 +429,7 @@ from Orders as o load o.Company as __alias0 select output(o, __alias0)"
 	var employees = load(update.EmployeesIds);
 	return { Company : update.Name, Employees : employees.map(function(e){return e.FirstName;}) };
 }
-from Orders as o load o.Company as __alias0 select output(o, __alias0)", query.ToString());
+from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query.ToString());
 
                     var result = query.ToList();
 
@@ -484,7 +484,7 @@ from Orders as o load o.Company as __alias0 select output(o, __alias0)", query.T
 	var _function = o.Lines.map(function(l){return l.PricePerUnit*l.Quantity;}).reduce(function(a, b) { return a + b; }, 0);
 	return { Sum : _function };
 }
-from Orders as o select output(o)", query.ToString());
+from 'Orders' as o select output(o)", query.ToString());
 
                     var result = query.ToList();
 
@@ -543,7 +543,7 @@ from Orders as o select output(o)", query.ToString());
 	var _var = load(_function.EmployeesIds);
 	return { Company : _function, Number : _super, Employees : _var.map(function(e){return e.FirstName;}) };
 }
-from Orders as o load o.Company as _function select output(o, _function)", query.ToString());
+from 'Orders' as o load o.Company as _function select output(o, _function)", query.ToString());
 
                     var result = query.ToList();
 
@@ -584,7 +584,7 @@ from Orders as o load o.Company as _function select output(o, _function)", query
 
                     var result = query.ToList();
 
-                    Assert.Equal("from Orders select Company as 'Load', Employee as 'Include'", query.ToString());
+                    Assert.Equal("from 'Orders' select Company as 'Load', Employee as 'Include'", query.ToString());
 
                     Assert.Equal("companies/1-A", result[0].Load);
                     Assert.Equal("employees/1-A", result[0].Include);
@@ -619,7 +619,7 @@ from Orders as o load o.Company as _function select output(o, _function)", query
 
                     var result = query.ToList();
 
-                    Assert.Equal("from Orders as o select " +
+                    Assert.Equal("from 'Orders' as o select " +
                                  "{ Update : o.Company.substr(10), Include : o.Employee.substr(10) }", query.ToString());
 
                     Assert.Equal("1-A", result[0].Update);

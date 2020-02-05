@@ -66,7 +66,7 @@ namespace SlowTests.Issues
 	var x = id(d)==null?0:10;
 	return { Id : id(d), Int1 : x, Int2 : externalDocument.Int+1 };
 }
-from RavenDocuments as d where id() = $p0 select output(d, $p1)"
+from 'RavenDocuments' as d where id() = $p0 select output(d, $p1)"
     , query.ToString());
 
                     var result = query.First();

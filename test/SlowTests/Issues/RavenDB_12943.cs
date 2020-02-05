@@ -28,7 +28,7 @@ namespace SlowTests.Issues
                         .Where(x => x.Address.City == "Warsaw")
                         .ToString();
 
-                    Assert.Equal("from Companies where Test between $p0 and $p1 and Test between $p2 and $p3 and exists(Test2)", q);
+                    Assert.Equal("from 'Companies' where Test between $p0 and $p1 and Test between $p2 and $p3 and exists(Test2)", q);
                 }
             }
         }

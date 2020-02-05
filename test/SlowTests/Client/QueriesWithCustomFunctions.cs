@@ -44,7 +44,7 @@ namespace SlowTests.Client
                         .Where(u => u.Name == "Jerry")
                         .Select(u => new { FullName = u.Name + " " + u.LastName, FirstName = u.Name });
 
-                    Assert.Equal("from Users as u where u.Name = $p0 select { FullName : u.Name+\" \"+u.LastName, FirstName : u.Name }", query.ToString());
+                    Assert.Equal("from 'Users' as u where u.Name = $p0 select { FullName : u.Name+\" \"+u.LastName, FirstName : u.Name }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -73,7 +73,7 @@ namespace SlowTests.Client
                         .Where(u => u.Name == "Jerry")
                         .Select(u => new { FullName = u.Name + " " + u.LastName, FirstName = u.Name });
 
-                    Assert.Equal("from Users as u where u.Name = $p0 select { FullName : u.Name+\" \"+u.LastName, FirstName : u.Name }", query.ToString());
+                    Assert.Equal("from 'Users' as u where u.Name = $p0 select { FullName : u.Name+\" \"+u.LastName, FirstName : u.Name }", query.ToString());
 
                     var queryResult = await query.ToListAsync();
 
@@ -101,7 +101,7 @@ namespace SlowTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday});
 
-                    Assert.Equal("from Users as u select { " +
+                    Assert.Equal("from 'Users' as u select { " +
                                  "Name : u.Name, Age : compareDates(new Date(new Date().setHours(0,0,0,0)), u.Birthday) }",
                                 query.ToString());
 
@@ -131,7 +131,7 @@ namespace SlowTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday });
 
-                    Assert.Equal("from Users as u select { " +
+                    Assert.Equal("from 'Users' as u select { " +
                                  "Name : u.Name, Age : compareDates(new Date(new Date().setHours(0,0,0,0)), u.Birthday) }",
                         query.ToString());
 
@@ -166,7 +166,7 @@ namespace SlowTests.Client
                         });
 
 
-                    Assert.Equal("from Users as u select { DayOfBirth : new Date(Date.parse(u.Birthday)).getDate(), MonthOfBirth : new Date(Date.parse(u.Birthday)).getMonth()+1, Age : new Date().getFullYear()-new Date(Date.parse(u.Birthday)).getFullYear() }"
+                    Assert.Equal("from 'Users' as u select { DayOfBirth : new Date(Date.parse(u.Birthday)).getDate(), MonthOfBirth : new Date(Date.parse(u.Birthday)).getMonth()+1, Age : new Date().getFullYear()-new Date(Date.parse(u.Birthday)).getFullYear() }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -204,7 +204,7 @@ namespace SlowTests.Client
                         });
 
 
-                    Assert.Equal("from Users as u select { DayOfBirth : new Date(Date.parse(u.Birthday)).getDate(), MonthOfBirth : new Date(Date.parse(u.Birthday)).getMonth()+1, Age : new Date().getFullYear()-new Date(Date.parse(u.Birthday)).getFullYear() }"
+                    Assert.Equal("from 'Users' as u select { DayOfBirth : new Date(Date.parse(u.Birthday)).getDate(), MonthOfBirth : new Date(Date.parse(u.Birthday)).getMonth()+1, Age : new Date().getFullYear()-new Date(Date.parse(u.Birthday)).getFullYear() }"
                         , query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -244,7 +244,7 @@ namespace SlowTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { LuckyNumber = u.IdNumber / u.Birthday.Year, Active = u.IsActive ? "yes" : "no" });
 
-                    Assert.Equal("from Users as u select { LuckyNumber : u.IdNumber/new Date(Date.parse(u.Birthday)).getFullYear(), Active : u.IsActive?\"yes\":\"no\" }",
+                    Assert.Equal("from 'Users' as u select { LuckyNumber : u.IdNumber/new Date(Date.parse(u.Birthday)).getFullYear(), Active : u.IsActive?\"yes\":\"no\" }",
                                 query.ToString());
 
                     var queryResult = query.ToList();
@@ -279,7 +279,7 @@ namespace SlowTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { LuckyNumber = u.IdNumber / u.Birthday.Year, Active = u.IsActive ? "yes" : "no" });
 
-                    Assert.Equal("from Users as u select { LuckyNumber : u.IdNumber/new Date(Date.parse(u.Birthday)).getFullYear(), Active : u.IsActive?\"yes\":\"no\" }",
+                    Assert.Equal("from 'Users' as u select { LuckyNumber : u.IdNumber/new Date(Date.parse(u.Birthday)).getFullYear(), Active : u.IsActive?\"yes\":\"no\" }",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -312,7 +312,7 @@ namespace SlowTests.Client
                             })
                         });
 
-                    Assert.Equal("from Users as u select { Roles : u.Roles.map(function(r){return {RoleName:r+\"!\"};}) }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Roles : u.Roles.map(function(r){return {RoleName:r+\"!\"};}) }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -349,7 +349,7 @@ namespace SlowTests.Client
                             })
                         });
 
-                    Assert.Equal("from Users as u select { Roles : u.Roles.map(function(r){return {RoleName:r+\"!\"};}) }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Roles : u.Roles.map(function(r){return {RoleName:r+\"!\"};}) }", query.ToString());
 
                     var queryResult = await query.ToListAsync();
 
@@ -391,7 +391,7 @@ namespace SlowTests.Client
 	var lastName = u.LastName;
 	return { FullName : u.Name+"" ""+lastName };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
 
                     var queryResult = query.ToList();
@@ -429,7 +429,7 @@ from Users as u select output(u)", query.ToString());
 	var lastName = u.LastName;
 	return { FullName : u.Name+"" ""+lastName };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
 
                     var queryResult = await query.ToListAsync();
@@ -467,7 +467,7 @@ from Users as u select output(u)", query.ToString());
 	var format = function(p){return p.Name+"" ""+p.LastName;};
 	return { FullName : format(u) };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
 
                     var queryResult = query.ToList();
@@ -505,7 +505,7 @@ from Users as u select output(u)", query.ToString());
 	var format = function(p){return p.Name+"" ""+p.LastName;};
 	return { FullName : format(u) };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
 
                     var queryResult = await query.ToListAsync();
@@ -547,7 +547,7 @@ from Users as u select output(u)", query.ToString());
 	var format = function(p){return p.Name+space+last;};
 	return { FullName : format(u) };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
 
                     var queryResult = query.ToList();
@@ -589,7 +589,7 @@ from Users as u select output(u)", query.ToString());
 	var format = function(p){return p.Name+space+last;};
 	return { FullName : format(u) };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
 
                     var queryResult = await query.ToListAsync();
@@ -679,7 +679,7 @@ from Users as u select output(u)", query.ToString());
                                     Detail = detail.Number
                                 };
 
-                    Assert.Equal("from Users as u where u.Name != $p0 load u.DetailId as detail select { FullName : u.Name+\" \"+u.LastName, Detail : detail.Number }",
+                    Assert.Equal("from 'Users' as u where u.Name != $p0 load u.DetailId as detail select { FullName : u.Name+\" \"+u.LastName, Detail : detail.Number }",
                                  query.ToString());
 
                     var queryResult = query.ToList();
@@ -717,7 +717,7 @@ from Users as u select output(u)", query.ToString());
                             Detail = detail.Number
                         };
 
-                    Assert.Equal(@"from Users as u where u.Name != $p0 load u.DetailId as detail select { FullName : u.Name+"" ""+u.LastName, Detail : detail.Number }",
+                    Assert.Equal(@"from 'Users' as u where u.Name != $p0 load u.DetailId as detail select { FullName : u.Name+"" ""+u.LastName, Detail : detail.Number }",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -765,7 +765,7 @@ from Users as u select output(u)", query.ToString());
 	var friend = load(u.FriendId);
 	return { FullName : format(u), Friend : format(friend), Detail : detail.Number };
 }
-from Users as u where u.Name != $p0 select output(u)",
+from 'Users' as u where u.Name != $p0 select output(u)",
                         query.ToString());
 
                     var queryResult = query.ToList();
@@ -814,7 +814,7 @@ from Users as u where u.Name != $p0 select output(u)",
 	var friend = load(u.FriendId);
 	return { FullName : format(u), Friend : format(friend), Detail : detail.Number };
 }
-from Users as u where u.Name != $p0 select output(u)",
+from 'Users' as u where u.Name != $p0 select output(u)",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -859,7 +859,7 @@ from Users as u where u.Name != $p0 select output(u)",
 	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -907,7 +907,7 @@ from Users as u select output(u)", query.ToString());
 	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
                     var queryResult = await query.ToListAsync();
 
@@ -952,7 +952,7 @@ from Users as u select output(u)", query.ToString());
                             Details = details
                         };
 
-                    Assert.Equal(@"from Users as u where u.Name != $p0 load u.DetailIds as details[] select { FullName : u.Name+"" ""+u.LastName, Details : details }",
+                    Assert.Equal(@"from 'Users' as u where u.Name != $p0 load u.DetailIds as details[] select { FullName : u.Name+"" ""+u.LastName, Details : details }",
                         query.ToString());
 
                     var queryResult = query.ToList();
@@ -998,7 +998,7 @@ from Users as u select output(u)", query.ToString());
                                     Details = details
                                 };
 
-                    Assert.Equal(@"from Users as u where u.Name != $p0 load u.DetailIds as details[] select { FullName : u.Name+"" ""+u.LastName, Details : details }",
+                    Assert.Equal(@"from 'Users' as u where u.Name != $p0 load u.DetailIds as details[] select { FullName : u.Name+"" ""+u.LastName, Details : details }",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -1044,7 +1044,7 @@ from Users as u select output(u)", query.ToString());
                                     Details = details
                                 };
 
-                    Assert.Equal(@"from Users as u where u.Name != $p0 load u.DetailIds as details[] select { FullName : u.Name+"" ""+u.LastName, Details : details }",
+                    Assert.Equal(@"from 'Users' as u where u.Name != $p0 load u.DetailIds as details[] select { FullName : u.Name+"" ""+u.LastName, Details : details }",
                         query.ToString());
 
                     var queryResult = query.ToList();
@@ -1090,7 +1090,7 @@ from Users as u select output(u)", query.ToString());
                                     Details = details
                                 };
 
-                    Assert.Equal(@"from Users as u where u.Name != $p0 load u.DetailIds as details[] select { FullName : u.Name+"" ""+u.LastName, Details : details }",
+                    Assert.Equal(@"from 'Users' as u where u.Name != $p0 load u.DetailIds as details[] select { FullName : u.Name+"" ""+u.LastName, Details : details }",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -1144,7 +1144,7 @@ from Users as u select output(u)", query.ToString());
 	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
-from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName desc select output(u)", query.ToString());
+from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName desc select output(u)", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -1193,7 +1193,7 @@ from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName de
 	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
-from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName desc select output(u)", query.ToString());
+from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName desc select output(u)", query.ToString());
 
                     var queryResult = await query.ToListAsync();
 
@@ -1225,7 +1225,7 @@ from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName de
                                     Max = Math.Max(u.IdNumber + 1, u.IdNumber)
                                 };
 
-                    Assert.Equal("from Users as u select { Pow : Math.pow(u.IdNumber, u.IdNumber), Max : Math.max((u.IdNumber+1), u.IdNumber) }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Pow : Math.pow(u.IdNumber, u.IdNumber), Max : Math.max((u.IdNumber+1), u.IdNumber) }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -1257,7 +1257,7 @@ from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName de
                                     FullName = user.Name + " " + user.LastName
                                 };
 
-                    Assert.Equal("from Users as user select { FullName : user.Name+\" \"+user.LastName }", query.ToString());
+                    Assert.Equal("from 'Users' as user select { FullName : user.Name+\" \"+user.LastName }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -1298,7 +1298,7 @@ from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName de
 	var format = function(){return first+"" ""+last;};
 	return { FullName : format() };
 }
-from Users as user select output(user)", query.ToString());
+from 'Users' as user select output(user)", query.ToString());
 
 
                     var queryResult = query.ToList();
@@ -1336,7 +1336,7 @@ from Users as user select output(user)", query.ToString());
 	var date = new Date(1960, 0, 1);
 	return { Bday : u.Birthday, Date : date };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
 
                     var queryResult = query.ToList();
@@ -1370,7 +1370,7 @@ from Users as u select output(u)", query.ToString());
                             Name = RavenQuery.Raw<string>("user.Name.substr(0,3)"),
                         };
 
-                    Assert.Equal("from Users as user select { Date : new Date(Date.parse(user.Birthday)), Name : user.Name.substr(0,3) }",
+                    Assert.Equal("from 'Users' as user select { Date : new Date(Date.parse(user.Birthday)), Name : user.Name.substr(0,3) }",
                         query.ToString());
 
                     var queryResult = query.ToList();
@@ -1411,7 +1411,7 @@ from Users as u select output(u)", query.ToString());
 	var days = Math.ceil((Date.now() - Date.parse(u.Birthday)) / (1000*60*60*24));
 	return { Days : days };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
                     
                     var queryResult = query.ToList();
                     
@@ -1441,7 +1441,7 @@ from Users as u select output(u)", query.ToString());
                             Name = RavenQuery.Raw<string>(a.Name, "substr(0,3)")
                         });
 
-                    Assert.Equal("from Users as a where a.Name = $p0 select { Name : a.Name.substr(0,3) }",
+                    Assert.Equal("from 'Users' as a where a.Name = $p0 select { Name : a.Name.substr(0,3) }",
                         query.ToString());
 
                     var queryResult = query.ToList();
@@ -1489,7 +1489,7 @@ from Users as u select output(u)", query.ToString());
 	var details = load(u.DetailIds).map(function(x){return x.Number;});
 	return { FullName : u.Name+"" ""+u.LastName, Friend : friend, Details : details };
 }
-from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToString());
+from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(2, queryResult.Count);
@@ -1574,7 +1574,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     }).ToArray()
                                 };
 
-                    Assert.Equal("from Users as u select { RolesList : u.Roles.map(function(a){return {Id:a};}), " +
+                    Assert.Equal("from 'Users' as u select { RolesList : u.Roles.map(function(a){return {Id:a};}), " +
                                  "RolesArray : u.Roles.map(function(a){return {Id:a};}) }", query.ToString());
 
                     var queryResult = query.ToList();
@@ -1615,7 +1615,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                             LastName = u.LastName ?? "Has no last name"
                         };
 
-                    Assert.Equal("from Users as u select { FirstName : u.Name, " +
+                    Assert.Equal("from 'Users' as u select { FirstName : u.Name, " +
                                  "LastName : (u.LastName!=null?u.LastName:\"Has no last name\") }"
                         , query.ToString());
 
@@ -1665,7 +1665,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     UshortParse = ushort.Parse("1234")
                                 };
 
-                    Assert.Equal("from Users as u select { " +
+                    Assert.Equal("from 'Users' as u select { " +
                         "IntParse : parseInt(\"1234\")+parseInt(\"1234\"), " +
                         "DoubleParse : parseFloat(\"1234\"), " +
                         "DecimalParse : parseFloat(\"12.34\"), " +
@@ -1726,7 +1726,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                         (u.Name == "Phil" ? "Bass" : (u.Name == "Bill" ? "Drums" : "Unknown"))
                                 };
 
-                    Assert.Equal("from Users as u select { Name : u.Name, Role : u.Name===\"Jerry\"||u.Name===\"Bob\" ? \"Guitar\" : " +
+                    Assert.Equal("from 'Users' as u select { Name : u.Name, Role : u.Name===\"Jerry\"||u.Name===\"Bob\" ? \"Guitar\" : " +
                                  "(u.Name===\"Phil\" ? \"Bass\" : (u.Name===\"Bill\"?\"Drums\":\"Unknown\")) }"
                     , query.ToString());
 
@@ -1793,7 +1793,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     ReplaceArguments = u.Name.Replace(u.Name, u.LastName),
                                     ReplaceArgumentsComplex = u.Name.Replace(u.Name + "a", u.LastName + "a")
                                 };
-                    Assert.Equal("from Users as u select { " +
+                    Assert.Equal("from 'Users' as u select { " +
                         "PadLeft : u.Name.padStart(10, \"z\"), " +
                         "PadRight : u.Name.padEnd(10, \"z\"), " +
                         "StartsWith : u.Name.startsWith(\"J\"), " +
@@ -1897,7 +1897,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     UsersByNameLastName = u.Users.ToDictionary(a => a.Name, a => a.LastName)
                                 };
 
-                    Assert.Equal("from UserGroups as u select { " +
+                    Assert.Equal("from 'UserGroups' as u select { " +
                         "Name : u.Name, " +
                         "UsersByName : u.Users.reduce(function(_obj, _cur) {_obj[(function(a){return a.Name;})(_cur)] = _cur;return _obj;}, {}), " +
                         "UsersByNameLastName : u.Users.reduce(function(_obj, _cur) {_obj[(function(a){return a.Name;})(_cur)] = (function(a){return a.LastName;})(_cur);return _obj;}, {}) }", query.ToString());
@@ -1948,7 +1948,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     FirstOrDefaultWithPredicate = details.FirstOrDefault(x => x.Number < 3)
                                 };
 
-                    Assert.Equal("from Users as u load u.DetailIds as details[] " +
+                    Assert.Equal("from 'Users' as u load u.DetailIds as details[] " +
                                  "select { Name : u.Name, " +
                                           "First : details.find(function(x){return x.Number>1;}).Number, " +
                                           "FirstOrDefault : details[0], " +
@@ -2003,7 +2003,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                                     }
                                 };
 
-                    Assert.Equal("from Users as u select { Name : u.Name, " +
+                    Assert.Equal("from 'Users' as u select { Name : u.Name, " +
                                  "DetailNumbers : u.DetailIds.map(function(detailId){return {detailId:detailId,detail:load(detailId)};})" +
                                                             ".map(function(__rvn0){return {Number:__rvn0.detail.Number};}) }"
                                 ,query.ToString());
@@ -2157,7 +2157,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     Metadata = session.Advanced.GetMetadataFor(u),
                                 };
 
-                    Assert.Equal("from Users as u select { Name : u.Name, Metadata : getMetadata(u) }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Name : u.Name, Metadata : getMetadata(u) }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -2200,7 +2200,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     Metadata = session.Advanced.GetMetadataFor(u),
                                 };
 
-                    Assert.Equal("from Users as u select { Name : u.Name, Metadata : getMetadata(u) }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Name : u.Name, Metadata : getMetadata(u) }", query.ToString());
 
                     var queryResult = await query.ToListAsync();
 
@@ -2247,7 +2247,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     Detail = detail
                                 };
 
-                    Assert.Equal("from Users as u where u.LastName = $p0 " +
+                    Assert.Equal("from 'Users' as u where u.LastName = $p0 " +
                                  "load $p1 as detail select { Name : u.Name, Detail : detail }", query.ToString());
 
                     var queryResult = query.ToList();
@@ -2256,7 +2256,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                     Assert.Equal("Jerry", queryResult[0].Name);
                     Assert.Equal(15, queryResult[0].Detail.Number);
 
-                    var rawQuery = session.Advanced.RawQuery<RawQueryResult>("from Users as u where u.LastName = \"Garcia\" " +
+                    var rawQuery = session.Advanced.RawQuery<RawQueryResult>("from 'Users' as u where u.LastName = \"Garcia\" " +
                                                                              "load \"details/1\" as detail " +
                                                                              "select { Name : u.Name, Detail : detail}").ToList();
                                     
@@ -2287,7 +2287,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     Metadata = RavenQuery.Metadata(u),
                                 };
 
-                    Assert.Equal("from Users as u select { Name : u.Name, Metadata : getMetadata(u) }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Name : u.Name, Metadata : getMetadata(u) }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -2334,7 +2334,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                     UniqueUser = RavenQuery.CmpXchg<string>("users/1")
                                 };
 
-                    Assert.Equal("from Users as u select { Name : u.Name, UniqueUser : cmpxchg(\"users/1\") }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Name : u.Name, UniqueUser : cmpxchg(\"users/1\") }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -2372,7 +2372,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                             UniqueUser = RavenQuery.CmpXchg<User>("users/1").Name,
                         };
 
-                    Assert.Equal("from Users as u select { Name : u.Name, UniqueUser : cmpxchg(\"users/1\").Name }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Name : u.Name, UniqueUser : cmpxchg(\"users/1\").Name }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -2410,7 +2410,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                         .WhereEquals("Name", CmpXchg.Value("Hera"))
                         .WhereEquals("LastName", CmpXchg.Value("Tom"));
 
-                    Assert.Equal("from Users where Name = cmpxchg($p0) and LastName = cmpxchg($p1)", query.ToString());
+                    Assert.Equal("from 'Users' where Name = cmpxchg($p0) and LastName = cmpxchg($p1)", query.ToString());
                     Assert.Equal(q.ToString(), query.ToString());
 
                     var queryResult = query.ToList();
@@ -2420,17 +2420,17 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                     query = from u in session.Query<User>()
                         where u.Name != RavenQuery.CmpXchg<string>("Hera")
                         select u;
-                    Assert.Equal("from Users where Name != cmpxchg($p0)", query.ToString());
+                    Assert.Equal("from 'Users' where Name != cmpxchg($p0)", query.ToString());
                     queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jerry", queryResult[0].Name);
 
-                    var rql = "from Users where Name = cmpxchg(\"Hera\")";
+                    var rql = "from 'Users' where Name = cmpxchg(\"Hera\")";
                     queryResult = session.Advanced.RawQuery<User>(rql).ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Zeus", queryResult[0].Name);
 
-                    rql = "from Users where id() = cmpxchg(\"Zeus@gmail.com\")";
+                    rql = "from 'Users' where id() = cmpxchg(\"Zeus@gmail.com\")";
                     queryResult = session.Advanced.RawQuery<User>(rql).ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Zeus", queryResult[0].Name);
@@ -2483,7 +2483,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                         select u;
                     var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg.Value("ActiveUser"));
 
-                    Assert.Equal("from Users where Name = cmpxchg($p0).Next.Next.Name", query.ToString());
+                    Assert.Equal("from 'Users' where Name = cmpxchg($p0).Next.Next.Name", query.ToString());
                     Assert.Equal(q.ToString(), query.ToString());
 
                     var queryResult = query.ToList();
@@ -2493,7 +2493,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                     query = from u in session.Query<User>()
                         where u.IsActive == RavenQuery.CmpXchg<Linked>("ActiveUser").Users[0].IsActive
                         select u;
-                    Assert.Equal("from Users where IsActive = cmpxchg($p0).Users[0].IsActive", query.ToString());
+                    Assert.Equal("from 'Users' where IsActive = cmpxchg($p0).Users[0].IsActive", query.ToString());
                     queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Zeus", queryResult[0].Name);
@@ -2544,7 +2544,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
                                                 Status = "Ordered at " + o.OrderedAt + ", by " + employee.FirstName + " " + employee.LastName
                                             };
 
-                    Assert.Equal("from Orders as o where o.OrderedAt.Year <= $p0 " +
+                    Assert.Equal("from 'Orders' as o where o.OrderedAt.Year <= $p0 " +
                                  "load o.Employee as employee " +
                                  "select { Id : id(o), Status : \"Ordered at \"+o.OrderedAt+\", by \"+employee.FirstName+\" \"+employee.LastName }"
                                  , complexLinqQuery.ToString());
@@ -2639,7 +2639,7 @@ from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToStr
 	var TotalSpentOnOrder = function(order){return order.Lines.map(function(l){return l.PricePerUnit*l.Quantity-l.Discount;}).reduce(function(a, b) { return a + b; }, 0);};
 	return { Id : id(o), TotalMoneySpent : TotalSpentOnOrder(o) };
 }
-from Orders as o select output(o)", complexLinqQuery.ToString());
+from 'Orders' as o select output(o)", complexLinqQuery.ToString());
 
                     var queryResult = complexLinqQuery.ToList();
                     Assert.Equal(3, queryResult.Count);
@@ -2701,7 +2701,7 @@ from Orders as o select output(o)", complexLinqQuery.ToString());
 	var employeeId = id(employee);
 	return { OrderId : id(o), EmployeeId1 : employeeId, EmployeeId2 : id(employee) };
 }
-from Orders as o load o.Employee as employee select output(o, employee)" , query.ToString());
+from 'Orders' as o load o.Employee as employee select output(o, employee)" , query.ToString());
                                  
 
                     var queryResult = query.ToList();
@@ -2746,7 +2746,7 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
                                 };
 
 
-                    Assert.Equal("from Orders as 'order' " +
+                    Assert.Equal("from 'Orders' as 'order' " +
                                  "select { Total : order.Lines.map(function(l){return l.PricePerUnit*l.Quantity*(1-l.Discount);}).reduce(function(a, b) { return a + b; }, 0) }"
                                  , query.ToString());
 
@@ -2786,7 +2786,7 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
                                            Birthday = u.Birthday.ToString()
                                        });
 
-                    Assert.Equal("from Users as u where startsWith(u.Birthday, $p0) " +
+                    Assert.Equal("from 'Users' as u where startsWith(u.Birthday, $p0) " +
                                  "select { Name : u.Name, Birthday : u.Birthday.toString() }"
                                 , query.ToString());
 
@@ -2846,7 +2846,7 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
 
                         });
 
-                    Assert.Equal("from Users as u select { " +
+                    Assert.Equal("from 'Users' as u select { " +
                                  "LastOrDefault : u.Roles.slice(-1)[0], " +
                                  "LastOrDefaultWithPredicate : u.Roles.slice().reverse().find(function(x){return x!==\"4\";}), " +
                                  "Take : u.Roles.slice(0, 2), " +
@@ -2917,7 +2917,7 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
 	var detail = load((""details/""+u.DetailShortId));
 	return { Name : u.Name, Detail : detail };
 }
-from Users as u where u.LastName = $p0 select output(u)", query.ToString());
+from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -2973,7 +2973,7 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
                         Result = s.Number * 2
                     };
 
-                Assert.Equal("from Documents as s select { Result : s.Foo*2 }", projection.ToString());
+                Assert.Equal("from 'Documents' as s select { Result : s.Foo*2 }", projection.ToString());
 
                 var result = projection.ToList();
 
@@ -3093,7 +3093,7 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
                         Grandchildren = node.Children.SelectMany(x => x.Children).ToList()
                     });
 
-                    Assert.Equal("from Nodes as node select " +
+                    Assert.Equal("from 'Nodes' as node select " +
                                  "{ Grandchildren : node.Children.reduce(function(a, b) { return a.concat((function(x){return x.Children;})(b)); }, []) }"
                                 , query.ToString());
 
@@ -3145,7 +3145,7 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
                                                       .ToList()
                                 };
                     
-                    Assert.Equal("from TestableDTOs as item select { " +
+                    Assert.Equal("from 'TestableDTOs' as item select { " +
                                  "Id : id(item), " +
                                  "data : item.Data, " +
                                  "values : (function(arr){return arr.length > 0 ? arr : [null]})" +
@@ -3197,7 +3197,7 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
                                     Friends = friendsDetail.Number
                                 };
 
-                    Assert.Equal("from Users as user " +
+                    Assert.Equal("from 'Users' as user " +
                                  "load user.DetailId as detail, user.FriendId as friend, friend.DetailId as friendsDetail " +
                                  "select { Name : user.Name, " +
                                           "Mine : detail.Number, " +
@@ -3273,7 +3273,7 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
 	var manager = load(employee.ReportsTo);
 	return { Company : company.Name, Employee : employee.FirstName+"" ""+employee.LastName, Manager : manager.FirstName+"" ""+manager.LastName };
 }
-from Orders as o load o.Company as company select output(o, company)", query.ToString());
+from 'Orders' as o load o.Company as company select output(o, company)", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -3388,7 +3388,7 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
                                     HasGroups = user.Groups != null
                                 };
                     
-                    Assert.Equal("from Users as user select " +
+                    Assert.Equal("from 'Users' as user select " +
                                  "{ HasGroups : user.Groups!=null }", query.ToString());
                     
                     var queryResult = query.ToList();
@@ -3421,7 +3421,7 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
                                     Name = string.IsNullOrEmpty(user.LastName) ? user.Name : user.LastName,
                                 };
                     
-                    Assert.Equal("from Users as user " +
+                    Assert.Equal("from 'Users' as user " +
                                  "select { Name : (user.LastName == null || user.LastName === \"\")?user.Name:user.LastName }", query.ToString());
                     
                     var queryResult = query.ToList();
@@ -3457,7 +3457,7 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
                                     Name = string.IsNullOrWhiteSpace(user.LastName) ? user.Name : user.LastName,
                                 };
                     
-                    Assert.Equal("from Users as user " +
+                    Assert.Equal("from 'Users' as user " +
                                  "select { Name : (!user.LastName || !user.LastName.trim())?user.Name:user.LastName }", query.ToString());
                     
                     var queryResult = query.ToList();
@@ -3493,7 +3493,7 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
                                     NumberOfRoles = user.Roles.Count()
                                 };
                     
-                    Assert.Equal("from Users as user " +
+                    Assert.Equal("from 'Users' as user " +
                                  "select { Name : user.Name, NumberOfRoles : user.Roles.length }", 
                                 query.ToString());
                     
@@ -3653,7 +3653,7 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
                                           })
                             };
 
-                        Assert.Equal("from Documents as d where (id() in ($p0)) and (d.Deleted = $p1) " +
+                        Assert.Equal("from 'Documents' as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
                                      "Values : d.SubDocuments.filter(function(x){return $p2.length===0||$p3.indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                                      , projection.ToString());
@@ -3708,7 +3708,7 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
                                     })
                             };
 
-                        Assert.Equal("from Documents as d where (id() in ($p0)) and (d.Deleted = $p1) " +
+                        Assert.Equal("from 'Documents' as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
                                      "Values : d.SubDocuments.filter(function(x){return $p2.length===0||$p3.indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                             , projection.ToString());
@@ -3758,7 +3758,7 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
                                     })
                             };
 
-                        Assert.Equal("from Documents as d where (id() in ($p0)) and (d.Deleted = $p1) " +
+                        Assert.Equal("from 'Documents' as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
                                      "Values : d.SubDocuments.filter(function(x){return $p2==null||x.TargetId===$p3;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                             , projection.ToString());

@@ -48,15 +48,20 @@ namespace Raven.Server.Documents.Operations
 
         internal void CleanupOperations()
         {
-            var oldestPossibleCompletedOperation = SystemTime.UtcNow - _maxCompletedTaskLifeTime;
+            CleanupOperationsInternal(_completed, _maxCompletedTaskLifeTime);
+        }
 
-            foreach (var taskAndState in _completed)
+        private static void CleanupOperationsInternal(ConcurrentDictionary<long, Operation> operations, TimeSpan maxCompletedTaskLifeTime)
+        {
+            var oldestPossibleCompletedOperation = SystemTime.UtcNow - maxCompletedTaskLifeTime;
+
+            foreach (var taskAndState in operations)
             {
                 var state = taskAndState.Value;
 
                 if (state.Description.EndTime.HasValue && state.Description.EndTime < oldestPossibleCompletedOperation)
                 {
-                    _completed.TryRemove(taskAndState.Key, out Operation _);
+                    operations.TryRemove(taskAndState.Key, out Operation _);
                 }
             }
         }
@@ -174,8 +179,8 @@ namespace Raven.Server.Documents.Operations
                 if (_active.TryGetValue(id, out Operation completed))
                 {
                     completed.SetCompleted();
-                        // add to completed items before removing from active ones to ensure an operation status is accessible all the time
-                        _completed.TryAdd(id, completed);
+                    // add to completed items before removing from active ones to ensure an operation status is accessible all the time
+                    _completed.TryAdd(id, completed);
                     _active.TryRemove(id, out completed);
                 }
 
@@ -231,7 +236,9 @@ namespace Raven.Server.Documents.Operations
 
         public void LowMemory()
         {
-            _completed.Clear();
+            // cleanup operations older than 1 minute only
+            // Client API might still be waiting for the status
+            CleanupOperationsInternal(_completed, TimeSpan.FromMinutes(1));
         }
 
         public void LowMemoryOver()

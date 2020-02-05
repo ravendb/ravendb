@@ -49,7 +49,7 @@ namespace FastTests.Issues
                                 };
 
                     var expectedQuery =
-                        $"declare function output(x) {{{Environment.NewLine}\tvar test = x.Value===\"Value1\";{Environment.NewLine}\treturn {{ ShouldBeTrue : test }};{Environment.NewLine}}}{Environment.NewLine}from Articles as x select output(x)";
+                        $"declare function output(x) {{{Environment.NewLine}\tvar test = x.Value===\"Value1\";{Environment.NewLine}\treturn {{ ShouldBeTrue : test }};{Environment.NewLine}}}{Environment.NewLine}from 'Articles' as x select output(x)";
 
                     Assert.Equal(expectedQuery, query.ToString());
 
@@ -86,7 +86,7 @@ namespace FastTests.Issues
                                 };
 
                     var expectedQuery =
-                        $"declare function output(x) {{{Environment.NewLine}\tvar test = x.Value===0;{Environment.NewLine}\treturn {{ ShouldBeTrue : test }};{Environment.NewLine}}}{Environment.NewLine}from Articles as x select output(x)";
+                        $"declare function output(x) {{{Environment.NewLine}\tvar test = x.Value===0;{Environment.NewLine}\treturn {{ ShouldBeTrue : test }};{Environment.NewLine}}}{Environment.NewLine}from 'Articles' as x select output(x)";
 
                     Assert.Equal(expectedQuery, query.ToString());
 

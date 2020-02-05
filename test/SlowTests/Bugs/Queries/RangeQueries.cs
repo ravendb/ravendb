@@ -27,7 +27,7 @@ namespace SlowTests.Bugs.Queries
 
                     var query = RavenTestHelper.GetIndexQuery(q);
 
-                    Assert.Equal("from WithIntegers where Sequence > $p0 and Sequence < $p1", query.Query);
+                    Assert.Equal("from 'WithIntegers' where Sequence > $p0 and Sequence < $p1", query.Query);
                     Assert.Equal(150, query.QueryParameters["p0"]);
                     Assert.Equal(300, query.QueryParameters["p1"]);
                 }
@@ -46,7 +46,7 @@ namespace SlowTests.Bugs.Queries
                     
                     var query = RavenTestHelper.GetIndexQuery(q);
 
-                    Assert.Equal("from WithIntegers where Sequence > $p0 and Sequence < $p1", query.Query);
+                    Assert.Equal("from 'WithIntegers' where Sequence > $p0 and Sequence < $p1", query.Query);
                     Assert.Equal(150, query.QueryParameters["p0"]);
                     Assert.Equal(300, query.QueryParameters["p1"]);
                 }
@@ -65,7 +65,7 @@ namespace SlowTests.Bugs.Queries
 
                     var query = RavenTestHelper.GetIndexQuery(q);
 
-                    Assert.Equal("from WithIntegers where Sequence > $p0 and Sequence < $p1", query.Query);
+                    Assert.Equal("from 'WithIntegers' where Sequence > $p0 and Sequence < $p1", query.Query);
                     Assert.Equal(150, query.QueryParameters["p0"]);
                     Assert.Equal(300, query.QueryParameters["p1"]);
                 }
@@ -84,7 +84,7 @@ namespace SlowTests.Bugs.Queries
 
                     var query = RavenTestHelper.GetIndexQuery(q);
                     
-                    Assert.Equal("from WithIntegers where Sequence between $p0 and $p1", query.Query);
+                    Assert.Equal("from 'WithIntegers' where Sequence between $p0 and $p1", query.Query);
                     Assert.Equal(150, query.QueryParameters["p0"]);
                     Assert.Equal(300, query.QueryParameters["p1"]);
                 }

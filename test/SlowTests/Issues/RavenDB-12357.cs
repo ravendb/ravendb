@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                             HasValue = false //this creates js projection
                         };
 
-                    Assert.Equal("from MyDocs as d order by id() select { SomeProp : null, HasValue : false }"
+                    Assert.Equal("from 'MyDocs' as d order by id() select { SomeProp : null, HasValue : false }"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
                             DocId = d.Id
                         };
 
-                    Assert.Equal("from MyDocs order by id() select null as SomeProp, id() as DocId"
+                    Assert.Equal("from 'MyDocs' order by id() select null as SomeProp, id() as DocId"
                         , query.ToString());
 
                     var results = query.ToList();
