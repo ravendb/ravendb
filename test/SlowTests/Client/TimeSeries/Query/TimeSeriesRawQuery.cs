@@ -5220,5 +5220,60 @@ select out(p)
             }
         }
 
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_SelectWithoutGroupBy()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    var id = "people/1";
+
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 30,
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id);
+
+                    tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(63), null, new[] { 369d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+    where Tag != null
+    select max()
+}
+from People as p
+select out(p)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(2));
+
+                    var agg = query.First();
+
+                    Assert.Equal(5, agg.Count);
+
+                    Assert.Equal(179, agg.Results[0].Max[0]);
+
+                }
+            }
+        }
+
     }
 }
