@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.ETL
                 if (value == null)
                     return JsValue.Null;
 
-                AddLoadedCounter(loadCounterReference, counterName, value.Value);
+                AddLoadedCounter(loadCounterReference, counterName, value.Value.Value);
             }
             else
             {

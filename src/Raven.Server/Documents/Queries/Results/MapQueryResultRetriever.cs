@@ -57,14 +57,15 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override long? GetCounter(string docId, string name)
         {
-            return DocumentsStorage.CountersStorage.GetCounterValue(_context, docId, name);
+            (long Value, long Etag)? counterValue = DocumentsStorage.CountersStorage.GetCounterValue(_context, docId, name);
+            return counterValue?.Value;
         }
 
         protected override DynamicJsonValue GetCounterRaw(string docId, string name)
         {
             var djv = new DynamicJsonValue();
 
-            foreach (var (cv, val) in DocumentsStorage.CountersStorage.GetCounterValues(_context, docId, name))
+            foreach (var (cv, val, etag) in DocumentsStorage.CountersStorage.GetCounterValues(_context, docId, name))
             {
                 djv[cv] = val;
             }
