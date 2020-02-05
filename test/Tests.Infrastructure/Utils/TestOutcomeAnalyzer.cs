@@ -48,10 +48,15 @@ namespace Tests.Infrastructure.Utils
 
         public bool ThrewRavenTimeoutException()
         {
-            if (Exception is RavenException == false)
+            var exception = Exception;
+
+            if (exception == null)
+                return false;
+            
+            if (exception is RavenException == false)
                 return false;
 
-            var innerException = Exception.InnerException;
+            var innerException = exception.InnerException;
 
             if (innerException == null)
                 return false;

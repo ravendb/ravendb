@@ -42,8 +42,8 @@ namespace SlowTests.Issues
                     var strBad = queryBad.ToString();
                     var strGood = queryGood.ToString();
 
-                    Assert.Equal("from Users where startsWith(id(), $p0) order by Name, LastName select Name, LastName", strBad);
-                    Assert.Equal("from Users where startsWith(id(), $p0) order by Name, LastName", strGood);
+                    Assert.Equal("from 'Users' where startsWith(id(), $p0) order by Name, LastName select Name, LastName", strBad);
+                    Assert.Equal("from 'Users' where startsWith(id(), $p0) order by Name, LastName", strGood);
 
                     var resultsBad = queryBad.ToList();
                     var resultsGood = queryGood.ToList();

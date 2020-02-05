@@ -53,7 +53,7 @@ namespace SlowTests.Issues
                             SecondTrue = !(doc.Status != DocumentStatus.Success),
                         };
 
-                    Assert.Equal("from Documents as doc select { " +
+                    Assert.Equal("from 'Documents' as doc select { " +
                                  "False : doc.Status!==\"Success\", " +
                                  "SecondFalse : !(doc.Status===\"Success\"), " +
                                  "True : doc.Status===\"Success\", " +

@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 
                 var q1 = query.ToString();
                 var expected =
-                    "from Users as customer select { CustomerName : customer.GivenName+\" \"+customer.FamilyName, " + 
+                    "from 'Users' as customer select { CustomerName : customer.GivenName+\" \"+customer.FamilyName, " +
                     "Phone : Object.keys(customer.Phones).map(function(a){return{Key: a,Value:customer.Phones[a]};}).filter(function(phone){return phone.Key===\"Work\";}) }";
                 Assert.Equal(expected, q1);
 
@@ -62,10 +62,10 @@ namespace SlowTests.Issues
                             select phone
                     };
 
-                
+
                 var q2 = query2.ToString();
                 expected =
-                    "from Users as customer select { CustomerName : customer.GivenName+\" \"+customer.FamilyName, " +
+                    "from 'Users' as customer select { CustomerName : customer.GivenName+\" \"+customer.FamilyName, " +
                     "Phone : Object.keys(customer.Phones2).map(function(a){return{Key: a,Value:customer.Phones2[a]};}).filter(function(phone){return phone.Key===\"Work\";}) }";
                 Assert.Equal(expected, q2);
 
@@ -173,17 +173,17 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = from invoice in session.Query<Invoice>()
-                        let vat = invoice.VATTotals
-                        select new
-                        {
-                            Id = invoice.Id,
-                            VATTotals = vat.Select(b => new VATTotalProjection()
-                            {
-                                Price = b.Value.Price,
-                                Percentage = b.Value.Percentage,
-                                VATName = RavenQuery.Load<VATRate>(b.Value.VATRateId).Name
-                            })
-                        };
+                                let vat = invoice.VATTotals
+                                select new
+                                {
+                                    Id = invoice.Id,
+                                    VATTotals = vat.Select(b => new VATTotalProjection()
+                                    {
+                                        Price = b.Value.Price,
+                                        Percentage = b.Value.Percentage,
+                                        VATName = RavenQuery.Load<VATRate>(b.Value.VATRateId).Name
+                                    })
+                                };
 
 
                     var result = await query.ToListAsync();

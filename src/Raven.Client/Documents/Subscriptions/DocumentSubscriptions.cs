@@ -109,9 +109,9 @@ namespace Raven.Client.Documents.Subscriptions
                     collectionName = conventions.GetCollectionName(tType.GenericTypeArguments[0]);
                 }
                 if (includeRevisions)
-                    criteria.Query = "from " + collectionName + " (Revisions = true)";
+                    criteria.Query = $"from '{collectionName.Replace("'", "\\'")}' (Revisions = true)";
                 else
-                    criteria.Query = "from " + collectionName;
+                    criteria.Query = $"from '{collectionName.Replace("'", "\\'")}'";
                 criteria.Query += " as doc";
             }
 

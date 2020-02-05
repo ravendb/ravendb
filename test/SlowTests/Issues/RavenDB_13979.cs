@@ -33,7 +33,7 @@ namespace SlowTests.Issues
 
                         });
 
-                    Assert.Equal("from Posts where id() = $p0 select Title", query.ToString());
+                    Assert.Equal("from 'Posts' where id() = $p0 select Title", query.ToString());
 
                     var postModels = query.ToList();
 
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 
                         });
 
-                    Assert.Equal("from Posts where exact(id() = $p0) select Title", query.ToString());
+                    Assert.Equal("from 'Posts' where exact(id() = $p0) select Title", query.ToString());
 
                     // Assert.Equal(1, query.ToList().Count); - would fail due to RavenDB-13980
                 }

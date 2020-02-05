@@ -60,7 +60,7 @@ namespace SlowTests.Issues
                                                 }
                                     };
 
-                    Assert.Equal("from Orders as o load o.CategoryListId as categoryList " +
+                    Assert.Equal("from 'Orders' as o load o.CategoryListId as categoryList " +
                                  "select { Id : id(o), Items : o.OrderItems" +
                                     ".map(function(i){return {i:i,cat:categoryList.Categories};})" +
                                     ".map(function(__rvn0){return {__rvn0:__rvn0,id:__rvn0.i.CategoryId};})" +

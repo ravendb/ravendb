@@ -39,7 +39,7 @@ namespace SlowTests.Issues
 
                     var q = session.Query<Song>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Tags.Any(y => y.Any(z => z == "Elektro House")));
 
-                    Assert.Equal(@"from Songs where Tags = $p0", q.ToString());
+                    Assert.Equal(@"from 'Songs' where Tags = $p0", q.ToString());
 
                     results = q.ToList();
 
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
                 {
                     var q = session.Query<Album>().Where(x => x.Tags3D.Any(t1 => t1.Any(t2 => t2.Any(t3 => t3 == "Elektro House"))));
 
-                    Assert.Equal("from Albums where Tags3D = $p0", q.ToString());
+                    Assert.Equal("from 'Albums' where Tags3D = $p0", q.ToString());
 
                     var results = q.ToList();
 
@@ -118,7 +118,7 @@ namespace SlowTests.Issues
                 {
                     var q = session.Query<Album>().Where(x => x.Tags4D.Any(t1 => t1.Any(t2 => t2.Any(t3 => t3.Any(t4 => t4 == "Elektro House")))));
 
-                    Assert.Equal("from Albums where Tags4D = $p0", q.ToString());
+                    Assert.Equal("from 'Albums' where Tags4D = $p0", q.ToString());
 
                     var results = q.ToList();
 
@@ -159,7 +159,7 @@ namespace SlowTests.Issues
                 {
                     var q = session.Query<Album>().Where(x => x.Tags4D.Any(t1 => t1.Any(t2 => t2.Any(t3 => t3.Contains("Elektro House")))));
 
-                    Assert.Equal("from Albums where Tags4D = $p0", q.ToString());
+                    Assert.Equal("from 'Albums' where Tags4D = $p0", q.ToString());
 
                     var results = q.ToList();
 

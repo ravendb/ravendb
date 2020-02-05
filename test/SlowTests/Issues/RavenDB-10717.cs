@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                                     Predicate = u.Birthday < date
                                 };
 
-                    Assert.Equal("from Users as u select { Predicate : compareDates(u.Birthday, $p0, 'LessThan') }"
+                    Assert.Equal("from 'Users' as u select { Predicate : compareDates(u.Birthday, $p0, 'LessThan') }"
                         , query.ToString());
 
                     var result = query.ToList();

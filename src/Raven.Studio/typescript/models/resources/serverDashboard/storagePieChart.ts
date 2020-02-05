@@ -1,5 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import d3 = require('d3');
 
 class storagePieChart {
@@ -81,10 +80,6 @@ class storagePieChart {
             .selectAll(".arc")
             .remove();
     }
-    
-    getColorClassProvider() {
-        return (dbName: string) => this.colorClassScale(dbName);
-    }
 
     onData(data: Array<{ Database: string, Size: number }>, withTween = false) {
         const group = this.svg.select(".pie");
@@ -96,9 +91,9 @@ class storagePieChart {
         const pie = d3.layout.pie<{ Database: string, Size: number }>()
             .value(x => x.Size)
             .sort(null);
-
+        
         const arcs = group.selectAll(".arc")
-            .data(pie(data));
+            .data(pie(data), x => x.data.Database);
         
         arcs.exit().remove();
         
@@ -112,7 +107,7 @@ class storagePieChart {
         paths
             .attr("data-db-name", d => d.data.Database)
             .attr("d", d => arc(d as any))
-            .attr("class", d => this.colorClassScale(d.data.Database))
+            .attr("class", d => this.getDatabaseColorForPie(d.data.Database))
             .each(function (d) { this._current = d; });
         
         paths
@@ -129,15 +124,21 @@ class storagePieChart {
             arcs.select("path")
                 .transition()
                 .attrTween("d", arcTween)
-                .attr("class",d => this.colorClassScale(d.data.Database));
+                .attr("class", d => this.getDatabaseColorForPie(d.data.Database));
         } else {
             arcs.select("path")
                 .attr("d", d => arc(d as any))
-                .attr("class", d => this.colorClassScale(d.data.Database));
+                .attr("class", d => this.getDatabaseColorForPie(d.data.Database));
         }
-
     }
-   
+    
+    private getDatabaseColorForPie(dbName: string): string {
+        return dbName === '<System>' ? "color-11" : this.colorClassScale(dbName);        
+    }
+
+    getColorClassProvider() {
+        return (dbName: string) => this.getDatabaseColorForPie(dbName);
+    }
 }
 
 export = storagePieChart;

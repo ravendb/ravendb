@@ -312,6 +312,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
             long workingSetInBytes = memInfo.WorkingSet.GetValue(SizeUnit.Bytes);
+            var dirtyMemoryState = MemoryInformation.GetDirtyMemoryState();
             var djv = new DynamicJsonValue
             {
                 [nameof(MemoryInfo.WorkingSet)] = workingSetInBytes,
@@ -320,6 +321,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.TotalMemoryMapped)] = totalMapping,
                 [nameof(MemoryInfo.TotalScratchDirtyMemory)] = Size.Humane(memInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.PhysicalMem)] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
+                [nameof(DirtyMemoryState.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
+                ["DirtyMemory"] = Size.Humane(dirtyMemoryState.TotalDirtyInBytes),
                 [nameof(MemoryInfo.FreeMem)] = Size.Humane(memInfo.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.LowMemLastOneMinute)] = Size.Humane(memoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),

@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                             IdCount = x.IdCollection.Length
                         });
 
-                    Assert.Equal("from Documents select IdCollection.Length as IdCount", queryable.ToString());
+                    Assert.Equal("from 'Documents' select IdCollection.Length as IdCount", queryable.ToString());
 
                     var doc = queryable.SingleOrDefault();
 
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                             IdCount = x.IdCollection.Length
                         });
 
-                    Assert.Equal("from Documents select IdCollection.Length as IdCount", queryable.ToString());
+                    Assert.Equal("from 'Documents' select IdCollection.Length as IdCount", queryable.ToString());
 
                     var doc = queryable.SingleOrDefault();
 

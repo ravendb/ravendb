@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                                     HasValue = d.NullableInt.HasValue
                                 };
 
-                    Assert.Equal("from MyDocs as d order by id() select { HasValue : d.NullableInt != null }"
+                    Assert.Equal("from 'MyDocs' as d order by id() select { HasValue : d.NullableInt != null }"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -96,7 +96,7 @@ namespace SlowTests.Issues
                                     HasValue = d.NullableInt.HasValue
                                 };
 
-                    Assert.Equal("from MyDocs as d order by id() select { HasValue : d.NullableInt != null }"
+                    Assert.Equal("from 'MyDocs' as d order by id() select { HasValue : d.NullableInt != null }"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -122,7 +122,7 @@ namespace SlowTests.Issues
                                     HasValue = d.NullableInt >= 0
                                 };
 
-                    Assert.Equal("from MyDocs as d select { " +
+                    Assert.Equal("from 'MyDocs' as d select { " +
                                  "HasValue : d.NullableInt>0||d.NullableInt===0 }"
                                  , query.ToString());
 
@@ -158,7 +158,7 @@ namespace SlowTests.Issues
                         });
 
                     var queryString = query.ToString();
-                    Assert.Equal("from People as x select { BirthDay : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getDate():null, " +
+                    Assert.Equal("from 'People' as x select { BirthDay : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getDate():null, " +
                                  "BirthMonth : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getMonth()+1:null, " +
                                  "BirthYear : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getFullYear():null }", queryString);
 
@@ -197,7 +197,7 @@ namespace SlowTests.Issues
                         });
 
                     var queryString = query.ToString();
-                    Assert.Equal("from People select " +
+                    Assert.Equal("from 'People' select " +
                                  "BirthDate.Day as BirthDay, " +
                                  "BirthDate.Month as BirthMonth, " +
                                  "BirthDate.Year as BirthYear, " +

@@ -47,19 +47,19 @@ namespace SlowTests.Issues
                         .Spatial(factory => factory.Point(x => x.Latitude, x => x.Longitude), factory => factory.WithinRadius(10, 10, 20));
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from Items where spatial.within(spatial.point(Latitude, Longitude), spatial.circle($p0, $p1, $p2))", iq.Query);
+                    Assert.Equal("from 'Items' where spatial.within(spatial.point(Latitude, Longitude), spatial.circle($p0, $p1, $p2))", iq.Query);
 
                     var dq = session.Advanced.DocumentQuery<Item>()
                         .Spatial(factory => factory.Point(x => x.Latitude, x => x.Longitude), factory => factory.WithinRadius(10, 10, 20));
 
                     iq = dq.GetIndexQuery();
-                    Assert.Equal("from Items where spatial.within(spatial.point(Latitude, Longitude), spatial.circle($p0, $p1, $p2))", iq.Query);
+                    Assert.Equal("from 'Items' where spatial.within(spatial.point(Latitude, Longitude), spatial.circle($p0, $p1, $p2))", iq.Query);
 
                     dq = session.Advanced.DocumentQuery<Item>()
                         .Spatial(factory => factory.Wkt(x => x.ShapeWkt), factory => factory.WithinRadius(10, 10, 20));
 
                     iq = dq.GetIndexQuery();
-                    Assert.Equal("from Items where spatial.within(spatial.wkt(ShapeWkt), spatial.circle($p0, $p1, $p2))", iq.Query);
+                    Assert.Equal("from 'Items' where spatial.within(spatial.wkt(ShapeWkt), spatial.circle($p0, $p1, $p2))", iq.Query);
                 }
 
                 using (var session = store.OpenSession())

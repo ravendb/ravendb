@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 	var detail = load((""details/""+u.DetailShortId));
 	return { Name : u.Name, Detail : detail };
 }
-from Users as u where u.LastName = $p0 select output(u)", query.ToString());
+from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -101,7 +101,7 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
 	var detailId = ""d""+u.Name[1]+""ta""+u.LastName[4]+""ls""+$p0+u.DetailShortId+""-""+$p1;
 	return { Name : u.Name, DetailId : detailId, Detail : load(detailId) };
 }
-from Users as u select output(u, $p0, $p1)", query.ToString());
+from 'Users' as u select output(u, $p0, $p1)", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -150,7 +150,7 @@ from Users as u select output(u, $p0, $p1)", query.ToString());
 	var detail = load(detailId);
 	return { Name : u.Name, Detail : detail };
 }
-from Users as u select output(u)", query.ToString());
+from 'Users' as u select output(u)", query.ToString());
 
                     var queryResult = query.ToList();
 

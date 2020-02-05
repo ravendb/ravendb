@@ -38,7 +38,7 @@ namespace SlowTests.Tests.Linq
                     var q = Queryable.Where(session.Query<Renamed>(), x => x.Name == "red");
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from Renameds where Yellow = $p0", iq.Query);
+                    Assert.Equal("from 'Renameds' where Yellow = $p0", iq.Query);
                     Assert.Equal("red", iq.QueryParameters["p0"]);
                 }
             }
@@ -55,7 +55,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => !x.IsActive);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where IsActive = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where IsActive = $p0", iq.Query);
                     Assert.Equal(false, iq.QueryParameters["p0"]);
                 }
             }
@@ -72,7 +72,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.IsActive == false);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where IsActive = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where IsActive = $p0", iq.Query);
                     Assert.Equal(false, iq.QueryParameters["p0"]);
                 }
             }
@@ -90,7 +90,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.Rate >= min && x.Rate <= max);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Rate between $p0 and $p1", q.ToString());
+                    Assert.Equal("from 'IndexedUsers' where Rate between $p0 and $p1", q.ToString());
                     Assert.Equal(min, iq.QueryParameters["p0"]);
                     Assert.Equal(max, iq.QueryParameters["p1"]);
                 }
@@ -108,7 +108,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => ((Dog)x.Animal).Color == "black");
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Animal.Color = $p0", q.ToString());
+                    Assert.Equal("from 'IndexedUsers' where Animal.Color = $p0", q.ToString());
                     Assert.Equal("black", iq.QueryParameters["p0"]);
                 }
             }
@@ -125,7 +125,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.StartsWith("foo"));
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where startsWith(Name, $p0)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where startsWith(Name, $p0)", iq.Query);
                     Assert.Equal("foo", iq.QueryParameters["p0"]);
                 }
             }
@@ -142,7 +142,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.StartsWith("foo") == true);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where startsWith(Name, $p0)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where startsWith(Name, $p0)", iq.Query);
                     Assert.Equal("foo", iq.QueryParameters["p0"]);
                 }
             }
@@ -159,7 +159,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.StartsWith("foo") == false);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (true and not startsWith(Name, $p0))", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (true and not startsWith(Name, $p0))", iq.Query);
                     Assert.Equal("foo", iq.QueryParameters["p0"]);
                 }
             }
@@ -176,7 +176,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => !user.Name.StartsWith("foo"));
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (true and not startsWith(Name, $p0))", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (true and not startsWith(Name, $p0))", iq.Query);
                     Assert.Equal("foo", iq.QueryParameters["p0"]);
                 }
             }
@@ -194,7 +194,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => string.IsNullOrEmpty(user.Name));
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (Name = $p0 or Name = $p1)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (Name = $p0 or Name = $p1)", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -212,7 +212,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => string.IsNullOrEmpty(user.Name) == true);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (Name = $p0 or Name = $p1)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (Name = $p0 or Name = $p1)", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -230,7 +230,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => string.IsNullOrEmpty(user.Name) == false);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (true and not (Name = $p0 or Name = $p1))", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (true and not (Name = $p0 or Name = $p1))", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -248,7 +248,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => !string.IsNullOrEmpty(user.Name));
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (true and not (Name = $p0 or Name = $p1))", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (true and not (Name = $p0 or Name = $p1))", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -266,7 +266,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.Any());
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (Name != $p0 and Name != $p1)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (Name != $p0 and Name != $p1)", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -284,7 +284,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.Any() == true);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (Name != $p0 and Name != $p1)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (Name != $p0 and Name != $p1)", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -302,7 +302,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.Any() == false);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (true and not (Name != $p0 and Name != $p1))", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (true and not (Name != $p0 and Name != $p1))", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -320,7 +320,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.Any() == false);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (true and not (Name != $p0 and Name != $p1))", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (true and not (Name != $p0 and Name != $p1))", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
 
@@ -357,7 +357,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name == "ayende" && (user.Name == "rob" || user.Name == "dave"));
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0 and (Name = $p1 or Name = $p2)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0 and (Name = $p1 or Name = $p2)", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                     Assert.Equal("rob", iq.QueryParameters["p1"]);
                     Assert.Equal("dave", iq.QueryParameters["p2"]);
@@ -380,7 +380,7 @@ namespace SlowTests.Tests.Linq
                     q = q.Where(user => (user.Name == "rob" || user.Name == "dave"));
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (Name = $p0) and (Name = $p1 or Name = $p2)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (Name = $p0) and (Name = $p1 or Name = $p2)", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                     Assert.Equal("rob", iq.QueryParameters["p1"]);
                     Assert.Equal("dave", iq.QueryParameters["p2"]);
@@ -401,7 +401,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                 }
             }
@@ -420,7 +420,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Age < $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Age < $p0", iq.Query);
                     Assert.Equal(15, iq.QueryParameters["p0"]);
                 }
             }
@@ -439,7 +439,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Age <= $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Age <= $p0", iq.Query);
                     Assert.Equal(15, iq.QueryParameters["p0"]);
                 }
             }
@@ -458,7 +458,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Age > $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Age > $p0", iq.Query);
                     Assert.Equal(15, iq.QueryParameters["p0"]);
                 }
             }
@@ -477,7 +477,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Age >= $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Age >= $p0", iq.Query);
                     Assert.Equal(15, iq.QueryParameters["p0"]);
                 }
             }
@@ -496,7 +496,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Age = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Age = $p0", iq.Query);
                     Assert.Equal(15, iq.QueryParameters["p0"]);
                 }
             }
@@ -515,7 +515,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Age != $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Age != $p0", iq.Query);
                     Assert.Equal(15, iq.QueryParameters["p0"]);
                 }
             }
@@ -534,7 +534,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                 }
             }
@@ -564,7 +564,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal(ayende, iq.QueryParameters["p0"]);
                 }
             }
@@ -583,7 +583,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                 }
             }
@@ -604,7 +604,7 @@ namespace SlowTests.Tests.Linq
                     Assert.NotNull(q);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                 }
             }
@@ -625,7 +625,7 @@ namespace SlowTests.Tests.Linq
                     Assert.NotNull(q);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                 }
             }
@@ -646,7 +646,7 @@ namespace SlowTests.Tests.Linq
                     Assert.NotNull(q);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                 }
             }
@@ -667,7 +667,7 @@ namespace SlowTests.Tests.Linq
                     Assert.NotNull(q);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where startsWith(Name, $p0)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where startsWith(Name, $p0)", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                 }
             }
@@ -689,7 +689,7 @@ namespace SlowTests.Tests.Linq
                     Assert.NotNull(q);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where startsWith(Name, $p0)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where startsWith(Name, $p0)", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                 }
             }
@@ -710,7 +710,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("ayende1", iq.QueryParameters["p0"]);
                 }
             }
@@ -726,7 +726,7 @@ namespace SlowTests.Tests.Linq
                     var indexedUsers = GetRavenQueryInspector(session);
                     var q = from user in indexedUsers
                             select user;
-                    Assert.Equal("from IndexedUsers", q.ToString());
+                    Assert.Equal("from 'IndexedUsers'", q.ToString());
                 }
             }
         }
@@ -744,7 +744,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0 and Email = $p1", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0 and Email = $p1", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                     Assert.Equal("ayende@ayende.com", iq.QueryParameters["p1"]);
                 }
@@ -764,7 +764,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0 or Email = $p1", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0 or Email = $p1", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                     Assert.Equal("ayende@ayende.com", iq.QueryParameters["p1"]);
                 }
@@ -784,7 +784,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (Name = $p0 and Name = $p1) or Name = $p2", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (Name = $p0 and Name = $p1) or Name = $p2", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                     Assert.Equal("rob", iq.QueryParameters["p1"]);
                     Assert.Equal("dave", iq.QueryParameters["p2"]);
@@ -805,7 +805,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0 and (Name = $p1 or Name = $p2)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0 and (Name = $p1 or Name = $p2)", iq.Query);
                     Assert.Equal("ayende", iq.QueryParameters["p0"]);
                     Assert.Equal("rob", iq.QueryParameters["p1"]);
                     Assert.Equal("dave", iq.QueryParameters["p2"]);
@@ -826,7 +826,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Birthday < $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Birthday < $p0", iq.Query);
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -847,7 +847,7 @@ namespace SlowTests.Tests.Linq
                         .CloseSubclause();
 
                     var iq = query.GetIndexQuery();
-                    Assert.Equal("from IndexedUsers where true and not (IsPublished = $p0 and Tags.Length = $p1)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where true and not (IsPublished = $p0 and Tags.Length = $p1)", iq.Query);
                     Assert.Equal(true, iq.QueryParameters["p0"]);
                     Assert.Equal(0, iq.QueryParameters["p1"]);
                 }
@@ -867,7 +867,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Birthday = $p0", q.ToString());
+                    Assert.Equal("from 'IndexedUsers' where Birthday = $p0", q.ToString());
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -886,7 +886,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Birthday <= $p0", q.ToString());
+                    Assert.Equal("from 'IndexedUsers' where Birthday <= $p0", q.ToString());
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -905,7 +905,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Birthday > $p0", q.ToString());
+                    Assert.Equal("from 'IndexedUsers' where Birthday > $p0", q.ToString());
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -924,7 +924,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Birthday >= $p0", q.ToString());
+                    Assert.Equal("from 'IndexedUsers' where Birthday >= $p0", q.ToString());
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -943,7 +943,7 @@ namespace SlowTests.Tests.Linq
                             select user.Name;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Birthday >= $p0 select Name", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Birthday >= $p0 select Name", iq.Query);
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -963,7 +963,7 @@ namespace SlowTests.Tests.Linq
                             select new { user.Name, user.Age };
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Birthday >= $p0 select Name, Age", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Birthday >= $p0 select Name, Age", iq.Query);
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -982,7 +982,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Age = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Age = $p0", iq.Query);
                     Assert.Equal(3, iq.QueryParameters["p0"]);
                 }
             }
@@ -1002,7 +1002,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Age > $p0", q.ToString());
+                    Assert.Equal("from 'IndexedUsers' where Age > $p0", q.ToString());
                     Assert.Equal(3, iq.QueryParameters["p0"]);
                 }
             }
@@ -1021,7 +1021,7 @@ namespace SlowTests.Tests.Linq
                             select new { user.Name, user.Age };
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Birthday >= $p0 select Name, Age", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Birthday >= $p0 select Name, Age", iq.Query);
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -1040,7 +1040,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Age = $p0", q.ToString());
+                    Assert.Equal("from 'IndexedUsers' where Age = $p0", q.ToString());
                     Assert.Equal(3, iq.QueryParameters["p0"]);
                 }
             }
@@ -1060,7 +1060,7 @@ namespace SlowTests.Tests.Linq
                         .Where(x => x.Name == "ayende");
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (Age = $p0) and (Name = $p1)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (Age = $p0) and (Name = $p1)", iq.Query);
                     Assert.Equal(3, iq.QueryParameters["p0"]);
                     Assert.Equal("ayende", iq.QueryParameters["p1"]);
                 }
@@ -1078,7 +1078,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.Properties.Any(y => y.Key == "first"));
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Properties[].Key = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Properties[].Key = $p0", iq.Query);
                     Assert.Equal("first", iq.QueryParameters["p0"]);
                 }
             }
@@ -1112,7 +1112,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.Properties.Any());
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where exists(Properties)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where exists(Properties)", iq.Query);
                 }
             }
         }
@@ -1128,7 +1128,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.Properties.Any() == true);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where exists(Properties)", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where exists(Properties)", iq.Query);
                 }
             }
         }
@@ -1144,7 +1144,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.Properties.Any() == false);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where (true and not exists(Properties))", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where (true and not exists(Properties))", iq.Query);
                 }
             }
         }
@@ -1160,7 +1160,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.Name == "NOT");
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("NOT", iq.QueryParameters["p0"]);
                 }
             }
@@ -1177,7 +1177,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.Name == "OR");
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("OR", iq.QueryParameters["p0"]);
                 }
             }
@@ -1194,7 +1194,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.Name == "AND");
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("AND", iq.QueryParameters["p0"]);
                 }
             }
@@ -1211,7 +1211,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(x => x.Name == "And");
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("from IndexedUsers where Name = $p0", iq.Query);
+                    Assert.Equal("from 'IndexedUsers' where Name = $p0", iq.Query);
                     Assert.Equal("And", iq.QueryParameters["p0"]);
                 }
             }

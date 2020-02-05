@@ -682,7 +682,7 @@ namespace SlowTests.Client.Counters
                     var query = from user in session.Query<User>()
                                 select RavenQuery.Counter("Downloads");
 
-                    Assert.Equal("from Users select counter(Downloads) as Downloads", query.ToString());
+                    Assert.Equal("from 'Users' select counter(Downloads) as Downloads", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -717,7 +717,7 @@ namespace SlowTests.Client.Counters
                     var query = from user in session.Query<User>()
                                 select RavenQuery.Counter(user, "Downloads");
 
-                    Assert.Equal("from Users as user select counter(user, Downloads) as Downloads", query.ToString());
+                    Assert.Equal("from 'Users' as user select counter(user, Downloads) as Downloads", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -755,7 +755,7 @@ namespace SlowTests.Client.Counters
                                     DownloadsCount = RavenQuery.Counter(user, "Downloads")
                                 };
 
-                    Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
+                    Assert.Equal("from 'Users' as user select counter(user, Downloads) as DownloadsCount", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -793,7 +793,7 @@ namespace SlowTests.Client.Counters
                                     DownloadsCount = RavenQuery.Counter(user, "Downloads")
                                 };
 
-                    Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
+                    Assert.Equal("from 'Users' as user select counter(user, Downloads) as DownloadsCount", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -829,7 +829,7 @@ namespace SlowTests.Client.Counters
                                 let f = RavenQuery.Load<User>(u.FriendId)
                                 select RavenQuery.Counter(f, "Downloads");
 
-                    Assert.Equal("from Users as u load u.FriendId as f " +
+                    Assert.Equal("from 'Users' as u load u.FriendId as f " +
                                  "select counter(f, Downloads) as Downloads", query.ToString());
 
                     var queryResult = query.ToList();
@@ -875,7 +875,7 @@ namespace SlowTests.Client.Counters
                                     Likes = RavenQuery.Counter(user, "Likes")
                                 };
 
-                    Assert.Equal("from Users as user " +
+                    Assert.Equal("from 'Users' as user " +
                                  "select counter(user, Downloads) as Downloads, " +
                                         "counter(user, Likes) as Likes"
                                 , query.ToString());
@@ -918,7 +918,7 @@ namespace SlowTests.Client.Counters
                     var query = from user in session.Query<User>()
                                 select session.CountersFor(user).Get("Downloads");
 
-                    Assert.Equal("from Users as user select counter(user, Downloads) as Downloads", query.ToString());
+                    Assert.Equal("from 'Users' as user select counter(user, Downloads) as Downloads", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -956,7 +956,7 @@ namespace SlowTests.Client.Counters
                                     DownloadsCount = session.CountersFor(user).Get("Downloads")
                                 };
 
-                    Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
+                    Assert.Equal("from 'Users' as user select counter(user, Downloads) as DownloadsCount", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -994,7 +994,7 @@ namespace SlowTests.Client.Counters
                                     DownloadsCount = session.CountersFor(user).Get("Downloads")
                                 };
 
-                    Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
+                    Assert.Equal("from 'Users' as user select counter(user, Downloads) as DownloadsCount", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -1030,7 +1030,7 @@ namespace SlowTests.Client.Counters
                                 let f = RavenQuery.Load<User>(u.FriendId)
                                 select session.CountersFor(f).Get("Downloads");
 
-                    Assert.Equal("from Users as u load u.FriendId as f " +
+                    Assert.Equal("from 'Users' as u load u.FriendId as f " +
                                  "select counter(f, Downloads) as Downloads", query.ToString());
 
                     var queryResult = query.ToList();
@@ -1076,7 +1076,7 @@ namespace SlowTests.Client.Counters
                                     Likes = session.CountersFor(user).Get("Likes")
                                 };
 
-                    Assert.Equal("from Users as user " +
+                    Assert.Equal("from 'Users' as user " +
                                  "select counter(user, Downloads) as Downloads, " +
                                         "counter(user, Likes) as Likes"
                                 , query.ToString());
@@ -1124,7 +1124,7 @@ namespace SlowTests.Client.Counters
                                     Downloads = RavenQuery.Counter(user, "Downloads")
                                 };
 
-                    Assert.Equal("from Users as user select { Name : user.Name+user.Age, Downloads : counter(user, \"Downloads\") }"
+                    Assert.Equal("from 'Users' as user select { Name : user.Name+user.Age, Downloads : counter(user, \"Downloads\") }"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1170,7 +1170,7 @@ namespace SlowTests.Client.Counters
                                     Downloads = session.CountersFor(user).Get("Downloads")
                                 };
 
-                    Assert.Equal("from Users as user select { Name : user.Name+user.Age, Downloads : counter(user, \"Downloads\") }"
+                    Assert.Equal("from 'Users' as user select { Name : user.Name+user.Age, Downloads : counter(user, \"Downloads\") }"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1216,7 +1216,7 @@ namespace SlowTests.Client.Counters
                                     Downloads = RavenQuery.Counter(user, "Downloads")
                                 };
 
-                    Assert.Equal("from Users as user select " +
+                    Assert.Equal("from 'Users' as user select " +
                                  "counter(user, Likes) as Likes, counter(user, Downloads) as Downloads"
                                 , query.ToString());
 
@@ -1269,7 +1269,7 @@ namespace SlowTests.Client.Counters
 	var c = counter(user, ""Downloads"");
 	return { Name : user.Name, Downloads : c };
 }
-from Users as user select output(user)", query.ToString());
+from 'Users' as user select output(user)", query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(3, queryResult.Count);
@@ -1320,7 +1320,7 @@ from Users as user select output(user)", query.ToString());
 	var c = counter(user, ""Downloads"");
 	return { Name : user.Name, Downloads : c };
 }
-from Users as user select output(user)", query.ToString());
+from 'Users' as user select output(user)", query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(3, queryResult.Count);
@@ -1367,7 +1367,7 @@ from Users as user select output(user)", query.ToString());
                                     FriendsDownloads = RavenQuery.Counter(f, "Downloads")
                                 };
 
-                    Assert.Equal("from Users as user " +
+                    Assert.Equal("from 'Users' as user " +
                                  "load user.FriendId as f " +
                                  "select { Name : user.Name, " +
                                           "Downloads : counter(user, \"Downloads\"), " +
@@ -1425,7 +1425,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounter("Downloads"));
 
-                    Assert.Equal("from Orders include counters('Downloads')"
+                    Assert.Equal("from 'Orders' include counters('Downloads')"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1489,7 +1489,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounters(new[] { "Downloads", "Likes" }));
 
-                    Assert.Equal("from Orders include counters('Downloads'),counters('Likes')"
+                    Assert.Equal("from 'Orders' include counters('Downloads'),counters('Likes')"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1564,7 +1564,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeAllCounters());
 
-                    Assert.Equal("from Orders include counters()"
+                    Assert.Equal("from 'Orders' include counters()"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1645,7 +1645,7 @@ from Users as user select output(user)", query.ToString());
                         .Include(i => i.IncludeCounter("Downloads")
                             .IncludeDocuments(x => x.Company));
 
-                    Assert.Equal("from Orders include " +
+                    Assert.Equal("from 'Orders' include " +
                                  "Company,counters('Downloads')"
                                 , query.ToString());
 
@@ -1723,7 +1723,7 @@ from Users as user select output(user)", query.ToString());
                         .Include(i => i.IncludeCounter("Downloads")
                             .IncludeDocuments(x => x.Company));
 
-                    Assert.Equal("from Orders include " +
+                    Assert.Equal("from 'Orders' include " +
                                  "Company,counters('Downloads')"
                                 , query.ToString());
 
@@ -1815,7 +1815,7 @@ from Users as user select output(user)", query.ToString());
 
                             .Where(x => x.ShipTo.Country == "Brazil");
 
-                    Assert.Equal("from Orders where ShipTo.Country = $p0 " +
+                    Assert.Equal("from 'Orders' where ShipTo.Country = $p0 " +
                                  "include Company,counters('Downloads')"
                                 , query.ToString());
 
@@ -1912,7 +1912,7 @@ from Users as user select output(user)", query.ToString());
 
                             .Where(x => x.ShipTo.Country == "Brazil");
 
-                    Assert.Equal("from Orders where ShipTo.Country = $p0 " +
+                    Assert.Equal("from 'Orders' where ShipTo.Country = $p0 " +
                                  "include Company,counters('Downloads')"
                                 , query.ToString());
 
@@ -2336,7 +2336,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounter(o => o.Employee, "Downloads"));
 
-                    Assert.Equal("from Orders as o " +
+                    Assert.Equal("from 'Orders' as o " +
                                  "include counters(o.Employee, 'Downloads')"
                         , query.ToString());
 
@@ -2403,7 +2403,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounter(o => o.Employee, "Downloads"));
 
-                    Assert.Equal("from Orders as o " +
+                    Assert.Equal("from 'Orders' as o " +
                                  "include counters(o.Employee, 'Downloads')"
                         , query.ToString());
 
@@ -2473,7 +2473,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounters(o => o.Employee, new[] { "Downloads", "Likes" }));
 
-                    Assert.Equal("from Orders as o " +
+                    Assert.Equal("from 'Orders' as o " +
                                  "include counters(o.Employee, 'Downloads'),counters(o.Employee, 'Likes')"
                         , query.ToString());
 
@@ -2549,7 +2549,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeCounter("Likes")
                             .IncludeCounter(x => x.Employee, "Downloads"));
 
-                    Assert.Equal("from Orders as x " +
+                    Assert.Equal("from 'Orders' as x " +
                                  "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
@@ -2637,7 +2637,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeCounter("Likes")
                             .IncludeCounter(x => x.Employee, "Downloads"));
 
-                    Assert.Equal("from Orders as x " +
+                    Assert.Equal("from 'Orders' as x " +
                                  "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
@@ -2729,7 +2729,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeCounter(x => x.Employee, "Downloads"))
                         .Where(o => o.OrderedAt.Year < 2000);
 
-                    Assert.Equal("from Orders as x where x.OrderedAt.Year < $p0 " +
+                    Assert.Equal("from 'Orders' as x where x.OrderedAt.Year < $p0 " +
                                  "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
@@ -2818,7 +2818,7 @@ from Users as user select output(user)", query.ToString());
                             o.Employee
                         });
 
-                    Assert.Equal("from Orders as x " +
+                    Assert.Equal("from 'Orders' as x " +
                                  "select id() as Id, Employee " +
                                  "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
@@ -2914,7 +2914,7 @@ from Users as user select output(user)", query.ToString());
                             o.Employee
                         });
 
-                    Assert.Equal("from Orders as x " +
+                    Assert.Equal("from 'Orders' as x " +
                                  "select id() as Id, Employee " +
                                  "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
@@ -3019,7 +3019,7 @@ from Users as user select output(user)", query.ToString());
                                     Foo = o.Employee + o.Company
                                 };
 
-                    Assert.Equal("from Orders as o " +
+                    Assert.Equal("from 'Orders' as o " +
                                  "where o.OrderedAt.Year < $p0 " +
                                  "select { Id : id(o), OrderedAt : o.OrderedAt, " +
                                     "Employee : o.Employee, Foo : o.Employee+o.Company } " +
@@ -3126,7 +3126,7 @@ from Users as user select output(user)", query.ToString());
                                     Foo = o.Employee + o.Company
                                 };
 
-                    Assert.Equal("from Orders as o " +
+                    Assert.Equal("from 'Orders' as o " +
                                  "where o.OrderedAt.Year < $p0 " +
                                  "select { Id : id(o), OrderedAt : o.OrderedAt, " +
                                     "Employee : o.Employee, Foo : o.Employee+o.Company } " +
@@ -3224,7 +3224,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeAllCounters()
                             .IncludeAllCounters(x => x.Employee));
 
-                    Assert.Equal("from Orders as x " +
+                    Assert.Equal("from 'Orders' as x " +
                                  "include counters(x),counters(x.Employee)"
                         , query.ToString());
 
@@ -3324,7 +3324,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeCounter("Likes")
                             .IncludeCounter(x => x.Employee, "Downloads"));
 
-                    Assert.Equal("from Orders as x " +
+                    Assert.Equal("from 'Orders' as x " +
                                  "include Employee,counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 

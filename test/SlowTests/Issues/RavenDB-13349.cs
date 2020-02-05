@@ -57,7 +57,7 @@ namespace SlowTests.Issues
                     var query = session.Query<User>()
                         .Where(x => x.Address.City == "city1");
 
-                    Assert.Equal("from Users where user_address.city_name = $p0", query.ToString());
+                    Assert.Equal("from 'Users' where user_address.city_name = $p0", query.ToString());
 
                     var result = await query.ToListAsync();
 
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
                     var query = session.Query<User>()
                         .Select(x => new { CityName = x.Address.City });
 
-                    Assert.Equal("from Users select user_address.city_name as CityName", query.ToString());
+                    Assert.Equal("from 'Users' select user_address.city_name as CityName", query.ToString());
 
                     var result = await query.ToListAsync();
 
