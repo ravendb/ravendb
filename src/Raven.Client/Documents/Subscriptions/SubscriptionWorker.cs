@@ -77,7 +77,11 @@ namespace Raven.Client.Documents.Subscriptions
             if (_disposed)
                 return;
 
-            AsyncHelpers.RunSync(() => DisposeAsync(waitForSubscriptionTask).AsTask());
+            var dispose = DisposeAsync(waitForSubscriptionTask);
+            if (dispose.IsCompletedSuccessfully)
+                return;
+
+            AsyncHelpers.RunSync(() => dispose.AsTask());
         }
 
         public ValueTask DisposeAsync()
@@ -350,7 +354,7 @@ namespace Raven.Client.Documents.Subscriptions
                     Dictionary<string, string> reasonsDictionary = new Dictionary<string, string>();
                     if (rawReasons != null && rawReasons is BlittableJsonReaderArray rawReasonsArray)
                     {
-                        foreach(var item in rawReasonsArray)
+                        foreach (var item in rawReasonsArray)
                         {
                             if (item is BlittableJsonReaderObject itemAsBlittable)
                             {
@@ -364,7 +368,7 @@ namespace Raven.Client.Documents.Subscriptions
                         }
                     }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine,reasonsDictionary.Select(x=>$"{x.Key}:{x.Value}"))}",
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine, reasonsDictionary.Select(x => $"{x.Key}:{x.Value}"))}",
                         appropriateNode,
                         reasonsDictionary);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect:
