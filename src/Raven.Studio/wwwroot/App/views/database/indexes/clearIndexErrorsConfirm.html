@@ -1,0 +1,29 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title" data-bind="text: title"></h4>
+        </div>
+        <div class="modal-body">
+            <p data-bind="html: subTitleHtml"></p>
+            <div data-bind="if: !clearAllIndexes() && indexesToClear().length">
+                <ul data-bind="foreach: indexesToClear()" style="max-height: 200px; overflow-y: auto;">
+                    <li class="padding padding-xs">
+                        <strong data-bind="text: $data"></strong>                   
+                    </li>
+                </ul>
+            </div>
+            <p>
+                <small class="bg-info text-info padding padding-xs">
+                    <i class="icon-warning margin-right margin-right-sm"></i>While the current errors will be cleared, the <i>index state</i> will not change.
+                </small>
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" data-bind="click: clearIndexes">Clear Index Errors</button>
+        </div>
+    </div>
+</div>
