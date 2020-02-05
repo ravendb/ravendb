@@ -10,10 +10,14 @@ class deleteTimeSeriesCommand extends commandBase {
     execute(): JQueryPromise<void> {
         const url = endpoints.databases.timeSeries.timeseries;
 
-        const payload = {
+        const operation = {
             DocumentId: this.documentId,
             Removals: this.dtos
         } as Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation;
+
+        const payload = {
+            Documents: [operation]
+        } as Raven.Client.Documents.Operations.TimeSeries.TimeSeriesBatch;
 
         return this.post(url, JSON.stringify(payload), this.db, { dataType: undefined })
             .fail((response: JQueryXHR) => this.reportError("Failed to delete time series.", response.responseText, response.statusText));
