@@ -141,48 +141,29 @@ namespace Raven.Server.Documents.TimeSeries
                 var start = DateTime.MinValue;
                 var end = DateTime.MaxValue;
 
-                // find the first good segment for this ts
-                foreach (var (key, value) in table.SeekByPrimaryKeyPrefix(slice, Slices.Empty, 0))
+                foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(slice, Slices.Empty, 0))
                 {
-                    var ptr = value.Reader.Read((int)TimeSeriesTable.Segment, out var size);
-                    var segment = new TimeSeriesValuesSegment(ptr, size);
-                    if (segment.NumberOfLiveEntries > 0)
-                    {
-                        var baseline = ExtractDateTimeFromKey(key);
-                        foreach (var result in segment.YieldAllValues(context, context.Allocator, baseline))
-                        {
-                            if (result.Status == TimeSeriesValuesSegment.Live)
-                            {
-                                start = result.Timestamp;
-                                break;
-                            }
-                        }
-                        break;
-                    }
+                    start = ExtractDateTimeFromKey(key);
+                    break;
                 }
 
                 // to find the last value we set to highest possible segment value (long.MaxValue) and seeking backward from there.
-                IDisposable dispose = Slice.External(context.Allocator, slice.Content.Ptr, slice.Content.Length + sizeof(long), out var lastKey);
-                *(long*)(lastKey.Content.Ptr + slice.Content.Length) = Bits.SwapBytes(long.MaxValue); 
-
-                while (table.SeekOneBackwardByPrimaryKeyPrefix(slice, lastKey, out var tvr))
+                using (Slice.External(context.Allocator, slice.Content.Ptr, slice.Content.Length + sizeof(long), out var lastKey))
                 {
-                    var segmentPtr = tvr.Read((int)TimeSeriesTable.Segment, out var size);
-                    var segment = new TimeSeriesValuesSegment(segmentPtr, size);
-
-                    var keyPtr = tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out var keySize);
-                    
-                    dispose.Dispose();
-                    dispose = Slice.External(context.Allocator, keyPtr, keySize, out var keySlice);
-                    lastKey = keySlice;
-                    if (segment.NumberOfLiveEntries > 0)
+                    *(long*)(lastKey.Content.Ptr + slice.Content.Length) = Bits.SwapBytes(long.MaxValue);
+                    if (table.SeekOneBackwardByPrimaryKeyPrefix(slice, lastKey, out var tvr))
                     {
-                        var baseline = ExtractDateTimeFromKey(lastKey);
-                        end = segment.GetLastTimestamp(baseline);
-                        break;
+                        var segmentPtr = tvr.Read((int)TimeSeriesTable.Segment, out var size);
+                        var segment = new TimeSeriesValuesSegment(segmentPtr, size);
+
+                        var keyPtr = tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out var keySize);
+                        using (Slice.From(context.Allocator, keyPtr, keySize, out var keySlice))
+                        {
+                            var baseline = ExtractDateTimeFromKey(keySlice);
+                            end = segment.GetLastTimestamp(baseline);
+                        }
                     }
                 }
-                dispose.Dispose();
 
                 return (count, start, end);
             }
