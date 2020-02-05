@@ -361,7 +361,11 @@ namespace Raven.Client.Documents.Subscriptions
 
             foreach (var subscription in _subscriptions)
             {
-                tasks.Add(subscription.DisposeAsync().AsTask());
+                var dispose = subscription.DisposeAsync();
+                if (dispose.IsCompletedSuccessfully)
+                    continue;
+
+                tasks.Add(dispose.AsTask());
             }
 
             try

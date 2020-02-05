@@ -38,7 +38,11 @@ namespace Raven.Client.Documents.Session
 
             public void Dispose()
             {
-                AsyncHelpers.RunSync(() => DisposeAsync().AsTask());
+                var dispose = DisposeAsync();
+                if (dispose.IsCompletedSuccessfully)
+                    return;
+
+                AsyncHelpers.RunSync(() => dispose.AsTask());
             }
 
             public ValueTask DisposeAsync()
@@ -54,7 +58,13 @@ namespace Raven.Client.Documents.Session
 
                 while (true)
                 {
-                    if (await _enumerator.MoveNextAsync().AsTask().WithCancellation(_token).ConfigureAwait(false) == false)
+                    var next = _enumerator.MoveNextAsync();
+                    if (next.IsCompleted)
+                    {
+                        if (next.Result == false)
+                            return false;
+                    }
+                    else if (await next.AsTask().WithCancellation(_token).ConfigureAwait(false) == false)
                         return false;
 
                     _prev = _enumerator.Current;
