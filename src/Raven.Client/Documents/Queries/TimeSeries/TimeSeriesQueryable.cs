@@ -10,9 +10,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, bool>> predicate);
 
-        ITimeSeriesGroupByQueryable GroupBy(string s);
+        ITimeSeriesAggregationQueryable GroupBy(string s);
 
-        ITimeSeriesGroupByQueryable GroupBy(Action<ITimeSeriesGroupByBuilder> timePeriod);
+        ITimeSeriesAggregationQueryable GroupBy(Action<ITimeSeriesGroupByBuilder> timePeriod);
+
+        ITimeSeriesAggregationQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
 
         TimeSeriesRawResult ToList();
 
@@ -23,9 +25,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, T, bool>> predicate);
     }
 
-    public interface ITimeSeriesGroupByQueryable
+    public interface ITimeSeriesAggregationQueryable
     {
-        ITimeSeriesGroupByQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
+        ITimeSeriesAggregationQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
 
         TimeSeriesAggregationResult ToList();
 

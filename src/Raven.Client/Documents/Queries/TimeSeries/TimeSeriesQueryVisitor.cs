@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesQueryable.GroupBy):
                     GroupBy(mce.Arguments[0]);
                     break;
-                case nameof(ITimeSeriesGroupByQueryable.Select):
+                case nameof(ITimeSeriesAggregationQueryable.Select):
                     Select(mce.Arguments[0]);
                     break;
                 case nameof(ITimeSeriesQueryable.LoadTag):
