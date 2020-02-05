@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.Queries.Results
                         rightAsString = rs;
                     
                     else
-                        rightAsString = right.ToString();
+                        rightAsString = right?.ToString();
                     
                     switch (be.Operator)
                     {
