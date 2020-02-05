@@ -478,10 +478,11 @@ class query extends viewModelBase {
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             enableInlinePreview: true,
             detectTimeSeries: true, 
-            timeSeriesActionHandler: (type, document, path, event) => {
+            timeSeriesActionHandler: (type, documentId, name, value, event) => {
                 const chart = new timeSeriesDetails([{
-                    document,
-                    path
+                    documentId,
+                    value,
+                    name
                 }], type === "plot" ? "plot" : "table");
                 this.timeSeriesGraphs.push(chart);
                 this.goToTimeSeriesTab(chart);

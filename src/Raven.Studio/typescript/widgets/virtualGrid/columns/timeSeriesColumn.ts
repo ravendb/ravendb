@@ -4,25 +4,22 @@ import virtualRow = require("widgets/virtualGrid/virtualRow");
 import generalUtils = require("common/generalUtils");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import timeSeriesQueryResult = require("models/database/timeSeries/timeSeriesQueryResult");
+import document = require("models/database/documents/document");
 
 /**
  * Virtual grid column that renders time series.
  */
-class timeSeriesColumn<T> extends textColumn<T> {
+class timeSeriesColumn<T extends document> extends textColumn<T> {
     
     static readonly dateFormat = "YYYY-MM-DD";
 
-    private readonly handler: (type: timeSeriesColumnEventType, document: T, path: string, event: JQueryEventObject) => void;
+    private readonly handler: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
 
     tsPlotActionUniqueId = _.uniqueId("ts-plot-action-");
     tsPreviewActionUniqueId = _.uniqueId("ts-preview-action-");
 
-    constructor(gridController: virtualGridController<T>, valueAccessor: ((obj: T) => any) | string, header: string, width: string, opts: timeSeriesColumnOpts<T> = {}) {
+    constructor(gridController: virtualGridController<T>, valueAccessor: string, header: string, width: string, opts: timeSeriesColumnOpts<T> = {}) {
         super(gridController, valueAccessor, header, width, opts);
-        
-        if (typeof valueAccessor !== "string") {
-            throw new Error("Only string based value accessor in supported");
-        }
         
         this.handler = opts.handler;
     }
@@ -32,13 +29,20 @@ class timeSeriesColumn<T> extends textColumn<T> {
         const canHandlePreview = this.handler && this.tsPreviewActionUniqueId === actionId;
         return canHandlePlot || canHandlePreview;
     }
+    
+    getName() {
+        return this.valueAccessor as string;
+    }
 
     handle(row: virtualRow, event: JQueryEventObject, actionId: string) {
+        const documentId = (row.data as T).getId();
+        const name = this.getName();
         const value = this.getCellValue(row.data as T);
+        
         if (actionId === this.tsPlotActionUniqueId) {
-            this.handler("plot", row.data as T, this.valueAccessor as string, event);
+            this.handler("plot", documentId, name, value, event);
         } else if (actionId === this.tsPreviewActionUniqueId) {
-            this.handler("preview", row.data as T, this.valueAccessor as string, event);
+            this.handler("preview", documentId, name, value, event);
         } else {
             console.warn("Unsupported action type = " + actionId);
         }

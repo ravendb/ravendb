@@ -203,11 +203,6 @@ interface operationIdDto {
     OperationId: number;
 }
 
-interface databaseCreatedEventArgs {
-    qualifier: string;
-    name: string;
-}
-
 type availableConfigurationSectionId =  "restore" | "legacyMigration" | "encryption" | "replication" | "path";
 
 type restoreSource = "local" | "cloud" | "amazonS3" | "azure" | "googleCloud";
@@ -266,12 +261,6 @@ interface timeGapInfo {
 interface documentColorPair {
     docName: string;
     docColor: string;
-}
-
-interface aggregatedRange {
-    start: number;
-    end: number;
-    value: number;
 }
 
 interface workData {
@@ -579,7 +568,7 @@ interface hypertextColumnOpts<T> extends textColumnOpts<T> {
 type timeSeriesColumnEventType = "plot" | "preview";
 
 interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {
-    handler?: (type: timeSeriesColumnEventType, document: T, path: string, event: JQueryEventObject) => void;
+    handler?: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
 }
 
 interface virtualColumnDto {

@@ -7,6 +7,7 @@ import customColumn = require("widgets/virtualGrid/columns/customColumn");
 import flagsColumn = require("widgets/virtualGrid/columns/flagsColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import timeSeriesColumn = require("widgets/virtualGrid/columns/timeSeriesColumn");
+import inlineTimeSeriesColumn = require("widgets/virtualGrid/columns/inlineTimeSeriesColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
@@ -32,10 +33,12 @@ type documentBasedColumnsProviderOpts = {
     columnOptions?: columnOptionsDto;
     showFlags?: boolean; // revisions, counters, attachments
     detectTimeSeries?: boolean;
-    timeSeriesActionHandler?: (type: timeSeriesColumnEventType, document: document, path: string, event: JQueryEventObject) => void;
+    timeSeriesActionHandler?: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
 }
 
 class documentBasedColumnsProvider {
+    
+    static readonly rootedTimeSeriesResultMarker = "@@__TimeSeries__@@";
 
     private static readonly minColumnWidth = 150;
 
@@ -51,7 +54,7 @@ class documentBasedColumnsProvider {
     private readonly customInlinePreview: (doc: document) => void;
     private readonly collectionTracker: collectionsTracker;
     private readonly customColumnProvider: () => virtualColumn[];
-    private readonly timeSeriesActionHandler: (type: timeSeriesColumnEventType, document: document, path: string, event: JQueryEventObject) => void;
+    private readonly timeSeriesActionHandler: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
@@ -84,9 +87,19 @@ class documentBasedColumnsProvider {
             }
         }
         
-        const columnNames = this.findColumnNames(results, Math.floor(viewportWidth / documentBasedColumnsProvider.minColumnWidth), prioritizedColumns);
+        let columnNames = this.findColumnNames(results, Math.floor(viewportWidth / documentBasedColumnsProvider.minColumnWidth), prioritizedColumns);
         const timeSeriesColumns = this.findTimeSeriesColumns(results);
-
+        
+        const includeInlineTimeSeriesColumn = timeSeriesColumns.length === 1 
+            && timeSeriesColumns[0] === documentBasedColumnsProvider.rootedTimeSeriesResultMarker; 
+        
+        if (includeInlineTimeSeriesColumn) {
+            // result contains inline time series result, replace Count and Results column with single TimeSeries column
+            const keysToStrip: Array<keyof timeSeriesQueryResultDto> = ["Count", "Results"];
+            columnNames = _.without(columnNames, ...keysToStrip);
+            columnNames.push(documentBasedColumnsProvider.rootedTimeSeriesResultMarker);
+        }
+        
         // Insert the row selection checkbox column as necessary.
         const initialColumns: virtualColumn[] = [];
 
@@ -109,17 +122,22 @@ class documentBasedColumnsProvider {
             initialColumns.push(flags);
         }
 
+        const tsOptions = {
+            ...this.columnOptions,
+            handler: this.timeSeriesActionHandler
+        } as timeSeriesColumnOpts<any>;
+
         const initialColumnsWidth = _.sumBy(initialColumns, x => virtualGridUtils.widthToPixels(x));
         const rightScrollWidth = 5;
         const remainingSpaceForOtherColumns = viewportWidth - initialColumnsWidth - rightScrollWidth;
         const columnWidth = Math.floor(remainingSpaceForOtherColumns / columnNames.length) + "px";
 
         const finalColumns = initialColumns.concat(columnNames.map(p => {
+            if (includeInlineTimeSeriesColumn && p === documentBasedColumnsProvider.rootedTimeSeriesResultMarker) {
+                return new inlineTimeSeriesColumn(this.gridController, columnWidth, tsOptions);
+            }
+            
             if (_.includes(timeSeriesColumns, p)) {
-                const tsOptions = {
-                    ...this.columnOptions,
-                    handler: this.timeSeriesActionHandler
-                } as timeSeriesColumnOpts<any>;
                 return new timeSeriesColumn(this.gridController, p, generalUtils.escapeHtml(p), columnWidth, tsOptions);
             }
             
@@ -199,15 +217,18 @@ class documentBasedColumnsProvider {
         if (results.items.length === 0) {
             return [];
         }
-
-        // duck type for now
-        const firstItem = results.items[0];
-        return Object.keys(firstItem).filter((x: keyof typeof firstItem) => this.quacksLikeTimeSeries(firstItem[x]));
-    }
-    
-    private quacksLikeTimeSeries(value: any) {
-        const keys = Object.keys(value);
-        return keys.length === 2 && "Count" in value && "Results" in value;
+        
+        const timeSeriesFields = results.additionalResultInfo.TimeSeriesFields;
+        if (timeSeriesFields != null) {
+            if (timeSeriesFields.length === 0) {
+                // special case timeSeriesFields is empty array, it means result contains time series data at root level (w/o alias)
+                return [documentBasedColumnsProvider.rootedTimeSeriesResultMarker];
+            } else {
+                return timeSeriesFields;
+            }
+        } else {
+            return [];
+        }
     }
     
     private findColumnNames(results: pagedResult<document>, limit: number, prioritizedColumns?: string[]): string[] {
