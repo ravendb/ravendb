@@ -17,7 +17,7 @@ namespace Raven.Server.Config.Categories
 
             UseTotalDirtyMemInsteadOfMemUsage = PlatformDetails.RunningOnDocker;
 
-            EnableHighTemporaryDirtyMemoryUse = MemoryInformation.TotalPhysicalMemory.GetValue(SizeUnit.Gigabytes) >= 2;
+            EnableHighTemporaryDirtyMemoryUse = false; //MemoryInformation.TotalPhysicalMemory.GetValue(SizeUnit.Gigabytes) >= 2;
         }
 
         [Description("The minimum amount of available memory RavenDB will attempt to achieve (free memory lower than this value will trigger low memory behavior)")]
