@@ -12,6 +12,7 @@ import timeHelpers = require("common/timeHelpers");
 import awesomeMultiselect = require("common/awesomeMultiselect");
 import indexErrorDetails = require("viewmodels/database/indexes/indexErrorDetails");
 import generalUtils = require("common/generalUtils");
+import clearIndexErrorsConfirm = require("viewmodels/database/indexes/clearIndexErrorsConfirm");
 
 type indexNameAndCount = {
     indexName: string;
@@ -41,10 +42,15 @@ class indexErrors extends viewModelBase {
     private remoteLatestIndexErrorTime = ko.observable<string>(null);
 
     private isDirty: KnockoutComputed<boolean>;
+    
+    allIndexesSelected: KnockoutComputed<boolean>;
+    clearErrorsBtnText: KnockoutComputed<string>;
+    clearErrorsBtnTooltip: KnockoutComputed<string>;
 
     constructor() {
         super();
         this.initObservables();
+        this.bindToCurrentInstance("clearIndexErrors");
     }
 
     private initObservables() {
@@ -57,6 +63,30 @@ class indexErrors extends viewModelBase {
             const remote = this.remoteLatestIndexErrorTime();
 
             return local !== remote;
+        });        
+      
+        this.allIndexesSelected = ko.pureComputed(() => { 
+            return this.allErroredIndexNames().length === this.selectedIndexNames().length;
+        });
+
+        this.clearErrorsBtnText = ko.pureComputed(() => {
+            if (this.allIndexesSelected() && this.allErroredIndexNames().length) {
+                return "Clear errors - All indexes";
+            } else if (this.selectedIndexNames().length){
+                return "Clear errors - Selected indexes";
+            } else {
+                return "Clear errors";
+            }
+        });
+
+        this.clearErrorsBtnTooltip = ko.pureComputed(() => {
+            if (this.allIndexesSelected() && this.allErroredIndexNames().length) {
+                return "Clear errors for all indexes";
+            } else if (this.selectedIndexNames().length){
+                return "Clear errors for selected indexes";
+            } else {
+                return "Select indexes to clear";
+            }
         });
     }
 
@@ -189,8 +219,8 @@ class indexErrors extends viewModelBase {
 
                 this.allErroredIndexNames(indexNamesAndCount);
                 this.allErroredActionNames(actionNamesAndCount);
-                this.selectedIndexNames(this.allErroredIndexNames().map(x => x.indexName).slice());
-                this.selectedActionNames(this.allErroredActionNames().map(x => x.actionName).slice());
+                this.selectedIndexNames(this.allErroredIndexNames().map(x => x.indexName));
+                this.selectedActionNames(this.allErroredActionNames().map(x => x.actionName));
 
                 this.syncMultiSelect();
 
@@ -287,6 +317,20 @@ class indexErrors extends viewModelBase {
     private onSearchCriteriaChanged() {
         if (!this.ignoreSearchCriteriaUpdatesMode) {
             this.gridController().reset();
+        }
+    }
+
+    clearIndexErrors() {
+        const indexesToClear = this.selectedIndexNames();
+        
+        if (indexesToClear.length > 0) {
+            const clearErrorsDialog = new clearIndexErrorsConfirm(indexesToClear, this.activeDatabase(), this.allIndexesSelected());
+            app.showBootstrapDialog(clearErrorsDialog);
+            
+            clearErrorsDialog.clearErrorsTask
+                .always(() => {                    
+                   this.refresh();
+                });
         }
     }
 }
