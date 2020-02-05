@@ -1414,7 +1414,10 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.TryScan("SELECT") == false)
                     ThrowParseException($"Expected select clause for {name}, but didn't find it");
 
-
+                select = SelectClauseExpressions("SELECT", false);
+            }
+            else if (Scanner.TryScan("SELECT"))
+            {
                 select = SelectClauseExpressions("SELECT", false);
             }
 

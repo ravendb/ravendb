@@ -57,19 +57,21 @@ namespace Raven.Server.Documents.Queries.Results
             var array = new DynamicJsonArray();
             TimeSeriesStorage.Reader reader;
 
-            if (timeSeriesFunction.GroupBy == null)
+            if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
-            
-            var groupBy = timeSeriesFunction.GroupBy.GetValue(_queryParameters)?.ToString();
-            if (groupBy == null)
-                throw new ArgumentException("Unable to parse group by value, expected range specification, but got a null");
 
-            var rangeSpec = TimeSeriesFunction.ParseRangeFromString(groupBy);
+            TimeSeriesFunction.RangeGroup rangeSpec = default;
+            DateTime start = default, next = default;
+
+            var groupBy = timeSeriesFunction.GroupBy?.GetValue(_queryParameters)?.ToString();
+            if (groupBy != null)
+                rangeSpec = TimeSeriesFunction.ParseRangeFromString(groupBy);
+            else
+                next = max;        
 
             var aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
             InitializeAggregationStates(timeSeriesFunction, aggStates);
 
-            DateTime start = default, next = default;
             return GetAggregatedValues();
 
             void AggregateIndividualItems(IEnumerable<SingleResult> items)
@@ -800,17 +802,21 @@ namespace Raven.Server.Documents.Queries.Results
 
         private static DynamicJsonValue AddTimeSeriesResult(TimeSeriesFunction func, TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
         {
-            var result = new DynamicJsonValue
+            var result = new DynamicJsonValue();
+
+            if (func.GroupBy != null)
             {
-                ["From"] = start,
-                ["To"] = next,
-                ["Count"] = new DynamicJsonArray(aggStates[0].Count)
-            };
+                result["From"] = start;
+                result["To"] = next;
+                result["Count"] = new DynamicJsonArray(aggStates[0].Count);
+            }
+
             for (int i = 0; i < aggStates.Length; i++)
             {
                 var name = func.Select[i].Item2?.ToString() ?? aggStates[i].Aggregation.ToString();
                 result[name] = new DynamicJsonArray(aggStates[i].GetFinalValues());
             }
+
             return result;
         }
 

@@ -212,6 +212,7 @@ namespace Raven.Server.Documents.Queries.AST
                     return;
                 case 'm':
                     if (TryConsumeMatch(source, ref offset, "minutes") ||
+                        TryConsumeMatch(source, ref offset, "minute") ||
                         TryConsumeMatch(source, ref offset, "min"))
                     {
                         range.Ticks += duration * 10_000_000 * 60;
