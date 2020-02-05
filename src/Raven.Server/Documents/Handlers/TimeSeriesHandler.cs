@@ -76,10 +76,9 @@ namespace Raven.Server.Documents.Handlers
                             writer.WriteComma();
                         }
                         first = false;
-                        
-                        var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, documentId, tsName, DateTime.MinValue, DateTime.MaxValue);
-                        var entries = reader.GetNumberOfEntries();
-                        
+
+                        var stats = Database.DocumentsStorage.TimeSeriesStorage.GetStatsFor(context, documentId, tsName);
+
                         writer.WriteStartObject();
                         
                         writer.WritePropertyName(nameof(TimeSeriesItemDetail.Name));
@@ -88,8 +87,18 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteComma();
                         
                         writer.WritePropertyName(nameof(TimeSeriesItemDetail.NumberOfEntries));
-                        writer.WriteInteger(entries);
-                        
+                        writer.WriteInteger(stats.Count);
+
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(TimeSeriesItemDetail.StartDate));
+                        writer.WriteDateTime(stats.Start, isUtc: true);
+
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(TimeSeriesItemDetail.EndDate));
+                        writer.WriteDateTime(stats.End, isUtc: true);
+
                         writer.WriteEndObject();
                     }
                     

@@ -82,6 +82,8 @@ namespace Raven.Server.Documents.TimeSeries
 
         public int NumberOfEntries => Header->NumberOfEntries;
 
+        public int NumberOfLiveEntries => SegmentValues.Span[0].Count;
+
         public void Initialize(int numberOfValues)
         {
             new Span<byte>(_buffer, _capacity).Clear();
