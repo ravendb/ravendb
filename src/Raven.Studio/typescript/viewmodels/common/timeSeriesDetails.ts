@@ -1,4 +1,3 @@
-import document = require("models/database/documents/document");
 import timeSeriesQueryResult = require("models/database/timeSeries/timeSeriesQueryResult");
 import viewModelBase = require("viewmodels/viewModelBase");
 import d3 = require("d3");
@@ -6,8 +5,9 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import colorsManager = require("common/colorsManager");
 
 type timeSeriesItem = {
-    document: document;
-    path: string;
+    documentId: string;
+    name: string;
+    value: timeSeriesQueryResultDto;
 }
 
 interface graphData {
@@ -43,22 +43,22 @@ class graphSeries<TPoint> {
 }
 
 abstract class timeSeriesContainer<T> {
-    sourceDocument: document;
-    path: string;
+    documentId: string;
+    name: string;
     value: timeSeriesQueryResultDto;
     abstract type: timeSeriesResultType;
     onChange: () => void;
     series = ko.observableArray<graphSeries<T>>();
     
     protected constructor(item: timeSeriesItem, onChange: () => void) {
-        this.sourceDocument = item.document;
-        this.path = item.path;
-        this.value = (item.document as any)[item.path] as timeSeriesQueryResultDto;
+        this.documentId = item.documentId;
+        this.name = item.name;
+        this.value = item.value;
         this.onChange = onChange;
     }
     
     get sectionName() {
-        return this.sourceDocument.getId() + " - " + this.path;
+        return this.documentId + " - " + this.name;
     }
 
     getSeriesData(): graphSeries<T>[] {
@@ -196,7 +196,7 @@ class timeSeriesDetails extends viewModelBase {
         const onChange = () => this.draw(true, false);
         
         timeSeries.forEach(item => {
-            const value = (item.document as any)[item.path] as timeSeriesQueryResultDto;
+            const value = item.value;
             const type = timeSeriesQueryResult.detectResultType(value);
 
             switch (type) {
@@ -260,6 +260,7 @@ class timeSeriesDetails extends viewModelBase {
         
         this.yAxis = d3.svg.axis()
             .scale(this.y)
+            .ticks(10, "s")
             .orient("left");
         
         this.brush = d3.svg.brush<void>()
