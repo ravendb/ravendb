@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Linq;
+using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -86,7 +87,6 @@ namespace FastTests.Graph
                     "Foozy"
                 };
 
-
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
@@ -120,6 +120,8 @@ namespace FastTests.Graph
             {
                 using (var session = store.OpenSession())
                 {
+                    var now = DateTime.UtcNow;
+
                     session.Store(
                         new Friend
                         {
@@ -130,17 +132,17 @@ namespace FastTests.Graph
                                 new FriendDescriptor
                                 {
                                     FriendId = "Friend/2",
-                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(1024)
+                                    FriendsSince = now - TimeSpan.FromDays(1024)
                                 },
                                 new FriendDescriptor
                                 {
                                     FriendId = "Friend/3",
-                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(678)
+                                    FriendsSince = now - TimeSpan.FromDays(678)
                                 },
                                 new FriendDescriptor
                                 {
                                     FriendId = "Friend/4",
-                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(345)
+                                    FriendsSince = now - TimeSpan.FromDays(345)
                                 }
                             }
                         }, "Friend/1");
@@ -154,12 +156,12 @@ namespace FastTests.Graph
                                 new FriendDescriptor
                                 {
                                     FriendId = "Friend/1",
-                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(1024)
+                                    FriendsSince = now - TimeSpan.FromDays(1024)
                                 },
                                 new FriendDescriptor
                                 {
                                     FriendId = "Friend/4",
-                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(304)
+                                    FriendsSince = now - TimeSpan.FromDays(304)
                                 }
                             }
                         }, "Friend/2");
@@ -173,7 +175,7 @@ namespace FastTests.Graph
                                 new FriendDescriptor
                                 {
                                     FriendId = "Friend/1",
-                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(678)
+                                    FriendsSince = now - TimeSpan.FromDays(678)
                                 }
                             }
                         }, "Friend/3");
@@ -187,20 +189,23 @@ namespace FastTests.Graph
                                 new FriendDescriptor
                                 {
                                     FriendId = "Friend/2",
-                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(304)
+                                    FriendsSince = now - TimeSpan.FromDays(304)
                                 },
                                 new FriendDescriptor
                                 {
                                     FriendId = "Friend/1",
-                                    FriendsSince = DateTime.UtcNow -  TimeSpan.FromDays(345)
+                                    FriendsSince = now -  TimeSpan.FromDays(345)
                                 }
                             }
                         }, "Friend/4");
+
+                    var from = now.AddDays(-345);
+
                     session.SaveChanges();
                     var res = session.Advanced.GraphQuery<FriendsTuple>("match (F1)-[L1]->(F2)")
                         .With("F1", session.Query<Friend>())
                         .With("F2", session.Query<Friend>())
-                        .WithEdges("L1", "Friends", "where FriendsSince >= \'2018-03-29T11:54:49.0095205Z\' select FriendId")
+                        .WithEdges("L1", "Friends", $"where FriendsSince >= '{from.GetDefaultRavenFormat(isUtc: true)}' select FriendId")
                         .WaitForNonStaleResults()
                         .OrderByDescending(x => x.F1.Age)
                         .Select(x => x.F1)
