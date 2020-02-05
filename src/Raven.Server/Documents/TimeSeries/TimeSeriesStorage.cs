@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -37,6 +38,8 @@ namespace Raven.Server.Documents.TimeSeries
         private static readonly Slice AllDeletedRangesEtagSlice;
         private static readonly Slice CollectionDeletedRangesEtagsSlice;
 
+        private static readonly Slice TimeSeriesStats;
+
         private static readonly TableSchema TimeSeriesSchema = new TableSchema
         {
             TableType = (byte)TableType.TimeSeries
@@ -60,6 +63,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Slice.From(ctx, "DeletedRangesKey", ByteStringType.Immutable, out DeletedRangesKey);
                 Slice.From(ctx, "AllDeletedRangesEtag", ByteStringType.Immutable, out AllDeletedRangesEtagSlice);
                 Slice.From(ctx, "CollectionDeletedRangesEtags", ByteStringType.Immutable, out CollectionDeletedRangesEtagsSlice);
+                Slice.From(ctx, "TimeSeriesStats", ByteStringType.Immutable, out TimeSeriesStats);
             }
 
             TimeSeriesSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -106,6 +110,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
 
+
         public TimeSeriesStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
             _documentDatabase = documentDatabase;
@@ -113,6 +118,103 @@ namespace Raven.Server.Documents.TimeSeries
 
             tx.CreateTree(TimeSeriesKeysSlice);
             tx.CreateTree(DeletedRangesKey);
+            tx.CreateTree(TimeSeriesStats);
+        }
+
+        private void UpdateTotalCountStats(DocumentsOperationContext context, string docId, string name, long count)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(TimeSeriesStats);
+            using (GetTimeSeriesFullName(context, docId, name, out var slice))
+            {
+                tree.Increment(slice, count);
+            }
+        }
+
+        public (long Count, DateTime Start, DateTime End) GetStatsFor(DocumentsOperationContext context, string docId, string name)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(TimeSeriesStats);
+            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            
+            using (GetTimeSeriesFullName(context, docId, name, out var slice))
+            {
+                var count = tree.Read(slice).Reader.ReadLittleEndianInt64();
+                var start = DateTime.MinValue;
+                var end = DateTime.MaxValue;
+
+                // find the first good segment for this ts
+                foreach (var (key, value) in table.SeekByPrimaryKeyPrefix(slice, Slices.Empty, 0))
+                {
+                    var ptr = value.Reader.Read((int)TimeSeriesTable.Segment, out var size);
+                    var segment = new TimeSeriesValuesSegment(ptr, size);
+                    if (segment.NumberOfLiveEntries > 0)
+                    {
+                        var baseline = ExtractDateTimeFromKey(key);
+                        foreach (var result in segment.YieldAllValues(context, context.Allocator, baseline))
+                        {
+                            if (result.Status == TimeSeriesValuesSegment.Live)
+                            {
+                                start = result.Timestamp;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                // to find the last value we set to highest possible segment value (long.MaxValue) and seeking backward from there.
+                IDisposable dispose = Slice.External(context.Allocator, slice.Content.Ptr, slice.Content.Length + sizeof(long), out var lastKey);
+                *(long*)(lastKey.Content.Ptr + slice.Content.Length) = Bits.SwapBytes(long.MaxValue); 
+
+                while (table.SeekOneBackwardByPrimaryKeyPrefix(slice, lastKey, out var tvr))
+                {
+                    var segmentPtr = tvr.Read((int)TimeSeriesTable.Segment, out var size);
+                    var segment = new TimeSeriesValuesSegment(segmentPtr, size);
+
+                    var keyPtr = tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out var keySize);
+                    
+                    dispose.Dispose();
+                    dispose = Slice.External(context.Allocator, keyPtr, keySize, out var keySlice);
+                    lastKey = keySlice;
+                    if (segment.NumberOfLiveEntries > 0)
+                    {
+                        var baseline = ExtractDateTimeFromKey(lastKey);
+                        end = segment.GetLastTimestamp(baseline);
+                        break;
+                    }
+                }
+                dispose.Dispose();
+
+                return (count, start, end);
+            }
+        }
+
+        public static DateTime ExtractDateTimeFromKey(Slice key)
+        {
+            var span = key.AsSpan();
+            var timeSlice = span.Slice(span.Length - sizeof(long), sizeof(long));
+            var baseline = Bits.SwapBytes(MemoryMarshal.Read<long>(timeSlice));
+            return new DateTime(baseline * 10_000);
+        }
+
+        private ByteStringContext<ByteStringMemoryCache>.ExternalScope GetTimeSeriesFullName(DocumentsOperationContext context, string docId, string name, out Slice keySlice)
+        {
+            // return slice of: doc/name/
+
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentIdSlice))
+            using (DocumentIdWorker.GetLower(context.Allocator, name, out var timeSeriesNameSlice))
+            using (context.Allocator.Allocate(documentIdSlice.Size + timeSeriesNameSlice.Size + 1 /* separator */,
+                out ByteString timeSeriesKeyBuffer))
+            {
+                documentIdSlice.CopyTo(timeSeriesKeyBuffer.Ptr);
+                var pos = documentIdSlice.Size;
+                timeSeriesKeyBuffer.Ptr[pos++] = SpecialChars.RecordSeparator;
+
+                timeSeriesNameSlice.CopyTo(timeSeriesKeyBuffer.Ptr + pos);
+                pos += timeSeriesNameSlice.Size;
+                timeSeriesKeyBuffer.Ptr[pos++] = SpecialChars.RecordSeparator;
+
+                return Slice.External(context.Allocator, timeSeriesKeyBuffer.Ptr, pos, out keySlice);
+            }
         }
 
         public long PurgeSegmentsAndDeletedRanges(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
@@ -191,6 +293,8 @@ namespace Raven.Server.Documents.TimeSeries
             public DateTime From;
             public DateTime To;
         }
+
+        
 
         private string InsertDeletedRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null)
         {
@@ -590,28 +694,6 @@ namespace Raven.Server.Documents.TimeSeries
                 return result;
             }
             
-            public long GetNumberOfEntries()
-            {
-                if (Init() == false)
-                    return 0;
-
-                InitializeSegment(out _, out _currentSegment);
-
-                var result = 0L;
-
-                do
-                {
-                    
-                    if (_currentSegment.NumberOfEntries == 0)
-                        continue;
-                    
-                    result += _currentSegment.SegmentValues.Span[0].Count;
-
-                } while (NextSegment(out _));
-
-                return result;
-            }
-
             public IEnumerable<(IEnumerable<SingleResult> IndividualValues, SegmentResult Segment)> SegmentsOrValues()
             {
                 if (Init() == false)
@@ -778,6 +860,8 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(key, out var tvr))
             {
                 var existingChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref tvr);
+                
+
                 var status = ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector);
 
                 if (status == ConflictStatus.AlreadyMerged)
@@ -790,6 +874,11 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         if (IsOverlapWithHigherSegment(prefix) == false)
                         {
+                            TimeSeriesValuesSegment.ParseTimeSeriesKey(key, context, out var docId, out var name);
+                            var segmentReadOnlyBuffer = tvr.Read((int)TimeSeriesTable.Segment, out int size);
+                            var count = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size).NumberOfLiveEntries;
+                            UpdateTotalCountStats(context, docId, name, -count);
+
                             AppendEntireSegment();
                             return true;
                         }
@@ -813,6 +902,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 EnsureSegmentSize(segment.NumberOfBytes);
+
+                TimeSeriesValuesSegment.ParseTimeSeriesKey(key, context, out var docId, out var name);
+                UpdateTotalCountStats(context, docId, name, segment.NumberOfLiveEntries);
 
                 using (Slice.From(context.Allocator, changeVector, out Slice cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out var collectionSlice))
@@ -1051,18 +1143,33 @@ namespace Raven.Server.Documents.TimeSeries
                 Memory.Copy(_clonedReadonlySegment.Address, segmentReadOnlyBuffer, size);
                 ReadOnlySegment = new TimeSeriesValuesSegment(_clonedReadonlySegment.Address, size);
                 ReadOnlyChangeVector = DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, ref _tvr);
+                _countWasReduced = false;
             }
 
             public Table Table => _tss.GetOrCreateTimeSeriesTable(_context.Transaction.InnerTransaction, _collection);
+
+            private bool _countWasReduced;
+            private void ReduceCountBeforeAppend()
+            {
+                if (_countWasReduced) 
+                    return;
+
+                // we modified this segment so we need to reduce the original count
+                _countWasReduced = true;
+                _tss.UpdateTotalCountStats(_context, _docId, _name, -ReadOnlySegment.NumberOfLiveEntries);
+            }
 
             public void AppendExistingSegment(TimeSeriesValuesSegment newValueSegment)
             {
                 EnsureSegmentSize(newValueSegment.NumberOfBytes);
 
-                if (newValueSegment.SegmentValues.Span[0].Count == 0)
+                if (newValueSegment.NumberOfLiveEntries == 0)
                 {
                     MarkSegmentAsPendingDeletion(_currentEtag);
                 }
+
+                ReduceCountBeforeAppend(); 
+                _tss.UpdateTotalCountStats(_context, _docId, _name, newValueSegment.NumberOfLiveEntries);
 
                 // the key came from the existing value, have to clone it
                 using (Slice.From(_context.Allocator, _key, _keySize, out var keySlice))
@@ -1101,6 +1208,8 @@ namespace Raven.Server.Documents.TimeSeries
                 newSegment.Append(_context.Allocator, deltaFromStart, valuesCopy, tag, status);
 
                 EnsureSegmentSize(newSegment.NumberOfBytes);
+
+                _tss.UpdateTotalCountStats(_context, _docId, _name, newSegment.NumberOfLiveEntries);
 
                 using (Slice.From(_context.Allocator, _currentChangeVector, out Slice cv))
                 using (DocumentIdWorker.GetStringPreserveCase(_context, _collection.Name, out var collectionSlice))
