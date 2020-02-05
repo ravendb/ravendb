@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Server.Documents.Includes;
@@ -9,11 +11,13 @@ namespace Raven.Server.Documents
 {
     public static class ComputeHttpEtags
     {
-        public static unsafe string ComputeEtagForDocuments(List<Document> documents, List<Document> includes)
+        public static unsafe string ComputeEtagForDocuments(List<Document> documents, List<Document>? includes, IncludeCountersCommand? includeCounters)
         {
             // This method is efficient because we aren't materializing any values
             // except the change vector, which we need
-            if (documents.Count == 1 && (includes == null || includes.Count == 0))
+            if (documents.Count == 1 && 
+                (includes == null || includes.Count == 0) &&
+                includeCounters == null)
                 return documents[0]?.ChangeVector ?? string.Empty;
 
             var size = Sodium.crypto_generichash_bytes();
@@ -23,19 +27,33 @@ namespace Raven.Server.Documents
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ThrowFailToInitHash();
 
+            HashNumber(state, documents.Count);
             foreach (var doc in documents)
             {
-                HashDocumentByChangeVector(state, doc);
+                HashChangeVector(state, doc?.ChangeVector);
             }
 
             if (includes != null)
             {
+                HashNumber(state, includes.Count);
                 foreach (var doc in includes)
                 {
                     if (doc is IncludeDocumentsCommand.ConflictDocument)
                         continue;
 
-                    HashDocumentByChangeVector(state, doc);
+                    HashChangeVector(state, doc.ChangeVector);
+                }
+            }
+
+            if (includeCounters != null)
+            {
+                foreach (var countersResult in includeCounters.Results)
+                {
+                    HashNumber(state, countersResult.Value.Count);
+                    foreach (var counterDetail in countersResult.Value)
+                    {
+                        HashNumber(state, counterDetail.Etag);
+                    }
                 }
             }
 
@@ -72,9 +90,10 @@ namespace Raven.Server.Documents
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ThrowFailToInitHash();
 
+            HashNumber(state, revisions.Count);
             foreach (var doc in revisions)
             {
-                HashDocumentByChangeVector(state, doc);
+                HashChangeVector(state, doc?.ChangeVector);
             }
 
             byte* final = stackalloc byte[(int)size];
@@ -96,24 +115,30 @@ namespace Raven.Server.Documents
             return str;
         }
 
-        private static unsafe void HashDocumentByChangeVector(byte* state, Document document)
+        private static unsafe void HashChangeVector(byte* state, string? changeVector)
         {
-            if (document == null)
+            if (changeVector == null)
             {
-                if (Sodium.crypto_generichash_update(state, null, 0) != 0)
-                    ThrowFailedToUpdateHash();
+                HashNumber(state, 0);
+                return;
             }
-            else
-                HashChangeVector(state, document.ChangeVector);
-        }
-
-        private static unsafe void HashChangeVector(byte* state, string changeVector)
-        {
             fixed (char* pCV = changeVector)
             {
                 if (Sodium.crypto_generichash_update(state, (byte*)pCV, (ulong)(sizeof(char) * changeVector.Length)) != 0)
                     ThrowFailedToUpdateHash();
             }
+        }
+
+        private static unsafe void HashNumber(byte* state, int num)
+        {
+            if (Sodium.crypto_generichash_update(state, (byte*)&num, sizeof(int)) != 0)
+                ThrowFailedToUpdateHash();
+        }
+
+        private static unsafe void HashNumber(byte* state, long num)
+        {
+            if (Sodium.crypto_generichash_update(state, (byte*)&num, sizeof(long)) != 0)
+                ThrowFailedToUpdateHash();
         }
 
         private static void ThrowFailedToFinalizeHash()

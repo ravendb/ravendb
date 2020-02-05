@@ -670,11 +670,11 @@ namespace Raven.Server.Documents.Patch
 
                 if (raw == false)
                 {
-                    return _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name) ?? JsValue.Null;
+                    return _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value ?? JsValue.Null;
                 }
 
                 var rawValues = new ObjectInstance(ScriptEngine);
-                foreach (var (cv, val) in _database.DocumentsStorage.CountersStorage.GetCounterValues(_docsCtx, id, name))
+                foreach (var (cv, val, etag) in _database.DocumentsStorage.CountersStorage.GetCounterValues(_docsCtx, id, name))
                 {
                     rawValues.FastAddProperty(cv, val, true, false, false);
                 }
