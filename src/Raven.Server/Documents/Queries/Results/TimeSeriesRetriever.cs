@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             void MaybeMoveToNextRange(DateTime ts)
             {
-                if (ts <= next)
+                if (ts < next)
                     return;
 
                 if (aggStates[0].Any)
