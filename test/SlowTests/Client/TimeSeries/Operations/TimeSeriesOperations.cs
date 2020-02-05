@@ -323,7 +323,7 @@ namespace SlowTests.Client.TimeSeries.Operations
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.Today.AddSeconds(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -368,7 +368,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                     var count = bloodPressure.Results.Sum(r => r.Count[0]);
                     Assert.Equal(8640, count);
                     Assert.Equal(bloodPressure.Count, count);
-                    Assert.Equal(bloodPressure.Results.Length, 24);
+                    Assert.Equal(24, bloodPressure.Results.Length);
 
                     for (var index = 0; index < bloodPressure.Results.Length; index++)
                     {
