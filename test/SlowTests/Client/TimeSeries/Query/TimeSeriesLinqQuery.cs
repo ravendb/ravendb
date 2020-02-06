@@ -2231,5 +2231,238 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WithOffset()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    var id = $"people/1";
+
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 30,
+                    }, id);
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 2.5
+                    }, "watches/fitbit");
+                    session.Store(new Watch
+                    {
+                        Accuracy = 1.8
+                    }, "watches/apple");
+
+                    var tsf = session.TimeSeriesFor(id);
+
+                    tsf.Append("HeartRate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(2), "watches/apple", new[] { 79d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(3), "watches/sony", new[] { 69d });
+
+                    tsf.Append("HeartRate", baseline.AddHours(1).AddMinutes(1), "watches/fitbit", new[] { 159d });
+                    tsf.Append("HeartRate", baseline.AddHours(1).AddMinutes(2), "watches/apple", new[] { 179d });
+                    tsf.Append("HeartRate", baseline.AddHours(1).AddMinutes(3), "watches/sony", new[] { 169d });
+
+                    tsf.Append("HeartRate", baseline.AddHours(2).AddMinutes(1), "watches/fitbit", new[] { 259d });
+                    tsf.Append("HeartRate", baseline.AddHours(2).AddMinutes(2), "watches/apple", new[] { 279d });
+                    tsf.Append("HeartRate", baseline.AddHours(2).AddMinutes(3), "watches/sony", new[] { 269d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(1), "watches/apple", new[] { 359d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(2), "watches/sony", new[] { 379d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(3), "watches/fitbit", new[] { 369d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(1).AddMinutes(1), "watches/apple", new[] { 459d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(1).AddMinutes(2), "watches/sony", new[] { 479d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(1).AddMinutes(3), "watches/fitbit", new[] { 469d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(2).AddMinutes(1), "watches/apple", new[] { 559d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(2).AddMinutes(2), "watches/sony", new[] { 579d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(2).AddMinutes(3), "watches/fitbit", new[] { 569d });
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddMonths(6))
+                            .GroupBy(g => g.Hours(1))
+                            .Select(ts => new
+                            {
+                                Max = ts.Max(), 
+                                Min = ts.Min()
+                            })
+                            .Offset(TimeSpan.FromHours(2))
+                            .ToList());
+
+                    var agg = query.First();
+
+                    Assert.Equal(9, agg.Count);
+
+                    Assert.Equal(3, agg.Results.Length);
+
+                    var rangeAggregation = agg.Results[0];
+
+                    Assert.Equal(259, rangeAggregation.Min[0]);
+                    Assert.Equal(279, rangeAggregation.Max[0]);
+
+                    var expectedFrom = baseline.AddHours(2);
+                    var expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From);
+                    Assert.Equal(expectedTo, rangeAggregation.To);
+
+                    rangeAggregation = agg.Results[1];
+
+                    Assert.Equal(359, rangeAggregation.Min[0]);
+                    Assert.Equal(379, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddMonths(1);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From);
+                    Assert.Equal(expectedTo, rangeAggregation.To);
+
+                    rangeAggregation = agg.Results[2];
+
+                    Assert.Equal(459, rangeAggregation.Min[0]);
+                    Assert.Equal(479, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddMonths(6).AddHours(1);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From);
+                    Assert.Equal(expectedTo, rangeAggregation.To);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WithNegativeOffset()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    var id = $"people/1";
+
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 30,
+                    }, id);
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 2.5
+                    }, "watches/fitbit");
+                    session.Store(new Watch
+                    {
+                        Accuracy = 1.8
+                    }, "watches/apple");
+
+                    var tsf = session.TimeSeriesFor(id);
+
+                    tsf.Append("HeartRate", baseline.AddHours(-3).AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    tsf.Append("HeartRate", baseline.AddHours(-3).AddMinutes(2), "watches/apple", new[] { 79d });
+                    tsf.Append("HeartRate", baseline.AddHours(-3).AddMinutes(3), "watches/sony", new[] { 69d });
+
+                    tsf.Append("HeartRate", baseline.AddHours(-2).AddMinutes(1), "watches/fitbit", new[] { 159d });
+                    tsf.Append("HeartRate", baseline.AddHours(-2).AddMinutes(2), "watches/apple", new[] { 179d });
+                    tsf.Append("HeartRate", baseline.AddHours(-2).AddMinutes(3), "watches/sony", new[] { 169d });
+
+                    tsf.Append("HeartRate", baseline.AddMinutes(1), "watches/fitbit", new[] { 259d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(2), "watches/apple", new[] { 279d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(3), "watches/sony", new[] { 269d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(1), "watches/apple", new[] { 359d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(2), "watches/sony", new[] { 379d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(3), "watches/fitbit", new[] { 369d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-3).AddMinutes(1), "watches/apple", new[] { 459d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-3).AddMinutes(2), "watches/sony", new[] { 479d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-3).AddMinutes(3), "watches/fitbit", new[] { 469d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-2).AddMinutes(1), "watches/apple", new[] { 559d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-2).AddMinutes(2), "watches/sony", new[] { 579d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-2).AddMinutes(3), "watches/fitbit", new[] { 569d });
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddMonths(6))
+                            .GroupBy(g => g.Hours(1))
+                            .Select(ts => new
+                            {
+                                Max = ts.Max(),
+                                Min = ts.Min()
+                            })
+                            .Offset(TimeSpan.FromHours(-2))
+                            .ToList());
+
+                    var agg = query.First();
+
+                    Assert.Equal(12, agg.Count);
+
+                    Assert.Equal(4, agg.Results.Length);
+
+                    var rangeAggregation = agg.Results[0];
+
+                    Assert.Equal(159, rangeAggregation.Min[0]);
+                    Assert.Equal(179, rangeAggregation.Max[0]);
+
+                    var expectedFrom = baseline.AddHours(-2);
+                    var expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From);
+                    Assert.Equal(expectedTo, rangeAggregation.To);
+
+                    rangeAggregation = agg.Results[1];
+
+                    Assert.Equal(259, rangeAggregation.Min[0]);
+                    Assert.Equal(279, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline;
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From);
+                    Assert.Equal(expectedTo, rangeAggregation.To);
+
+                    rangeAggregation = agg.Results[2];
+
+                    Assert.Equal(359, rangeAggregation.Min[0]);
+                    Assert.Equal(379, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddMonths(1);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From);
+                    Assert.Equal(expectedTo, rangeAggregation.To);
+
+                    rangeAggregation = agg.Results[3];
+
+                    Assert.Equal(459, rangeAggregation.Min[0]);
+                    Assert.Equal(479, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddMonths(6).AddHours(-3);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From);
+                    Assert.Equal(expectedTo, rangeAggregation.To);
+                }
+            }
+        }
+
     }
 }
