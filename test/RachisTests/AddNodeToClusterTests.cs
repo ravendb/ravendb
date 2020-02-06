@@ -64,7 +64,7 @@ namespace RachisTests
                 await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(watcher.WebUrl, watcher.ServerStore.NodeTag), ctx);
             }
         }
-        
+
         private static async Task AddManyCompareExchange(IDocumentStore store, RavenServer ravenServer)
         {
             var list = Enumerable.Range(0, 10)
@@ -75,7 +75,7 @@ namespace RachisTests
                         int k = 0;
                         for (int f = 0; f < 200; f++)
                         {
-                            using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                             {
                                 for (int j = 0; j < 30; j++)
                                 {
@@ -91,10 +91,10 @@ namespace RachisTests
                         }
                     });
                 });
-            
+
             await Task.WhenAll(list);
         }
-        
+
         [Theory]
         [InlineData(false)]
         public async Task ReAddMemberNode(bool withManyCompareExchange)
@@ -103,15 +103,18 @@ namespace RachisTests
             {
                 {"Cluster.TcpTimeoutInMs", "3000"}
             };
-            
-            var (nodes, leader) = await CreateRaftCluster(2, customSettings:customSettings);
+
+            var (nodes, leader) = await CreateRaftCluster(2, customSettings: customSettings);
             var follower = nodes.Single(x => x != leader);
 
-            using (var store = new DocumentStore {Urls = new[] {leader.WebUrl}, Database = "Snapshot"}.Initialize())
+            var databaseName = GetDatabaseName();
+
+            using (var store = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName }.Initialize())
+            using (EnsureDatabaseDeletion(store.Database, store))
             {
                 try
                 {
-                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("Snapshot"), 2));
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName), 2));
                 }
                 catch (ConcurrencyException)
                 {
@@ -119,22 +122,22 @@ namespace RachisTests
 
                 if (withManyCompareExchange)
                     await AddManyCompareExchange(store, leader);
+
+                leader = await ActionWithLeader(l =>
+                {
+                    follower = nodes.Single(x => x != l);
+                    return l.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag);
+                });
+                await follower.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
+
+                using (var store2 = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName }.Initialize())
+                {
+                    store2.Operations.Send(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0));
+                }
+
+                await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl, follower.ServerStore.NodeTag);
+                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
-
-            leader = await ActionWithLeader(l =>
-            {
-                follower = nodes.Single(x => x != l);
-                return l.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag);
-            });
-            await follower.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
-
-            using (var store = new DocumentStore {Urls = new[] {leader.WebUrl}, Database = "Snapshot"}.Initialize())
-            {
-                store.Operations.Send(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0));
-            }
-
-            await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl, follower.ServerStore.NodeTag);
-            await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
         }
 
         [Fact]
@@ -156,9 +159,9 @@ namespace RachisTests
         [Fact]
         public async Task DisallowAddingNodeWithInvalidSourcePublicServerUrl()
         {
-            var raft1 = await CreateRaftClusterAndGetLeader(1,customSettings: new Dictionary<string,string>
+            var raft1 = await CreateRaftClusterAndGetLeader(1, customSettings: new Dictionary<string, string>
             {
-                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)]  = "http://fake.url:8080"
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = "http://fake.url:8080"
             });
             var raft2 = await CreateRaftClusterAndGetLeader(1);
 
@@ -224,7 +227,7 @@ namespace RachisTests
 
             var source = raft1.WebUrl;
             var dest = raft2.WebUrl;
-            
+
             // here we pusblish a wrong PublicServerUrl, but connect to the ServerUrl, so the HTTP connection should be okay, but will when trying to the TCP connection.
             using (raft1.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(source, raft1.ServerStore.Server.Certificate.Certificate))
@@ -286,6 +289,7 @@ namespace RachisTests
                 Urls = new[] { leader.WebUrl },
                 Database = db
             }.Initialize())
+            using (EnsureDatabaseDeletion(db, store))
             {
                 var hasDisconnected = await WaitForValueAsync(() => leader.ServerStore.GetNodesStatuses().Count(n => n.Value.Connected == false), 1) == 1;
                 Assert.True(hasDisconnected);
@@ -372,7 +376,7 @@ namespace RachisTests
                     }
 
                     Assert.True(WaitForDocument<User>(watcherStore, "users/1", u => u.Name == "Karmel", 30_000));
-                    
+
                     // remove the node from the cluster that is responsible for the external replication
                     await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
                     Assert.True(await responsibleServer.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(fromSeconds));
@@ -393,7 +397,7 @@ namespace RachisTests
                         }
                     });
                 }
-                
+
                 var nodeInCluster = serverNodes.First(s => s.ClusterTag != responsibleServer.ServerStore.NodeTag);
                 using (var nodeInClusterStore = new DocumentStore
                 {
@@ -434,7 +438,7 @@ namespace RachisTests
                     }, "users/4");
                     await session.SaveChangesAsync();
                 }
-                
+
                 Assert.True(WaitForDocument<User>(watcherStore, "users/4", u => u.Name == "Karmel4", 30_000), $"The watcher doesn't have the document");
             }
         }
@@ -585,15 +589,13 @@ namespace RachisTests
             var server2Url = server2.ServerStore.GetNodeHttpServerUrl();
             Servers.Add(server2);
 
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await leader.ServerStore.AddNodeToClusterAsync(server2Url));
 
             Assert.Contains("Adding nodes to cluster is forbidden when the leader " +
                             "has port '0' in 'Configuration.Core.ServerUrls' setting", ex.Message);
-
         }
 
-        
         [Fact]
         public async Task WhoseTaskIsItShouldNotSelectRemovedNode()
         {
@@ -610,7 +612,7 @@ namespace RachisTests
                 {
                     Topology = new DatabaseTopology
                     {
-                        Members = new List<string> {cluster.Leader.ServerStore.NodeTag,firstFollowerTag},
+                        Members = new List<string> { cluster.Leader.ServerStore.NodeTag, firstFollowerTag },
                         ReplicationFactor = 2,
                         Stamp = new LeaderStamp()
                     }
@@ -621,7 +623,7 @@ namespace RachisTests
             await DisposeServerAndWaitForFinishOfDisposalAsync(first);
             var result = await cluster.Leader.ServerStore.SendToLeaderAsync(new DeleteDatabaseCommand(db, Guid.NewGuid().ToString())
             {
-                FromNodes = new[] {firstFollowerTag}, 
+                FromNodes = new[] { firstFollowerTag },
             });
 
             await WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
@@ -633,7 +635,7 @@ namespace RachisTests
                     x.ServerStore.LoadDatabaseTopology(db)
                         .WhoseTaskIsIt(x.ServerStore.Engine.CurrentState, new PromotableTask(x.ServerStore.NodeTag, x.WebUrl, db, firstFollowerTag), null) == firstFollowerTag);
 
-                Assert.True(false,$"removed node was selected :/ Leader: {cluster.Leader.ServerStore.NodeTag}, first: {firstFollowerTag}, second {res.ServerStore.NodeTag}");
+                Assert.True(false, $"removed node was selected :/ Leader: {cluster.Leader.ServerStore.NodeTag}, first: {firstFollowerTag}, second {res.ServerStore.NodeTag}");
             });
         }
 
@@ -664,8 +666,7 @@ namespace RachisTests
         {
             var leader = await CreateRaftClusterAndGetLeader(1);
 
-
-            using (var store = GetDocumentStore(options:new Options
+            using (var store = GetDocumentStore(options: new Options
             {
                 Server = leader
             }))
@@ -713,7 +714,6 @@ namespace RachisTests
 
             foreach (var follower in followers)
             {
-                
                 while (cluster.Leader.ServerStore.Engine.CurrentLeader.TryModifyTopology(follower.ServerStore.NodeTag, follower.ServerStore.Engine.Url, Leader.TopologyModification.NonVoter, out var task) == false)
                 {
                     await task;
@@ -721,14 +721,21 @@ namespace RachisTests
             }
 
             var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
-            cluster.Leader = GetNewServer(new ServerCreationOptions {DeletePrevious = false, RunInMemory = false, PartialPath = result.DataDir, CustomSettings = new Dictionary<string, string>
+            cluster.Leader = GetNewServer(new ServerCreationOptions
             {
-                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url
-            }});
+                DeletePrevious = false,
+                RunInMemory = false,
+                PartialPath = result.DataDir,
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url
+                }
+            });
 
             var topology = cluster.Leader.ServerStore.GetClusterTopology();
             Assert.Equal(3, topology.AllNodes.Count);
         }
+
         private async Task WaitForAssertion(Action action)
         {
             var sp = Stopwatch.StartNew();

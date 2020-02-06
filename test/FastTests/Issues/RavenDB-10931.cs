@@ -22,21 +22,24 @@ namespace FastTests.Issues
         [Fact]
         public void Subscribing_to_OnBeforeStore_event_should_not_prevent_metadata_to_be_saved()
         {
+            var databaseName = GetDatabaseName();
+
             using(var server = GetNewServer())
             using(var store = new DocumentStore
             {
-                Database = "Test",
+                Database = databaseName,
                 Urls = new[] { server.WebUrl },
                 Conventions =
                     {
                         IdentityPartsSeparator = "-"
                     }
             })
+            using (EnsureDatabaseDeletion(databaseName, store))
             {
                 store.OnBeforeStore += (s, a) => { };
                 store.Initialize();
 
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("Test")));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName)));
 
                 var verificationValue = Guid.NewGuid().ToString();
                 using (var session = store.OpenSession())
