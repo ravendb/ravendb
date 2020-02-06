@@ -53,6 +53,12 @@ namespace Raven.Server.Documents.Queries.Results
             var min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
             var max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
 
+            if (timeSeriesFunction.Offset.HasValue)
+            {
+                min = min.Add(timeSeriesFunction.Offset.Value);
+                max = max.Add(timeSeriesFunction.Offset.Value);
+            }
+
             long count = 0;
             var array = new DynamicJsonArray();
             TimeSeriesStorage.Reader reader;
