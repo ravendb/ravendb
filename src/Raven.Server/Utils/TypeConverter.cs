@@ -366,7 +366,7 @@ namespace Raven.Server.Utils
 
         public static int MaxAllowedRecursiveLevelForType { get; } = 100;
 
-        private static IEnumerable<object> Flatten(IEnumerable items)
+        internal static IEnumerable<object> Flatten(IEnumerable items)
         {
             foreach (var item in items)
             {
@@ -377,7 +377,7 @@ namespace Raven.Server.Utils
                         yield return nestedItem;
                     }
 
-                    yield break;
+                    continue;
                 }
 
                 yield return item;

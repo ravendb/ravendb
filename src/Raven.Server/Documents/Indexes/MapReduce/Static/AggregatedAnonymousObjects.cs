@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 foreach (var property in _propertyAccessor.GetPropertiesInOrder(output))
                 {
                     var value = property.Value;
-                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value);
+                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
                 }
 
                 var item = _indexContext.ReadObject(djv, "map/reduce result to store");
