@@ -599,7 +599,7 @@ namespace Raven.Server.Documents.Indexes
         private void InitializeComponentsUsingEnvironment(DocumentDatabase documentDatabase, StorageEnvironment environment)
         {
             _contextPool?.Dispose();
-            _contextPool = new TransactionContextPool(environment);
+            _contextPool = new TransactionContextPool(environment, documentDatabase.Configuration.Memory.MaxContextSizeToKeep);
 
             _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
             _indexStorage.Initialize(environment);

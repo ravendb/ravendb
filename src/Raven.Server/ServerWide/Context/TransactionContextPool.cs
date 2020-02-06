@@ -6,6 +6,7 @@
 
 using System;
 using System.Threading;
+using Sparrow;
 using Sparrow.Json;
 using Voron;
 
@@ -25,7 +26,7 @@ namespace Raven.Server.ServerWide.Context
             _mostlyThreadDedicatedWork = true;
         }
 
-        public TransactionContextPool(StorageEnvironment storageEnvironment)
+        public TransactionContextPool(StorageEnvironment storageEnvironment, Size? maxContextSizeToKeep = null) : base(maxContextSizeToKeep)
         {
             _storageEnvironment = storageEnvironment;
         }

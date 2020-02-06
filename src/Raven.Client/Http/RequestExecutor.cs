@@ -34,6 +34,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Threading;
+using Size = Sparrow.Size;
 
 namespace Raven.Client.Http
 {
@@ -329,7 +330,7 @@ namespace Raven.Client.Http
 
             _lastReturnedResponse = DateTime.UtcNow;
 
-            ContextPool = new JsonContextPool();
+            ContextPool = new JsonContextPool(new Size(8, SizeUnit.Megabytes));
             Conventions = conventions.Clone();
             DefaultTimeout = Conventions.RequestTimeout;
             SecondBroadcastAttemptTimeout = conventions.SecondBroadcastAttemptTimeout;

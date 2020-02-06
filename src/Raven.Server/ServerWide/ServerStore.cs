@@ -690,7 +690,7 @@ namespace Raven.Server.ServerWide
             if (Configuration.Queries.MaxClauseCount != null)
                 BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount.Value;
 
-            ContextPool = new TransactionContextPool(_env);
+            ContextPool = new TransactionContextPool(_env, Configuration.Memory.MaxContextSizeToKeep);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
