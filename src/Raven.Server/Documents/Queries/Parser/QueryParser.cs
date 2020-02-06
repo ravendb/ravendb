@@ -1339,6 +1339,8 @@ namespace Raven.Server.Documents.Queries.Parser
         private TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource = default)
         {
             _insideTimeSeriesBody = true;
+         
+            var tsf = new TimeSeriesFunction();
 
             if (Scanner.TryScan("from") == false)
                 ThrowParseException($"Unable to parse time series query for {name}, missing FROM");
@@ -1351,11 +1353,10 @@ namespace Raven.Server.Documents.Queries.Parser
                 source.Compound.RemoveAt(0);
             }
 
-            var between = Scanner.TryScan("BETWEEN") 
-                ? ReadTimeSeriesBetweenExpression(source) 
+            tsf.Between = Scanner.TryScan("BETWEEN")
+                ? ReadTimeSeriesBetweenExpression(source)
                 : new TimeSeriesBetweenExpression(source, null, null);
 
-            StringSegment? loadTagAs = default;
             if (Scanner.TryScan("LOAD"))
             {
                 var loadExpressions = SelectClauseExpressions("LOAD", false);
@@ -1379,23 +1380,20 @@ namespace Raven.Server.Documents.Queries.Parser
                                                "You can use the root RQL in order to load any other documents, and can pass them as arguments to the time series function");
                 }
 
-                loadTagAs = loadExpressions[0].Item2;
+                tsf.LoadTagAs = loadExpressions[0].Item2;
             }
 
-            QueryExpression filter = null;
             if (Scanner.TryScan("WHERE"))
             {
-                if (Expression(out filter) == false)
+                if (Expression(out var filter) == false)
                     ThrowInvalidQueryException($"Failed to parse filter expression after WHERE in time series function '{name}'");
+                
+                tsf.Where = filter;
             }
-
-
-            List<(QueryExpression, StringSegment?)> select = null;
-            ValueExpression groupByExpr = null;
 
             if (Scanner.TryScanMultiWordsToken("GROUP", "BY"))
             {
-                if (Value(out groupByExpr) == false)
+                if (Value(out var groupByExpr) == false)
                     ThrowParseException($"Could not parse GROUP BY argument for {name}");
 
                 if (groupByExpr.Value == ValueTokenType.Long)
@@ -1411,26 +1409,32 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                 }
 
+                tsf.GroupBy = groupByExpr;
+
                 if (Scanner.TryScan("SELECT") == false)
                     ThrowParseException($"Expected select clause for {name}, but didn't find it");
 
-                select = SelectClauseExpressions("SELECT", false);
+                tsf.Select = SelectClauseExpressions("SELECT", false);
             }
             else if (Scanner.TryScan("SELECT"))
             {
-                select = SelectClauseExpressions("SELECT", false);
+                tsf.Select = SelectClauseExpressions("SELECT", false);
+            }
+
+            if (Scanner.TryScan("OFFSET"))
+            {
+                if (Scanner.String(out var str) == false)
+                    ThrowInvalidQueryException($"Failed to parse string value after OFFSET in time series function '{name}'");
+
+                if (TimeSpan.TryParse(str, out var offset) == false)
+                    ThrowInvalidQueryException($"Failed to parse string '{str}' as TimeSpan, in OFFSET clause of time series function '{name}'");
+
+                tsf.Offset = offset;
             }
 
             _insideTimeSeriesBody = false;
 
-            return new TimeSeriesFunction
-            {
-                Between = between,
-                LoadTagAs = loadTagAs,
-                Where = filter,
-                GroupBy = groupByExpr,
-                Select = select
-            };
+            return tsf;
         }
 
         private List<(QueryExpression Expression, StringSegment? Alias)> GroupBy()
