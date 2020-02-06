@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private readonly RavenQueryProviderProcessor<T> _providerProcessor;
         private TimeSeriesWhereClauseVisitor<T> _whereVisitor;
         private StringBuilder _selectFields;
-        private string _src, _between, _where, _groupBy, _loadTag;
+        private string _src, _between, _where, _groupBy, _loadTag, _offset;
 
         public List<string> Parameters { get; internal set; }
 
@@ -37,6 +37,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     break;
                 case nameof(ITimeSeriesAggregationQueryable.Select):
                     Select(mce.Arguments[0]);
+                    break;
+                case nameof(ITimeSeriesAggregationQueryable.Offset):
+                    Offset(mce.Arguments[0]);
                     break;
                 case nameof(ITimeSeriesQueryable.LoadTag):
                 case nameof(ITimeSeriesQueryable.ToList):
@@ -156,6 +159,17 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 default:
                     throw new InvalidOperationException("Invalid Select expression " + expression);
             }
+        }
+
+        private void Offset(Expression expression)
+        {
+            if (expression.Type != typeof(TimeSpan))
+                throw new InvalidOperationException($"Invalid argument in method '{nameof(ITimeSeriesAggregationQueryable.Offset)}'. " +
+                                                    $"Expected argument of type 'TimeSpan' but got : '{expression.Type}'");
+
+            LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var ts);
+
+            _offset = $"offset '{ts}'";
         }
 
         private void TimeSeriesCall(MethodCallExpression mce)
@@ -335,6 +349,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 queryBuilder.Append(_groupBy);
             if (_selectFields != null)
                 queryBuilder.Append(" select ").Append(_selectFields);
+            if (_offset != null)
+                queryBuilder.Append(_offset);
 
             return queryBuilder.ToString();
         }

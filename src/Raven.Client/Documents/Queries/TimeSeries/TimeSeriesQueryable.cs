@@ -16,6 +16,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesAggregationQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
 
+        ITimeSeriesQueryable Offset(TimeSpan offset);
+
         TimeSeriesRawResult ToList();
 
     }
@@ -28,6 +30,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     public interface ITimeSeriesAggregationQueryable
     {
         ITimeSeriesAggregationQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
+
+        ITimeSeriesAggregationQueryable Offset(TimeSpan offset);
 
         TimeSeriesAggregationResult ToList();
 
