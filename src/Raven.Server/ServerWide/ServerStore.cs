@@ -460,7 +460,7 @@ namespace Raven.Server.ServerWide
 
         public bool HasFixedPort { get; internal set; }
 
-        public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
+        public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false, CancellationToken token = default)
         {
             if (ValidateFixedPort && HasFixedPort == false)
             {
@@ -469,12 +469,14 @@ namespace Raven.Server.ServerWide
                                                     "Define a fixed port for the node to enable cluster creation.");
             }
 
-            await _engine.AddToClusterAsync(nodeUrl, nodeTag, validateNotInTopology, asWatcher).WithCancellation(_shutdownNotification.Token);
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, _shutdownNotification.Token))
+                await _engine.AddToClusterAsync(nodeUrl, nodeTag, validateNotInTopology, asWatcher).WithCancellation(cts.Token);
         }
 
-        public async Task RemoveFromClusterAsync(string nodeTag)
+        public async Task RemoveFromClusterAsync(string nodeTag, CancellationToken token = default)
         {
-            await _engine.RemoveFromClusterAsync(nodeTag).WithCancellation(_shutdownNotification.Token);
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, _shutdownNotification.Token))
+                await _engine.RemoveFromClusterAsync(nodeTag).WithCancellation(cts.Token);
         }
 
         public void RequestSnapshot()
@@ -2632,14 +2634,14 @@ namespace Raven.Server.ServerWide
             public object Data { get; set; }
         }
 
-        public Task WaitForTopology(Leader.TopologyModification state)
+        public Task WaitForTopology(Leader.TopologyModification state, CancellationToken token)
         {
-            return _engine.WaitForTopology(state);
+            return _engine.WaitForTopology(state, token: token);
         }
 
-        public Task WaitForState(RachisState rachisState, CancellationToken cts)
+        public Task WaitForState(RachisState rachisState, CancellationToken token)
         {
-            return _engine.WaitForState(rachisState, cts);
+            return _engine.WaitForState(rachisState, token);
         }
 
         public void ClusterAcceptNewConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, Action disconnect, EndPoint remoteEndpoint)
