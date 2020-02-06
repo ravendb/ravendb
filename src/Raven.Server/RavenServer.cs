@@ -2211,7 +2211,6 @@ namespace Raven.Server
                 {
                     ServerCertificate = Certificate.Certificate,
                     ClientCertificateRequired = true,
-                    AllowRenegotiation = false,
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                     EncryptionPolicy = EncryptionPolicy.RequireEncryption,
                     EnabledSslProtocols = TcpUtils.SupportedSslProtocols
