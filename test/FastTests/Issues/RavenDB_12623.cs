@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_12623:IDisposable
+    public class RavenDB_12623 : IDisposable
     {
         [Fact]
         public void ContextPoolsShouldNotLeakThreadIdData()

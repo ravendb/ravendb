@@ -29,7 +29,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly ConcurrentDictionary<string, ClusterNode> _clusterNodes = new ConcurrentDictionary<string, ClusterNode>();
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private readonly JsonContextPool _contextPool = new JsonContextPool();
+        private readonly JsonContextPool _contextPool;
 
         internal readonly ClusterConfiguration Config;
         private readonly ServerStore _server;
@@ -39,6 +39,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _leaderClusterTag = leaderClusterTag;
             _term = term;
             _server = server;
+            _contextPool = new JsonContextPool(server.Configuration.Memory.MaxContextSizeToKeep);
             Config = server.Configuration.Cluster;
         }
 

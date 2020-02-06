@@ -84,6 +84,7 @@ namespace Raven.Server
 
         private readonly Logger _tcpLogger;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
+        internal readonly JsonContextPool _tcpContextPool;
 
         public event Action AfterDisposal;
 
@@ -118,6 +119,7 @@ namespace Raven.Server
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
             _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
+            _tcpContextPool = new JsonContextPool(Configuration.Memory.MaxContextSizeToKeep);
         }
 
         public TcpListenerStatus GetTcpServerStatus()
@@ -1554,8 +1556,6 @@ namespace Raven.Server
         }
 
         public string WebUrl { get; private set; }
-
-        internal readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
         internal CertificateHolder Certificate;
 

@@ -33,9 +33,11 @@ namespace Sparrow.Json
         public ThreadIdHolder[] ThreadIDs => _threadIds;
 
         private NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
+
         private bool _disposed;
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly long _maxContextSizeToKeepInBytes;
 
         // because this is a finalizer object, we want to pool them to avoid having too many items in the finalization queue
         private static ObjectPool<ContextStack> _contextStackPool = new ObjectPool<ContextStack>(() => new ContextStack());
@@ -86,7 +88,6 @@ namespace Sparrow.Json
 
         [ThreadStatic]
         private static ContextStackThreadReleaser _releaser;
-        
 
         private void EnsureCurrentThreadContextWillBeReleased(int currentThreadId)
         {            
@@ -156,12 +157,14 @@ namespace Sparrow.Json
             }
         }
 
-        protected JsonContextPoolBase()
+        protected JsonContextPoolBase(Size? maxContextSizeToKeep)
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanThreadLocalState;
             _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(this, s => ((JsonContextPoolBase<T>)s).EnumerateAllThreadContexts().ToList(),
                 LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
+
+            _maxContextSizeToKeepInBytes = maxContextSizeToKeep?.GetValue(SizeUnit.Bytes) ?? long.MaxValue;
         }
 
         private ContextStack MaybeGetCurrentContextStack()
@@ -341,9 +344,15 @@ namespace Sparrow.Json
             public void Dispose()
             {
                 if (Parent == null)
-                    return;// disposed already
+                    return; // disposed already
 
                 if (Context.DoNotReuse)
+                {
+                    Context.Dispose();
+                    return;
+                }
+
+                if (Context.AllocatedMemory > Parent._maxContextSizeToKeepInBytes)
                 {
                     Context.Dispose();
                     return;
@@ -378,7 +387,7 @@ namespace Sparrow.Json
             while (true)
             {
                 var current = threadHeader.Head;
-                if(current == ContextStack.HeaderDisposed)
+                if (current == ContextStack.HeaderDisposed)
                 {
                     context.Dispose();
                     return;

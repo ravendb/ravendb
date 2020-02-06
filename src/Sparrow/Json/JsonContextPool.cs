@@ -2,6 +2,10 @@
 {
     public class JsonContextPool : JsonContextPoolBase<JsonOperationContext>
     {
+        public JsonContextPool(Size? maxContextSizeToKeep = null) : base(maxContextSizeToKeep)
+        {
+        }
+
         protected override JsonOperationContext CreateContext()
         {
             if (Platform.PlatformDetails.Is32Bits)
