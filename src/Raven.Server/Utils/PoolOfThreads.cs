@@ -11,6 +11,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
 
@@ -19,13 +20,13 @@ namespace Raven.Server.Utils
     /// <summary>
     /// This is not a thread pool, this is a pool of threads.
     /// It is intended for checking out long running threads and will reuse them
-    /// when the running job is done. 
+    /// when the running job is done.
     /// Threads checked out from here may be mutated by the caller and their state will
-    /// be wiped when they are (automatically) returned to the system. 
-    /// 
+    /// be wiped when they are (automatically) returned to the system.
+    ///
     /// This is intended for _BIG_ tasks and it is not a replacement for the thread pool.
     /// </summary>
-    public class PoolOfThreads : IDisposable
+    public class PoolOfThreads : IDisposable, ILowMemoryHandler
     {
         private static readonly Lazy<PoolOfThreads> _globalRavenThreadPool = new Lazy<PoolOfThreads>(() =>
         {
@@ -36,6 +37,13 @@ namespace Raven.Server.Utils
         private static Logger _log = LoggingSource.Instance.GetLogger<PoolOfThreads>("Server");
 
         public int TotalNumberOfThreads;
+
+        private readonly SharedMultipleUseFlag _lowMemoryFlag = new SharedMultipleUseFlag();
+
+        public PoolOfThreads()
+        {
+            LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
+        }
 
         public void SetThreadsAffinityIfNeeded()
         {
@@ -66,10 +74,8 @@ namespace Raven.Server.Utils
             {
                 _disposed = true;
             }
-            while (_pool.TryDequeue(out var pooled))
-            {
-                pooled.SetWorkForThread(null, null, null);
-            }
+
+            Clear();
         }
 
         public class LongRunningWork
@@ -78,7 +84,7 @@ namespace Raven.Server.Utils
             [ThreadStatic] internal static PooledThread CurrentPooledThread;
             private ManualResetEvent _manualResetEvent;
 
-            public NativeMemory.ThreadStats CurrentThreadStats 
+            public NativeMemory.ThreadStats CurrentThreadStats
                 // this is initialize when the thread starts work,
                 // setting to to empty value avoid complex null / race conditions
                 = NativeMemory.ThreadStats.Empty;
@@ -116,11 +122,28 @@ namespace Raven.Server.Utils
                     Name = name,
                     IsBackground = true,
                 };
-                
+
                 thread.Start();
             }
             pooled.StartedAt = DateTime.UtcNow;
             return pooled.SetWorkForThread(action, state, name);
+        }
+
+        public void LowMemory()
+        {
+            if (_lowMemoryFlag.Raise())
+                Clear();
+        }
+
+        public void LowMemoryOver()
+        {
+            _lowMemoryFlag.Lower();
+        }
+
+        private void Clear()
+        {
+            while (_pool.TryDequeue(out var pooled))
+                pooled.SetWorkForThread(null, null, null);
         }
 
         internal class PooledThread
@@ -173,7 +196,6 @@ namespace Raven.Server.Utils
                     JsonContextPoolWorkStealing.AvoidForCurrentThread = true;
 
                     LongRunningWork.CurrentPooledThread = this;
-
 
                     while (true)
                     {
@@ -248,6 +270,12 @@ namespace Raven.Server.Utils
                     if (_parent._disposed)
                         return false;
 
+                    if (_parent._lowMemoryFlag.IsRaised())
+                    {
+                        SetWorkForThread(null, null, null);
+                        return false;
+                    }
+
                     _parent._pool.Enqueue(this);
                 }
 
@@ -310,7 +338,7 @@ namespace Raven.Server.Utils
                     // on different cpus, however we cannot choose which cpus will be used
 
                     // from thread_policy.h about using THREAD_AFFINITY_POLICY:
-                    // This may be used to express affinity relationships between threads in  
+                    // This may be used to express affinity relationships between threads in
                     // the task. Threads with the same affinity tag will be scheduled to
                     // share an L2 cache if possible. That is, affinity tags are a hint to
                     // the scheduler for thread placement.
@@ -340,7 +368,6 @@ namespace Raven.Server.Utils
                 if (_currentProcessThread == null)
                     throw new InvalidOperationException("Unable to get the current process thread: " + _currentUnmanagedThreadId + ", this should not be possible");
             }
-
 
             public static void ResetCurrentThreadName()
             {
@@ -386,7 +413,7 @@ namespace Raven.Server.Utils
                     for (int i = 0; i < numberOfCoresToReduce; i++)
                     {
                         // remove the N least significant bits
-                        // we do that because it is typical that the first cores (0, 1, etc) are more 
+                        // we do that because it is typical that the first cores (0, 1, etc) are more
                         // powerful and we want to keep them for other things, such as request processing
                         currentAffinity &= currentAffinity - 1;
                     }
@@ -395,7 +422,7 @@ namespace Raven.Server.Utils
                 {
                     currentAffinity &= threadMask.Value;
                 }
-                
+
                 try
                 {
                     SetThreadAffinityByPlatform(currentAffinity);

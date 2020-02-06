@@ -66,7 +66,7 @@ namespace FastTests.Server.Basic
             }; // force timeout          
 
             var url = Server.WebUrl;
-            var name = Guid.NewGuid().ToString();
+            var name = GetDatabaseName();
             var doc = GenerateDatabaseDoc(name);
 
             try

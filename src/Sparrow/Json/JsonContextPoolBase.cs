@@ -30,8 +30,6 @@ namespace Sparrow.Json
         private ConcurrentDictionary<int, ContextStack> _contextStacksByThreadId = new ConcurrentDictionary<int, ContextStack>();
         private ThreadIdHolder[] _threadIds = Array.Empty< ThreadIdHolder>();
 
-        private static ConcurrentBag<ThreadIdHolder[]> AllThreadIdHolders = new ConcurrentBag<ThreadIdHolder[]>();
-
         public ThreadIdHolder[] ThreadIDs => _threadIds;
 
         private NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
