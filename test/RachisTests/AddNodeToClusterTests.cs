@@ -65,7 +65,7 @@ namespace RachisTests
             }
         }
 
-        private static async Task AddManyCompareExchange(IDocumentStore store, RavenServer ravenServer)
+        private static async Task AddManyCompareExchange(IDocumentStore store, CancellationToken token)
         {
             var list = Enumerable.Range(0, 10)
                 .Select(i =>
@@ -85,11 +85,11 @@ namespace RachisTests
                                         k++;
                                     }
 
-                                    await session.SaveChangesAsync();
+                                    await session.SaveChangesAsync(token);
                                 }
                             }
                         }
-                    });
+                    }, token);
                 });
 
             await Task.WhenAll(list);
@@ -99,44 +99,47 @@ namespace RachisTests
         [InlineData(false)]
         public async Task ReAddMemberNode(bool withManyCompareExchange)
         {
-            var customSettings = new Dictionary<string, string>
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10)))
             {
-                {"Cluster.TcpTimeoutInMs", "3000"}
-            };
-
-            var (nodes, leader) = await CreateRaftCluster(2, customSettings: customSettings);
-            var follower = nodes.Single(x => x != leader);
-
-            var databaseName = GetDatabaseName();
-
-            using (var store = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName }.Initialize())
-            using (EnsureDatabaseDeletion(store.Database, store))
-            {
-                try
+                var customSettings = new Dictionary<string, string>
                 {
-                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName), 2));
+                    {"Cluster.TcpTimeoutInMs", "3000"}
+                };
+
+                var (nodes, leader) = await CreateRaftCluster(2, customSettings: customSettings);
+                var follower = nodes.Single(x => x != leader);
+
+                var databaseName = GetDatabaseName();
+
+                using (var store = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName }.Initialize())
+                using (EnsureDatabaseDeletion(store.Database, store))
+                {
+                    try
+                    {
+                        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(databaseName), 2), cts.Token);
+                    }
+                    catch (ConcurrencyException)
+                    {
+                    }
+
+                    if (withManyCompareExchange)
+                        await AddManyCompareExchange(store, cts.Token);
+
+                    leader = await ActionWithLeader(l =>
+                    {
+                        follower = nodes.Single(x => x != l);
+                        return l.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag, cts.Token);
+                    });
+                    await follower.ServerStore.WaitForState(RachisState.Passive, cts.Token);
+
+                    using (var store2 = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName }.Initialize())
+                    {
+                        await store2.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0), token: cts.Token);
+                    }
+
+                    await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl, follower.ServerStore.NodeTag, token: cts.Token);
+                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter, cts.Token);
                 }
-                catch (ConcurrencyException)
-                {
-                }
-
-                if (withManyCompareExchange)
-                    await AddManyCompareExchange(store, leader);
-
-                leader = await ActionWithLeader(l =>
-                {
-                    follower = nodes.Single(x => x != l);
-                    return l.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag);
-                });
-                await follower.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
-
-                using (var store2 = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName }.Initialize())
-                {
-                    store2.Operations.Send(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0));
-                }
-
-                await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl, follower.ServerStore.NodeTag);
-                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
         }
 
