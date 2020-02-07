@@ -11,10 +11,15 @@
                         <div data-bind="text: sectionName" class="flex-grow"></div>
                     </div>
                     
-                    <div class="margin-left" data-bind="foreach: series">
+                    <div class="margin-left legend" data-bind="foreach: series">
                         <div class="checkbox">
                             <input type="checkbox" data-bind="attr: { id: uniqueId }, checked: visible" />
-                            <label data-bind="text: name, attr: { for: uniqueId }"></label>
+                            <label data-bind="attr: { for: uniqueId }">
+                                <span data-bind="attr: { class: $root.getColorClass($data) + ' ' + $parent.type }">
+                                    <i class="icon-stats"></i>
+                                </span>
+                                <span data-bind="text: name"></span>
+                            </label>
                         </div>
                     </div>
                 </div>

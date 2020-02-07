@@ -65,13 +65,13 @@ class customColumnForm {
         this.parseError = ko.pureComputed(() => {
             const exp = this.expression();
             if (exp && this.expressionWasChanged()) {
-                return this.tryParse(exp);
+                return customColumnForm.tryParse(exp);
             }
             return null;
         });
     }
 
-    private tryParse(val: string): string {
+    private static tryParse(val: string): string {
         try {
             // ReSharper disable once WrongExpressionStatement
             new Function('return (' + val + ")");
@@ -92,7 +92,7 @@ class customColumnForm {
 
         this.expression.extend({
             validation: [{
-                validator: (val: string) => !this.tryParse(val),
+                validator: (val: string) => !customColumnForm.tryParse(val),
                 message: "Unable to parse binding expression."
             }]
         });

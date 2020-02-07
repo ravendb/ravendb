@@ -5,7 +5,6 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import colorsManager = require("common/colorsManager");
 
 
-
 interface graphData {
     pointSeries: graphSeries<dataPoint>[];
     rangeSeries: graphSeries<dataRangePoint>[];
@@ -69,11 +68,9 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
     constructor(item: timeSeriesPlotItem, onChange: () => void) {
         super(item, onChange);
 
-        const groupedValues = this.value.Results as Array<timeSeriesQueryGroupedItemResultDto>;
-        const allKeys = Object.keys(groupedValues[0]);
-        const seriesPrefixNames = _.without(allKeys, "From", "To", "Count");
-        
-        const valuesCount = groupedValues[0][seriesPrefixNames[0]].length; //TODO: scan through all values!
+        const groupedValues = item.value.Results as Array<timeSeriesQueryGroupedItemResultDto>;
+        const seriesPrefixNames = timeSeriesQueryResult.detectGroupKeys(groupedValues);
+        const valuesCount = timeSeriesQueryResult.detectValuesCount(item.value);
         const seriesValuesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
         
         const dateFromPoints = groupedValues.map(x => new Date(x.From));
@@ -123,9 +120,7 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
     }
 }
 
-type viewMode = "plot" | "table";
-
-class timeSeriesDetails extends viewModelBase {
+class timeSeriesPlotDetails extends viewModelBase {
     
     private readonly margin = {
         top: 40,
@@ -150,7 +145,6 @@ class timeSeriesDetails extends viewModelBase {
     
     private readonly heightBrush = 80;
     
-    private mode = ko.observable<viewMode>();
     pointTimeSeries: timeSeriesContainer<dataPoint>[] = [];
     rangeTimeSeries: timeSeriesContainer<dataRangePoint>[] = [];
 
@@ -183,10 +177,9 @@ class timeSeriesDetails extends viewModelBase {
     
     private zoom: d3.behavior.Zoom<void>;
     private rect: d3.Selection<any>;
-    private readonly colorClassPointScale: d3.scale.Ordinal<string, keyof this["colors"]>;
-    private readonly colorClassRangeScale: d3.scale.Ordinal<string, keyof this["colors"]>;
+    private readonly colorClassScale: d3.scale.Ordinal<string, keyof this["colors"]>;
     
-    constructor(timeSeries: Array<timeSeriesPlotItem>, initialMode: viewMode = "plot") { //TODO: support modes!
+    constructor(timeSeries: Array<timeSeriesPlotItem>) {
         super();
         
         const onChange = () => this.draw(true, false);
@@ -205,13 +198,18 @@ class timeSeriesDetails extends viewModelBase {
             }
         });
         
-        this.mode(initialMode);
+        _.bindAll(this, "getColor", "getColorClass");
 
-        this.colorClassPointScale = d3.scale.ordinal<string>()
+        this.colorClassScale = d3.scale.ordinal<string>()
             .range(_.range(1, 12).map(x => "color-" + x));
-
-        this.colorClassRangeScale = d3.scale.ordinal<string>()
-            .range(_.range(10, 0).map(x => "color-" + x));
+    }
+    
+    getColorClass(series: graphSeries<any>) {
+        return this.colorClassScale(series.uniqueId);
+    }
+    
+    getColor(series: graphSeries<any>) {
+        return this.colors[this.getColorClass(series)];
     }
     
     get allTimeSeries() {
@@ -367,8 +365,8 @@ class timeSeriesDetails extends viewModelBase {
         
         if (dataUpdated) {
             if (data.pointSeries.length || data.rangeSeries.length) {
-                const extents = timeSeriesDetails.computeExtents(data);
-                const paddedExtents = timeSeriesDetails.paddingExtents(extents, 0.02);
+                const extents = timeSeriesPlotDetails.computeExtents(data);
+                const paddedExtents = timeSeriesPlotDetails.paddingExtents(extents, 0.02);
                 const { minX, maxX, minY, maxY } = paddedExtents;
 
                 if (resetXScale) {
@@ -408,7 +406,7 @@ class timeSeriesDetails extends viewModelBase {
                 for (let i = 0; i < data.rangeSeries.length; i++) {
                     const series = data.rangeSeries[i];
                     contextContext.beginPath();
-                    contextContext.strokeStyle = this.colors[this.colorClassRangeScale(series.uniqueId)];
+                    contextContext.strokeStyle = this.getColor(series);
                     contextContext.lineWidth = 2;
                     for (let p = 0; p < series.points.length; p++) {
                         const point = series.points[p];
@@ -427,7 +425,7 @@ class timeSeriesDetails extends viewModelBase {
 
                     if (points.points.length) {
                         contextContext.beginPath();
-                        contextContext.strokeStyle = this.colors[this.colorClassPointScale(points.uniqueId)];
+                        contextContext.strokeStyle = this.colors[this.colorClassScale(points.uniqueId)];
                         contextContext.lineWidth = 2;
                         const renderer = new quantizedLineRenderer(contextContext, pixelTimeDelta, this.xBrush, this.yBrush);
                         renderer.draw(points.points[0].date, points.points[0].value);
@@ -456,7 +454,7 @@ class timeSeriesDetails extends viewModelBase {
             for (let i = 0; i < data.rangeSeries.length; i++) {
                 const series = data.rangeSeries[i];
                 focusContext.beginPath();
-                focusContext.strokeStyle = this.colors[this.colorClassRangeScale(series.uniqueId)];
+                focusContext.strokeStyle = this.getColor(series);
                 focusContext.lineWidth = 2;
                 for (let p = 0; p < series.points.length; p++) {
                     const point = series.points[p];
@@ -478,7 +476,7 @@ class timeSeriesDetails extends viewModelBase {
                 
                 if (points.points.length) {
                     focusContext.beginPath();
-                    focusContext.strokeStyle = this.colors[this.colorClassPointScale(points.uniqueId)];
+                    focusContext.strokeStyle = this.colors[this.colorClassScale(points.uniqueId)];
                     focusContext.lineWidth = 2;
                     const renderer = new quantizedLineRenderer(focusContext, pixelTimeDelta, this.x, this.y);
                     renderer.draw(points.points[startIdx].date, points.points[startIdx].value);
@@ -580,8 +578,8 @@ class timeSeriesDetails extends viewModelBase {
     }
     
     private static computeExtents(data: graphData) {
-        const pointsExtents = timeSeriesDetails.computePointExtents(data.pointSeries);
-        const rangeExtents = timeSeriesDetails.computeRangeExtents(data.rangeSeries);
+        const pointsExtents = timeSeriesPlotDetails.computePointExtents(data.pointSeries);
+        const rangeExtents = timeSeriesPlotDetails.computeRangeExtents(data.rangeSeries);
         
         return {
             minX: d3.min([pointsExtents.minX, rangeExtents.minX]),
@@ -692,4 +690,4 @@ class quantizedLineRenderer {
     }
 }
 
-export = timeSeriesDetails;
+export = timeSeriesPlotDetails;

@@ -83,7 +83,7 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
                 : "";
             
             const previewButton = this.handler 
-                ? `<button title="Show time series values" class="btn btn-default btn-sm" ${customPreviewAction}><i class="icon-preview"></i></button>`
+                ? `<button title="Show time series values" class="btn btn-default btn-sm" ${customPreviewAction}><i class="icon-table"></i></button>`
                 : "";
             
             const separator = `<div class="flex-separator"></div>`;

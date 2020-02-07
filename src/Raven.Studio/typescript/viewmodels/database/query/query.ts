@@ -35,7 +35,8 @@ import graphQueryResults = require("common/query/graphQueryResults");
 import debugGraphOutputCommand = require("commands/database/query/debugGraphOutputCommand");
 import generalUtils = require("common/generalUtils");
 import timeSeriesColumn = require("widgets/virtualGrid/columns/timeSeriesColumn");
-import timeSeriesDetails = require("viewmodels/common/timeSeriesDetails");
+import timeSeriesPlotDetails = require("viewmodels/common/timeSeriesPlotDetails");
+import timeSeriesQueryResult = require("models/database/timeSeries/timeSeriesQueryResult");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph";
 
@@ -59,6 +60,11 @@ class highlightSection {
     data = new Map<string, highlightItem[]>();
     fieldName = ko.observable<string>();
     totalCount = ko.observable<number>(0);
+}
+
+class timeSeriesTableDetails {
+    constructor(public documentId: string, public name: string, public value: timeSeriesQueryResultDto) {
+    }
 }
 
 class perCollectionIncludes {
@@ -149,7 +155,7 @@ class query extends viewModelBase {
     fromCache = ko.observable<boolean>(false);
     originalRequestTime = ko.observable<number>();
     dirtyResult = ko.observable<boolean>();
-    currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes | timeSeriesDetails>("results");
+    currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes | timeSeriesPlotDetails | timeSeriesTableDetails>("results");
     totalResultsForUi = ko.observable<number>(0);
     hasMoreUnboundedResults = ko.observable<boolean>(false);
     graphTabIsDirty = ko.observable<boolean>(true);
@@ -173,7 +179,8 @@ class query extends viewModelBase {
     showTimeSeriesGraph: KnockoutComputed<boolean>;
     showPlotButton: KnockoutComputed<boolean>;
     
-    timeSeriesGraphs = ko.observableArray<timeSeriesDetails>([]);
+    timeSeriesGraphs = ko.observableArray<timeSeriesPlotDetails>([]);
+    timeSeriesTables = ko.observableArray<timeSeriesTableDetails>([]);
 
     private columnPreview = new columnPreviewPlugin<document>();
 
@@ -437,13 +444,11 @@ class query extends viewModelBase {
             }
         });
 
-        this.showTimeSeriesGraph = ko.pureComputed(() => {
-            return this.currentTab() instanceof timeSeriesDetails;
-        });
+        this.showTimeSeriesGraph = ko.pureComputed(() => this.currentTab() instanceof timeSeriesPlotDetails);
         
         this.showVirtualTable = ko.pureComputed(() => {
             const currentTab = this.currentTab();
-            return currentTab !== 'timings' && currentTab !== 'graph' && !this.showTimeSeriesGraph(); 
+            return currentTab !== 'timings' && currentTab !== 'graph' && !this.showTimeSeriesGraph();
         });
     }
 
@@ -516,13 +521,19 @@ class query extends viewModelBase {
             enableInlinePreview: true,
             detectTimeSeries: true, 
             timeSeriesActionHandler: (type, documentId, name, value, event) => {
-                const chart = new timeSeriesDetails([{
-                    documentId,
-                    value,
-                    name
-                }], type === "plot" ? "plot" : "table");
-                this.timeSeriesGraphs.push(chart);
-                this.goToTimeSeriesTab(chart);
+                if (type === "plot") {
+                    const chart = new timeSeriesPlotDetails([{
+                        documentId,
+                        value,
+                        name
+                    }]);
+                    this.timeSeriesGraphs.push(chart);
+                    this.goToTimeSeriesTab(chart);    
+                } else {
+                    const table = new timeSeriesTableDetails(documentId, name, value);
+                    this.timeSeriesTables.push(table);
+                    this.goToTimeSeriesTab(table);
+                }
             }
         });
 
@@ -548,10 +559,13 @@ class query extends viewModelBase {
         this.columnsSelector.init(grid,
             (s, t, c) => this.effectiveFetcher()(s, t),
             (w, r) => {
-                if (this.currentTab() === "results" || this.currentTab() instanceof perCollectionIncludes) {
+                const tab = this.currentTab();
+                if (tab === "results" || tab instanceof perCollectionIncludes) {
                     return documentsProvider.findColumns(w, r);
-                } else if (this.currentTab() === "explanations") {
+                } else if (tab === "explanations") {
                     return this.explanationsColumns(grid);
+                } else if (tab instanceof timeSeriesTableDetails) {
+                    return this.getTimeSeriesColumns(grid, tab);
                 } else {
                     return highlightingProvider.findColumns(w, r);
                 }
@@ -569,19 +583,69 @@ class query extends viewModelBase {
                 // we don't want to show inline preview for Explanation column, as value doesn't contain full message
                 // which might be misleading - use preview button to obtain entire explanation 
                 return;
-            } 
+            }
             
-            if (column instanceof textColumn && !(column instanceof timeSeriesColumn)) {
-                const value = column.getCellValue(doc);
+            const showPreview = (value: any) => {
                 if (!_.isUndefined(value)) {
                     const json = JSON.stringify(value, null, 4);
                     const html = Prism.highlight(json, (Prism.languages as any).javascript);
                     onValue(html, json);
                 }
+            };
+
+            if (this.currentTab() instanceof timeSeriesTableDetails && column instanceof textColumn) {
+                const header = column.header;
+                const rawValue = (doc as any)[header];
+                const dateHeaders = ["From", "To", "Timestamp"];
+
+                if (_.includes(dateHeaders, header)) {
+                    onValue(moment.utc(rawValue), rawValue);
+                } else {
+                    showPreview(rawValue);
+                }
+                
+                // if value wasn't handled don't fallback to default options
+                return;
+            }
+            
+            if (column instanceof textColumn && !(column instanceof timeSeriesColumn)) {
+                const value = column.getCellValue(doc);
+                showPreview(value);
             }
         });
         
         this.queryHasFocus(true);
+    }
+    
+    private getTimeSeriesColumns(grid: virtualGridController<any>, tab: timeSeriesTableDetails): virtualColumn[] {
+        const valuesCount = timeSeriesQueryResult.detectValuesCount(tab.value);
+        const maybeArrayPresenter: (columnName: string) => (dto: timeSeriesQueryGroupedItemResultDto | timeSeriesRawItemResultDto) => string | number
+            = valuesCount === 1
+            ? (columnName => dto => (dto as any)[columnName][0])
+            : (columnName => dto => "[" + (dto as any)[columnName].join(", ") + "]");
+        
+        switch (timeSeriesQueryResult.detectResultType(tab.value)) {
+            case "grouped":
+                const groupedItems = tab.value.Results as Array<timeSeriesQueryGroupedItemResultDto>;
+                const groupKeys = timeSeriesQueryResult.detectGroupKeys(groupedItems);
+                
+                const aggregationColumns = groupKeys.map(key => {
+                    return new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, maybeArrayPresenter(key), key, (50 / groupKeys.length) + "%");
+                });
+                
+                return [
+                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.From), "From", "20%"),
+                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.To), "To", "20%"),
+                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, maybeArrayPresenter("Count"), "Count", "10%"),
+                    ...aggregationColumns
+                ];
+            case "raw":
+                return [
+                    new textColumn<timeSeriesRawItemResultDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Timestamp), "Timestamp", "30%"),
+                    new textColumn<timeSeriesRawItemResultDto>(grid, x => x.Tag, "Tag", "30%"),
+                    new textColumn<timeSeriesRawItemResultDto>(grid, maybeArrayPresenter("Values"), "Values", "30%"),
+                ];
+        }
     }
     
     private explanationsColumns(grid: virtualGridController<any>) {
@@ -1057,10 +1121,9 @@ class query extends viewModelBase {
             });
         });
         
-        const chart = new timeSeriesDetails(timeSeries, "plot");
+        const chart = new timeSeriesPlotDetails(timeSeries);
         this.timeSeriesGraphs.push(chart);
         this.goToTimeSeriesTab(chart);
-        
     }
 
     refresh() {
@@ -1220,17 +1283,35 @@ class query extends viewModelBase {
         }
     }
 
-    goToTimeSeriesTab(graph: timeSeriesDetails) {
-        this.currentTab(graph);
+    goToTimeSeriesTab(tab: timeSeriesPlotDetails | timeSeriesTableDetails) {
+        this.currentTab(tab);
         this.resultsExpanded(true);
+
+        if (tab instanceof timeSeriesTableDetails) {
+            this.effectiveFetcher = ko.observable<fetcherType>(() => {
+                return $.when({
+                    items: tab.value.Results.map(x => new document(x)),
+                    totalResultCount: tab.value.Count
+                });
+            });
+
+            this.columnsSelector.reset();
+            this.refresh();
+        }
     }
 
-    closeTimeSeriesTab(graph: timeSeriesDetails) {
-        if (this.currentTab() === graph) {
+    closeTimeSeriesTab(tab: timeSeriesPlotDetails | timeSeriesTableDetails) {
+        if (this.currentTab() === tab) {
             this.goToResultsTab();    
         }
-        
-        this.timeSeriesGraphs.remove(graph);
+
+        if (tab instanceof timeSeriesPlotDetails) {
+            this.timeSeriesGraphs.remove(tab);
+        }
+
+        if (tab instanceof timeSeriesTableDetails) {
+            this.timeSeriesTables.remove(tab);
+        }
     }
 
     toggleResults() {
