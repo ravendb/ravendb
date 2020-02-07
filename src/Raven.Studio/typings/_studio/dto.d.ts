@@ -667,13 +667,13 @@ type timeSeriesResultType = "grouped" | "raw";
 
 interface timeSeriesQueryResultDto {
     Count: number;
-    Results: Array<timeSeriesQueryGroupedItemResultDto> | Array<timeSeriesRawItemResultDto>;
+    Results: Array<timeSeriesQueryGroupedItemResultDto | timeSeriesRawItemResultDto>;
 }
 
 interface timeSeriesQueryGroupedItemResultDto {
     From: string;
     To: string;
-    [column: string]: Array<number>;
+    [column: string]: number[];
 }
 
 interface timeSeriesRawItemResultDto {

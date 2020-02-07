@@ -31,6 +31,28 @@ class timeSeriesQueryResult {
         const firstResult = results[0] as timeSeriesQueryGroupedItemResultDto;
         return firstResult.From && firstResult.To ? "grouped" : "raw";
     }
+    
+    static detectGroupKeys(groupedValues: Array<timeSeriesQueryGroupedItemResultDto>): string[] {
+        const allKeys = Object.keys(groupedValues[0]);
+        return _.without(allKeys, "From", "To", "Count");
+    }
+    
+    static detectValuesCount(dto: timeSeriesQueryResultDto): number {
+        switch (timeSeriesQueryResult.detectResultType(dto)) {
+            case "grouped":
+                const groupedValues = dto.Results as Array<timeSeriesQueryGroupedItemResultDto>;
+                const keys = timeSeriesQueryResult.detectGroupKeys(groupedValues);
+                if (keys.length) {
+                    const firstKey = keys[0];
+                    return _.max(groupedValues.map(x => x[firstKey].length));
+                } else {
+                    return 0;
+                }
+            case "raw":
+                const rawValues = dto.Results as Array<timeSeriesRawItemResultDto>;
+                return _.max(rawValues.map(x => x.Values.length));
+        }
+    }
 }
 
 
