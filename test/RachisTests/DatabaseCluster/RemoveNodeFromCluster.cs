@@ -273,7 +273,7 @@ namespace RachisTests.DatabaseCluster
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
                 cluster.Leader = GetNewServer(new ServerCreationOptions
                 {
-                    DeletePrevious = false, RunInMemory = false, PartialPath = result.DataDir, CustomSettings = new Dictionary<string, string>
+                    DeletePrevious = false, RunInMemory = false, DataDirectory = result.DataDir, CustomSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url
                 }});
@@ -293,7 +293,7 @@ namespace RachisTests.DatabaseCluster
             {
                 DeletePrevious = false,
                 RunInMemory = false,
-                PartialPath = result.DataDir,
+                DataDirectory = result.DataDir,
                 CustomSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url,
@@ -322,7 +322,7 @@ namespace RachisTests.DatabaseCluster
             {
                 DeletePrevious = false,
                 RunInMemory = false,
-                PartialPath = result.DataDir,
+                DataDirectory = result.DataDir,
                 CustomSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url,

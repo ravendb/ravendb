@@ -135,7 +135,7 @@ namespace StressTests.Issues
 
                 var dataDir = node.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
 
-                node = base.GetNewServer(new ServerCreationOptions() { DeletePrevious = false, RunInMemory = false, CustomSettings = settings, PartialPath = dataDir });
+                node = base.GetNewServer(new ServerCreationOptions() { DeletePrevious = false, RunInMemory = false, CustomSettings = settings, DataDirectory = dataDir });
             }
             else
             {

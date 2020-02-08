@@ -468,7 +468,7 @@ namespace RachisTests
                     DeletePrevious = false,
                     RunInMemory = false,
                     CustomSettings = settings,
-                    PartialPath = dataDir
+                    DataDirectory = dataDir
                 });
 
                 Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");

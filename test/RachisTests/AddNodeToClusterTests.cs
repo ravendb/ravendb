@@ -728,7 +728,7 @@ namespace RachisTests
             {
                 DeletePrevious = false,
                 RunInMemory = false,
-                PartialPath = result.DataDir,
+                DataDirectory = result.DataDir,
                 CustomSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url

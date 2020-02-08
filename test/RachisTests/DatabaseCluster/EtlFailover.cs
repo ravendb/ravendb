@@ -339,7 +339,7 @@ namespace RachisTests.DatabaseCluster
                         CustomSettings = new Dictionary<string, string>
                         {
                             {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalServerUrl}
-                        }, RunInMemory = false, DeletePrevious = false, PartialPath = originalServerDataDir
+                        }, RunInMemory = false, DeletePrevious = false, DataDirectory = originalServerDataDir
                     });
 
                 using (var store = new DocumentStore

@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                 }
 
                 // Bring destination server up
-                serverDst = GetNewServer(new ServerCreationOptions{RunInMemory = false, DeletePrevious = false, PartialPath = nodePath, CustomSettings = settings});
+                serverDst = GetNewServer(new ServerCreationOptions{RunInMemory = false, DeletePrevious = false, DataDirectory = nodePath, CustomSettings = settings});
 
                 Assert.True(WaitForDocument(storeDst, "user/2"));
             }

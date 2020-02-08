@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                             },
                             RunInMemory = false,
                             DeletePrevious = false,
-                            PartialPath = dataDir});
+                            DataDirectory = dataDir});
 
                         Assert.True(await WaitForDatabaseToBeDeleted(Servers[1], databaseName, TimeSpan.FromSeconds(30), cts.Token));
                     }
