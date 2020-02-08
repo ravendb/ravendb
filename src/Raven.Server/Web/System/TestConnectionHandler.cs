@@ -50,7 +50,7 @@ namespace Raven.Server.Web.System
             TcpClient tcpClient;
             string url;
             (tcpClient, url) =  await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
-            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, timeout);
+            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy, timeout);
             using (tcpClient)
             {
                 using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))

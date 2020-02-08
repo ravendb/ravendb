@@ -211,7 +211,14 @@ namespace Raven.Client.Documents.Subscriptions
                 _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
                 _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
                 _stream = _tcpClient.GetStream();
-                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpInfo, _store.Certificate, requestExecutor.DefaultTimeout).ConfigureAwait(false);
+                _stream = await TcpUtils.WrapStreamWithSslAsync(
+                    _tcpClient,
+                    tcpInfo,
+                    _store.Certificate,
+#if !(NETSTANDARD2_0 || NETCOREAPP2_1)
+                    null,
+#endif
+                    requestExecutor.DefaultTimeout).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
 
@@ -351,7 +358,7 @@ namespace Raven.Client.Documents.Subscriptions
                     Dictionary<string, string> reasonsDictionary = new Dictionary<string, string>();
                     if (rawReasons != null && rawReasons is BlittableJsonReaderArray rawReasonsArray)
                     {
-                        foreach(var item in rawReasonsArray)
+                        foreach (var item in rawReasonsArray)
                         {
                             if (item is BlittableJsonReaderObject itemAsBlittable)
                             {
@@ -365,7 +372,7 @@ namespace Raven.Client.Documents.Subscriptions
                         }
                     }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine,reasonsDictionary.Select(x=>$"{x.Key}:{x.Value}"))}",
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine, reasonsDictionary.Select(x => $"{x.Key}:{x.Value}"))}",
                         appropriateNode,
                         reasonsDictionary);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect:

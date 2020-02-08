@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Replication
             (tcpClient, url) = task.Result;
             using (Interlocked.Exchange(ref _tcpClient, tcpClient))
             {
-                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Engine.TcpConnectionTimeout);
+                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy, _parent._server.Engine.TcpConnectionTimeout);
                 wrapSsl.Wait(CancellationToken);
 
                 _stream = wrapSsl.Result;
@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Replication
             {
                 request[nameof(ReplicationInitialRequest.Database)] = _parent.Database.Name; // my database
                 request[nameof(ReplicationInitialRequest.DatabaseGroupId)] = _parent.Database.DatabaseGroupId; // my database id
-                request[nameof(ReplicationInitialRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl(); 
+                request[nameof(ReplicationInitialRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl();
                 request[nameof(ReplicationInitialRequest.Info)] = _parent._server.GetTcpInfoAndCertificates(null); // my connection info
                 request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = destination.HubDefinitionName;
                 request[nameof(ReplicationInitialRequest.PullReplicationSinkTaskName)] = destination.GetTaskName();
@@ -777,26 +777,26 @@ namespace Raven.Server.Documents.Replication
             {
                 if (string.IsNullOrEmpty(context.LastDatabaseChangeVector))
                     context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-                
+
                 var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
                     context.LastDatabaseChangeVector);
 
                 if (status != ConflictStatus.AlreadyMerged)
                     return 0;
 
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.LastDatabaseChangeVector);                
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.LastDatabaseChangeVector);
                 if (result.IsValid)
                 {
-                    if(context.LastReplicationEtagFrom == null)
+                    if (context.LastReplicationEtagFrom == null)
                         context.LastReplicationEtagFrom = new Dictionary<string, long>();
 
                     if (context.LastReplicationEtagFrom.ContainsKey(_replicationBatchReply.DatabaseId) == false)
                     {
                         context.LastReplicationEtagFrom[_replicationBatchReply.DatabaseId] = _replicationBatchReply.CurrentEtag;
                     }
-                    
+
                     context.LastDatabaseChangeVector = result.ChangeVector;
-                    
+
                     context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                     {
                         try
@@ -1062,7 +1062,7 @@ namespace Raven.Server.Documents.Replication
             _cts.Cancel();
 
             DisposeTcpClient();
-            
+
             _connectionDisposed.Set();
 
             if (_longRunningSendingWork != null && _longRunningSendingWork != PoolOfThreads.LongRunningWork.Current)
@@ -1074,7 +1074,7 @@ namespace Raven.Server.Documents.Replication
                     DisposeTcpClient();
                 }
             }
-            
+
             try
             {
                 _cts.Dispose();
@@ -1103,7 +1103,7 @@ namespace Raven.Server.Documents.Replication
 
     public interface IReportOutgoingReplicationPerformance
     {
-        string DestinationFormatted { get;}
+        string DestinationFormatted { get; }
         OutgoingReplicationPerformanceStats[] GetReplicationPerformance();
     }
 

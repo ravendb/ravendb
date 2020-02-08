@@ -397,7 +397,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 string url;
                 (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
 
-                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, timeout);
+                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Server.CipherSuitesPolicy, timeout);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {
