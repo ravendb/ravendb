@@ -95,6 +95,8 @@ namespace Raven.Server
 
         internal bool ThrowOnLicenseActivationFailure;
 
+        internal CipherSuitesPolicy CipherSuitesPolicy => _httpsConnectionMiddleware?.CipherSuitesPolicy;
+
         public RavenServer(RavenConfiguration configuration)
         {
             JsonDeserializationValidator.Validate();
@@ -2212,7 +2214,7 @@ namespace Raven.Server
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                     EncryptionPolicy = EncryptionPolicy.RequireEncryption,
                     EnabledSslProtocols = TcpUtils.SupportedSslProtocols,
-                    CipherSuitesPolicy = _httpsConnectionMiddleware?.CipherSuitesPolicy
+                    CipherSuitesPolicy = CipherSuitesPolicy
                 });
 
                 return (sslStream, HttpsConnectionMiddleware.ConvertToX509Certificate2(sslStream.RemoteCertificate));
