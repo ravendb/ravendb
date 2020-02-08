@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -42,21 +41,21 @@ namespace SlowTests.Issues
                         var stats = await leaderStore.Maintenance.SendAsync(new GetStatisticsOperation(), cts.Token);
                         Assert.NotNull(stats);
 
-                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
+                        var result = await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
 
                         await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true), cts.Token);
 
-                        var url = Servers[1].WebUrl;
-                        var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-
-                        Servers[1] = GetNewServer(new ServerCreationOptions {CustomSettings = new Dictionary<string, string>
+                        Servers[1] = GetNewServer(new ServerCreationOptions
+                        {
+                            CustomSettings = new Dictionary<string, string>
                             {
-                                {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), url},
-                                {RavenConfiguration.GetKey(x => x.Core.ServerUrls), url}
+                                {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), result.Url},
+                                {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url}
                             },
                             RunInMemory = false,
                             DeletePrevious = false,
-                            DataDirectory = dataDir});
+                            DataDirectory = result.DataDirectory
+                        });
 
                         Assert.True(await WaitForDatabaseToBeDeleted(Servers[1], databaseName, TimeSpan.FromSeconds(30), cts.Token));
                     }

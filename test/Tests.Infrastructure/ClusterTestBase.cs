@@ -340,27 +340,34 @@ namespace Tests.Infrastructure
             return false;
         }
 
-        protected static void DisposeServerAndWaitForFinishOfDisposal(RavenServer serverToDispose)
+        protected static (string DataDirectory, string Url, string NodeTag) DisposeServerAndWaitForFinishOfDisposal(RavenServer serverToDispose)
         {
             var mre = new ManualResetEventSlim();
+            var dataDirectory = serverToDispose.Configuration.Core.DataDirectory.FullPath;
+            var url = serverToDispose.WebUrl;
+            var nodeTag = serverToDispose.ServerStore.NodeTag;
+
             serverToDispose.AfterDisposal += () => mre.Set();
             serverToDispose.Dispose();
 
-            Assert.True(mre.Wait(TimeSpan.FromMinutes(1)), $"Could not dispose server: {serverToDispose.WebUrl}");
+            Assert.True(mre.Wait(TimeSpan.FromMinutes(1)), $"Could not dispose server: {url}");
+
+            return (dataDirectory, url, nodeTag);
         }
 
-        protected static async Task<(string DataDir, string Url)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
+        protected static async Task<(string DataDirectory, string Url, string NodeTag)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
         {
             var mre = new AsyncManualResetEvent();
-            var dataDir = serverToDispose.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+            var dataDirectory = serverToDispose.Configuration.Core.DataDirectory.FullPath;
             var url = serverToDispose.WebUrl;
+            var nodeTag = serverToDispose.ServerStore.NodeTag;
 
             serverToDispose.AfterDisposal += () => mre.Set();
             serverToDispose.Dispose();
 
-            Assert.True(await mre.WaitAsync(TimeSpan.FromMinutes(1)), $"Could not dispose server: {serverToDispose.WebUrl}");
+            Assert.True(await mre.WaitAsync(TimeSpan.FromMinutes(1)), $"Could not dispose server: {url}");
 
-            return (dataDir, url);
+            return (dataDirectory, url, nodeTag);
         }
 
         protected async Task DisposeAndRemoveServer(RavenServer serverToDispose)
