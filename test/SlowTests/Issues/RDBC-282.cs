@@ -1,18 +1,14 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Config;
-using Xunit;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -42,14 +38,14 @@ namespace SlowTests.Issues
 
                     var value = WaitForValue(() => list.Count, 1);
                     Assert.Equal(1, value);
-                    var serverPath = server.Configuration.Core.DataDirectory.FullPath;
-                    var url = server.WebUrl;
-                    await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+
+                    var result = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+
                     var settings = new Dictionary<string, string>
                     {
-                        {RavenConfiguration.GetKey(x => x.Core.ServerUrls), url}
+                        {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url}
                     };
-                    server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = serverPath, CustomSettings = settings });
+                    server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = result.DataDirectory, CustomSettings = settings });
                     await taskObservable.EnsureConnectedNow();
                     PushUser(store);
                     value = WaitForValue(() => list.Count, 2);
