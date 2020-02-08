@@ -67,6 +67,7 @@ namespace Raven.Server.Commercial
         public event Action LicenseChanged;
 
         public static readonly OsInfo OsInfo = OsInfoExtensions.GetOsInfo();
+
         public static readonly BuildNumber BuildInfo = new BuildNumber
         {
             BuildVersion = ServerVersion.Build,
@@ -74,6 +75,8 @@ namespace Raven.Server.Commercial
             CommitHash = ServerVersion.CommitHash,
             FullVersion = ServerVersion.FullVersion
         };
+
+        internal static bool IgnoreProcessorAffinityChanges = false;
 
         public LicenseManager(ServerStore serverStore)
         {
@@ -529,7 +532,7 @@ namespace Raven.Server.Commercial
                     // Here we have an expired license, but it was valid once.
                     // The user might rely on the license features and we want
                     // to err on the side of the user in this case, so we'll accept
-                    // the features of the license, even before we check with the 
+                    // the features of the license, even before we check with the
                     // server
                     SetLicense(license.Id, newLicenseStatus.Attributes);
 
@@ -861,7 +864,7 @@ namespace Raven.Server.Commercial
                         nodeDetails.NumberOfCores == numberOfCores &&
                         nodeDetails.UsableMemoryInGb.Equals(usableMemoryInGb) &&
                         nodeDetails.InstalledMemoryInGb.Equals(installedMemoryInGb) &&
-                        // using static method here to avoid null checks 
+                        // using static method here to avoid null checks
                         Equals(nodeDetails.BuildInfo, buildInfo) &&
                         Equals(nodeDetails.OsInfo, osInfo))
                     {
@@ -944,7 +947,7 @@ namespace Raven.Server.Commercial
                 {
                     nodeDetails.Value.UtilizedCores = coresPerNode;
                 }
-                
+
                 return;
             }
 
@@ -1064,6 +1067,12 @@ namespace Raven.Server.Commercial
             try
             {
                 var currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
+                if (IgnoreProcessorAffinityChanges && currentlyAssignedCores != cores)
+                {
+                    Console.WriteLine($"Processor affinity change detected. Current cores: {currentlyAssignedCores}. Requested cores: {cores}.");
+                    return;
+                }
+
                 if (currentlyAssignedCores == cores &&
                     _lastPerformanceHint != null &&
                     _lastPerformanceHint.Value.AddDays(7) > DateTime.UtcNow)
