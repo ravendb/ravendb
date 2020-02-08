@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -74,6 +75,7 @@ namespace FastTests
 
         static TestBase()
         {
+            LicenseManager.IgnoreProcessorAffinityChanges = true;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
@@ -94,12 +96,12 @@ namespace FastTests
             if (PlatformDetails.RunningOnPosix == false &&
                 PlatformDetails.Is32Bits) // RavenDB-13655
             {
-                System.Threading.ThreadPool.SetMinThreads(25, 25);
-                System.Threading.ThreadPool.SetMaxThreads(125, 125);
+                ThreadPool.SetMinThreads(25, 25);
+                ThreadPool.SetMaxThreads(125, 125);
             }
             else
             {
-                System.Threading.ThreadPool.SetMinThreads(250, 250);
+                ThreadPool.SetMinThreads(250, 250);
             }
 
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
