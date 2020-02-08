@@ -5,14 +5,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Subscriptions;
-using Raven.Server.ServerWide.Context;
-using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
-using Xunit;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -22,12 +18,14 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server;
-using Xunit.Sdk;
-using Raven.Client.ServerWide.Commands;
-using Raven.Client.Documents.Commands;
+using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace RachisTests
 {
@@ -37,11 +35,11 @@ namespace RachisTests
         {
         }
 
-
         private class SubscriptionProggress
         {
             public int MaxId;
         }
+
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(10);
 
         [Theory]
@@ -247,7 +245,6 @@ namespace RachisTests
                 tag3 = subscription.CurrentNodeTag;
                 // Assert.NotEqual(tag1, tag3);
                 //    Assert.NotEqual(tag2, tag3);
-
             }
         }
 
@@ -312,7 +309,6 @@ namespace RachisTests
                         }
                         catch (Exception)
                         {
-
                         }
                     };
                     var started = new AsyncManualResetEvent();
@@ -501,8 +497,6 @@ namespace RachisTests
                                 AsyncHelpers.RunSync(() => WaitForDocumentInClusterAsync<User>(nodes, "users/" + index, x => x.Name == curDocName, _reasonableWaitTime))
                                 );
                         }
-
-
                     }
                     curVer++;
                 }
@@ -524,7 +518,6 @@ namespace RachisTests
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                 MaxDocsPerBatch = batchSize
-
             });
             var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
             var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
@@ -561,17 +554,13 @@ namespace RachisTests
                 }
                 catch (Exception)
                 {
-
-
                 }
                 return Task.CompletedTask;
             };
 
             var task = subscription.Run(a =>
             {
-
             });
-
 
             //await Task.WhenAny(task, Task.Delay(_reasonableWaitTime)).ConfigureAwait(false);
 
@@ -594,7 +583,6 @@ namespace RachisTests
                         var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase).ConfigureAwait(false);
                         var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
                         tag = databaseRecord.Topology.WhoseTaskIsIt(someServer.ServerStore.Engine.CurrentState, subscriptionState, null);
-
                     }
                     if (tag == null)
                     {
@@ -617,7 +605,6 @@ namespace RachisTests
             {
                 Assert.True(sp.ElapsedMilliseconds < _reasonableWaitTime.TotalMilliseconds);
             }
-
         }
 
         private static async Task GenerateDocuments(IDocumentStore store)
@@ -635,7 +622,6 @@ namespace RachisTests
                 await session.SaveChangesAsync().ConfigureAwait(false);
             }
         }
-
 
         [Fact]
         public async Task SubscriptionShouldFailIfLeaderIsDownAndItIsOnlyOpening()
@@ -660,7 +646,6 @@ namespace RachisTests
                 {
                     MentorNode = mentor
                 }).ConfigureAwait(false);
-
 
                 var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
                 var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
@@ -757,8 +742,6 @@ namespace RachisTests
             const int nodesAmount = 2;
             var leader = await CreateRaftClusterAndGetLeader(nodesAmount, shouldRunInMemory: false);
             var indexLeader = Servers.FindIndex(x => x == leader);
-            var leaderDataDir = leader.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-            var leaderUrl = leader.WebUrl;
 
             var defaultDatabase = "SubscriptionShouldNotFailIfLeaderIsDownButItStillHasEnoughTimeToRetry";
 
@@ -809,19 +792,19 @@ namespace RachisTests
                         return Task.CompletedTask;
                     };
 
-                    var task = subscription.Run(async a =>
+                    (string DataDirectory, string Url, string NodeTag) result = default;
+                    var task = subscription.Run(batch =>
                     {
                         if (disposedOnce == false)
                         {
                             disposedOnce = true;
-                            subscription.OnSubscriptionConnectionRetry += x =>
-                            {
-                                subscriptionRetryBegins.SetAndResetAtomically();
-                            };
-                            await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
+                            subscription.OnSubscriptionConnectionRetry += x => subscriptionRetryBegins.SetAndResetAtomically();
+
+                            result = DisposeServerAndWaitForFinishOfDisposal(leader);
                         }
                         batchProccessed.SetAndResetAtomically();
                     });
+
                     await GenerateDocuments(store);
 
                     Assert.True(await batchProccessed.WaitAsync(_reasonableWaitTime));
@@ -834,17 +817,16 @@ namespace RachisTests
                         {
                             CustomSettings = new Dictionary<string, string>
                             {
-                                {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), leaderUrl},
-                                {RavenConfiguration.GetKey(x => x.Core.ServerUrls), leaderUrl}
+                                {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), result.Url},
+                                {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url}
                             },
                             RunInMemory = false,
                             DeletePrevious = false,
-                            PartialPath = leaderDataDir
+                            DataDirectory = result.DataDirectory
                         });
 
                     Assert.True(await batchProccessed.WaitAsync(TimeSpan.FromSeconds(60)));
                     Assert.True(await batchedAcked.WaitAsync(TimeSpan.FromSeconds(60)));
-
                 }
             }
         }

@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Server.Config;
-using Xunit;
 using Raven.Tests.Core.Utils.Entities;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -47,13 +46,10 @@ namespace SlowTests.Issues
                 Assert.True(WaitForDocument(storeDst, "user/1"));
 
                 // Taking down destination server
-                var serverPath = serverDst.Configuration.Core.DataDirectory.FullPath;
-                var nodePath = serverPath.Split('/').Last();
-                var url = serverDst.WebUrl;
-                await DisposeServerAndWaitForFinishOfDisposalAsync(serverDst);
+                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(serverDst);
                 var settings = new Dictionary<string, string>
                 {
-                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), url}
+                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url}
                 };
                 // Put document while destination is down
                 using (var session = storeSrc.OpenSession())
@@ -63,7 +59,13 @@ namespace SlowTests.Issues
                 }
 
                 // Bring destination server up
-                serverDst = GetNewServer(new ServerCreationOptions{RunInMemory = false, DeletePrevious = false, PartialPath = nodePath, CustomSettings = settings});
+                serverDst = GetNewServer(new ServerCreationOptions
+                {
+                    RunInMemory = false,
+                    DeletePrevious = false,
+                    DataDirectory = result.DataDirectory,
+                    CustomSettings = settings
+                });
 
                 Assert.True(WaitForDocument(storeDst, "user/2"));
             }

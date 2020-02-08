@@ -55,7 +55,7 @@ namespace RachisTests.DatabaseCluster
                     "Removed node wasn't reconnected with the cluster.");
                 await removed.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, leaderNode.ServerStore.LastRaftCommitIndex);
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
-                
+
                 Assert.Equal(4, record.Topology.Count);
                 Assert.Equal(4, record.Topology.ReplicationFactor);
             }
@@ -261,7 +261,7 @@ namespace RachisTests.DatabaseCluster
                     },
                     ReplicationFactor = 1
                 }
-            },1,cluster.Leader.WebUrl );
+            }, 1, cluster.Leader.WebUrl);
 
             using (var store = new DocumentStore
             {
@@ -273,10 +273,14 @@ namespace RachisTests.DatabaseCluster
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
                 cluster.Leader = GetNewServer(new ServerCreationOptions
                 {
-                    DeletePrevious = false, RunInMemory = false, PartialPath = result.DataDir, CustomSettings = new Dictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url
-                }});
+                    DeletePrevious = false,
+                    RunInMemory = false,
+                    DataDirectory = result.DataDirectory,
+                    CustomSettings = new Dictionary<string, string>
+                    {
+                        [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url
+                    }
+                });
 
                 await cluster.Leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
                 Assert.NotNull(await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName)));
@@ -293,7 +297,7 @@ namespace RachisTests.DatabaseCluster
             {
                 DeletePrevious = false,
                 RunInMemory = false,
-                PartialPath = result.DataDir,
+                DataDirectory = result.DataDirectory,
                 CustomSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url,
@@ -322,7 +326,7 @@ namespace RachisTests.DatabaseCluster
             {
                 DeletePrevious = false,
                 RunInMemory = false,
-                PartialPath = result.DataDir,
+                DataDirectory = result.DataDirectory,
                 CustomSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url,
