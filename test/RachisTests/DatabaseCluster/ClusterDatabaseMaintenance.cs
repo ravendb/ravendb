@@ -187,7 +187,7 @@ namespace RachisTests.DatabaseCluster
                 cluster.Nodes[0] = GetNewServer(new ServerCreationOptions
                 {
                     CustomSettings = settings,
-                    PartialPath = revive.DataDir
+                    DataDirectory = revive.DataDir
                 });
 
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3);
@@ -235,7 +235,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     DeletePrevious = false,
                     RunInMemory = false,
-                    PartialPath = nodeInfo.DataDir,
+                    DataDirectory = nodeInfo.DataDir,
                     CustomSettings = new Dictionary<string, string> {[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = nodeInfo.Url}
                 });
 
@@ -516,7 +516,7 @@ namespace RachisTests.DatabaseCluster
                         CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urls[0] } },
                         RunInMemory = false,
                         DeletePrevious = false,
-                        PartialPath = dataDir
+                        DataDirectory = dataDir
                     });
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3, 30_000);
                 Assert.Equal(3, val);
@@ -590,7 +590,7 @@ namespace RachisTests.DatabaseCluster
                         },
                         RunInMemory = false,
                         DeletePrevious = false,
-                        PartialPath = dataDir
+                        DataDirectory = dataDir
                     });
 
                 Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)), "1st assert");
@@ -815,7 +815,7 @@ namespace RachisTests.DatabaseCluster
                         CustomSettings = settings,
                         RunInMemory = false,
                         DeletePrevious = false,
-                        PartialPath = dataDirA
+                        DataDirectory = dataDirA
                     });
 
                 settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = urlsB[0];
@@ -824,7 +824,7 @@ namespace RachisTests.DatabaseCluster
                     CustomSettings = settings,
                     RunInMemory = false,
                     DeletePrevious = false,
-                    PartialPath = dataDirB
+                    DataDirectory = dataDirB
                 });
                 await Task.Delay(TimeSpan.FromSeconds(10));
                 Assert.Equal(2, await WaitForValueAsync(async () => await GetMembersCount(leaderStore, databaseName), 2));
@@ -848,7 +848,7 @@ namespace RachisTests.DatabaseCluster
                     CustomSettings = settings,
                     RunInMemory = false,
                     DeletePrevious = false,
-                    PartialPath = dataDirC,
+                    DataDirectory = dataDirC,
                     BeforeDatabasesStartup = (server) =>
                     {
                         while (server.LoadDatabaseTopology(databaseName).Rehabs.Contains("C") == false)
@@ -947,7 +947,7 @@ namespace RachisTests.DatabaseCluster
                 CustomSettings = customSettings,
                 RunInMemory = false,
                 DeletePrevious = false,
-                PartialPath = dataDir
+                DataDirectory = dataDir
             });
 
             var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
@@ -1007,7 +1007,7 @@ namespace RachisTests.DatabaseCluster
                     CustomSettings = customSettings,
                     RunInMemory = false,
                     DeletePrevious = false,
-                    PartialPath = dataDir
+                    DataDirectory = dataDir
                 });
                 newUrl = Servers[1].WebUrl;
                 // ensure that at this point we still can't talk to node

@@ -70,7 +70,7 @@ namespace RachisTests
                 settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = firstNodeUrl;
                 Servers.Add(GetNewServer(new ServerCreationOptions
                 {
-                    CustomSettings = settings, RunInMemory = false, DeletePrevious = false, PartialPath = nodePath
+                    CustomSettings = settings, RunInMemory = false, DeletePrevious = false, DataDirectory = nodePath
                 }));
                 await re.CheckNodeStatusNow(tag);
                 Assert.True(WaitForValue(() => firstNodeUrl == re.Url, true));

@@ -839,7 +839,7 @@ namespace RachisTests
                             },
                             RunInMemory = false,
                             DeletePrevious = false,
-                            PartialPath = leaderDataDir
+                            DataDirectory = leaderDataDir
                         });
 
                     Assert.True(await batchProccessed.WaitAsync(TimeSpan.FromSeconds(60)));

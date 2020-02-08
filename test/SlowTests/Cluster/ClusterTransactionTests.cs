@@ -1061,7 +1061,7 @@ namespace SlowTests.Cluster
                 },
                     RunInMemory = false,
                     DeletePrevious = false,
-                    PartialPath = dataDir,
+                    DataDirectory = dataDir,
                     RegisterForDisposal = false
                 });
                 using (var revivedStore = new DocumentStore()
@@ -1093,7 +1093,7 @@ namespace SlowTests.Cluster
                         {
                             [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url2,
                             [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
-                        }, RunInMemory = false, DeletePrevious =  false, PartialPath = dataDir2});
+                        }, RunInMemory = false, DeletePrevious =  false, DataDirectory = dataDir2});
 
                         // wait for the log to apply on the SUT node
                         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))

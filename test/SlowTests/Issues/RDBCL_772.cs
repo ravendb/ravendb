@@ -60,7 +60,7 @@ namespace SlowTests.Issues
             var serverPath = Server.Configuration.Core.DataDirectory.FullPath;
             var nodePath = serverPath.Split('/').Last();
 
-            var serverAfterRestart = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, PartialPath = nodePath, CustomSettings = customSettings });
+            var serverAfterRestart = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = nodePath, CustomSettings = customSettings });
 
             Assert.NotNull(serverAfterRestart.Statistics.LastAuthorizedNonClusterAdminRequestTime);
         }
