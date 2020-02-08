@@ -19,12 +19,9 @@ namespace SlowTests.Issues
         {
             string dbName = GetDatabaseName();
 
-            var dataPath = NewDataPath();
-
             var customSettings = new Dictionary<string, string>()
             {
-                [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false",
-                [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = dataPath
+                [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
             };
 
             var certificates = SetupServerAuthentication(customSettings: customSettings);
