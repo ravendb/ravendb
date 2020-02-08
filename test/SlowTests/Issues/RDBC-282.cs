@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     {
                         {RavenConfiguration.GetKey(x => x.Core.ServerUrls), url}
                     };
-                    server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, PartialPath = serverPath, CustomSettings = settings });
+                    server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = serverPath, CustomSettings = settings });
                     await taskObservable.EnsureConnectedNow();
                     PushUser(store);
                     value = WaitForValue(() => list.Count, 2);

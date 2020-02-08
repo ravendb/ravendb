@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -17,7 +16,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -141,7 +139,6 @@ namespace SlowTests.Cluster
                     }
                 }
             }
-
         }
 
         [Fact]
@@ -173,6 +170,7 @@ namespace SlowTests.Cluster
         }
 
         private Random _random = new Random();
+
         private string RandomString(int length)
         {
             const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
@@ -524,7 +522,6 @@ namespace SlowTests.Cluster
                 Name = "Indych"
             };
 
-
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions
@@ -631,7 +628,6 @@ namespace SlowTests.Cluster
             }
         }
 
-
         [Fact]
         public async Task TestSessionMixture()
         {
@@ -665,6 +661,7 @@ namespace SlowTests.Cluster
                 }
             }
         }
+
         [Fact]
         public async Task CreateUniqueUser()
         {
@@ -781,7 +778,6 @@ namespace SlowTests.Cluster
                     await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
                     await session.SaveChangesAsync();
                 }
-
 
                 using (var session = storeA.OpenAsyncSession())
                 {
@@ -998,7 +994,7 @@ namespace SlowTests.Cluster
         /// - Bring all nodes down except of the original leader.
         /// - Bring the SUT node back up and wait for the document to replicate.
         /// - Bring another node up in order to have a majority.
-        /// - Wait for the raft index on the SUT to catch-up and verify that we still have one document with one revision. 
+        /// - Wait for the raft index on the SUT to catch-up and verify that we still have one document with one revision.
         /// </summary>
         /// <returns></returns>
         [Fact]
@@ -1026,10 +1022,7 @@ namespace SlowTests.Cluster
 
                 // bring our SUT node down, but we still have a cluster and can execute cluster transaction.
                 var server = Servers[1];
-                var url = server.WebUrl;
-                var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-
-                await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+                var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
 
                 using (var session = leaderStore.OpenAsyncSession(new SessionOptions
                 {
@@ -1051,15 +1044,15 @@ namespace SlowTests.Cluster
                     Assert.Equal(1, list.Count);
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
                     Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(changeVector));
-
                 }
-                // bring more nodes down, so only one node is left 
-                var dataDir2 = Servers[2].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-                var url2 = Servers[2].WebUrl;
-                var task1 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[2]);
-                var task2 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[3]);
-                var task3 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[4]);
-                await Task.WhenAll(task1, task2, task3);
+
+                // bring more nodes down, so only one node is left
+                var task2 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[2]);
+                var task3 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[3]);
+                var task4 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[4]);
+                await Task.WhenAll(task2, task3, task4);
+
+                var result2 = task2.Result;
 
                 using (var session = leaderStore.OpenAsyncSession())
                 {
@@ -1079,14 +1072,16 @@ namespace SlowTests.Cluster
                 }
 
                 // revive the SUT node
-                var revived = Servers[1] = GetNewServer(new ServerCreationOptions{ CustomSettings = new Dictionary<string, string>
+                var revived = Servers[1] = GetNewServer(new ServerCreationOptions
                 {
-                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url,
-                    [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
-                },
+                    CustomSettings = new Dictionary<string, string>
+                    {
+                        [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result1.Url,
+                        [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
+                    },
                     RunInMemory = false,
                     DeletePrevious = false,
-                    PartialPath = dataDir,
+                    DataDirectory = result1.DataDirectory,
                     RegisterForDisposal = false
                 });
                 using (var revivedStore = new DocumentStore()
@@ -1114,11 +1109,17 @@ namespace SlowTests.Cluster
                         Assert.Equal(2, count);
 
                         // revive another node so we should have a functional cluster now
-                        Servers[2] = GetNewServer(new ServerCreationOptions { CustomSettings = new Dictionary<string, string>
+                        Servers[2] = GetNewServer(new ServerCreationOptions
                         {
-                            [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url2,
-                            [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
-                        }, RunInMemory = false, DeletePrevious =  false, PartialPath = dataDir2});
+                            CustomSettings = new Dictionary<string, string>
+                            {
+                                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result2.Url,
+                                [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
+                            },
+                            RunInMemory = false,
+                            DeletePrevious = false,
+                            DataDirectory = result2.DataDirectory
+                        });
 
                         // wait for the log to apply on the SUT node
                         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))

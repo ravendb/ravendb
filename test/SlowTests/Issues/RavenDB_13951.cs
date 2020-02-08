@@ -51,7 +51,7 @@ namespace SlowTests.Issues
             };
 
             // Bring server up
-            server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, PartialPath = nodePath, CustomSettings = settings });
+            server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = nodePath, CustomSettings = settings });
 
             license = server.ServerStore.LoadLicenseLimits();
             Assert.True(license.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out detailsPerNode));
