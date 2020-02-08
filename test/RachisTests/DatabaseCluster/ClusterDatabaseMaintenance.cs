@@ -217,7 +217,7 @@ namespace RachisTests.DatabaseCluster
                     await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 }
 
-                var nodeInfo = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[2]);
+                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[2]);
 
                 // wait for moving all of the nodes to rehab state
                 foreach (string name in names)
@@ -232,8 +232,8 @@ namespace RachisTests.DatabaseCluster
                 {
                     DeletePrevious = false,
                     RunInMemory = false,
-                    DataDirectory = nodeInfo.DataDirectory,
-                    CustomSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = nodeInfo.Url }
+                    DataDirectory = result.DataDirectory,
+                    CustomSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url }
                 });
 
                 var preferredCount = new Dictionary<string, int> { ["A"] = 0, ["B"] = 0, ["C"] = 0 };
