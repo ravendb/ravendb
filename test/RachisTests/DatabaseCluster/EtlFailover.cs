@@ -12,7 +12,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -39,12 +38,12 @@ namespace RachisTests.DatabaseCluster
 
             using (var src = new DocumentStore
             {
-                Urls = srcNodes.Servers.Select(s=>s.WebUrl).ToArray(),
+                Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(),
                 Database = srcDb,
             }.Initialize())
             using (var dest = new DocumentStore
             {
-                Urls = new []{destNode.Servers[0].WebUrl},
+                Urls = new[] { destNode.Servers[0].WebUrl },
                 Database = dstDb,
             }.Initialize())
             {
@@ -80,17 +79,17 @@ namespace RachisTests.DatabaseCluster
 
                 src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
                 var originalTaskNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == node);
-                
+
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
                     {
                         Name = "Joe Doe"
-                    },"users/1");
+                    }, "users/1");
 
                     session.SaveChanges();
                 }
-                
+
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
                 await srcRaft.ServerStore.RemoveFromClusterAsync(node);
                 await originalTaskNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
@@ -144,7 +143,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var src = new DocumentStore
             {
-                Urls = new[]{ srcRaft.WebUrl},
+                Urls = new[] { srcRaft.WebUrl },
                 Database = srcDb,
                 Conventions = new DocumentConventions
                 {
@@ -212,7 +211,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
 
                 // BEFORE THE FIX: this will change the database record and restart the ETL, which would fail the test.
-                // we leave this here to make sure that such issue in future will fail the test immediately 
+                // we leave this here to make sure that such issue in future will fail the test immediately
                 await src.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration()));
 
                 var taskInfo = (OngoingTaskRavenEtlDetails)src.Maintenance.Send(new GetOngoingTaskInfoOperation(etlResult.TaskId, OngoingTaskType.RavenEtl));
@@ -306,15 +305,11 @@ namespace RachisTests.DatabaseCluster
                     }, "users/1");
 
                     session.SaveChanges();
-}
+                }
 
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
-                
 
-                var originalServerDataDir = originalTaskNodeServer.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-                var originalServerUrl = originalTaskNodeServer.WebUrl;
-
-                DisposeServerAndWaitForFinishOfDisposal(originalTaskNodeServer);
+                var originalResult = DisposeServerAndWaitForFinishOfDisposal(originalTaskNodeServer);
 
                 using (var session = src.OpenSession())
                 {
@@ -335,16 +330,19 @@ namespace RachisTests.DatabaseCluster
 
                 // start server which originally was handling ETL task
                 GetNewServer(new ServerCreationOptions
-                    {
-                        CustomSettings = new Dictionary<string, string>
+                {
+                    CustomSettings = new Dictionary<string, string>
                         {
-                            {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalServerUrl}
-                        }, RunInMemory = false, DeletePrevious = false, DataDirectory = originalServerDataDir
-                    });
+                            {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalResult.Url}
+                        },
+                    RunInMemory = false,
+                    DeletePrevious = false,
+                    DataDirectory = originalResult.DataDirectory
+                });
 
                 using (var store = new DocumentStore
                 {
-                    Urls = new[] {originalServerUrl},
+                    Urls = new[] { originalResult.Url },
                     Database = srcDb,
                     Conventions =
                     {

@@ -27,6 +27,7 @@ namespace RachisTests
         private class CountdownsArray : IDisposable
         {
             private CountdownEvent[] _array;
+
             public CountdownsArray(int arraySize, int countdownCount)
             {
                 _array = new CountdownEvent[arraySize];
@@ -97,7 +98,6 @@ namespace RachisTests
             const int DocsBatchSize = 10;
             var cluster = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
 
-
             using (var cdeArray = new CountdownsArray(subscriptionsChainSize, SubscriptionsCount))
             using (var store = GetDocumentStore(new Options
             {
@@ -127,7 +127,6 @@ namespace RachisTests
                 var dbNodesCountToToggle = Math.Max(Math.Min(dBGroupSize - 1, dBGroupSize / 2 + 1), 1);
                 foreach (var node in store.GetRequestExecutor().TopologyNodes.Take(dbNodesCountToToggle))
                 {
-
                     var i = 0;
 
                     for (; i < cluster.Nodes.Count; i++)
@@ -294,7 +293,6 @@ namespace RachisTests
             cluster.Nodes[index] = node;
 
             await WaitForRehab(databaseName, cluster);
-
         }
 
         internal static async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store)
@@ -398,7 +396,6 @@ namespace RachisTests
                         }
                         catch (Exception)
                         {
-
                             await Task.Delay(1000);
                             rehabCount = 1;
                             continue;
@@ -438,7 +435,6 @@ namespace RachisTests
                             continue;
                         db.SubscriptionStorage.DropSubscriptionConnection(subscription.SubscriptionId,
                             new SubscriptionClosedException("Dropped by Test"));
-
                     }
                 }
             }
@@ -456,9 +452,9 @@ namespace RachisTests
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.WebUrl
                 };
 
-                var dataDir = node.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+                var dataDirectory = node.Configuration.Core.DataDirectory.FullPath;
 
-                // if we want to make sure that the revived node will be trapped in candidate node, we should make sure that the election timeout value is different from the 
+                // if we want to make sure that the revived node will be trapped in candidate node, we should make sure that the election timeout value is different from the
                 // rest of the node (note that this is a configuration value, therefore we need to define it in "settings" and nowhere else)
                 if (shouldTrapRevivedNodesIntoCandidate == false)
                     settings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = node.Configuration.Cluster.ElectionTimeout.AsTimeSpan.TotalMilliseconds.ToString();
@@ -468,14 +464,14 @@ namespace RachisTests
                     DeletePrevious = false,
                     RunInMemory = false,
                     CustomSettings = settings,
-                    DataDirectory = dataDir
+                    DataDirectory = dataDirectory
                 });
 
                 Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
             }
             else
             {
-                var nodeInfo = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
             }
 
             return node;
