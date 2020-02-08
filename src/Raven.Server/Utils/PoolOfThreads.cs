@@ -349,24 +349,22 @@ namespace Raven.Server.Utils
                 _currentUnmanagedThreadId = NativeMemory.GetCurrentUnmanagedThreadId.Invoke();
                 _currentProcess = Process.GetCurrentProcess();
 
-                if (PlatformDetails.RunningOnLinux)
+                if (PlatformDetails.RunningOnPosix == false)
                 {
-                    // we set the thread affinity by the unmanaged thread id
-                    SetLinuxThreadAffinity(_currentProcess.ProcessorAffinity.ToInt64());
-                    return;
-                }
-
-                foreach (ProcessThread pt in _currentProcess.Threads)
-                {
-                    if (pt.Id == (uint)_currentUnmanagedThreadId)
+                    foreach (ProcessThread pt in _currentProcess.Threads)
                     {
-                        _currentProcessThread = pt;
-                        break;
+                        if (pt.Id == (uint)_currentUnmanagedThreadId)
+                        {
+                            _currentProcessThread = pt;
+                            break;
+                        }
                     }
+
+                    if (_currentProcessThread == null)
+                        throw new InvalidOperationException("Unable to get the current process thread: " + _currentUnmanagedThreadId + ", this should not be possible");
                 }
 
-                if (_currentProcessThread == null)
-                    throw new InvalidOperationException("Unable to get the current process thread: " + _currentUnmanagedThreadId + ", this should not be possible");
+                SetThreadAffinityByPlatform(_currentProcess.ProcessorAffinity.ToInt64());
             }
 
             public static void ResetCurrentThreadName()
@@ -454,16 +452,16 @@ namespace Raven.Server.Utils
                 {
                     SetLinuxThreadAffinity(affinity);
                 }
-            }
 
-            private void SetLinuxThreadAffinity(long affinity)
-            {
-                var ulongAffinity = (ulong)affinity;
-                var result = Syscall.sched_setaffinity((int)_currentUnmanagedThreadId, new IntPtr(sizeof(ulong)), ref ulongAffinity);
-                if (result != 0)
-                    throw new InvalidOperationException(
-                        $"Failed to set affinity for thread: {_currentUnmanagedThreadId}, " +
-                        $"affinity: {affinity}, result: {result}, error: {Marshal.GetLastWin32Error()}");
+                void SetLinuxThreadAffinity(long affinity)
+                {
+                    var ulongAffinity = (ulong)affinity;
+                    var result = Syscall.sched_setaffinity((int)_currentUnmanagedThreadId, new IntPtr(sizeof(ulong)), ref ulongAffinity);
+                    if (result != 0)
+                        throw new InvalidOperationException(
+                            $"Failed to set affinity for thread: {_currentUnmanagedThreadId}, " +
+                            $"affinity: {affinity}, result: {result}, error: {Marshal.GetLastWin32Error()}");
+                }
             }
         }
     }
