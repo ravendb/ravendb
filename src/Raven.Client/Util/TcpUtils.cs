@@ -138,7 +138,8 @@ namespace Raven.Client.Util
                 TargetHost = targetHost,
                 ClientCertificates = clientCertificates,
                 EnabledSslProtocols = SupportedSslProtocols,
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                CipherSuitesPolicy = cipherSuitesPolicy
             }).ConfigureAwait(false);
 #else
             await sslStream.AuthenticateAsClientAsync(targetHost, clientCertificates, SupportedSslProtocols, checkCertificateRevocation: false).ConfigureAwait(false);
