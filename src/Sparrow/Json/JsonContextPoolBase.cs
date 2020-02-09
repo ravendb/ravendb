@@ -33,11 +33,12 @@ namespace Sparrow.Json
         public ThreadIdHolder[] ThreadIDs => _threadIds;
 
         private NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
-
+        private long Generation;
         private bool _disposed;
+
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private readonly long _maxContextSizeToKeepInBytes;
+        private readonly long MaxContextSizeToKeepInBytes;
 
         // because this is a finalizer object, we want to pool them to avoid having too many items in the finalization queue
         private static ObjectPool<ContextStack> _contextStackPool = new ObjectPool<ContextStack>(() => new ContextStack());
@@ -164,7 +165,7 @@ namespace Sparrow.Json
                 LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
 
-            _maxContextSizeToKeepInBytes = maxContextSizeToKeep?.GetValue(SizeUnit.Bytes) ?? long.MaxValue;
+            MaxContextSizeToKeepInBytes = maxContextSizeToKeep?.GetValue(SizeUnit.Bytes) ?? long.MaxValue;
         }
 
         private ContextStack MaybeGetCurrentContextStack()
@@ -299,6 +300,7 @@ namespace Sparrow.Json
             }
             // no choice, got to create it
             context = CreateContext();
+            context.PoolGeneration = Generation;
             return new ReturnRequestContext
             {
                 Parent = this,
@@ -324,7 +326,7 @@ namespace Sparrow.Json
                 disposable = new ReturnRequestContext
                 {
                     Parent = this,
-                    Context = context
+                    Context = context,
                 };
                 return true;
             }
@@ -352,8 +354,15 @@ namespace Sparrow.Json
                     return;
                 }
 
-                if (Context.AllocatedMemory > Parent._maxContextSizeToKeepInBytes)
+                if (Context.AllocatedMemory > Parent.MaxContextSizeToKeepInBytes)
                 {
+                    Context.Dispose();
+                    return;
+                }
+
+                if (Parent.LowMemoryFlag.IsRaised() && Context.PoolGeneration < Parent.Generation)
+                {
+                    // releasing all the contexts which were created before we got the low memory event
                     Context.Dispose();
                     return;
                 }
@@ -426,7 +435,10 @@ namespace Sparrow.Json
         public void LowMemory()
         {
             if (LowMemoryFlag.Raise())
+            {
+                Generation++;
                 _nativeMemoryCleaner?.CleanNativeMemory(null);
+            }
         }
 
         public void LowMemoryOver()
