@@ -1075,7 +1075,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (indexesCatchedUp)
             {
-                LogMessage($"We try to promoted the database '{dbName}' on {promotable} to be a full member", database: dbName);
+                LogMessage($"We try to promote the database '{dbName}' on {promotable} to be a full member", database: dbName);
 
                 topology.PromotablesStatus.Remove(promotable);
                 topology.DemotionReasons.Remove(promotable);
