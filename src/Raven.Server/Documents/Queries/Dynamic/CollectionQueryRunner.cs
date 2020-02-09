@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var collection = GetCollectionName(query.Metadata.CollectionName, out var indexName);
 
-            using (QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            using (QueryRunner.MarkQueryAsRunning(indexName, query, token, true))
             {
                 result.IndexName = indexName;
 

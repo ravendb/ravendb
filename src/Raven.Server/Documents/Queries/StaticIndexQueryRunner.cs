@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Queries
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token, true))
             {
                 await index.StreamQuery(response, writer, query, documentsContext, token);
             }
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Queries
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token, true))
             {
                 await index.StreamIndexEntriesQuery(response, writer, query, documentsContext, token);
             }
