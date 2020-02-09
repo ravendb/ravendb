@@ -21,21 +21,24 @@ namespace Tests.Infrastructure.XunitExtensions
 
             if(resourceSnapshotEnabled)
                 testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestAssemblyStarted, TestAssembly.Assembly.Name);
+            try
+            {
+                using var assemblyRunner = new PerfTestAssemblyRunner(
+                    TestAssembly,
+                    testCases,
+                    DiagnosticMessageSink,
+                    executionMessageSink,
+                    executionOptions,
+                    testResourceSnapshotWriter,
+                    resourceSnapshotEnabled);
 
-            using var assemblyRunner = new PerfTestAssemblyRunner(
-                TestAssembly, 
-                testCases, 
-                DiagnosticMessageSink, 
-                executionMessageSink, 
-                executionOptions,
-                testResourceSnapshotWriter,
-                resourceSnapshotEnabled);
-            
-            await assemblyRunner.RunAsync();
-
-            if(resourceSnapshotEnabled)
-                testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestAssemblyEnded, TestAssembly.Assembly.Name);
-
+                await assemblyRunner.RunAsync();
+            }
+            finally
+            {
+                if (resourceSnapshotEnabled)
+                    testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestAssemblyEnded, TestAssembly.Assembly.Name);
+            }
         }
     }
 }

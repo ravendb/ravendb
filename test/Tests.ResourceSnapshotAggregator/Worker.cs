@@ -21,11 +21,12 @@ namespace Tests.ResourceSnapshotAggregator
         private readonly Task _hostTask;
         private TestSnapshotDataProcessor _dataProcessor;
         private SubscriptionToken _notificationsSubscription;
+        private SubscriptionToken _notificationsCsvUpload;
         private const string TestResourceSnapshotsDatabase = "TestResourceSnapshots";
 
         public Worker(ServiceSettings settings, IEventBus messageBus, IWebHost jenkinsEndpointHost, ILogger<Worker> logger)
         {
-            //TODO: add configuration support for server startup
+            //TODO: add configuration support for server startup, perhaps customize stuff?
             EmbeddedServer.Instance.StartServer(new ServerOptions
             {
                 AcceptEula = true,
@@ -55,6 +56,22 @@ namespace Tests.ResourceSnapshotAggregator
             }
         }
 
+        private void ReceiveCsvUpload(CsvUploadNotification csvUploadData)
+        {
+            try
+            {
+                _dataProcessor.ProcessBuildNotification(new BuildNotification
+                {
+                    JobName = csvUploadData.JobName,
+                    BuildNumber = csvUploadData.BuildNumber
+                },csvUploadData.Uploaded);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Failed to process build notification (job name = {csvUploadData.JobName}, build number = {csvUploadData.BuildNumber})");
+            }
+        }
+
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             if (_hostTask.Status != TaskStatus.WaitingForActivation)
@@ -62,6 +79,7 @@ namespace Tests.ResourceSnapshotAggregator
 
             InitializeDataProcessor();
             _notificationsSubscription = _messageBus.Subscribe<BuildNotification>(ReceiveBuildNotification);
+            _notificationsCsvUpload = _messageBus.Subscribe<CsvUploadNotification>(ReceiveCsvUpload);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -69,6 +87,7 @@ namespace Tests.ResourceSnapshotAggregator
             await _jenkinsEndpointHost.StopAsync(cancellationToken);
             _dataProcessor.Dispose();
             _messageBus.Unsubscribe(_notificationsSubscription);
+            _messageBus.Unsubscribe(_notificationsCsvUpload);
         }
 
         private void InitializeDataProcessor()
@@ -104,7 +123,7 @@ namespace Tests.ResourceSnapshotAggregator
                 _dataProcessor = new TestSnapshotDataProcessor(
                     _settings,
                     EmbeddedServer.Instance.GetDocumentStore(TestResourceSnapshotsDatabase),
-                    new InfluxClient(new Uri(_settings.InfluxDB.Url)), 
+                    new InfluxClient(new Uri(_settings.InfluxDB.Url), _settings.InfluxDB.Username, _settings.InfluxDB.Password), 
                     new JenkinsClient
                     {
                         BaseUrl = _settings.Jenkins.Url, 

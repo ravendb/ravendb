@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using AutoMapper;
 using CsvHelper;
 using CsvHelper.Configuration;
 using JenkinsNET;
 using JenkinsNET.Models;
+using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
@@ -38,7 +41,7 @@ namespace Tests.ResourceSnapshotAggregator
             _logger = logger;
         }
 
-        public void ProcessBuildNotification(BuildNotification notification)
+        public void ProcessBuildNotification(BuildNotification notification, List<Stream> artifactStreams = null)
         {
             lock (_disposeLock)
             {
@@ -46,17 +49,22 @@ namespace Tests.ResourceSnapshotAggregator
                 
                 session.Store(notification);
                 
-
-                List<Stream> artifactStreams = null;
                 try
                 {
-                    //TODO: use this implementation once HRINT-1455 is resolved (https://issues.hibernatingrhinos.com/issue/HRINT-1455)
                     try
                     {
-                        //artifactStreams = ExtractAndStoreArtifacts(notification, session);
+                        if (artifactStreams == null)
+                        {
+                            //TODO: use this implementation once HRINT-1455 is resolved (https://issues.hibernatingrhinos.com/issue/HRINT-1455)
+                            //artifactStreams = ExtractAndStoreArtifacts(notification, session);
 
-                        //until HRINT-1455 is resolved, this is a workaround code
-                        artifactStreams = ExtractAndStoreArtifactsWorkaround(notification, session);
+                            //until HRINT-1455 is resolved, this is a workaround code
+                            artifactStreams = ExtractAndStoreArtifactsWorkaround(notification, session);
+                        }
+                        else
+                        {
+                            StoreRawStreams(notification, artifactStreams, session);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -89,6 +97,11 @@ namespace Tests.ResourceSnapshotAggregator
             }
         }
 
+        //translate between rows of TestResourceSnapshotWriter.TestResourceSnapshot and ResourceUsageSnapshot - which is InfluxDB row
+        private static readonly Mapper _influxRowMapper = new Mapper(
+            new MapperConfiguration(cfg => 
+                cfg.CreateMap<TestResourceSnapshotWriter.TestResourceSnapshot, ResourceUsageSnapshot>()));
+
         private void ProcessAndWriteToInfluxDb(string jobName, string buildNumber, List<Stream> artifactStreams)
         {
             foreach (var stream in artifactStreams)
@@ -103,8 +116,35 @@ namespace Tests.ResourceSnapshotAggregator
                     MissingFieldFound = (headerNames, index, ctx) => _logger.LogWarning($"Found missing fields ({string.Join(",", headerNames)})")
                 });
 
+                var records = csvReader.GetRecords<TestResourceSnapshotWriter.TestResourceSnapshot>().ToList();
+                var influxRecords = 
+                    records.Select(x =>
+                    {
+                        var row = _influxRowMapper.Map<ResourceUsageSnapshot>(x);
+                        row.JobName = jobName; //not strictly needed, since this is the measurement name as well
+                        row.BuildNumber = buildNumber;
+                        return row;
+                    }).ToList();
 
-                _influxClient.WriteAsync("test-results", jobName + "/" + buildNumber, csvReader.GetRecords<TestResourceSnapshotWriter.TestResourceSnapshot>()).Wait();
+                try
+                {
+                    var deltas = SnapshotDelta.Calculate(influxRecords);
+                    _influxClient.WriteAsync(_settings.InfluxDB.Database, jobName, influxRecords.Union(deltas), new InfluxWriteOptions {Precision = TimestampPrecision.Millisecond}).Wait();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Failed to write test snapshot data to InfluxDB.");
+                }
+            }
+        }
+
+        private void StoreRawStreams(object entity ,List<Stream> streams, IDocumentSession session)
+        {
+            var inx = 1;
+            foreach (var stream in streams)
+            {
+                stream.Position = 0;
+                session.Advanced.Attachments.Store(entity, $"raw-csv/{inx++}", stream, "text/csv");
             }
         }
 

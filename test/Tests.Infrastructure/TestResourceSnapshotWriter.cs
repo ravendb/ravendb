@@ -6,7 +6,6 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 using Sparrow;
 using Sparrow.LowMemory;
-using Vibrant.InfluxDB.Client;
 
 namespace Tests.Infrastructure
 {
@@ -54,52 +53,36 @@ namespace Tests.Infrastructure
 
         public class TestResourceSnapshot
         {
-            [InfluxTag(nameof(TestStage))]
             public TestStage TestStage { get; set; }
 
-            [InfluxTag(nameof(Comment))]
             public string Comment { get; set; }
 
-            [InfluxTimestamp]
             public DateTime InfluxTimestamp => DateTime.Parse(TimeStamp);
 
-            [InfluxField(nameof(TimeStamp))]
             public string TimeStamp { get; set; }
             
-            [InfluxField(nameof(MachineCpuUsage))]
             public long MachineCpuUsage { get; set; }
             
-            [InfluxField(nameof(ProcessCpuUsage))]
             public long ProcessCpuUsage { get; set; }
             
-            [InfluxField(nameof(ProcessMemoryUsageInMb))]
             public long ProcessMemoryUsageInMb { get; set; }
             
-            [InfluxField(nameof(TotalMemoryInMb))]
             public long TotalMemoryInMb { get; set; }
             
-            [InfluxField(nameof(AvailableMemoryInMb))]
             public long AvailableMemoryInMb { get; set; }
             
-            [InfluxField(nameof(TotalCommittableMemoryInMb))]
             public long TotalCommittableMemoryInMb { get; set; }
             
-            [InfluxField(nameof(CurrentCommitChargeInMb))]
             public long CurrentCommitChargeInMb { get; set; }
             
-            [InfluxField(nameof(SharedCleanMemoryInMb))]
             public long SharedCleanMemoryInMb { get; set; }
             
-            [InfluxField(nameof(TotalScratchDirtyMemory))]
             public long TotalScratchDirtyMemory { get; set; }
             
-            [InfluxField(nameof(TotalScratchAllocatedMemory))]
             public long TotalScratchAllocatedMemory { get; set; }
             
-            [InfluxField(nameof(TotalDirtyMemory))]
             public long TotalDirtyMemory { get; set; }
             
-            [InfluxField(nameof(IsHighDirty))]
             public bool IsHighDirty { get; set; }
 
             [Obsolete("Needed for serialization, should not be used directly", true)]
@@ -151,7 +134,8 @@ namespace Tests.Infrastructure
         TestClassStarted,
         TestClassEnded,
         TestStarted,
-        TestFinishedBeforeGc,
-        TestFinishedAfterGc
+        TestEndedBeforeGc,
+        TestEndedAfterGc,
+        Delta
     }
 }

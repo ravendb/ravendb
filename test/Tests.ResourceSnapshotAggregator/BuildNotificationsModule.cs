@@ -8,9 +8,10 @@ using Utf8Json;
 
 namespace Tests.ResourceSnapshotAggregator
 {
-    public class JenkinsEndpoint : NancyModule
+    // ReSharper disable once UnusedMember.Global
+    public class BuildNotificationsModule : NancyModule
     {
-        public JenkinsEndpoint(IEventBus messageBus)
+        public BuildNotificationsModule(IEventBus messageBus)
         {
             Post("/notify-build", @params =>
             {

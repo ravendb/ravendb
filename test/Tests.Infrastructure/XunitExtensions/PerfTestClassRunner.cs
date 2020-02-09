@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,18 +58,20 @@ namespace Tests.Infrastructure.XunitExtensions
                 _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestStarted, GetDisplayName(testMethod));
 
             return base.RunTestMethodAsync(testMethod, method, testCases, constructorArguments)
-                       .ContinueWith(t =>
-                       {
-                           if(_resourceSnapshotEnabled)
-                               _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestFinishedBeforeGc, GetDisplayName(testMethod));
+                .ContinueWith(t =>
+                {
+                    if (_resourceSnapshotEnabled)
+                        _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestEndedBeforeGc, GetDisplayName(testMethod));
+                    
+                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    GC.WaitForPendingFinalizers();
+                    
+                    if (_resourceSnapshotEnabled)
+                        _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestEndedAfterGc, GetDisplayName(testMethod));
 
-                           GC.Collect(2, GCCollectionMode.Forced, true, true);
-
-                           if(_resourceSnapshotEnabled)
-                               _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestFinishedAfterGc, GetDisplayName(testMethod));
-
-                           return t.Result;
-                       });
+                    return t.Result;
+                });
         }
 
 
