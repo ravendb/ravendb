@@ -728,17 +728,20 @@ namespace Raven.Server.Smuggler.Documents
                     Writer.WriteComma();
                 First = false;
 
-                _context.Write(Writer, new DynamicJsonValue
+                using (tombstone)
                 {
-                    ["Key"] = tombstone.LowerId,
-                    [nameof(Tombstone.Type)] = tombstone.Type.ToString(),
-                    [nameof(Tombstone.Collection)] = tombstone.Collection,
-                    [nameof(Tombstone.Flags)] = tombstone.Flags.ToString(),
-                    [nameof(Tombstone.ChangeVector)] = tombstone.ChangeVector,
-                    [nameof(Tombstone.DeletedEtag)] = tombstone.DeletedEtag,
-                    [nameof(Tombstone.Etag)] = tombstone.Etag,
-                    [nameof(Tombstone.LastModified)] = tombstone.LastModified,
-                });
+                    _context.Write(Writer, new DynamicJsonValue
+                    {
+                        ["Key"] = tombstone.LowerId,
+                        [nameof(Tombstone.Type)] = tombstone.Type.ToString(),
+                        [nameof(Tombstone.Collection)] = tombstone.Collection,
+                        [nameof(Tombstone.Flags)] = tombstone.Flags.ToString(),
+                        [nameof(Tombstone.ChangeVector)] = tombstone.ChangeVector,
+                        [nameof(Tombstone.DeletedEtag)] = tombstone.DeletedEtag,
+                        [nameof(Tombstone.Etag)] = tombstone.Etag,
+                        [nameof(Tombstone.LastModified)] = tombstone.LastModified,
+                    });
+                }
             }
 
             public void WriteConflict(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress)
