@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var index = await MatchIndex(query, true, customStalenessWaitTimeout: TimeSpan.FromSeconds(60), token.Token);
 
-            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token, true))
             {
                 await index.StreamQuery(response, writer, query, documentsContext, token);
             }
