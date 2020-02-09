@@ -1,240 +1,34 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Threading;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Threading;
-using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
-    public class ThreadIdHolder
-    {
-        public int ThreadId;
-        public override string ToString()
-        {
-            return ThreadId.ToString();
-        }
-    }
-
-    public abstract class JsonContextPoolBase<T> : ILowMemoryHandler, IDisposable 
+    public abstract class JsonContextPoolBase<T> : ILowMemoryHandler, IDisposable
         where T : JsonOperationContext
     {
-        /// <summary>
-        /// This is thread static value because we usually have great similiarity in the operations per threads.
-        /// Indexing thread will adjust their contexts to their needs, and request processing threads will tend to
-        /// average to the same overall type of contexts
-        /// </summary>
-        private ConcurrentDictionary<int, ContextStack> _contextStacksByThreadId = new ConcurrentDictionary<int, ContextStack>();
-        private ThreadIdHolder[] _threadIds = Array.Empty< ThreadIdHolder>();
-
-        public ThreadIdHolder[] ThreadIDs => _threadIds;
-
-        private NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
         private bool _disposed;
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        // because this is a finalizer object, we want to pool them to avoid having too many items in the finalization queue
-        private static ObjectPool<ContextStack> _contextStackPool = new ObjectPool<ContextStack>(() => new ContextStack());
-
-        private class ContextStackThreadReleaser
-        {
-            private HashSet<JsonContextPoolBase<T>> _parents = new HashSet<JsonContextPoolBase<T>>();
-            int _threadId;
-            public List<ThreadIdHolder> ThreadIdHolders = new List<ThreadIdHolder>();            
-
-            public ContextStackThreadReleaser()
-            {
-                _threadId = NativeMemory.CurrentThreadStats.InternalId;
-            }
-
-            ~ContextStackThreadReleaser()
-            {
-                foreach (var item in ThreadIdHolders)
-                {
-                    Debug.Assert(item.ThreadId == _threadId);
-                    item.ThreadId = -1;
-                }
-                // we remove the references from the thread dictionary
-                // it is possible that the pool is no longer referenced and was collected, and as such
-                // the finalizers for the context stack values were already run, if not, they will run soon
-                // anyway, so we just clear it.
-                foreach (var parent in _parents)
-                {
-                    parent._contextStacksByThreadId?.TryRemove(_threadId, out var contextStack);
-                }
-            }
-
-            public bool AddContextPool(JsonContextPoolBase<T> parent)
-            {
-                return _parents.Add(parent);
-            }
-
-            public void RemoveContextPool(JsonContextPoolBase<T> parent)
-            {
-                _parents.Remove(parent);
-            }
-
-            public void RemoveThreadIdHolder(ThreadIdHolder holder)
-            {
-                ThreadIdHolders.Remove(holder);
-            }
-        }
-
-        [ThreadStatic]
-        private static ContextStackThreadReleaser _releaser;
-        
-
-        private void EnsureCurrentThreadContextWillBeReleased(int currentThreadId)
-        {            
-            if (_releaser == null)
-            {
-                _releaser = new ContextStackThreadReleaser();
-            }
-
-            if (_releaser.AddContextPool(this) == false)
-                return;
-
-            while (true)
-            {
-                var copy = _threadIds;
-                for (int i = 0; i < copy.Length; i++)
-                {
-                    if (copy[i].ThreadId == -1)
-                    {
-                        if(Interlocked.CompareExchange(ref copy[i].ThreadId, currentThreadId, -1) == -1)
-                        {
-                            _releaser.ThreadIdHolders.Add(copy[i]);
-                            return;
-                        }
-                    }
-                }
-                
-                var threads = new ThreadIdHolder[copy.Length + 1];
-                Array.Copy(copy, threads, copy.Length);
-                threads[copy.Length] = new ThreadIdHolder
-                {
-                    ThreadId = currentThreadId
-                };
-
-                if (Interlocked.CompareExchange(ref _threadIds, threads, copy) == copy)
-                {
-                    _releaser.ThreadIdHolders.Add(threads[copy.Length]);
-                    break;
-                }
-            }
-        }
-
-        private class ContextStack : StackHeader<T>, IDisposable
-        {
-            public bool AvoidWorkStealing;        
-            public void Dispose()
-            {
-                GC.SuppressFinalize(this);
-                DisposeOfContexts();
-                // explicitly don't want to do this in the finalizer, if the instance leaked, so be it
-                _contextStackPool.Free(this);
-            }
-
-            private void DisposeOfContexts()
-            {
-                var current = Interlocked.Exchange(ref Head, HeaderDisposed);
-
-                while (current != null)
-                {
-                    var ctx = current.Value;
-                    current = current.Next;
-                    if (ctx == null)
-                        continue;
-                    if (!ctx.InUse.Raise())
-                        continue;
-                    ctx.Dispose();
-                }
-            }
-        }
+        private readonly T[][] _perCoreContexts;
+        private readonly ConcurrentQueue<T> _globalQueue = new ConcurrentQueue<T>();
+        private readonly Timer _idleTimer;
 
         protected JsonContextPoolBase()
         {
-            ThreadLocalCleanup.ReleaseThreadLocalState += CleanThreadLocalState;
-            _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(this, s => ((JsonContextPoolBase<T>)s).EnumerateAllThreadContexts().ToList(),
-                LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            _perCoreContexts = new T[Environment.ProcessorCount][];
+            for (int i = 0; i < _perCoreContexts.Length; i++)
+            {
+                _perCoreContexts[i] = new T[2];
+            }
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
-        }
-
-        private ContextStack MaybeGetCurrentContextStack()
-        {
-            ContextStack x = null;
-            _contextStacksByThreadId?.TryGetValue(NativeMemory.CurrentThreadStats.InternalId, out x);
-            return x;
-        }
-
-        private ContextStack GetCurrentContextStack()
-        {
-            return _contextStacksByThreadId?.GetOrAdd(NativeMemory.CurrentThreadStats.InternalId, 
-                currentThreadId =>
-                {
-                    EnsureCurrentThreadContextWillBeReleased(currentThreadId);
-                    var ctx =  _contextStackPool.Allocate();
-                    ctx.AvoidWorkStealing = JsonContextPoolWorkStealing.AvoidForCurrentThread;
-                    return ctx;
-                });
-        }
-
-        private void CleanThreadLocalState()
-        {
-            StackNode<T> current;
-            try
-            {
-                current = MaybeGetCurrentContextStack()?.Head;
-
-                _contextStacksByThreadId?.TryRemove(NativeMemory.CurrentThreadStats.InternalId, out _);
-
-                if (_releaser != null)
-                {
-                    // we want to clear our JsonContextPool's current thread's state from the _releaser, but to avoid touching any other states
-                    foreach (var threadIdHolder in _threadIds)
-                    {
-                        if (Interlocked.CompareExchange(ref threadIdHolder.ThreadId, -1, NativeMemory.CurrentThreadStats.InternalId) == NativeMemory.CurrentThreadStats.InternalId)
-                        {
-                            _releaser.RemoveThreadIdHolder(threadIdHolder);
-                            break;
-                        }
-                    }                    
-                }
-
-                if (current == null)
-                    return;
-
-                
-            }
-            catch (ObjectDisposedException)
-            {
-                return; // the context pool was already disposed
-            }
-            finally
-            {
-                if (_releaser != null)
-                {
-                    _releaser.RemoveContextPool(this);
-                }
-
-            }
-
-            while (current != null)
-            {
-                var value = current.Value;
-
-                if (value != null)
-                {
-                    if (value.InUse.Raise()) // it could be stolen by another thread - RavenDB-11409
-                        value.Dispose();
-                }
-
-                current = current.Next;
-            }
+            _idleTimer = new Timer(IdleTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context)
@@ -251,49 +45,51 @@ namespace Sparrow.Json
             // more work to be done, and we want to release resources
             // to the system
 
-            var stack = GetCurrentContextStack();
-            var current = Interlocked.Exchange(ref stack.Head, null);
-            while (current != null)
-            {
-                current.Value?.Dispose();
-                current = current.Next;
-            }
-        }
-
-        private IEnumerable<ContextStack> EnumerateAllThreadContexts()
-        {
-            var copy = _threadIds;
-            for (int i = 0; i < copy.Length; i++)
-            {
-                var id = copy[i].ThreadId;
-                if (id == -1)
-                    continue;
-
-                var contextStacksByThreadId = _contextStacksByThreadId;
-                if (contextStacksByThreadId != null && contextStacksByThreadId.TryGetValue(id, out var ctx))
-                    yield return ctx;
-            }
+            // currently we have nothing to do here
         }
 
         public IDisposable AllocateOperationContext(out T context)
         {
             _cts.Token.ThrowIfCancellationRequested();
-            var currentThread = GetCurrentContextStack();
-            if (TryReuseExistingContextFrom(currentThread, out context, out IDisposable returnContext))
-                return returnContext;
 
-            // couldn't find it on our own thread, let us try and steal from other threads
+            var coreItems = _perCoreContexts[GetCurrentProcessorIndex()];
 
-            if (currentThread.AvoidWorkStealing == false)
+            for (int i = 0; i < coreItems.Length; i++)
             {
-                foreach (var otherThread in EnumerateAllThreadContexts())
+                context = coreItems[i];
+                if (context == null)
+                    continue;
+
+                if (Interlocked.CompareExchange(ref coreItems[i], null, context) != context)
+                    continue;
+
+                if (context.InUse.Raise() == false)
                 {
-                    if (otherThread == currentThread || otherThread.AvoidWorkStealing)
-                        continue;
-                    if (TryReuseExistingContextFrom(otherThread, out context, out returnContext))
-                        return returnContext;
+                    // This what ensures that we work correctly with races from other threads
+                    // if there is a context switch at the wrong time
+                    continue;
                 }
+                context.Renew();
+                return new ReturnRequestContext
+                {
+                    Parent = this,
+                    Context = context
+                };
             }
+
+            while (_globalQueue.TryDequeue(out context))
+            {
+                if (context.InUse.Raise() == false)
+                    continue;
+
+                context.Renew();
+                return new ReturnRequestContext
+                {
+                    Parent = this,
+                    Context = context
+                };
+            }
+
             // no choice, got to create it
             context = CreateContext();
             return new ReturnRequestContext
@@ -301,34 +97,6 @@ namespace Sparrow.Json
                 Parent = this,
                 Context = context
             };
-        }
-
-        private bool TryReuseExistingContextFrom(ContextStack stack, out T context, out IDisposable disposable)
-        {
-            while (true)
-            {
-                var current = stack.Head;
-                if (current == null)
-                    break;
-                if (Interlocked.CompareExchange(ref stack.Head, current.Next, current) != current)
-                    continue;
-                context = current.Value;
-                if (context == null)
-                    continue;
-                if (!context.InUse.Raise())
-                    continue;
-                context.Renew();
-                disposable = new ReturnRequestContext
-                {
-                    Parent = this,
-                    Context = context
-                };
-                return true;
-            }
-
-            context = default(T);
-            disposable = null;
-            return false;
         }
 
         protected abstract T CreateContext();
@@ -361,33 +129,94 @@ namespace Sparrow.Json
             }
         }
 
+        private void IdleTimer(object _)
+        {
+            var currentTime = DateTime.UtcNow;
+            TimeSpan idleTime = TimeSpan.FromMinutes(5);
+
+            if (_globalQueue.IsEmpty)
+            {
+                // we have nothing in global, let's check if we can clear the per core
+                foreach (var current in _perCoreContexts)
+                {
+                    for (var index = 0; index < current.Length; index++)
+                    {
+                        var context = current[index];
+                        if (currentTime - context.InPoolSince > idleTime)
+                            continue;
+
+                        if (!context.InUse.Raise()) 
+                            continue;
+
+                        Interlocked.CompareExchange(ref current[index], null, context);
+                        context.Dispose();
+                    }
+                }
+
+                return;
+            }
+
+            while (_globalQueue.TryPeek(out var context))
+            {
+                if (currentTime - context.InPoolSince < idleTime)
+                {
+                    break;
+                }
+
+                if (_globalQueue.TryDequeue(out context) == false)
+                    break;
+
+                if (currentTime - context.InPoolSince > idleTime)
+                {
+                    if (context.InUse.Raise())
+                        context.Dispose();
+                }
+                else
+                {
+                    // was checked out, meaning there is activity, we are done now
+                    _globalQueue.Enqueue(context);
+                    break;
+                }
+            }
+        }
+
         private void Push(T context)
         {
-            ContextStack threadHeader;
-            try
+            int currentProcessorId = GetCurrentProcessorIndex();
+            var core = _perCoreContexts[currentProcessorId];
+
+            for (int i = 0; i < core.Length; i++)
             {
-                threadHeader = GetCurrentContextStack();
-                if (threadHeader == null) // the parent was already disposed
+                if (core[i] != null)
+                    continue;
+                if (Interlocked.CompareExchange(ref core[i], context, null) == null)
                     return;
             }
-            catch (ObjectDisposedException)
+
+            if (core.Length < 64)
+            {
+                var newCore = new T[core.Length * 2];
+                Array.Copy(core, 0, newCore, 0, core.Length);
+                newCore[core.Length] = context;
+                if (Interlocked.CompareExchange(ref _perCoreContexts[currentProcessorId], newCore, core) == core)
+                    return;
+            }
+
+            if (LowMemoryFlag.IsRaised())
             {
                 context.Dispose();
                 return;
             }
-            while (true)
-            {
-                var current = threadHeader.Head;
-                if(current == ContextStack.HeaderDisposed)
-                {
-                    context.Dispose();
-                    return;
-                }
-                var newHead = new StackNode<T> { Value = context, Next = current };
-                if (Interlocked.CompareExchange(ref threadHeader.Head, newHead, current) == current)
-                    return;
-            }
+
+            // couldn't find a place for it, let's add it to the global list
+            _globalQueue.Enqueue(context);
         }
+
+        private int GetCurrentProcessorIndex()
+        {
+            return JsonContextPoolHelpers.CurrentProcessNumber % _perCoreContexts.Length;
+        }
+
         public virtual void Dispose()
         {
             if (_disposed)
@@ -399,25 +228,48 @@ namespace Sparrow.Json
 
                 _cts.Cancel();
                 _disposed = true;
-                CleanThreadLocalState();
-                ThreadLocalCleanup.ReleaseThreadLocalState -= CleanThreadLocalState;
-                _nativeMemoryCleaner.Dispose();
-                _nativeMemoryCleaner = null;
+                _idleTimer.Dispose();
 
-                foreach (var kvp in EnumerateAllThreadContexts())
+                while (_globalQueue.TryDequeue(out var result))
                 {
-                    kvp.Dispose();
+                    result.Dispose();
                 }
-                _contextStacksByThreadId?.Clear();
-                _contextStacksByThreadId = null;
-                _threadIds = Array.Empty<ThreadIdHolder>();                
+
+                foreach (var coreContext in _perCoreContexts)
+                {
+                    for (int i = 0; i < coreContext.Length; i++)
+                    {
+                        coreContext[i]?.Dispose();
+                        coreContext[i] = null;
+                    }
+
+                }
             }
         }
 
         public void LowMemory()
         {
-            if (LowMemoryFlag.Raise())
-                _nativeMemoryCleaner?.CleanNativeMemory(null);
+            if (!LowMemoryFlag.Raise()) 
+                return;
+
+            while (_globalQueue.TryDequeue(out var result))
+            {
+                if (result.InUse.Raise())
+                    result.Dispose();
+            }
+
+            foreach (var coreContext in _perCoreContexts)
+            {
+                for (int i = 0; i < coreContext.Length; i++)
+                {
+                    var context = coreContext[i];
+                    if (context != null && context.InUse.Raise())
+                    {
+                        context.Dispose();
+                        Interlocked.CompareExchange(ref coreContext[i], null, context);
+                    }
+                }
+            }
         }
 
         public void LowMemoryOver()
@@ -426,10 +278,30 @@ namespace Sparrow.Json
         }
     }
 
-    public static class JsonContextPoolWorkStealing
+    internal class JsonContextPoolHelpers
     {
-        [ThreadStatic]
-        public static bool AvoidForCurrentThread;
+        internal const string LIBC_6 = "libc";
+
+        [DllImport(LIBC_6, EntryPoint = "sched_getcpu", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
+        private static extern int sched_getcpu();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern int GetCurrentProcessorNumber();
+
+        public static int CurrentProcessNumber
+        {
+            get
+            {
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    int currentProcessNumber = sched_getcpu();
+                    if (currentProcessNumber == -1)
+                        return Thread.CurrentThread.ManagedThreadId % Environment.ProcessorCount;
+                    return currentProcessNumber;
+                }
+                return GetCurrentProcessorNumber();
+            }
+        }
     }
 
 }
