@@ -613,7 +613,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 CountersStorage.ConvertFromBlobToNumbers(_context, counterDetail);
 
-                using (counterDetail.Values)
+                using (counterDetail)
                 {
                     if (First == false)
                         Writer.WriteComma();
@@ -709,7 +709,7 @@ namespace Raven.Server.Smuggler.Documents
                     throw new NotSupportedException();
 
                 var document = item.Document;
-                using (document.Data)
+                using (document)
                 {
                     if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
                         WriteUniqueAttachmentStreams(document, progress);
@@ -747,16 +747,19 @@ namespace Raven.Server.Smuggler.Documents
                     Writer.WriteComma();
                 First = false;
 
-                _context.Write(Writer, new DynamicJsonValue
+                using (conflict)
                 {
-                    [nameof(DocumentConflict.Id)] = conflict.Id,
-                    [nameof(DocumentConflict.Collection)] = conflict.Collection,
-                    [nameof(DocumentConflict.Flags)] = conflict.Flags.ToString(),
-                    [nameof(DocumentConflict.ChangeVector)] = conflict.ChangeVector,
-                    [nameof(DocumentConflict.Etag)] = conflict.Etag,
-                    [nameof(DocumentConflict.LastModified)] = conflict.LastModified,
-                    [nameof(DocumentConflict.Doc)] = conflict.Doc,
-                });
+                    _context.Write(Writer, new DynamicJsonValue
+                    {
+                        [nameof(DocumentConflict.Id)] = conflict.Id,
+                        [nameof(DocumentConflict.Collection)] = conflict.Collection,
+                        [nameof(DocumentConflict.Flags)] = conflict.Flags.ToString(),
+                        [nameof(DocumentConflict.ChangeVector)] = conflict.ChangeVector,
+                        [nameof(DocumentConflict.Etag)] = conflict.Etag,
+                        [nameof(DocumentConflict.LastModified)] = conflict.LastModified,
+                        [nameof(DocumentConflict.Doc)] = conflict.Doc,
+                    });
+                }
             }
 
             public void DeleteDocument(string id)

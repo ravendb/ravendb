@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Extensions;
 using Sparrow.Json;
@@ -48,7 +49,7 @@ namespace Raven.Client.Documents.Operations.Counters
         }
     }
 
-    public class CounterGroupDetail
+    public class CounterGroupDetail : IDisposable
     {
         public LazyStringValue DocumentId { get; set; }
 
@@ -67,6 +68,13 @@ namespace Raven.Client.Documents.Operations.Counters
                 [nameof(Values)] = Values,
                 [nameof(Etag)] = Etag
             };
+        }
+
+        public void Dispose()
+        {
+            DocumentId?.Dispose();
+            ChangeVector?.Dispose();
+            Values?.Dispose();
         }
     }
 }
