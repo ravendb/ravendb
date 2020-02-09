@@ -1,7 +1,6 @@
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import messagePublisher = require("common/messagePublisher");
 import clearIndexErrorsCommand = require("commands/database/index/clearIndexErrorsCommand");
 
 class clearIndexErrorsConfirm extends dialogViewModelBase {
@@ -11,15 +10,15 @@ class clearIndexErrorsConfirm extends dialogViewModelBase {
     indexesToClear = ko.observableArray<string>();
     clearAllIndexes = ko.observable<boolean>();
     
-    constructor(indexesToClear: string[], private db: database, private shouldClearAllIndexes: boolean) {
+    constructor(indexesToClear: Array<string>, private db: database) {
         super();
         this.indexesToClear(indexesToClear);
-        this.clearAllIndexes(shouldClearAllIndexes);
+        this.clearAllIndexes(!indexesToClear);
        
-        if (this.shouldClearAllIndexes) {
+        if (this.clearAllIndexes()) {
             this.title = "Clear errors for ALL indexes ?";
             this.subTitleHtml = "Errors will be cleared for ALL indexes.";
-        } else if (this.indexesToClear().length === 1) {
+        } else if (this.indexesToClear() && this.indexesToClear().length === 1) {
             this.title = "Clear index Errors?";
             this.subTitleHtml = `You're clearing errors from index:`;
         } else {
@@ -29,23 +28,11 @@ class clearIndexErrorsConfirm extends dialogViewModelBase {
     }
 
     clearIndexes() {
-        let clearErrorsTasks;        
-        if (this.shouldClearAllIndexes) {
-             clearErrorsTasks = new clearIndexErrorsCommand(null, this.db).execute();
-        } else {
-            clearErrorsTasks = this.indexesToClear().map(index => new clearIndexErrorsCommand(index, this.db).execute());
-        }
-
-        $.when.apply($, clearErrorsTasks)
+        new clearIndexErrorsCommand(this.indexesToClear(), this.db)
+            .execute()
             .done(() => {
-                if (this.indexesToClear().length > 1) {
-                    messagePublisher.reportSuccess(`Successfully cleared errors from ${this.indexesToClear().length} indexes`);
-                } else {
-                    messagePublisher.reportSuccess(`"Successfully cleared errors from index: ${this.indexesToClear()[0]}`);
-                }
                 this.clearErrorsTask.resolve(true);
-            })
-            .fail(() => this.clearErrorsTask.reject());
+            });
 
         dialog.close(this);
     }

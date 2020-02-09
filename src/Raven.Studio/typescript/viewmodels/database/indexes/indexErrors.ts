@@ -71,9 +71,9 @@ class indexErrors extends viewModelBase {
 
         this.clearErrorsBtnText = ko.pureComputed(() => {
             if (this.allIndexesSelected() && this.allErroredIndexNames().length) {
-                return "Clear errors - All indexes";
-            } else if (this.selectedIndexNames().length){
-                return "Clear errors - Selected indexes";
+                return "Clear errors (All indexes)";
+            } else if (this.selectedIndexNames().length) {
+                return "Clear errors (Selected indexes)";
             } else {
                 return "Clear errors";
             }
@@ -82,10 +82,8 @@ class indexErrors extends viewModelBase {
         this.clearErrorsBtnTooltip = ko.pureComputed(() => {
             if (this.allIndexesSelected() && this.allErroredIndexNames().length) {
                 return "Clear errors for all indexes";
-            } else if (this.selectedIndexNames().length){
+            } else if (this.selectedIndexNames().length) {
                 return "Clear errors for selected indexes";
-            } else {
-                return "Select indexes to clear";
             }
         });
     }
@@ -321,17 +319,15 @@ class indexErrors extends viewModelBase {
     }
 
     clearIndexErrors() {
-        const indexesToClear = this.selectedIndexNames();
-        
-        if (indexesToClear.length > 0) {
-            const clearErrorsDialog = new clearIndexErrorsConfirm(indexesToClear, this.activeDatabase(), this.allIndexesSelected());
-            app.showBootstrapDialog(clearErrorsDialog);
+        const clearErrorsDialog = new clearIndexErrorsConfirm(this.allIndexesSelected() ? null : this.selectedIndexNames(), this.activeDatabase());
+        app.showBootstrapDialog(clearErrorsDialog);
             
-            clearErrorsDialog.clearErrorsTask
-                .always(() => {                    
-                   this.refresh();
-                });
-        }
+        clearErrorsDialog.clearErrorsTask
+            .done((errorsCleared: boolean) => { 
+                if (errorsCleared) { 
+                    this.refresh(); 
+                } 
+        });
     }
 }
 
