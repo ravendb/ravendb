@@ -15,11 +15,13 @@
                     </li>
                 </ul>
             </div>
-            <p>
-                <small class="bg-info text-info padding padding-xs">
-                    <i class="icon-warning margin-right margin-right-sm"></i>While the current errors will be cleared, the <i>index state</i> will not change.
-                </small>
-            </p>
+            <div class="bg-info padding padding-xs margin-top margin-top-lg flex-horizontal">
+                <span class="flex-start"><i class="icon-info"></i></span>
+                <span class="margin-left margin-left-sm">
+                    While the current indexing errors will be cleared,<br>
+                    an index with an 'Error state' will Not be set back to 'Normal state'.
+                </span>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
