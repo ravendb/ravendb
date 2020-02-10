@@ -350,7 +350,30 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue DeleteRangeTimeSeries(JsValue self, JsValue[] args)
             {
-                throw new NotImplementedException();
+                const string signature = "deleteRangeTs(doc, timeseries, from, to)";
+                const int requiredArgs = 4;
+                
+                if (args.Length != requiredArgs)
+                    throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
+                
+                var (id, doc) = GetIdAndDocFromFirstArg(args[0], signature);
+
+                string timeseries = GetStringArg(args[1], signature, "timeseries");
+
+                var from = GetDateArg(args[2], signature, "from");
+                var to = GetDateArg(args[3], signature, "to");
+
+                var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
+                {
+                    DocumentId = id,
+                    Collection = CollectionName.GetCollectionName(doc),
+                    Name = timeseries,
+                    From = from,
+                    To = to,
+                };
+                _database.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(_docsCtx, deletionRangeRequest);
+                
+                return JsValue.Undefined;
             }
             
             private JsValue GetRangeTimeSeries(JsValue self, JsValue[] args)
