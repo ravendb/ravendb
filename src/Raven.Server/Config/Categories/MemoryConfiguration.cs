@@ -35,8 +35,8 @@ namespace Raven.Server.Config.Categories
         [Description("The maximum size of context to keep in the pool after dispose")]
         [DefaultValue(32)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Memory.MaxContextSizeToKeep", ConfigurationEntryScope.ServerWideOnly)]
-        public Size MaxContextSizeToKeep { get; set; }
+        [ConfigurationEntry("Memory.MaxContextSizeToKeepInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size MaxContextSizeToKeepInMb { get; set; }
 
         [Description("EXPERT: The minimum amount of committed memory percentage that RavenDB will attempt to ensure remains available. Reducing this value too much may cause RavenDB to fail if there is not enough memory available for the operation system to handle operations.")]
         [DefaultValue(0.05f)]

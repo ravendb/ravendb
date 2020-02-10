@@ -158,14 +158,23 @@ namespace Sparrow.Json
             }
         }
 
-        protected JsonContextPoolBase(Size? maxContextSizeToKeep)
+        protected JsonContextPoolBase()
+        {
+            Initialize();
+        }
+
+        protected JsonContextPoolBase(Size? maxContextSizeToKeepInMb)
+        {
+            Initialize();
+            MaxContextSizeToKeepInBytes = maxContextSizeToKeepInMb?.GetValue(SizeUnit.Bytes) ?? long.MaxValue;
+        }
+
+        private void Initialize()
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanThreadLocalState;
             _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(this, s => ((JsonContextPoolBase<T>)s).EnumerateAllThreadContexts().ToList(),
                 LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
-
-            MaxContextSizeToKeepInBytes = maxContextSizeToKeep?.GetValue(SizeUnit.Bytes) ?? long.MaxValue;
         }
 
         private ContextStack MaybeGetCurrentContextStack()
@@ -436,7 +445,7 @@ namespace Sparrow.Json
         {
             if (LowMemoryFlag.Raise())
             {
-                Generation++;
+                Interlocked.Increment(ref Generation);
                 _nativeMemoryCleaner?.CleanNativeMemory(null);
             }
         }

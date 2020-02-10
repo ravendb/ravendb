@@ -119,7 +119,7 @@ namespace Raven.Server
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
             _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
-            _tcpContextPool = new JsonContextPool(Configuration.Memory.MaxContextSizeToKeep);
+            _tcpContextPool = new JsonContextPool(Configuration.Memory.MaxContextSizeToKeepInMb);
         }
 
         public TcpListenerStatus GetTcpServerStatus()

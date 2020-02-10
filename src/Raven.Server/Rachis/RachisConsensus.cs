@@ -392,7 +392,7 @@ namespace Raven.Server.Rachis
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
-                ContextPool = new TransactionContextPool(_persistentState, configuration.Memory.MaxContextSizeToKeep);
+                ContextPool = new TransactionContextPool(_persistentState, configuration.Memory.MaxContextSizeToKeepInMb);
 
                 ClusterTopology topology;
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))

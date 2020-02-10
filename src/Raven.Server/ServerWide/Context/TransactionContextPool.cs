@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Context
             _mostlyThreadDedicatedWork = true;
         }
 
-        public TransactionContextPool(StorageEnvironment storageEnvironment, Size? maxContextSizeToKeep = null) : base(maxContextSizeToKeep)
+        public TransactionContextPool(StorageEnvironment storageEnvironment, Size? maxContextSizeToKeepInMb = null) : base(maxContextSizeToKeepInMb)
         {
             _storageEnvironment = storageEnvironment;
         }

@@ -2,7 +2,11 @@
 {
     public class JsonContextPool : JsonContextPoolBase<JsonOperationContext>
     {
-        public JsonContextPool(Size? maxContextSizeToKeep = null) : base(maxContextSizeToKeep)
+        public JsonContextPool()
+        {
+        }
+
+        public JsonContextPool(Size? maxContextSizeToKeepInMb = null) : base(maxContextSizeToKeepInMb)
         {
         }
 
