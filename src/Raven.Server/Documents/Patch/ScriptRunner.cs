@@ -236,69 +236,6 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private JsValue AppendTimeSeries(JsValue self, JsValue[] args)
-            {
-                const string signature = "appendTs(this, timeseries, timestamp, tag, values)";
-                const int requiredArgs = 5;
-                
-                if (args.Length != requiredArgs)
-                    throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
-                
-                var (id, doc) = GetIdAndDocFromFirstArg(args[0], signature);
-
-                if(args[1].IsString() == false)
-                    throw new ArgumentException($"{signature}: The timeseries argument should be a string, but got {args[1].GetType().Name}");
-                var timeseries = args[1].AsString();
-                
-                var timestamp = GetDateArg(args[2], signature, "timestamp");
-                
-                if(args[3].IsString() == false)
-                    throw new ArgumentException($"{signature}: The tag argument should be a string, but got {args[3].GetType().Name}");
-                var tag = args[3].AsString();
-                
-                if(args[4].IsArray() == false)
-                    throw new ArgumentException($"{signature}: The tag argument should be an array but it is, but got {args[4].GetType().Name}");
-
-                ArrayInstance jsValues = args[4].AsArray();
-                var values = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
-                try
-                {
-                    FillDoubleArrayFromJsArray(values, jsValues, signature);
-                    _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(
-                        _docsCtx,
-                        id,
-                        CollectionName.GetCollectionName(doc),
-                        timeseries,
-                        new []{new TimeSeriesStorage.Reader.SingleResult
-                        {
-                            Values = new Memory<double>(values, 0, (int)jsValues.Length),
-                            Tag = _docsCtx.GetLazyString(tag),
-                            Timestamp = timestamp,
-                            Status = TimeSeriesValuesSegment.Live
-                        }});
-                }
-                finally                
-                {
-                    ArrayPool<double>.Shared.Return(values);
-                }
-                
-                return Undefined.Instance;
-            }
-
-            private void FillDoubleArrayFromJsArray(double[] array, ArrayInstance jsArray, string signature)
-            {
-                var i = 0;
-                foreach (var (key, value) in jsArray.GetOwnProperties())
-                {
-                    if (key == "length")
-                        continue;
-                    if (value.Value.IsNumber() == false)
-                        throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {value.Value.GetType().Name} key({key}) value({value})");
-                    array[i] = value.Value.AsNumber();
-                    ++i;
-                }
-            }
-            
             private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromFirstArg(JsValue firstArgs, string signature)
             {
                 if (firstArgs.IsObject() && firstArgs.AsObject() is BlittableObjectInstance doc)
@@ -315,6 +252,100 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+            }
+            
+            private static string GetStringArg(JsValue jsArg, string signature, string argName)
+            {
+                if (jsArg.IsString() == false)
+                    throw new ArgumentException($"{signature}: The {argName} argument should be a string, but got {jsArg.GetType().Name}");
+                return jsArg.AsString();
+            }
+            
+            private void FillDoubleArrayFromJsArray(double[] array, ArrayInstance jsArray, string signature)
+            {
+                var i = 0;
+                foreach (var (key, value) in jsArray.GetOwnProperties())
+                {
+                    if (key == "length")
+                        continue;
+                    if (value.Value.IsNumber() == false)
+                        throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {value.Value.GetType().Name} key({key}) value({value})");
+                    array[i] = value.Value.AsNumber();
+                    ++i;
+                }
+            }
+            
+            private JsValue AppendTimeSeries(JsValue self, JsValue[] args)
+            {
+                const string signature = "appendTs(doc, timeseries, toAppend)";
+                const int requiredArgs = 3;
+                
+                if (args.Length != requiredArgs)
+                    throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
+                
+                var (id, doc) = GetIdAndDocFromFirstArg(args[0], signature);
+
+                string timeseries = GetStringArg(args[1], signature, "timeseries");
+
+                if(args[2].IsArray() == false)
+                    throw new ArgumentException($"{signature}: The tuples argument should be an array but got {args[2].GetType().Name}");
+                var tuples = args[2].AsArray();
+
+                var toAppend = new TimeSeriesStorage.Reader.SingleResult[tuples.Length];
+                var valuesArrays = ArrayPool<double[]>.Shared.Rent((int)tuples.Length);       
+                try
+                {
+                    var i = 0;
+                    foreach (var (key, jsTuple) in tuples.GetOwnProperties())
+                    {
+                        if (key == "length")
+                            continue;
+                        if (jsTuple.Value.IsArray() == false)
+                            throw new ArgumentException($"{signature}: The tuple must be an array but got {jsTuple.Value.GetType().Name}");
+
+                        var tuple = jsTuple.Value.AsArray();
+                        var timestamp = GetDateArg(tuple[0], signature, "timestamp");
+                
+                        string tag = GetStringArg(tuple[1], signature, "tag");
+                        
+                        if(tuple[2].IsArray() == false)
+                            throw new ArgumentException($"{signature}: The values should be an array but got {tuple[2].GetType().Name}");
+                    
+                        var jsValues = tuple[2].AsArray();
+                        valuesArrays[i] = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
+                    
+                        FillDoubleArrayFromJsArray(valuesArrays[i], jsValues, signature);
+                    
+                        toAppend[i] = new TimeSeriesStorage.Reader.SingleResult
+                        {
+                            Values = new Memory<double>(valuesArrays[i], 0, (int)jsValues.Length),
+                            Tag = _docsCtx.GetLazyString(tag),
+                            Timestamp = timestamp,
+                            Status = TimeSeriesValuesSegment.Live
+                        };
+                        ++i;
+                    }
+                    
+                    _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(
+                        _docsCtx,
+                        id,
+                        CollectionName.GetCollectionName(doc),
+                        timeseries,
+                        toAppend);
+                }
+                finally                
+                {
+                    foreach (double[] values in valuesArrays)
+                    {
+                        if(values == null)
+                            break;
+                        
+                        ArrayPool<double>.Shared.Return(values);
+                    }
+                    ArrayPool<double[]>.Shared.Return(valuesArrays);
+                }
+                
+                return Undefined.Instance;
             }
 
             private JsValue DeleteRangeTimeSeries(JsValue self, JsValue[] args)
@@ -596,7 +627,7 @@ namespace Raven.Server.Documents.Patch
                         reader,
                         //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
                         nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict
-                        );
+                    );
 
                     if (DebugMode)
                     {
@@ -1077,7 +1108,7 @@ namespace Raven.Server.Documents.Patch
                     binaryOperationType = ExpressionType.Subtract;
                 }
                 else if (args[2].IsString() == false ||
-                    Enum.TryParse(args[2].AsString(), out binaryOperationType) == false)
+                         Enum.TryParse(args[2].AsString(), out binaryOperationType) == false)
                 {
                     throw new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'");
                 }
