@@ -8,11 +8,11 @@ class clearIndexErrorsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const args =  this.indexesNames ? { name: this.indexesNames } : "";
+        const args =  this.indexesNames ? { name: this.indexesNames } : {};
         const url = endpoints.databases.index.indexesErrors + this.urlEncodeArgs(args);
 
         return this.del<void>(url, null, this.db)
-            .done(() => this.reportSuccess(`Successfully cleared errors from ${this.indexesNames ? 'selected' : 'all'} indexes`));
+            .done(() => this.reportSuccess("Indexing errors cleared successfully."));
     }
 }
 
