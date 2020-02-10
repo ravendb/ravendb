@@ -28,14 +28,14 @@ class deleteIndexesConfirm extends dialogViewModelBase {
 
     indexesInfoForDelete = Array<indexInfoForDelete>();
 
-    constructor(private indexes: index[] | indexDefinition[], private db: database) {
+    constructor(private indexes: Array<index | indexDefinition>, private db: database) {
         super();
 
         if (!indexes || indexes.length === 0) {
             throw new Error("Indexes must not be null or empty.");
         }
         
-        this.indexesInfoForDelete = (indexes as indexDefinition[]).map(x => new indexInfoForDelete(x.name(), x.reduceOutputCollectionName(), x.hasPatternForReduceOutputCollection()));
+        this.indexesInfoForDelete = indexes.map(x => new indexInfoForDelete(ko.unwrap(x.name), x.reduceOutputCollectionName(), x.hasPatternForReduceOutputCollection()));
 
         if (this.indexesInfoForDelete.length === 1) {
             this.title = "Delete index?";
