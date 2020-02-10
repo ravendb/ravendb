@@ -118,9 +118,7 @@ class driveUsage {
                 if (this.includeTemp()) {
                     return [
                         new legendColumn<driveUsageDetails>(grid, x => this.colorClassProvider(x.database()), "", "26px"),
-                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(),  
-                                                                     x => (x.database().toString() === '<System>') ? appUrl.forSystemStorageReport() : appUrl.forStatusStorageReport(x.database()), 
-                                                                     "Database", "42%", {
+                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => this.getStorageReportUrl(x.database()), "Database", "42%", {
                             extraClass: d => isDisabled(d.database()) ? "disabled" : "",
                             sortable: "string",
                             customComparator: generalUtils.sortAlphaNumeric
@@ -141,13 +139,14 @@ class driveUsage {
                 } else {
                     return [
                         new legendColumn<driveUsageDetails>(grid, x =>  this.colorClassProvider(x.database()), "", "26px"),
-                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%", {
+                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => this.getStorageReportUrl(x.database()), "Database", "60%", {
                             extraClass: d => isDisabled(d.database()) ? "disabled" : "",
                             sortable: "string",
                             customComparator: generalUtils.sortAlphaNumeric
                         }),
                         new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "30%", {
-                            sortable: x => x.size()
+                            sortable: x => x.size(),
+                            defaultSortOrder: "desc"
                         }) 
                     ]
                 }
@@ -165,6 +164,10 @@ class driveUsage {
 
             return mountPoint;
         });
+    }
+    
+    private getStorageReportUrl(database: string) {
+        return database === "<System>" ? appUrl.forSystemStorageReport() : appUrl.forStatusStorageReport(database);
     }
     
     update(dto: Raven.Server.Dashboard.MountPointUsage) {
@@ -191,8 +194,6 @@ class driveUsage {
                 this.items.push(new driveUsageDetails(incomingItem));
             }
         });
-
-        this.items.sort((a, b) => generalUtils.sortAlphaNumeric(a.database(), b.database()));
 
         if (this.gridController()) {
             const selectedItems = this.gridController().getSelectedItems();
