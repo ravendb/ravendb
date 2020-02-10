@@ -203,5 +203,77 @@ namespace SlowTests.Client.TimeSeries.Patch
                 }
             }
         }
+        
+        [Theory]
+        [InlineData(4, 7)]
+        [InlineData(0, 3)]
+        [InlineData(0, 9)]
+        [InlineData(5, 9)]
+        [InlineData(0, 0)]
+        [InlineData(2, 2)]
+        [InlineData(9, 9)]
+        public void Patch_DeleteSingleTimestamp(int fromIndex, int toIndex)
+        {
+            const string tag = "watches/fitbit";
+            const string timeseries = "Heartrate";
+            const string documentId = "users/1";
+            var values = new[] {59.3d, 59.2d, 70.5555d, 72.53399393d, 71.543434d, 70.938457d, 72.53399393d, 60.1d, 59.9d, 0d};
+            
+            var baseline = DateTime.Today;
+            var toRemoveFrom = baseline.AddMinutes(fromIndex);
+            var toRemoveTo = baseline.AddMinutes(toIndex);
+            var expectedValues = new List<(DateTime, double)>();
+            
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, documentId);
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        var time = baseline.AddMinutes(i);
+                        expectedValues.Add((time, values[i]));
+                        session.TimeSeriesFor(documentId).Append(timeseries, time, tag, new[] { values[i] });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Defer(new PatchCommandData(documentId, null,
+                        new PatchRequest
+                        {
+                            Script = @"deleteRangeTs(this, args.timeseries, args.from, args.to);",
+                            Values =
+                            {
+                                { "timeseries", timeseries },
+                                { "from", toRemoveFrom },
+                                { "to", toRemoveTo },
+                            }
+                        }, null));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var entries = session.TimeSeriesFor(documentId)
+                        .Get(timeseries, DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+
+                    Assert.Equal(values.Length - 1 - (toIndex - fromIndex), entries.Count);
+                    foreach (var expected in expectedValues)
+                    {
+                        if (expected.Item1 >= toRemoveFrom || expected.Item1 <= toRemoveTo) 
+                            continue;
+                        
+                        Assert.Equal(expected.Item1, entries[0].Timestamp);
+                        Assert.Equal(expected.Item2, entries[0].Values[0]);
+                        Assert.Equal(tag, entries[0].Tag);
+                    }
+                }
+            }
+        }
     }
 }
