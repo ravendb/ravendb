@@ -39,7 +39,6 @@ class indexes extends viewModelBase {
     lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
-    indexesProgressRefreshThrottle: Function;
     indexProgressInterval: number;
     indexingProgresses = new Map<string, indexProgress>();
     requestedIndexingInProgress = false;
@@ -60,6 +59,7 @@ class indexes extends viewModelBase {
     resetsInProgress = new Set<string>();
 
     throttledRefresh: Function;
+    indexesProgressRefreshThrottle: Function;
 
     indexErrorsUrl = ko.pureComputed(() => appUrl.forIndexErrors(this.activeDatabase()));
 
@@ -191,6 +191,7 @@ class indexes extends viewModelBase {
         this.autoRefresh.subscribe(refresh => {
             if (refresh) {
                 this.filterIndexes(false);
+                this.fetchIndexes(true);
             }
         });
         
@@ -259,7 +260,11 @@ class indexes extends viewModelBase {
         $('.index-info [data-toggle="tooltip"]').tooltip();
     }
     
-    private fetchIndexes(): JQueryPromise<void> {
+    private fetchIndexes(forceRefresh: boolean = false): JQueryPromise<void> {
+        if (!this.autoRefresh()) {
+            return;
+        }
+        
         const statsTask = new getIndexesStatsCommand(this.activeDatabase())
             .execute();
 
@@ -267,10 +272,14 @@ class indexes extends viewModelBase {
             .execute();
 
         return $.when<any>(statsTask, statusTask)
-            .done(([stats]: [Array<Raven.Client.Documents.Indexes.IndexStats>], [statuses]: [Raven.Client.Documents.Indexes.IndexingStatus]) => this.processData(stats, statuses));
+            .done(([stats]: [Array<Raven.Client.Documents.Indexes.IndexStats>], [statuses]: [Raven.Client.Documents.Indexes.IndexingStatus]) => this.processData(stats, statuses, forceRefresh));
     }
 
-    private processData(stats: Array<Raven.Client.Documents.Indexes.IndexStats>, statuses: Raven.Client.Documents.Indexes.IndexingStatus) {
+    private processData(stats: Array<Raven.Client.Documents.Indexes.IndexStats>, statuses: Raven.Client.Documents.Indexes.IndexingStatus, forceRefresh: boolean) {                 
+        if (forceRefresh) {
+            this.indexGroups([]);
+        }
+        
         this.globalIndexingStatus(statuses.Status);
 
         const replacements = stats
@@ -375,6 +384,10 @@ class indexes extends viewModelBase {
     }
     
     private getIndexesProgress() {
+        if (!this.autoRefresh()) {
+            return;
+        }
+        
         if (shell.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
             return $.Deferred().fail();
@@ -482,6 +495,10 @@ class indexes extends viewModelBase {
     }
 
     private processIndexEvent(e: Raven.Client.Documents.Changes.IndexChange) {
+        if (!this.autoRefresh()) {
+            return;    
+        }
+        
         switch (e.Type) {
             case "IndexRemoved":
                 if (!this.resetsInProgress.has(e.Name)) {
