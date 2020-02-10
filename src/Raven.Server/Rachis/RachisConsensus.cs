@@ -507,12 +507,12 @@ namespace Raven.Server.Rachis
 
         protected abstract void InitializeState(TransactionOperationContext context);
 
-        public async Task WaitForState(RachisState rachisState, CancellationToken cts)
+        public async Task WaitForState(RachisState rachisState, CancellationToken token)
         {
-            while (cts.IsCancellationRequested == false)
+            while (token.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
-                var task = _stateChanged.Task.WithCancellation(cts);
+                var task = _stateChanged.Task.WithCancellation(token);
 
                 if (CurrentState == rachisState)
                     return;
@@ -555,7 +555,7 @@ namespace Raven.Server.Rachis
             return _topologyChanged.Task;
         }
 
-        public async Task WaitForTopology(Leader.TopologyModification modification, string nodeTag = null)
+        public async Task WaitForTopology(Leader.TopologyModification modification, string nodeTag = null, CancellationToken token = default)
         {
             while (true)
             {
@@ -590,7 +590,7 @@ namespace Raven.Server.Rachis
                     }
                 }
 
-                await task;
+                await task.WithCancellation(token);
             }
         }
 

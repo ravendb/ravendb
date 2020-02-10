@@ -11,7 +11,7 @@ namespace StressTests.Rachis
         {
         }
 
-        [Theory]
+        [Theory64Bit]
         [InlineData(true)]
         public async Task ReAddMemberNode(bool withManyCompareExchange)
         {

@@ -15,7 +15,6 @@ import dashboardChart = require("models/resources/serverDashboard/dashboardChart
 import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
 import serverDashboardWebSocketClient = require("common/serverDashboardWebSocketClient");
 import clusterNode = require("models/database/cluster/clusterNode");
-import databasesManager = require("common/shell/databasesManager");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import serverTime = require("common/helpers/database/serverTime");
 import accessManager = require("common/shell/accessManager");
@@ -646,7 +645,9 @@ class driveUsageSection {
     
     onResize() {
         this.table().forEach(item => {
-            item.gridController().reset(true);
+            if (item.gridController()) {
+                item.gridController().reset(true);
+            }
         });
         
         this.storageChart.onResize();
@@ -689,7 +690,6 @@ class driveUsageSection {
 
         const includeTemp = this.includeTemporaryBuffers();
         
-        // group by database size
         data.Items.forEach(mountPointUsage => {
             mountPointUsage.Items.forEach(item => {
                 const sizeToUse = includeTemp ? item.Size + item.TempBuffersSize : item.Size;
@@ -711,7 +711,7 @@ class driveUsageSection {
             });
         });
 
-        this.storageChart.onData(result, withTween);
+        this.storageChart.onData(_.orderBy(result, x=> x.Size, ["desc"]), withTween);
     }
 }
 

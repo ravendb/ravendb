@@ -25,7 +25,8 @@ namespace RachisTests
             // we don't want to move the node to rehab, since it should be restored to the top of the list.
             var settings = new Dictionary<string, string>()
             {
-                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1"
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "15"
             };
 
             var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false, customSettings: settings);
@@ -50,9 +51,8 @@ namespace RachisTests
 
                 var firstNodeUrl = re.Url;
                 var firstNode = Servers.Single(s => s.WebUrl == firstNodeUrl);
-                var tag = firstNode.ServerStore.NodeTag;
-                var nodePath = firstNode.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-                await DisposeServerAndWaitForFinishOfDisposalAsync(firstNode);
+
+                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(firstNode);
 
                 // check that replication works.
                 using (var session = leaderStore.OpenSession())
@@ -69,9 +69,12 @@ namespace RachisTests
                 settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = firstNodeUrl;
                 Servers.Add(GetNewServer(new ServerCreationOptions
                 {
-                    CustomSettings = settings, RunInMemory = false, DeletePrevious = false, PartialPath = nodePath
+                    CustomSettings = settings,
+                    RunInMemory = false,
+                    DeletePrevious = false,
+                    DataDirectory = result.DataDirectory
                 }));
-                await re.CheckNodeStatusNow(tag);
+                await re.CheckNodeStatusNow(result.NodeTag);
                 Assert.True(WaitForValue(() => firstNodeUrl == re.Url, true));
             }
         }

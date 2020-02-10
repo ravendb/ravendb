@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
@@ -41,17 +40,14 @@ namespace SlowTests.Issues
             Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
 
             // Taking down server
-            var serverPath = server.Configuration.Core.DataDirectory.FullPath;
-            var nodePath = serverPath.Split('/').Last();
-            var url = server.WebUrl;
-            await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
             var settings = new Dictionary<string, string>
             {
-                { RavenConfiguration.GetKey(x => x.Core.ServerUrls), url }
+                { RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url }
             };
 
             // Bring server up
-            server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, PartialPath = nodePath, CustomSettings = settings });
+            server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = result.DataDirectory, CustomSettings = settings });
 
             license = server.ServerStore.LoadLicenseLimits();
             Assert.True(license.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out detailsPerNode));

@@ -133,13 +133,13 @@ namespace StressTests.Issues
                     [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = node.Configuration.Cluster.ElectionTimeout.AsTimeSpan.TotalMilliseconds.ToString()
                 };
 
-                var dataDir = node.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+                var dataDirectory = node.Configuration.Core.DataDirectory.FullPath;
 
-                node = base.GetNewServer(new ServerCreationOptions() { DeletePrevious = false, RunInMemory = false, CustomSettings = settings, PartialPath = dataDir });
+                node = base.GetNewServer(new ServerCreationOptions() { DeletePrevious = false, RunInMemory = false, CustomSettings = settings, DataDirectory = dataDirectory });
             }
             else
             {
-                var nodeInfo = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(node);
             }
 
             return node;

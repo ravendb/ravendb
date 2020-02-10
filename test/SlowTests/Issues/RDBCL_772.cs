@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using FastTests;
+﻿using System.Collections.Generic;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RDBCL_772 : RavenTestBase
+    public class RDBCL_772 : ClusterTestBase
     {
         public RDBCL_772(ITestOutputHelper output) : base(output)
         {
@@ -21,12 +19,9 @@ namespace SlowTests.Issues
         {
             string dbName = GetDatabaseName();
 
-            var dataPath = NewDataPath();
-
             var customSettings = new Dictionary<string, string>()
             {
-                [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false",
-                [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = dataPath
+                [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
             };
 
             var certificates = SetupServerAuthentication(customSettings: customSettings);
@@ -53,14 +48,17 @@ namespace SlowTests.Issues
                 Assert.NotNull(Server.Statistics.LastAuthorizedNonClusterAdminRequestTime);
             }
 
-            Server.Dispose();
+            var result = DisposeServerAndWaitForFinishOfDisposal(Server);
 
             DoNotReuseServer(customSettings);
 
-            var serverPath = Server.Configuration.Core.DataDirectory.FullPath;
-            var nodePath = serverPath.Split('/').Last();
-
-            var serverAfterRestart = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, PartialPath = nodePath, CustomSettings = customSettings });
+            var serverAfterRestart = GetNewServer(new ServerCreationOptions
+            {
+                RunInMemory = false,
+                DeletePrevious = false,
+                DataDirectory = result.DataDirectory,
+                CustomSettings = customSettings
+            });
 
             Assert.NotNull(serverAfterRestart.Statistics.LastAuthorizedNonClusterAdminRequestTime);
         }

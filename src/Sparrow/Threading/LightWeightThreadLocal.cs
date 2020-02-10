@@ -77,7 +77,6 @@ namespace Sparrow.Threading
             if (copy == null)
                 return;
 
-            GC.SuppressFinalize(this);
             _globalState.Dispose();
             _values = null;
 
@@ -94,11 +93,6 @@ namespace Sparrow.Threading
             }
         }
 
-        ~LightWeightThreadLocal()
-        {
-            Dispose();
-        }
-
         private sealed class CurrentThreadState
         {
             private readonly HashSet<WeakReferenceToLightWeightThreadLocal> _parents
@@ -113,11 +107,13 @@ namespace Sparrow.Threading
                 int parentsDisposed = _localState.ParentsDisposed;
                 if (parentsDisposed > 0)
                 {
-                    RemoveDisposedParents(parentsDisposed);
+                    RemoveDisposedParents();
+                    Interlocked.Add(ref _localState.ParentsDisposed, -parentsDisposed);
+
                 }
             }
 
-            private void RemoveDisposedParents(int parentsDisposed)
+            private void RemoveDisposedParents()
             {
                 var toRemove = new List<WeakReferenceToLightWeightThreadLocal>();
                 foreach (var local in _parents)
@@ -132,8 +128,6 @@ namespace Sparrow.Threading
                 {
                     _parents.Remove(remove);
                 }
-
-                Interlocked.Add(ref parentsDisposed, -parentsDisposed);
             }
 
             ~CurrentThreadState()

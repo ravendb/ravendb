@@ -1,5 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import driveUsageDetails = require("models/resources/serverDashboard/driveUsageDetails");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
@@ -140,8 +139,8 @@ class driveUsage {
                         })
                     ] 
                 } else {
-                    return [ 
-                        new legendColumn<driveUsageDetails>(grid, x => this.colorClassProvider(x.database()), "", "26px"),
+                    return [
+                        new legendColumn<driveUsageDetails>(grid, x =>  this.colorClassProvider(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%", {
                             extraClass: d => isDisabled(d.database()) ? "disabled" : "",
                             sortable: "string",

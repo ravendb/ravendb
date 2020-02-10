@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -74,6 +75,7 @@ namespace FastTests
 
         static TestBase()
         {
+            LicenseManager.IgnoreProcessorAffinityChanges = true;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
@@ -94,12 +96,12 @@ namespace FastTests
             if (PlatformDetails.RunningOnPosix == false &&
                 PlatformDetails.Is32Bits) // RavenDB-13655
             {
-                System.Threading.ThreadPool.SetMinThreads(25, 25);
-                System.Threading.ThreadPool.SetMaxThreads(125, 125);
+                ThreadPool.SetMinThreads(25, 25);
+                ThreadPool.SetMaxThreads(125, 125);
             }
             else
             {
-                System.Threading.ThreadPool.SetMinThreads(250, 250);
+                ThreadPool.SetMinThreads(250, 250);
             }
 
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
@@ -209,7 +211,6 @@ namespace FastTests
                                                         $"tempFileName = {serverCertificatePath}" +
                                                         $"certBytes.Length = {certBytes.Length}" +
                                                         $"MachineName = {Environment.MachineName}.", e);
-
                 }
 
                 GlobalPathsToDelete.Add(serverCertificatePath);
@@ -246,7 +247,6 @@ namespace FastTests
                                                         $"tempFileName = {clientCertificatePath}" +
                                                         $"certBytes.Length = {certBytes.Length}" +
                                                         $"MachineName = {Environment.MachineName}.", e);
-
                 }
 
                 GlobalPathsToDelete.Add(clientCertificatePath);
@@ -450,6 +450,7 @@ namespace FastTests
             }
 
             private bool _runInMemory = true;
+
             public bool RunInMemory
             {
                 get => _runInMemory;
@@ -460,15 +461,15 @@ namespace FastTests
                 }
             }
 
-            private string _partialPath;
+            private string _dataDirectory;
 
-            public string PartialPath
+            public string DataDirectory
             {
-                get => _partialPath;
+                get => _dataDirectory;
                 set
                 {
                     AssertNotFrozen();
-                    _partialPath = value;
+                    _dataDirectory = value;
                 }
             }
 
@@ -520,6 +521,7 @@ namespace FastTests
             {
                 _frozen = frozen;
             }
+
             private static readonly Lazy<ServerCreationOptions> _default = new Lazy<ServerCreationOptions>(() => new ServerCreationOptions(frozen: true));
             public static ServerCreationOptions Default => _default.Value;
 
@@ -545,33 +547,44 @@ namespace FastTests
                 if (options.CustomSettings != null)
                 {
                     foreach (var setting in options.CustomSettings)
-                    {
                         configuration.SetSetting(setting.Key, setting.Value);
-                    }
                 }
+
+                var hasServerUrls = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrls));
+                var hasDataDirectory = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.DataDirectory));
+                var hasFeaturesAvailability = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability));
 
                 configuration.Initialize();
+
                 configuration.Logs.Mode = LogMode.None;
-                if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrls)) == false)
-                {
-                    configuration.Core.ServerUrls = new[] { "http://127.0.0.1:0" };
-                }
                 configuration.Server.Name = ServerName;
-
                 configuration.Core.RunInMemory = options.RunInMemory;
-
-                if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.DataDirectory)) == false)
-                {
-                    configuration.Core.DataDirectory =
-                        configuration.Core.DataDirectory.Combine(options.PartialPath ?? NewDataPath(prefix: $"GetNewServer-{options.NodeTag}", forceCreateDir: true));
-                }
-
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;
-                if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)) == false)
+
+                if (hasServerUrls == false)
+                    configuration.Core.ServerUrls = new[] { "http://127.0.0.1:0" };
+
+                if (hasDataDirectory == false)
                 {
-                    configuration.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
+                    string dataDirectory = null;
+                    if (options.DataDirectory == null)
+                        dataDirectory = NewDataPath(prefix: $"GetNewServer-{options.NodeTag}", forceCreateDir: true);
+                    else
+                    {
+                        if (Path.IsPathRooted(options.DataDirectory) == false)
+                            throw new InvalidOperationException($"{nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.DataDirectory)} path needs to be rooted. Was: {options.DataDirectory}");
+
+                        dataDirectory = options.DataDirectory;
+                    }
+
+                    configuration.Core.DataDirectory = configuration.Core.DataDirectory.Combine(dataDirectory);
                 }
+                else if (options.DataDirectory != null)
+                    throw new InvalidOperationException($"You cannot set DataDirectory in both, {nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.CustomSettings)} and {nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.DataDirectory)}");
+
+                if (hasFeaturesAvailability == false)
+                    configuration.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
 
                 if (options.DeletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
@@ -579,17 +592,13 @@ namespace FastTests
                 var server = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true };
 
                 if (options.BeforeDatabasesStartup != null)
-                {
                     server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged = options.BeforeDatabasesStartup;
-                }
 
                 server.Initialize();
                 server.ServerStore.ValidateFixedPort = false;
 
                 if (options.RegisterForDisposal)
-                {
                     ServersForDisposal.Add(server);
-                }
 
                 return server;
             }

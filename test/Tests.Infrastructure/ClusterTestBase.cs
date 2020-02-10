@@ -192,7 +192,6 @@ namespace Tests.Infrastructure
             {
                 var server = Servers.Single(s => s.ServerStore.NodeTag == node);
                 servers.Add(server.ServerStore);
-
             }
             foreach (var server in servers)
             {
@@ -341,28 +340,34 @@ namespace Tests.Infrastructure
             return false;
         }
 
-
-        protected static void DisposeServerAndWaitForFinishOfDisposal(RavenServer serverToDispose)
+        protected static (string DataDirectory, string Url, string NodeTag) DisposeServerAndWaitForFinishOfDisposal(RavenServer serverToDispose)
         {
             var mre = new ManualResetEventSlim();
+            var dataDirectory = serverToDispose.Configuration.Core.DataDirectory.FullPath;
+            var url = serverToDispose.WebUrl;
+            var nodeTag = serverToDispose.ServerStore.NodeTag;
+
             serverToDispose.AfterDisposal += () => mre.Set();
             serverToDispose.Dispose();
 
-            Assert.True(mre.Wait(TimeSpan.FromMinutes(1)), $"Could not dispose server: {serverToDispose.WebUrl}");
+            Assert.True(mre.Wait(TimeSpan.FromMinutes(1)), $"Could not dispose server: {url}");
+
+            return (dataDirectory, url, nodeTag);
         }
 
-        protected static async Task<(string DataDir, string Url)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
+        protected static async Task<(string DataDirectory, string Url, string NodeTag)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
         {
             var mre = new AsyncManualResetEvent();
-            var dataDir = serverToDispose.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+            var dataDirectory = serverToDispose.Configuration.Core.DataDirectory.FullPath;
             var url = serverToDispose.WebUrl;
+            var nodeTag = serverToDispose.ServerStore.NodeTag;
 
             serverToDispose.AfterDisposal += () => mre.Set();
             serverToDispose.Dispose();
 
-            Assert.True(await mre.WaitAsync(TimeSpan.FromMinutes(1)), $"Could not dispose server: {serverToDispose.WebUrl}");
+            Assert.True(await mre.WaitAsync(TimeSpan.FromMinutes(1)), $"Could not dispose server: {url}");
 
-            return (dataDir, url);
+            return (dataDirectory, url, nodeTag);
         }
 
         protected async Task DisposeAndRemoveServer(RavenServer serverToDispose)
@@ -453,24 +458,29 @@ namespace Tests.Infrastructure
                     leader = server;
                 }
             }
-            for (var i = 0; i < numberOfNodes; i++)
+
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             {
-                if (i == leaderIndex)
+                for (var i = 0; i < numberOfNodes; i++)
                 {
-                    continue;
-                }
-                var follower = clustersServers[i];
-                // ReSharper disable once PossibleNullReferenceException
-                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster);
-                if (watcherCluster)
-                {
-                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.NonVoter);
-                }
-                else
-                {
-                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
+                    if (i == leaderIndex)
+                    {
+                        continue;
+                    }
+                    var follower = clustersServers[i];
+                    // ReSharper disable once PossibleNullReferenceException
+                    await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster);
+                    if (watcherCluster)
+                    {
+                        await follower.ServerStore.WaitForTopology(Leader.TopologyModification.NonVoter, cts.Token);
+                    }
+                    else
+                    {
+                        await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter, cts.Token);
+                    }
                 }
             }
+
             // ReSharper disable once PossibleNullReferenceException
             var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
             var states = string.Empty;
@@ -521,16 +531,19 @@ namespace Tests.Infrastructure
                     leader = server;
                 }
             }
-            for (var i = 0; i < numberOfNodes; i++)
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             {
-                if (i == leaderIndex)
+                for (var i = 0; i < numberOfNodes; i++)
                 {
-                    continue;
+                    if (i == leaderIndex)
+                    {
+                        continue;
+                    }
+                    var follower = Servers[i];
+                    // ReSharper disable once PossibleNullReferenceException
+                    await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], token: cts.Token);
+                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter, cts.Token);
                 }
-                var follower = Servers[i];
-                // ReSharper disable once PossibleNullReferenceException
-                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower]);
-                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
             var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
@@ -542,7 +555,6 @@ namespace Tests.Infrastructure
             Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
             return (leader, serversToProxies);
         }
-
 
         protected Dictionary<string, string> GetServerSettingsForPort(bool useSsl, out string serverUrl)
         {
@@ -625,7 +637,7 @@ namespace Tests.Infrastructure
             }
 
             if (numberOfInstances != replicationFactor)
-                throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances} 
+                throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances}
                                                     out of {replicationFactor}{Environment.NewLine}
                                                     Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster (members) urls are : {string.Join(",", urls)}; The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",", currentServers.Select(x => x.WebUrl))}");
             return (databaseResult, relevantServers.ToList());
