@@ -35,7 +35,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
             throw new Error("Indexes must not be null or empty.");
         }
         
-        this.indexesInfoForDelete = (indexes as index[]).map(x => new indexInfoForDelete(x.name, x.reduceOutputCollectionName(), x.hasPatternForReduceOutputCollection()));
+        this.indexesInfoForDelete = (indexes as indexDefinition[]).map(x => new indexInfoForDelete(x.name(), x.reduceOutputCollectionName(), x.hasPatternForReduceOutputCollection()));
 
         if (this.indexesInfoForDelete.length === 1) {
             this.title = "Delete index?";
