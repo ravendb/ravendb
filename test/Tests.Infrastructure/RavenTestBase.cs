@@ -103,25 +103,30 @@ namespace FastTests
 
         protected async Task WaitForRaftCommandToBeAppliedInCluster(RavenServer leader, string commandType)
         {
+            var updateIndex = LastRaftIndexForCommand(leader, commandType);
+            await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
+        }
+
+        protected long LastRaftIndexForCommand(RavenServer server, string commandType)
+        {
             var updateIndex = 0L;
-            var haveUpdateExternalReplicationStateCommand = false;
-            using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            var commandFound = false;
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                foreach (var entry in leader.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
+                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
                 {
                     var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
                     if (type == commandType)
                     {
-                        haveUpdateExternalReplicationStateCommand = true;
+                        commandFound = true;
                         Assert.True(long.TryParse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString(), out updateIndex));
                     }
                 }
             }
 
-            Assert.True(haveUpdateExternalReplicationStateCommand);
-
-            await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
+            Assert.True(commandFound,$"{commandType} wasn't found in the log.");
+            return updateIndex;
         }
 
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)
