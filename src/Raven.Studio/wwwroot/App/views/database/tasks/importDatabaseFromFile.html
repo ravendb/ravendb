@@ -7,7 +7,7 @@
             <div class="row">
                 <div class="col-sm-8 col-lg-6 col-xl-5">
                     <div class="input-group file-input" data-bind="validationElement: importedFileName">
-                        <input type="file" id="importDatabaseFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }, disable: isImporting" tabindex="-1">
+                        <input type="file" id="importDatabaseFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }, disable: isImporting" tabindex="-1" />
                         <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'"></span>
                         <span class="input-group-btn">
                             <label for="importDatabaseFilePicker" class="btn btn-default">
@@ -23,7 +23,7 @@
                 <div class="row">
                     <div class="col-lg-3">
                         <div class="toggle">
-                            <input id="importDocuments" type="checkbox" data-bind="checked: includeDocuments">
+                            <input id="importDocuments" type="checkbox" data-bind="checked: includeDocuments" />
                             <label for="importDocuments">Include Documents</label>
                         </div>
                         <div class="margin-left margin-left-lg">
@@ -34,25 +34,25 @@
                             </div>
                             <div class="toggle">
                                 <input id="importLegacyAttachments" type="checkbox"
-                                       data-bind="checked: includeLegacyAttachments">
+                                       data-bind="checked: includeLegacyAttachments" />
                                 <label for="importLegacyAttachments">Include Legacy Attachments</label>
                             </div>
                             <div class="toggle">
                                 <input id="importCounters" type="checkbox"
-                                       data-bind="checked: includeCounters">
+                                       data-bind="checked: includeCounters" />
                                 <label for="importCounters">Include Counters</label>
                             </div>
                             <div class="toggle">
                                 <input id="importLegacyCounters" type="checkbox"
-                                       data-bind="checked: includeLegacyCounters">
+                                       data-bind="checked: includeLegacyCounters" />
                                 <label for="importLegacyCounters">Include Legacy Counters</label>
                             </div>
                             <div class="toggle">
-                                <input id="importExpiredDocuments" type="checkbox" data-bind="checked: includeExpiredDocuments">
+                                <input id="importExpiredDocuments" type="checkbox" data-bind="checked: includeExpiredDocuments" />
                                 <label for="importExpiredDocuments">Include Expired Documents</label>
                             </div>
                             <div class="toggle">
-                                <input id="importArtificialDocuments" type="checkbox" data-bind="checked: includeArtificialDocuments">
+                                <input id="importArtificialDocuments" type="checkbox" data-bind="checked: includeArtificialDocuments" />
                                 <label for="importArtificialDocuments">Include Artificial Documents</label>
                                 <small id="js-import-artificial-documents"><i class="icon-info text-info"></i></small>
                             </div>
@@ -61,7 +61,7 @@
                                 <label for="importRevisions">Include Revisions</label>
                             </div>
                             <div class="toggle">
-                                <input id="importConflicts" type="checkbox" data-bind="checked: includeConflicts">
+                                <input id="importConflicts" type="checkbox" data-bind="checked: includeConflicts" />
                                 <label for="importConflicts">Include Conflicts</label>
                             </div>
 
@@ -69,30 +69,30 @@
                     </div>
                     <div class="col-lg-5">
                         <div class="toggle">
-                            <input id="importIndexes" type="checkbox" data-bind="checked: includeIndexes">
+                            <input id="importIndexes" type="checkbox" data-bind="checked: includeIndexes" />
                             <label for="importIndexes">Include Indexes</label>
                         </div>
                         <div class="margin-left margin-left-lg">
                             <div class="toggle">
-                                <input id="importAnalyzers" type="checkbox" data-bind="checked: removeAnalyzers">
+                                <input id="importAnalyzers" type="checkbox" data-bind="checked: removeAnalyzers" />
                                 <label for="importAnalyzers">Remove Analyzers</label>
                             </div>
                         </div>
                         <div class="toggle">
-                            <input id="importIdentities" type="checkbox" data-bind="checked: includeIdentities">
+                            <input id="importIdentities" type="checkbox" data-bind="checked: includeIdentities" />
                             <label for="importIdentities">Include Identities</label>
                         </div>
                         <div class="toggle">
-                            <input id="importCmpXch" type="checkbox" data-bind="checked: includeCompareExchange">
+                            <input id="importCmpXch" type="checkbox" data-bind="checked: includeCompareExchange" />
                             <label for="importCmpXch">Include Compare Exchange</label>
                         </div>
                         <div class="toggle">
-                            <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions">
+                            <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
                             <label for="includeSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
                         </div>
                         <div class="flex-horizontal">
                             <div class="toggle">
-                                <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord">
+                                <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
                                 <label for="importConfiguration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
                             </div>
                             <button class="btn btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
@@ -115,7 +115,7 @@
             <div class="row">
                 <div class="col-lg-6">
                     <div class="toggle">
-                        <input id="toggleEncryption" type="checkbox" data-bind="checked: model.encryptedInput">
+                        <input id="toggleEncryption" type="checkbox" data-bind="checked: model.encryptedInput" />
                         <label for="toggleEncryption">Imported file is encrypted</label>
                     </div>
                 </div>
@@ -129,7 +129,7 @@
                                 Encryption Key <small class="text-muted">(Base64 Encoding)</small>
                             </label>
                             <input type="text" class="form-control" placeholder="Key" autocomplete="off"
-                                   data-bind="textInput: model.encryptionKey">
+                                   data-bind="textInput: model.encryptionKey" />
                         </div>
                     </div>
                 </div>
@@ -141,7 +141,7 @@
                 <div class="margin-left margin-left-lg">
                     <div class="margin-bottom">
                         <div class="toggle">
-                            <input id="useTransformScript" type="checkbox" data-bind="checked: $root.showTransformScript">
+                            <input id="useTransformScript" type="checkbox" data-bind="checked: $root.showTransformScript" />
                             <label for="useTransformScript" class="use-transform-script margin-right margin-right-sm">Use Transform script </label>
                             <small id="scriptPopover"><i class="icon-info text-info"></i></small>
                         </div>

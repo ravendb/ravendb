@@ -36,8 +36,21 @@ class importDatabaseModel {
         this.includeDocuments.subscribe(documents => {
             if (!documents) {
                 this.includeCounters(false);
+                this.includeLegacyCounters(false);
                 this.includeAttachments(false);
                 this.includeLegacyAttachments(false);
+            }
+        });
+
+        this.includeCounters.subscribe(counters => {
+            if (counters) {
+                this.includeDocuments(true);
+            }
+        });
+
+        this.includeAttachments.subscribe(attachments => {
+            if (attachments) {
+                this.includeDocuments(true);
             }
         });
         

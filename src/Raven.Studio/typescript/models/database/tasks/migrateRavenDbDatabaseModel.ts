@@ -14,6 +14,7 @@ class migrateRavenDbDatabaseModel {
     includeIdentities = ko.observable(true);
     includeCompareExchange = ko.observable(true);
     includeCounters = ko.observable(true);
+    includeLegacyCounters = ko.observable(true);
     includeAttachments = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(true);
@@ -49,6 +50,7 @@ class migrateRavenDbDatabaseModel {
     isRavenDb: KnockoutComputed<boolean>;
     isLegacy: KnockoutComputed<boolean>;
     isV41: KnockoutComputed<boolean>;
+    isV42orAbove: KnockoutComputed<boolean>;
     hasRavenFs: KnockoutComputed<boolean>;
     ravenFsImport: KnockoutComputed<boolean>;
     resourceTypeName: KnockoutComputed<string>;
@@ -119,8 +121,11 @@ class migrateRavenDbDatabaseModel {
             if (this.includeCompareExchange() && !this.isLegacy()) {
                 operateOnTypes.push("CompareExchange");
             }
-            if (this.includeCounters() && !this.isLegacy()) {
+            if (this.includeLegacyCounters() && this.isV41()) {
                 operateOnTypes.push("Counters");
+            }
+            if (this.includeCounters() && this.isV42orAbove()) {
+                operateOnTypes.push("CounterGroups");
             }
             if (this.includeAttachments() && !this.isLegacy()) {
                 operateOnTypes.push("Attachments");
@@ -172,22 +177,22 @@ class migrateRavenDbDatabaseModel {
             let majorVersion: string;
             let buildVersion = buildVersionInt.toString();
             switch (serverMajorVersion) {
-            case "Unknown":
-                return "Unknown";
-            case "V2":
-                majorVersion = "2.x";
-                break;
-            case "V30":
-                majorVersion = "3.0";
-                break;
-            case "V35":
-                majorVersion = "3.5";
-                break;
-            case "V4":
-                majorVersion = productVersion;
-                break;
-            default:
-                return null;
+                case "Unknown":
+                    return "Unknown";
+                case "V2":
+                    majorVersion = "2.x";
+                    break;
+                case "V30":
+                    majorVersion = "3.0";
+                    break;
+                case "V35":
+                    majorVersion = "3.5";
+                    break;
+                case "V4":
+                    majorVersion = productVersion;
+                    break;
+                default:
+                    return null;
             }
 
             return `${majorVersion} (build: ${buildVersion})`;
@@ -213,7 +218,16 @@ class migrateRavenDbDatabaseModel {
             }
 
             const buildVersion = this.buildVersion();
-            return buildVersion >= 41000 || buildVersion === 41;
+            return (buildVersion >= 41000 && buildVersion <= 41999) || buildVersion === 41;
+        });
+
+        this.isV42orAbove = ko.pureComputed(() => {
+            if (this.isLegacy()) {
+                return false;
+            }
+
+            const buildVersion = this.buildVersion();
+            return buildVersion >= 42000 || (buildVersion >= 42 && buildVersion <= 99);
         });
 
         this.hasRavenFs = ko.pureComputed(() => {
@@ -258,6 +272,18 @@ class migrateRavenDbDatabaseModel {
                 this.includeCounters(false);
                 this.includeAttachments(false);
                 this.includeLegacyAttachments(false);
+            }
+        });
+
+        this.includeCounters.subscribe(counters => {
+            if (counters) {
+                this.includeDocuments(true);
+            }
+        });
+
+        this.includeAttachments.subscribe(attachments => {
+            if (attachments) {
+                this.includeAttachments(true);
             }
         });
 
@@ -313,11 +339,22 @@ class migrateRavenDbDatabaseModel {
 
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
             if (this.serverMajorVersion() === "V4") {
-                return this.includeDatabaseRecord() || this.includeDocuments() || this.includeRevisionDocuments() || this.includeConflicts() ||
-                    this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeCounters();
+                return this.includeDatabaseRecord() ||
+                    this.includeDocuments() ||
+                    this.includeRevisionDocuments() ||
+                    this.includeConflicts() ||
+                    this.includeIndexes() ||
+                    this.includeSubscriptions() ||
+                    this.includeIdentities() ||
+                    this.includeCompareExchange() ||
+                    this.includeCounters();
             }
 
-            const hasIncludes = this.includeDocuments() || this.includeIndexes() || this.includeLegacyAttachments() || this.includeRevisionDocuments();
+            const hasIncludes = this.includeDocuments() ||
+                this.includeIndexes() ||
+                this.includeLegacyAttachments() ||
+                this.includeRevisionDocuments();
+            
             if (this.serverMajorVersion() === "V30" || this.serverMajorVersion() === "V35") {
                 return hasIncludes || this.importRavenFs();
             }

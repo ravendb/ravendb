@@ -357,7 +357,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.Messages = [result.Message];
             }
             
-        } else if (incoming.State.Status === "InProgress") { // if incoming operaton is in progress, then merge messages into existing item
+        } else if (incoming.State.Status === "InProgress") { // if incoming operation is in progress, then merge messages into existing item
             const incomingResult = incoming.State.Progress as Raven.Client.Documents.Smuggler.SmugglerResult;
             const existingResult = existing.progress() as Raven.Client.Documents.Smuggler.SmugglerResult;
 
