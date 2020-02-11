@@ -15,6 +15,8 @@ class importDatabaseModel {
     includeLegacyAttachments = ko.observable(false);
     includeAttachments = ko.observable(true);
     includeSubscriptions = ko.observable(true);
+    includeDocumentsTombstones = ko.observable(true);
+    includeCompareExchangeTombstones = ko.observable(true);
 
     databaseModel = new smugglerDatabaseRecord();
 
@@ -119,6 +121,12 @@ class importDatabaseModel {
         if (this.includeSubscriptions()) {
             operateOnTypes.push("Subscriptions");
         }
+        if (this.includeDocumentsTombstones()) {
+            operateOnTypes.push("Tombstones");
+        }
+        if (this.includeCompareExchangeTombstones()) {
+            operateOnTypes.push("CompareExchangeTombstones");
+        }
 
         const recordTypes = databaseRecordTypes.length ? databaseRecordTypes.join(",") : undefined as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
         
@@ -146,7 +154,9 @@ class importDatabaseModel {
                 || this.includeLegacyCounters()
                 || this.includeRevisionDocuments() 
                 || this.includeDocuments()
-                || this.includeAttachments();
+                || this.includeAttachments()
+                || this.includeDocumentsTombstones()
+                || this.includeCompareExchangeTombstones();
         });
 
         this.transformScript.extend({

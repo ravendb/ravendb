@@ -64,7 +64,6 @@
                                 <input id="importConflicts" type="checkbox" data-bind="checked: includeConflicts" />
                                 <label for="importConflicts">Include Conflicts</label>
                             </div>
-
                         </div>
                     </div>
                     <div class="col-lg-5">
@@ -87,8 +86,8 @@
                             <label for="importCmpXch">Include Compare Exchange</label>
                         </div>
                         <div class="toggle">
-                            <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
-                            <label for="includeSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
+                            <input id="importSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
+                            <label for="importSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
                         </div>
                         <div class="flex-horizontal">
                             <div class="toggle">
@@ -98,8 +97,14 @@
                             <button class="btn btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
                             <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
                         </div>
-                        
-                        
+                        <div class="toggle">
+                            <input id="importDocumentsTombstones" type="checkbox" data-bind="checked: includeDocumentsTombstones" />
+                            <label for="importDocumentsTombstones" class="margin-right margin-right-sm">Include Documents Tombstones</label>
+                        </div>
+                        <div class="toggle">
+                            <input id="importCmpXchTombstones" type="checkbox" data-bind="checked: includeCompareExchangeTombstones" />
+                            <label for="importCmpXchTombstones" class="margin-right margin-right-sm">Include Compare Exchange Tombstones</label>
+                        </div>
                     </div>
                 </div>
                 <div class="row">
@@ -110,7 +115,6 @@
                     </div>
                 </div>
             </div>
-
             <hr />
             <div class="row">
                 <div class="col-lg-6">
@@ -120,7 +124,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="margin-left margin-left-lg" data-bind="collapse: model.encryptedInput">
                 <div class="row">
                     <div class="col-lg-6">
@@ -134,7 +137,6 @@
                     </div>
                 </div>
             </div>
-            
             <div data-bind="collapse: showAdvancedOptions, with: model">
                 <hr />
                 <h3>Advanced</h3>
@@ -151,12 +153,10 @@
                                 <div class="help-block" data-bind="validationMessage: transformScript"></div>
                             </div>
                         </div>
-
                         <div data-bind="with: databaseModel">
                             <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>
                         </div>
                     </div>
-
                     <div class="flex-horizontal">
                         <div class="btn-group">
                             <button data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandPowerShell())" class="btn btn-default">
@@ -183,7 +183,6 @@
                         <div class="flex-grow">
                             <input onClick="this.select();" class="form-control" readonly data-bind="value: $root.importCommandPowerShell" />
                         </div>
-
                     </div>    
                 </div>
             </div>
@@ -194,7 +193,7 @@
             <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
                 Advanced
             </button>
-            <button class="btn btn-primary" type="submit" download data-bind="css: { 'btn-spinner': isImporting() }"><span class="icon-import"></span> <span>Import Database</span></button>
+            <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': isImporting() }"><span class="icon-import"></span> <span>Import Database</span></button>
         </form>
     </div>
 </div>
