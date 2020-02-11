@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace Sparrow.Server.Utils
 {
@@ -9,48 +10,24 @@ namespace Sparrow.Server.Utils
             if (File.Exists(filePath) == false)
                 return 0;
 
-            using (var stream = File.OpenRead(filePath))
+            using var stream = File.OpenRead(filePath);
+            var ctx = new Hashing.Streamed.XXHash32Context();
+            Hashing.Streamed.XXHash32.BeginProcess(ref ctx);
+
+            const int len = 1024*16;
+            var buffer = stackalloc byte[len];
+            Span<byte> span = new Span<byte>(buffer, len);
+
+            while (true)
             {
-                var ctx = Hashing.Streamed.XXHash32.BeginProcess();
+                var toProcess = stream.Read(span);
+                if (toProcess <= 0)
+                    break;
 
-                byte[] temp = null;
-                var readBuffer = new byte[4096];
-
-                fixed (byte* buffer = readBuffer)
-                {
-                    while (true)
-                    {
-                        var toProcess = stream.Read(readBuffer, 0, readBuffer.Length);
-                        if (toProcess <= 0)
-                            break;
-
-                        var current = buffer;
-                        do
-                        {
-                            if (toProcess < Hashing.Streamed.XXHash32.Alignment)
-                            {
-                                if (temp == null)
-                                    temp = new byte[Hashing.Streamed.XXHash32.Alignment];
-
-                                fixed (byte* tempBuffer = temp)
-                                {
-                                    Memory.Set(tempBuffer, 0, temp.Length);
-                                    Memory.Copy(tempBuffer, current, toProcess);
-
-                                    ctx = Hashing.Streamed.XXHash32.Process(ctx, tempBuffer, temp.Length);
-                                    break;
-                                }
-                            }
-
-                            ctx = Hashing.Streamed.XXHash32.Process(ctx, current, Hashing.Streamed.XXHash32.Alignment);
-                            toProcess -= Hashing.Streamed.XXHash32.Alignment;
-                            current += Hashing.Streamed.XXHash32.Alignment;
-                        } while (toProcess > 0);
-                    }
-                }
-
-                return (int)Hashing.Streamed.XXHash32.EndProcess(ctx);
+                Hashing.Streamed.XXHash32.Process(ref ctx, buffer, toProcess);
             }
+
+            return (int)Hashing.Streamed.XXHash32.EndProcess(ref ctx);
         }
     }
 }

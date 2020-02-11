@@ -87,39 +87,17 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 _items = items;
 
-                byte[] temp = null;
-                var ctx = Hashing.Streamed.XXHash32.BeginProcess();
+                var ctx = new Hashing.Streamed.XXHash32Context();
+                Hashing.Streamed.XXHash32.BeginProcess(ref ctx);
                 foreach (var str in items)
                 {
                     fixed (char* buffer = str)
                     {
-                        var toProcess = str.Length;
-                        var current = buffer;
-                        do
-                        {
-                            if (toProcess < Hashing.Streamed.XXHash32.Alignment)
-                            {
-                                if (temp == null)
-                                    temp = new byte[Hashing.Streamed.XXHash32.Alignment];
+                        Hashing.Streamed.XXHash32.Process(ref ctx, (byte*)buffer, str.Length*sizeof(char));
 
-                                fixed (byte* tempBuffer = temp)
-                                {
-                                    Memory.Set(tempBuffer, 0, temp.Length);
-                                    Memory.Copy(tempBuffer, (byte*)current, toProcess);
-
-                                    ctx = Hashing.Streamed.XXHash32.Process(ctx, tempBuffer, temp.Length);
-                                    break;
-                                }
-                            }
-
-                            ctx = Hashing.Streamed.XXHash32.Process(ctx, (byte*)current, Hashing.Streamed.XXHash32.Alignment);
-                            toProcess -= Hashing.Streamed.XXHash32.Alignment;
-                            current += Hashing.Streamed.XXHash32.Alignment;
-                        }
-                        while (toProcess > 0);
                     }
                 }
-                _hash = (int)Hashing.Streamed.XXHash32.EndProcess(ctx);
+                _hash = (int)Hashing.Streamed.XXHash32.EndProcess(ref ctx);
             }
 
             public override bool Equals(object obj)

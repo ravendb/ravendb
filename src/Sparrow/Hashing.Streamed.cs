@@ -1,5 +1,6 @@
 using Sparrow.Binary;
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Sparrow
@@ -10,13 +11,13 @@ namespace Sparrow
         {
             #region XXHash32 & XXHash64
 
-            public class XXHash32Context
+            public unsafe struct XXHash32Context
             {
-                internal uint Seed = 0;
+                internal uint Seed;
                 internal XXHash32Values Current;
-                internal readonly byte[] Leftover = new byte[XXHash32.Alignment];
-                internal int LeftoverCount = 0;
-                internal int BufferSize = 0;
+                internal fixed byte Leftover[XXHash32.Alignment];
+                internal int LeftoverCount ;
+                internal int BufferSize;
             }
 
             public static unsafe class XXHash32
@@ -25,23 +26,17 @@ namespace Sparrow
 
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public static XXHash32Context BeginProcessInline(uint seed = 0)
+                public static void BeginProcessInline(ref XXHash32Context context)
                 {
-                    var context = new XXHash32Context
-                    {
-                        Seed = seed
-                    };
-                    
+                    var seed = context.Seed;
                     context.Current.V1 = seed + XXHash32Constants.PRIME32_1 + XXHash32Constants.PRIME32_2;
                     context.Current.V2 = seed + XXHash32Constants.PRIME32_2;
                     context.Current.V3 = seed + 0;
                     context.Current.V4 = seed - XXHash32Constants.PRIME32_1;
-
-                    return context;
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public static XXHash32Context ProcessInline(XXHash32Context context, byte* buffer, int size)
+                public static void ProcessInline(ref XXHash32Context context, byte* buffer, int size)
                 {
                     if (context.LeftoverCount != 0)
                         throw new NotSupportedException("Streaming process does not support resuming with buffers whose size is not 16 bytes aligned. Supporting it would impact performance.");
@@ -91,12 +86,10 @@ namespace Sparrow
                         context.Leftover[i] = *buffer;
                         buffer++;
                     }
-
-                    return context;
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public static uint EndProcessInline(XXHash32Context context)
+                public static uint EndProcessInline(ref XXHash32Context context)
                 {
                     uint h32;
 
@@ -148,41 +141,41 @@ namespace Sparrow
                     return h32;
                 }
 
-                public static XXHash32Context BeginProcess(uint seed = 0)
+                public static void BeginProcess(ref XXHash32Context context)
                 {
-                    return BeginProcessInline(seed);
+                    BeginProcessInline(ref context);
                 }
 
-                public static uint EndProcess(XXHash32Context context)
+                public static uint EndProcess(ref XXHash32Context context)
                 {
-                    return EndProcessInline(context);
+                    return EndProcessInline(ref context);
                 }
 
-                public static XXHash32Context Process(XXHash32Context context, byte* buffer, int size)
+                public static void Process(ref XXHash32Context context, byte* buffer, int size)
                 {
-                    return ProcessInline(context, buffer, size);
+                    ProcessInline(ref context, buffer, size);
                 }
 
-                public static XXHash32Context Process(XXHash32Context context, byte[] value, int size = -1)
+                public static void Process(ref XXHash32Context context, byte[] value, int size = -1)
                 {
                     if (size == -1)
                         size = value.Length;
 
                     fixed (byte* buffer = value)
                     {
-                        return ProcessInline(context, buffer, size);
+                        ProcessInline(ref context, buffer, size);
                     }
                 }
             }
 
 
-            public class XXHash64Context
+            public unsafe struct XXHash64Context
             {
-                internal ulong Seed = 0;
+                public ulong Seed;
                 internal XXHash64Values Current;
-                internal readonly byte[] Leftover = new byte[XXHash64.Alignment];
+                internal fixed byte Leftover[XXHash64.Alignment];
                 internal int LeftoverCount;
-                internal int BufferSize = 0;
+                internal int BufferSize;
             }
 
 
@@ -191,23 +184,17 @@ namespace Sparrow
                 public const int Alignment = 32;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public static XXHash64Context BeginProcessInline(ulong seed = 0)
+                public static void BeginProcessInline(ref XXHash64Context context)
                 {
-                    var context = new XXHash64Context
-                    {
-                        Seed = seed
-                    };
-
+                    var seed = context.Seed;
                     context.Current.V1 = seed + XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_2;
                     context.Current.V2 = seed + XXHash64Constants.PRIME64_2;
                     context.Current.V3 = seed + 0;
                     context.Current.V4 = seed - XXHash64Constants.PRIME64_1;
-
-                    return context;
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public static XXHash64Context ProcessInline(XXHash64Context context, byte* buffer, int size)
+                public static void ProcessInline(ref XXHash64Context context, byte* buffer, int size)
                 {
                     if (context.LeftoverCount != 0)
                         throw new NotSupportedException("Streaming process does not support resuming with buffers whose size is not 16 bytes aligned. Supporting it would impact performance.");
@@ -257,12 +244,10 @@ namespace Sparrow
                         context.Leftover[i] = *buffer;
                         buffer++;
                     }
-
-                    return context;
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public static ulong EndProcessInline(XXHash64Context context)
+                public static ulong EndProcessInline(ref XXHash64Context context)
                 {
                     ulong h64;
 
@@ -353,29 +338,29 @@ namespace Sparrow
                 }
 
 
-                public static XXHash64Context BeginProcess(ulong seed = 0)
+                public static void BeginProcess(ref XXHash64Context context)
                 {
-                    return BeginProcessInline(seed);
+                    BeginProcessInline(ref context);
                 }
 
-                public static ulong EndProcess(XXHash64Context context)
+                public static ulong EndProcess(ref XXHash64Context context)
                 {
-                    return EndProcessInline(context);
+                    return EndProcessInline(ref context);
                 }
 
-                public static XXHash64Context Process(XXHash64Context context, byte* buffer, int size)
+                public static void Process(ref XXHash64Context context, byte* buffer, int size)
                 {
-                    return ProcessInline(context, buffer, size);
+                     ProcessInline(ref context, buffer, size);
                 }
 
-                public static XXHash64Context Process(XXHash64Context context, byte[] value, int size = -1)
+                public static void Process(ref XXHash64Context context, byte[] value, int size = -1)
                 {
                     if (size == -1)
                         size = value.Length;
 
                     fixed (byte* buffer = value)
                     {
-                        return ProcessInline(context, buffer, size);
+                        ProcessInline(ref context, buffer, size);
                     }
                 }
             }
