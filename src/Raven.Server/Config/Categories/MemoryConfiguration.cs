@@ -30,13 +30,13 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(512)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Memory.LowMemoryCommitLimitInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size LowMemoryCommitLimitInMb { get; set; }
+        public Size LowMemoryCommitLimit { get; set; }
 
         [Description("The maximum size of context to keep in the pool after dispose")]
         [DefaultValue(32)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Memory.MaxContextSizeToKeepInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size MaxContextSizeToKeepInMb { get; set; }
+        public Size MaxContextSizeToKeep { get; set; }
 
         [Description("EXPERT: The minimum amount of committed memory percentage that RavenDB will attempt to ensure remains available. Reducing this value too much may cause RavenDB to fail if there is not enough memory available for the operation system to handle operations.")]
         [DefaultValue(0.05f)]
@@ -47,7 +47,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(128)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Memory.MaxFreeCommittedMemoryToKeepInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size MaxFreeCommittedMemoryToKeepInMb { get; set; }
+        public Size MaxFreeCommittedMemoryToKeep { get; set; }
 
         [Description("EXPERT: Use entire process dirty memory instead of 'memory.usage_in_bytes minus Shared Clean Memory' value to determine machine memory usage. Applicable only when running on Linux. Default: 'true' when 'RAVEN_IN_DOCKER' environment variable is set to 'true', 'false' otherwise.")]
         [DefaultValue(DefaultValueSetInConstructor)]

@@ -15,7 +15,7 @@ namespace Raven.Server.ServerWide.Context
     {
         private DocumentDatabase _database;
 
-        public DocumentsContextPool(DocumentDatabase database) : base(database.Configuration.Memory.MaxContextSizeToKeepInMb)
+        public DocumentsContextPool(DocumentDatabase database) : base(database.Configuration.Memory.MaxContextSizeToKeep)
         {
             _database = database;
         }
