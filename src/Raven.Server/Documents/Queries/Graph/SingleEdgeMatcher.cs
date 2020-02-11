@@ -16,16 +16,18 @@ namespace Raven.Server.Documents.Queries.Graph
         public BlittableJsonReaderObject QueryParameters;
         public List<Match> Results;
         public IGraphQueryStep Right;
+        private readonly char _identityPartsSeparator;
         public Dictionary<string, BlittableJsonReaderObject> IncludedEdges;
         public WithEdgesExpression Edge;
         public StringSegment EdgeAlias;
 
 
-        public SingleEdgeMatcher(SingleEdgeMatcher step, IGraphQueryStep right)
+        public SingleEdgeMatcher(SingleEdgeMatcher step, IGraphQueryStep right, char identityPartsSeparator)
         {
             Right = right;
+            _identityPartsSeparator = identityPartsSeparator;
             QueryParameters = step.QueryParameters;
-            IncludedEdges = new Dictionary<string, Sparrow.Json.BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+            IncludedEdges = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             Results = new List<Match>();
             Edge = step.Edge;
             EdgeAlias = step.EdgeAlias;
@@ -44,8 +46,8 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (BlittableJsonTraverser.Default.TryRead(leftDoc, Edge.Path.FieldValue, out var value, out _) == false || value == null)
                     return;
 
-                var projectFieldValue = !string.IsNullOrWhiteSpace(Edge.Project?.FieldValueWithoutAlias) ? 
-                        Edge.Project?.FieldValueWithoutAlias : Edge.Project?.FieldValue;              
+                var projectFieldValue = !string.IsNullOrWhiteSpace(Edge.Project?.FieldValueWithoutAlias) ?
+                        Edge.Project?.FieldValueWithoutAlias : Edge.Project?.FieldValue;
 
                 switch (value)
                 {
@@ -91,7 +93,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 }
             }
             else
-            {              
+            {
                 AddEdgeAfterFiltering(left, leftDoc, Edge.Path.FieldValue);
             }
         }
@@ -141,6 +143,7 @@ namespace Raven.Server.Documents.Queries.Graph
             IncludedEdges.Clear();
             IncludeUtil.GetDocIdFromInclude(leftDoc,
                  path,
+                 _identityPartsSeparator,
                  edgeIncludeOp);
 
             if (IncludedEdges.Count == 0)

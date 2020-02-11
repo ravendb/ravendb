@@ -14,8 +14,7 @@ namespace Raven.Server.Utils
         private const char SuffixSeparator = '[';
         private const string SuffixStart = "{0}/";
         private static readonly char[] PrefixSeparatorChar = { PrefixSeparator };
-        private static readonly char[] SuffixSeparatorChar = { SuffixSeparator };
-        
+
         public interface IIncludeOp
         {
             void Include(BlittableJsonReaderObject parent, string id);
@@ -23,7 +22,7 @@ namespace Raven.Server.Utils
 
         private struct HashSetIncludeOp : IIncludeOp
         {
-            HashSet<string> _items;
+            private HashSet<string> _items;
 
             public HashSetIncludeOp(HashSet<string> items)
             {
@@ -36,17 +35,16 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath,
-            HashSet<string> includedIds)
+        public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath, HashSet<string> includedIds, char identityPartsSeparator)
         {
             var op = new HashSetIncludeOp(includedIds);
-            GetDocIdFromInclude(docReader, includePath, op);
+            GetDocIdFromInclude(docReader, includePath, identityPartsSeparator, op);
         }
 
-        public static void GetDocIdFromInclude<TIncludeOp>(BlittableJsonReaderObject docReader, StringSegment includePath, TIncludeOp op)
+        public static void GetDocIdFromInclude<TIncludeOp>(BlittableJsonReaderObject docReader, StringSegment includePath, char identityPartsSeparator, TIncludeOp op)
             where TIncludeOp : struct, IIncludeOp
         {
-            Func<object, StringSegment, string> valueHandler = null;
+            Func<object, StringSegment, char, string> valueHandler = null;
 
             var indexOfPrefixStart = includePath.IndexOfAny(PrefixSeparatorChar, 0);
 
@@ -104,7 +102,7 @@ namespace Raven.Server.Utils
                     foreach (var item in array)
                     {
                         if (item is BlittableJsonReaderObject inner)
-                            GetDocIdFromInclude(inner, leftPath, op);
+                            GetDocIdFromInclude(inner, leftPath, identityPartsSeparator, op);
                     }
                 }
 
@@ -121,7 +119,7 @@ namespace Raven.Server.Utils
                         continue;
                     if (addition != null)
                     {
-                        var includedId = valueHandler(item, addition.Value);
+                        var includedId = valueHandler(item, addition.Value, identityPartsSeparator);
                         if (includedId != null)
                             op.Include(null, includedId);
                     }
@@ -132,7 +130,7 @@ namespace Raven.Server.Utils
             {
                 if (addition != null)
                 {
-                    var includedId = valueHandler(value, addition.Value);
+                    var includedId = valueHandler(value, addition.Value, identityPartsSeparator);
                     if (includedId != null)
                         op.Include(docReader, includedId);
                 }
@@ -153,7 +151,7 @@ namespace Raven.Server.Utils
                     includePath[indexOfPrefixStart + 1] == BlittableJsonTraverser.CollectionAndPropertySeparators[1] &&
                     includePath[indexOfPrefixStart + 2] == BlittableJsonTraverser.CollectionAndPropertySeparators[2])
                 {
-                     // []. means collection
+                    // []. means collection
 
                     return false;
                 }
@@ -162,28 +160,28 @@ namespace Raven.Server.Utils
             return true;
         }
 
-        private static string HandleSuffixValue(object val, StringSegment suffixSegment)
+        private static string HandleSuffixValue(object val, StringSegment suffixSegment, char identityPartsSeparator)
         {
             var doubleVal = val as LazyNumberValue;
             if (doubleVal != null)
                 val = doubleVal.Inner;
             var res = string.Format(suffixSegment.Value, val).TrimEnd(']');
-            return res == "" ? null : res;
+            return res == string.Empty ? null : res;
         }
 
-        private static string HandlePrefixValue(object val, StringSegment prefixSegment)
+        private static string HandlePrefixValue(object val, StringSegment prefixSegment, char identityPartsSeparator)
         {
             var doubleVal = val as LazyNumberValue;
             if (doubleVal != null)
                 val = doubleVal.Inner;
 
-            return ValueWithPrefix(prefixSegment, val);
+            return ValueWithPrefix(val, prefixSegment, identityPartsSeparator);
         }
 
-        private static string ValueWithPrefix(StringSegment prefixSegment, object val)
+        private static string ValueWithPrefix(object val, StringSegment prefixSegment, char identityPartsSeparator)
         {
             var prefix = prefixSegment.Subsegment(0, prefixSegment.Length - 1);
-            return (prefix.Length > 0) && (prefix[prefix.Length - 1] != '/') ? null : $"{prefix}{val}"; // TODO [ppekrol]
+            return (prefix.Length > 0) && (prefix[prefix.Length - 1] != identityPartsSeparator) ? null : $"{prefix}{val}";
         }
 
         private static string BlittableValueToString(object value)
@@ -203,6 +201,5 @@ namespace Raven.Server.Utils
             var convertible = value as IConvertible;
             return convertible?.ToString(CultureInfo.InvariantCulture);
         }
-
     }
 }

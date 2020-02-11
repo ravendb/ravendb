@@ -586,7 +586,7 @@ namespace Raven.Server.Documents.Patch
                         _documentIds = new HashSet<string>();
 
                     _documentIds.Clear();
-                    IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds);
+                    IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds, _database.IdentityPartsSeparator);
                     if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1) // array
                         return JsValue.FromObject(ScriptEngine, _documentIds.Select(LoadDocumentInternal).ToList());
                     if (_documentIds.Count == 0)
