@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Includes
                     _includedIds.Add(document.Id);
                     continue;
                 }
-                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedIds);
+                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedIds, _storage.DocumentDatabase.IdentityPartsSeparator);
             }
         }
 

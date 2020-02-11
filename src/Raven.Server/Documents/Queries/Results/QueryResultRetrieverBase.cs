@@ -529,7 +529,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (_loadedDocumentsByAliasName.TryGetValue(fieldToFetch.QueryField.LoadFromAlias, out var loadedDoc))
                     {
-                        IncludeUtil.GetDocIdFromInclude(loadedDoc.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
+                        IncludeUtil.GetDocIdFromInclude(loadedDoc.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds, _database.IdentityPartsSeparator);
                     }
                 }
 
@@ -548,7 +548,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 else
                 {
-                    IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
+                    IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds, _database.IdentityPartsSeparator);
                 }
 
             }

@@ -3,14 +3,13 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
-    public class EdgeCollectionDestinationRewriter: QueryPlanRewriter
+    public class EdgeCollectionDestinationRewriter : QueryPlanRewriter
     {
-        private readonly DocumentsStorage _documentsStorage;
         private bool _isVisitingRight;
 
-        public EdgeCollectionDestinationRewriter(DocumentsStorage documentsStorage, OperationCancelToken token) : base(token)
+        public EdgeCollectionDestinationRewriter(DocumentsStorage documentsStorage, OperationCancelToken token)
+            : base(documentsStorage, token)
         {
-            _documentsStorage = documentsStorage;
         }
 
         public override IGraphQueryStep VisitEdgeQueryStep(EdgeQueryStep eqs)
@@ -63,7 +62,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (ReferenceEquals(right, step.Right) == false)
                 {
                     modified = true;
-                    steps.Add(new SingleEdgeMatcher(step, right));
+                    steps.Add(new SingleEdgeMatcher(step, right, _documentsStorage.DocumentDatabase.IdentityPartsSeparator));
                 }
                 else
                 {
@@ -79,7 +78,7 @@ namespace Raven.Server.Documents.Queries.Graph
             }
 
             var result = new RecursionQueryStep(rqs, left, steps, _token);
-            
+
             if (next != null)
             {
                 next.SetPrev(result);

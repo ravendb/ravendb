@@ -6,10 +6,12 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public class QueryPlanRewriter
     {
+        protected readonly DocumentsStorage _documentsStorage;
         protected OperationCancelToken _token;
 
-        public QueryPlanRewriter(OperationCancelToken token)
+        public QueryPlanRewriter(DocumentsStorage documentsStorage, OperationCancelToken token)
         {
+            _documentsStorage = documentsStorage;
             _token = token;
         }
 
@@ -45,7 +47,7 @@ namespace Raven.Server.Documents.Queries.Graph
             switch (step)
             {
                 case EdgeQueryStep.EdgeMatcher em:
-                     VisitEdgeMatcher(em);
+                    VisitEdgeMatcher(em);
                     break;
                 case null:
                 case QueryQueryStep.QuerySingleStep _:
@@ -112,7 +114,7 @@ namespace Raven.Server.Documents.Queries.Graph
             if (ReferenceEquals(left, iqsu.Left) && ReferenceEquals(right, iqsu.Right))
                 return iqsu;
 
-            return new IntersectionQueryStep<Union>(left, right, _token, returnEmptyIfLeftEmpty:false);
+            return new IntersectionQueryStep<Union>(left, right, _token, returnEmptyIfLeftEmpty: false);
         }
 
         public virtual IGraphQueryStep VisitIntersectionQueryStepIntersection(IntersectionQueryStep<Intersection> iqsi)
@@ -141,7 +143,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (ReferenceEquals(right, step.Right) == false)
                 {
                     modified = true;
-                    steps.Add(new SingleEdgeMatcher(step, right));
+                    steps.Add(new SingleEdgeMatcher(step, right, _documentsStorage.DocumentDatabase.IdentityPartsSeparator));
                 }
                 else
                 {
