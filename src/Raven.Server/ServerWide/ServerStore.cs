@@ -512,8 +512,8 @@ namespace Raven.Server.ServerWide
 
             MemoryInformation.SetFreeCommittedMemory(
                 Configuration.Memory.MinimumFreeCommittedMemoryPercentage,
-                Configuration.Memory.MaxFreeCommittedMemoryToKeepInMb,
-                Configuration.Memory.LowMemoryCommitLimitInMb);
+                Configuration.Memory.MaxFreeCommittedMemoryToKeep,
+                Configuration.Memory.LowMemoryCommitLimit);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
@@ -690,7 +690,7 @@ namespace Raven.Server.ServerWide
             if (Configuration.Queries.MaxClauseCount != null)
                 BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount.Value;
 
-            ContextPool = new TransactionContextPool(_env, Configuration.Memory.MaxContextSizeToKeepInMb);
+            ContextPool = new TransactionContextPool(_env, Configuration.Memory.MaxContextSizeToKeep);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {

@@ -39,7 +39,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _leaderClusterTag = leaderClusterTag;
             _term = term;
             _server = server;
-            _contextPool = new JsonContextPool(server.Configuration.Memory.MaxContextSizeToKeepInMb);
+            _contextPool = new JsonContextPool(server.Configuration.Memory.MaxContextSizeToKeep);
             Config = server.Configuration.Cluster;
         }
 
