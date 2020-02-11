@@ -15,6 +15,7 @@ using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
@@ -236,7 +237,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromFirstArg(JsValue firstArgs, string signature)
+            private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(JsValue firstArgs, string signature)
             {
                 if (firstArgs.IsObject() && firstArgs.AsObject() is BlittableObjectInstance doc)
                     return (doc.DocumentId, doc.Blittable);
@@ -249,6 +250,20 @@ namespace Raven.Server.Documents.Patch
                         throw new DocumentDoesNotExistException(id, "Cannot operate on a missing document.");
 
                     return (id, document.Data);
+                }
+
+                throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+            }
+            
+            private string GetIdFromArg(JsValue firstArgs, string signature)
+            {
+                if (firstArgs.IsObject() && firstArgs.AsObject() is BlittableObjectInstance doc)
+                    return doc.DocumentId;
+
+                if (firstArgs.IsString())
+                {
+                    var id = firstArgs.AsString();
+                    return id;
                 }
 
                 throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
@@ -277,13 +292,15 @@ namespace Raven.Server.Documents.Patch
             
             private JsValue AppendTimeSeries(JsValue self, JsValue[] args)
             {
+                AssertValidDatabaseContext("appendTs");
+                
                 const string signature = "appendTs(doc, timeseries, toAppend)";
                 const int requiredArgs = 3;
                 
                 if (args.Length != requiredArgs)
                     throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
                 
-                var (id, doc) = GetIdAndDocFromFirstArg(args[0], signature);
+                var (id, doc) = GetIdAndDocFromArg(args[0], signature);
 
                 string timeseries = GetStringArg(args[1], signature, "timeseries");
 
@@ -319,7 +336,7 @@ namespace Raven.Server.Documents.Patch
                         toAppend[i] = new TimeSeriesStorage.Reader.SingleResult
                         {
                             Values = new Memory<double>(valuesArrays[i], 0, (int)jsValues.Length),
-                            Tag = _docsCtx.GetLazyString(tag),
+                            Tag = _jsonCtx.GetLazyString(tag),
                             Timestamp = timestamp,
                             Status = TimeSeriesValuesSegment.Live
                         };
@@ -350,13 +367,15 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue DeleteRangeTimeSeries(JsValue self, JsValue[] args)
             {
+                AssertValidDatabaseContext("deleteRangeTs");
+                
                 const string signature = "deleteRangeTs(doc, timeseries, from, to)";
                 const int requiredArgs = 4;
                 
                 if (args.Length != requiredArgs)
                     throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
                 
-                var (id, doc) = GetIdAndDocFromFirstArg(args[0], signature);
+                var (id, doc) = GetIdAndDocFromArg(args[0], signature);
 
                 string timeseries = GetStringArg(args[1], signature, "timeseries");
 
@@ -378,7 +397,40 @@ namespace Raven.Server.Documents.Patch
             
             private JsValue GetRangeTimeSeries(JsValue self, JsValue[] args)
             {
-                throw new NotImplementedException();
+                AssertValidDatabaseContext("getRangeTs");
+                
+                const string signature = "getRangeTs(doc, timeseries, from, to)";
+                const int requiredArgs = 4;
+                
+                if (args.Length != requiredArgs)
+                    throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
+                
+                var id = GetIdFromArg(args[0], signature);
+
+                string timeseries = GetStringArg(args[1], signature, "timeseries");
+
+                var from = GetDateArg(args[2], signature, "from");
+                var to = GetDateArg(args[3], signature, "to");
+
+                var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeseries, from, to);
+
+                var entries = new DynamicJsonArray();
+                foreach (var singleResult in reader.AllValues())
+                {
+                    var values = new DynamicJsonArray();
+                    foreach (var value in singleResult.Values.Span)
+                    {
+                        values.Add(value);
+                    }
+                    entries.Add(new DynamicJsonValue
+                    {
+                        [nameof(TimeSeriesEntry.Timestamp)] = singleResult.Timestamp,
+                        [nameof(TimeSeriesEntry.Tag)] = singleResult.Tag,
+                        [nameof(TimeSeriesEntry.Values)] = values,
+                    });
+                }
+                var bResult = _jsonCtx.ReadObject(new DynamicJsonValue{["Entries"] = entries}, "");
+                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, bResult["Entries"]);
             }
             
             private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName]string caller = null)
@@ -618,7 +670,7 @@ namespace Raven.Server.Documents.Patch
 
                 if (args.Length != 2 && args.Length != 3)
                     throw new InvalidOperationException("put(id, doc, changeVector) must be called with called with 2 or 3 arguments only");
-                AssertValidDatabaseContext();
+                AssertValidDatabaseContext("put document");
                 AssertNotReadOnly();
                 if (args[0].IsString() == false && args[0].IsNull() == false && args[0].IsUndefined() == false)
                     AssertValidId();
@@ -693,7 +745,7 @@ namespace Raven.Server.Documents.Patch
                     changeVector = args[1].AsString();
 
                 PutOrDeleteCalled = true;
-                AssertValidDatabaseContext();
+                AssertValidDatabaseContext("delete document");
                 AssertNotReadOnly();
                 if (DebugMode)
                     DebugActions.DeleteDocument.Add(id);
@@ -711,16 +763,15 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("Cannot make modifications in readonly context");
             }
 
-            private void AssertValidDatabaseContext()
+            private void AssertValidDatabaseContext(string functionName)
             {
                 if (_docsCtx == null)
-                    throw new InvalidOperationException("Unable to put documents when this instance is not attached to a database operation");
+                    throw new InvalidOperationException($"Unable to use `{functionName}` when this instance is not attached to a database operation");
             }
 
             private JsValue LoadDocumentByPath(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext();
-
+                AssertValidDatabaseContext("loadPath");
 
                 if (args.Length != 2 ||
                     (args[0].IsNull() == false && args[0].IsUndefined() == false && args[0].IsObject() == false)
@@ -752,7 +803,7 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue CompareExchange(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext();
+                AssertValidDatabaseContext("cmpxchg");
 
                 if (args.Length != 1 || args[0].IsString() == false)
                     throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
@@ -762,10 +813,10 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue LoadDocument(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext();
+                AssertValidDatabaseContext("load");
 
                 if (args.Length != 1)
-                    throw new InvalidOperationException("load(id | ids) must be called with a single string argument");
+                    throw new InvalidOperationException($"load(id | ids) must be called with a single string argument");
 
                 if (args[0].IsNull() || args[0].IsUndefined())
                     return args[0];
@@ -804,8 +855,9 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetCounterInternal(JsValue[] args, bool raw = false)
             {
-                AssertValidDatabaseContext();
                 var signature = raw ? "counterRaw(doc, name)" : "counter(doc, name)";
+                AssertValidDatabaseContext(signature);
+
                 if (args.Length != 2)
                     throw new InvalidOperationException($"{signature} must be called with exactly 2 arguments");
 
@@ -850,7 +902,7 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue IncrementCounter(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext();
+                AssertValidDatabaseContext("incrementCounter");
 
                 if (args.Length < 2 || args.Length > 3)
                 {
@@ -922,7 +974,7 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue InvokeTimeSeriesFunction(string name, JsValue[] args)
             {
-                AssertValidDatabaseContext();
+                AssertValidDatabaseContext("InvokeTimeSeriesFunction");
 
                 if (_runner.TimeSeriesDeclaration.TryGetValue(name, out var func) == false)
                     throw new InvalidOperationException($"Failed to invoke time series function. Unknown time series name '{name}'.");
@@ -1025,7 +1077,7 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue DeleteCounter(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext();
+                AssertValidDatabaseContext("deleteCounter");
 
                 if (args.Length != 2)
                 {
