@@ -79,8 +79,6 @@ class importDatabaseFromFile extends viewModelBase {
         
         const fileNameProvider = () => this.importedFileName() || "Dump of Database.ravendbdump";
         const commandEndpointUrl = (db: database) => appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImport;
-        
-        
 
         this.importCommandPowerShell = ko.pureComputed(() => {
             const db = this.activeDatabase();
@@ -175,7 +173,7 @@ class importDatabaseFromFile extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => {
+            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, () => {
                 this.isUploading(false);
             })
         ];

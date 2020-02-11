@@ -49,6 +49,18 @@ class exportDatabaseModel {
             }
         });
 
+        this.includeCounters.subscribe(counters => {
+            if (counters) {
+                this.includeDocuments(true);
+            }
+        });
+
+        this.includeAttachments.subscribe(attachments => {
+            if (attachments) {
+                this.includeDocuments(true);
+            }
+        });
+
         this.removeAnalyzers.subscribe(analyzers => {
             if (analyzers) {
                 this.includeIndexes(true);

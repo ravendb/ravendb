@@ -17,32 +17,32 @@
                 <div class="row">
                     <div class="col-lg-3">
                         <div class="toggle">
-                            <input id="toggleDocuments" type="checkbox" data-bind="checked: includeDocuments">
+                            <input id="toggleDocuments" type="checkbox" data-bind="checked: includeDocuments" />
                             <label for="toggleDocuments">Include Documents</label>
                         </div>
                         <div class="margin-left margin-left-lg">
                             <div class="toggle">
                                 <input id="toggleAttachments" type="checkbox"
-                                       data-bind="checked: includeAttachments">
+                                       data-bind="checked: includeAttachments" />
                                 <label for="toggleAttachments">Include Attachments</label>
                             </div>
                             <div class="toggle">
                                 <input id="toggleCounters" type="checkbox"
-                                       data-bind="checked: includeCounters">
+                                       data-bind="checked: includeCounters" />
                                 <label for="toggleCounters">Include Counters</label>
                             </div>
                             <div class="toggle">
                                 <input id="toggleArtificial" type="checkbox"
-                                       data-bind="checked: includeArtificialDocuments">
+                                       data-bind="checked: includeArtificialDocuments" />
                                 <label for="toggleArtificial">Include Artificial Documents</label>
                             </div>
                             <div class="toggle" data-toggle="tooltip" data-placement="top"
                                  data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Document Revisions are not enabled for this database' }">
-                                <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions">
+                                <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions" />
                                 <label for="toggleRevisions">Include Revisions</label>
                             </div>
                             <div class="toggle">
-                                <input id="toggleConflicts" type="checkbox" data-bind="checked: includeConflicts">
+                                <input id="toggleConflicts" type="checkbox" data-bind="checked: includeConflicts" />
                                 <label for="toggleConflicts">Include Conflicts</label>
                             </div>
                         </div>
@@ -50,33 +50,33 @@
                     
                     <div class="col-lg-5">
                         <div class="toggle">
-                            <input id="toggleIndexes" type="checkbox" data-bind="checked: includeIndexes">
+                            <input id="toggleIndexes" type="checkbox" data-bind="checked: includeIndexes" />
                             <label for="toggleIndexes">Include Indexes</label>
                         </div>
 
                         <div class="margin-left margin-left-lg">
                             <div class="toggle">
                                 <input id="toggleAnalyzers" type="checkbox" 
-                                       data-bind="checked: removeAnalyzers, enable: includeIndexes">
+                                       data-bind="checked: removeAnalyzers, enable: includeIndexes" />
                                 <label for="toggleAnalyzers">Remove Analyzers</label>
                             </div>
                         </div>
 
                         <div class="toggle">
-                            <input id="toggleIdentities" type="checkbox" data-bind="checked: includeIdentities">
+                            <input id="toggleIdentities" type="checkbox" data-bind="checked: includeIdentities" />
                             <label for="toggleIdentities">Include Identities</label>
                         </div>
                         <div class="toggle">
-                            <input id="toggleCmpXch" type="checkbox" data-bind="checked: includeCompareExchange">
+                            <input id="toggleCmpXch" type="checkbox" data-bind="checked: includeCompareExchange" />
                             <label for="toggleCmpXch">Include Compare Exchange</label>
                         </div>
 
                         <div class="toggle">
-                            <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions">
+                            <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
                             <label for="includeSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
                         </div>
                         <div class="toggle">
-                            <input id="toggleConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord">
+                            <input id="toggleConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
                             <label for="toggleConfiguration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
                             <button class="btn btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
                             <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
@@ -97,7 +97,7 @@
                 <div class="row">
                     <div class="col-lg-6">
                         <div class="toggle">
-                            <input id="toggleEncryption" type="checkbox" data-bind="checked: encryptOutput">
+                            <input id="toggleEncryption" type="checkbox" data-bind="checked: encryptOutput" />
                             <label for="toggleEncryption">Encrypt exported file</label>
                         </div>
                     </div>
@@ -121,7 +121,7 @@
                         <label for="expiredDocuments">Include Expired Documents</label>
                     </div>-->
                     <div class="toggle">
-                        <input id="Collections" type="checkbox" data-bind="checked: model.includeAllCollections">
+                        <input id="Collections" type="checkbox" data-bind="checked: model.includeAllCollections" />
                         <label for="Collections">Export all collections</label>
                     </div>
                     <div data-bind="visible: !collections().length && !model.includeAllCollections()">
@@ -136,7 +136,7 @@
                                 <div class="col-sm-6">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-addon"><span class="glyphicon glyphicon-filter" aria-hidden="true"></span></span>
-                                        <input class="form-control" placeholder="Filter" data-bind="textInput: filter"/>
+                                        <input class="form-control" placeholder="Filter" data-bind="textInput: filter" />
                                     </div>
                                 </div>
                             </div>
@@ -144,7 +144,7 @@
                             <div class="row limit-height" data-bind="foreach: filteredCollections">
                                 <div class="col-sm-6">
                                     <div class="toggle toggle-info">
-                                        <input class="styled" type="checkbox" data-bind="attr: { id: 'collection_' + $index() }, value: $data, checked: $root.model.includedCollections">
+                                        <input class="styled" type="checkbox" data-bind="attr: { id: 'collection_' + $index() }, value: $data, checked: $root.model.includedCollections" />
                                         <label data-bind="attr: { for: 'collection_' + $index() }, text: $data">
                                         </label>
                                     </div>
@@ -155,7 +155,7 @@
                     </div>
                     <div class="form-group">
                         <div class="toggle">
-                            <input id="useTransformScript" type="checkbox" data-bind="checked: showTransformScript">
+                            <input id="useTransformScript" type="checkbox" data-bind="checked: showTransformScript" />
                             <label for="useTransformScript" class="margin-right margin-right-sm">Use Transform script </label>
                             <a id="scriptPopover" tabindex="0"><small><i class="icon-info text-info"></i></small></a>
                         </div>
@@ -177,7 +177,7 @@
                         <span class="input-group-btn">
                             <button class="btn btn-default" data-bind="click: copyCommandToClipboard"><i class="icon-copy"></i> <span>Copy to clipboard</span></button>
                         </span>
-                            <input onClick="this.select();" class="form-control" readonly data-bind="value: exportCommand">
+                            <input onClick="this.select();" class="form-control" readonly data-bind="value: exportCommand" />
                         </div>
                     </div>
                 </div>
