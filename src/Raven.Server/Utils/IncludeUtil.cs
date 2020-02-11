@@ -12,7 +12,7 @@ namespace Raven.Server.Utils
     {
         private const char PrefixSeparator = '(';
         private const char SuffixSeparator = '[';
-        private const string SuffixStart = "{0}/";
+        private const string SuffixStart = "{0}";
         private static readonly char[] PrefixSeparatorChar = { PrefixSeparator };
 
         public interface IIncludeOp
@@ -55,9 +55,8 @@ namespace Raven.Server.Utils
             {
                 addition = includePath.Subsegment(indexOfSuffixStart + 1);
 
-                if (!addition.Value[addition.Value.Length - 1].Equals(']') ||
-                    ((addition.Value.Length >= 4) &&
-                     !addition.Value.Subsegment(0, 4).Equals(SuffixStart)))
+                if (addition.Value[addition.Value.Length - 1].Equals(']') == false 
+                    || ((addition.Value.Length >= 4) && (addition.Value.Subsegment(0, 3).Equals(SuffixStart) == false || addition.Value[3].Equals(identityPartsSeparator) == false)))
                     return;
                 pathSegment = includePath.Subsegment(0, indexOfSuffixStart);
                 valueHandler = HandleSuffixValue;

@@ -99,17 +99,19 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
-        public void FindDocIdFromPath_with_array_of_arrays_with_simple_values_should_work()
+        [Theory]
+        [InlineData('/')]
+        [InlineData(':')]
+        public void FindDocIdFromPath_with_array_of_arrays_with_simple_values_should_work(char identityPartsSeparator)
         {
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    GetStringArray("foo"),
-                    GetStringArray("bar"),
-                    GetStringArray("foobar")
+                    GetStringArray("foo", identityPartsSeparator),
+                    GetStringArray("bar", identityPartsSeparator),
+                    GetStringArray("foobar", identityPartsSeparator)
                 })
             };
 
@@ -117,46 +119,48 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].", ids, '/');
-                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}3", $"bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].(abc/)", ids, '/');
-                Assert.Equal(new[] { "abc/foo/1", "foo/1",
-                    "abc/foo/2", "foo/2",
-                    "abc/foo/3", "foo/3",
-                    "abc/bar/1", "bar/1",
-                    "abc/bar/2", "bar/2",
-                    "abc/bar/3", "bar/3",
-                    "abc/foobar/1", "foobar/1",
-                    "abc/foobar/2", "foobar/2",
-                    "abc/foobar/3", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].[].(abc{identityPartsSeparator})", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"abc{identityPartsSeparator}foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}3", $"foo{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}3", $"bar{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].[{0}/abc]", ids, '/');
-                Assert.Equal(new[] { "foo/1/abc", "foo/1",
-                    "foo/2/abc", "foo/2",
-                    "foo/3/abc", "foo/3",
-                    "bar/1/abc", "bar/1",
-                    "bar/2/abc", "bar/2",
-                    "bar/3/abc", "bar/3",
-                    "foobar/1/abc", "foobar/1",
-                    "foobar/2/abc", "foobar/2",
-                    "foobar/3/abc", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].[].[{{0}}{identityPartsSeparator}abc]", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1{identityPartsSeparator}abc", $"foo{identityPartsSeparator}1",
+                    $"foo{identityPartsSeparator}2{identityPartsSeparator}abc", $"foo{identityPartsSeparator}2",
+                    $"foo{identityPartsSeparator}3{identityPartsSeparator}abc", $"foo{identityPartsSeparator}3",
+                    $"bar{identityPartsSeparator}1{identityPartsSeparator}abc", $"bar{identityPartsSeparator}1",
+                    $"bar{identityPartsSeparator}2{identityPartsSeparator}abc", $"bar{identityPartsSeparator}2",
+                    $"bar{identityPartsSeparator}3{identityPartsSeparator}abc", $"bar{identityPartsSeparator}3",
+                    $"foobar{identityPartsSeparator}1{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}1",
+                    $"foobar{identityPartsSeparator}2{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}2",
+                    $"foobar{identityPartsSeparator}3{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}3" }, ids);
             }
         }
 
-        [Fact]
-        public void FindDocIdFromPath_with_array_of_arrays_of_objects_should_work()
+        [Theory]
+        [InlineData('/')]
+        [InlineData(':')]
+        public void FindDocIdFromPath_with_array_of_arrays_of_objects_should_work(char identityPartsSeparator)
         {
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    GetObjectArray("foo"),
-                    GetObjectArray("bar"),
-                    GetObjectArray("foobar")
+                    GetObjectArray("foo", identityPartsSeparator),
+                    GetObjectArray("bar", identityPartsSeparator),
+                    GetObjectArray("foobar", identityPartsSeparator)
                 })
             };
 
@@ -164,47 +168,49 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Foo", ids, '/');
-                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Foo", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}3", $"bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Foo(abc/)", ids, '/');
-                Assert.Equal(new[] { "abc/foo/1", "foo/1",
-                    "abc/foo/2", "foo/2",
-                    "abc/foo/3", "foo/3",
-                    "abc/bar/1", "bar/1",
-                    "abc/bar/2", "bar/2",
-                    "abc/bar/3", "bar/3",
-                    "abc/foobar/1", "foobar/1",
-                    "abc/foobar/2", "foobar/2",
-                    "abc/foobar/3", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].[].Foo(abc{identityPartsSeparator})", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"abc{identityPartsSeparator}foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}3", $"foo{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}3", $"bar{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}3" }, ids);
 
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Foo[{0}/abc]", ids, '/');
-                Assert.Equal(new[] { "foo/1/abc", "foo/1",
-                    "foo/2/abc", "foo/2",
-                    "foo/3/abc", "foo/3",
-                    "bar/1/abc", "bar/1",
-                    "bar/2/abc", "bar/2",
-                    "bar/3/abc", "bar/3",
-                    "foobar/1/abc", "foobar/1",
-                    "foobar/2/abc", "foobar/2",
-                    "foobar/3/abc", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].[].Foo[{{0}}{identityPartsSeparator}abc]", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1{identityPartsSeparator}abc", $"foo{identityPartsSeparator}1",
+                    $"foo{identityPartsSeparator}2{identityPartsSeparator}abc", $"foo{identityPartsSeparator}2",
+                    $"foo{identityPartsSeparator}3{identityPartsSeparator}abc", $"foo{identityPartsSeparator}3",
+                    $"bar{identityPartsSeparator}1{identityPartsSeparator}abc", $"bar{identityPartsSeparator}1",
+                    $"bar{identityPartsSeparator}2{identityPartsSeparator}abc", $"bar{identityPartsSeparator}2",
+                    $"bar{identityPartsSeparator}3{identityPartsSeparator}abc", $"bar{identityPartsSeparator}3",
+                    $"foobar{identityPartsSeparator}1{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}1",
+                    $"foobar{identityPartsSeparator}2{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}2",
+                    $"foobar{identityPartsSeparator}3{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}3" }, ids);
             }
         }
 
-        [Fact]
-        public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work1()
+        [Theory]
+        [InlineData('/')]
+        [InlineData(':')]
+        public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work1(char identityPartsSeparator)
         {
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    GetNestedObjectArray("foo"),
-                    GetNestedObjectArray("bar"),
-                    GetNestedObjectArray("foobar")
+                    GetNestedObjectArray("foo", identityPartsSeparator),
+                    GetNestedObjectArray("bar", identityPartsSeparator),
+                    GetNestedObjectArray("foobar", identityPartsSeparator)
                 })
             };
 
@@ -212,37 +218,39 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Bar.Foo", ids, '/');
-                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Bar.Foo", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}3", $"bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Bar.Foo(abc/)", ids, '/');
-                Assert.Equal(new[] { "abc/foo/1", "foo/1",
-                    "abc/foo/2", "foo/2",
-                    "abc/foo/3", "foo/3",
-                    "abc/bar/1", "bar/1",
-                    "abc/bar/2", "bar/2",
-                    "abc/bar/3", "bar/3",
-                    "abc/foobar/1", "foobar/1",
-                    "abc/foobar/2", "foobar/2",
-                    "abc/foobar/3", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].[].Bar.Foo(abc{identityPartsSeparator})", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"abc{identityPartsSeparator}foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}3", $"foo{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}3", $"bar{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Bar.Foo[{0}/abc]", ids, '/');
-                Assert.Equal(new[] { "foo/1/abc", "foo/1",
-                    "foo/2/abc", "foo/2",
-                    "foo/3/abc", "foo/3",
-                    "bar/1/abc", "bar/1",
-                    "bar/2/abc", "bar/2",
-                    "bar/3/abc", "bar/3",
-                    "foobar/1/abc", "foobar/1",
-                    "foobar/2/abc", "foobar/2",
-                    "foobar/3/abc", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].[].Bar.Foo[{{0}}{identityPartsSeparator}abc]", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1{identityPartsSeparator}abc", $"foo{identityPartsSeparator}1",
+                    $"foo{identityPartsSeparator}2{identityPartsSeparator}abc", $"foo{identityPartsSeparator}2",
+                    $"foo{identityPartsSeparator}3{identityPartsSeparator}abc", $"foo{identityPartsSeparator}3",
+                    $"bar{identityPartsSeparator}1{identityPartsSeparator}abc", $"bar{identityPartsSeparator}1",
+                    $"bar{identityPartsSeparator}2{identityPartsSeparator}abc", $"bar{identityPartsSeparator}2",
+                    $"bar{identityPartsSeparator}3{identityPartsSeparator}abc", $"bar{identityPartsSeparator}3",
+                    $"foobar{identityPartsSeparator}1{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}1",
+                    $"foobar{identityPartsSeparator}2{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}2",
+                    $"foobar{identityPartsSeparator}3{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}3" }, ids);
             }
         }
 
-        [Fact]
-        public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work2()
+        [Theory]
+        [InlineData('/')]
+        [InlineData(':')]
+        public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work2(char identityPartsSeparator)
         {
             var obj = new DynamicJsonValue
             {
@@ -251,15 +259,15 @@ namespace FastTests.Utils
                 {
                     new DynamicJsonValue
                     {
-                        ["Foo"] = GetNestedObjectArray("foo")
+                        ["Foo"] = GetNestedObjectArray("foo", identityPartsSeparator)
                     },
                     new DynamicJsonValue
                     {
-                        ["Foo"] = GetNestedObjectArray("bar")
+                        ["Foo"] = GetNestedObjectArray("bar", identityPartsSeparator)
                     },
                     new DynamicJsonValue
                     {
-                        ["Foo"] = GetNestedObjectArray("foobar")
+                        ["Foo"] = GetNestedObjectArray("foobar", identityPartsSeparator)
                     },
                 })
             };
@@ -268,37 +276,39 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo[].Bar.Foo", ids, '/');
-                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo[].Bar.Foo", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}3", $"bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo[].Bar.Foo(abc/)", ids, '/');
-                Assert.Equal(new[] { "abc/foo/1", "foo/1",
-                    "abc/foo/2", "foo/2",
-                    "abc/foo/3", "foo/3",
-                    "abc/bar/1", "bar/1",
-                    "abc/bar/2", "bar/2",
-                    "abc/bar/3", "bar/3",
-                    "abc/foobar/1", "foobar/1",
-                    "abc/foobar/2", "foobar/2",
-                    "abc/foobar/3", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].Foo[].Bar.Foo(abc{identityPartsSeparator})", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"abc{identityPartsSeparator}foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}3", $"foo{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}3", $"bar{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo[].Bar.Foo[{0}/abc]", ids, '/');
-                Assert.Equal(new[] { "foo/1/abc", "foo/1",
-                    "foo/2/abc", "foo/2",
-                    "foo/3/abc", "foo/3",
-                    "bar/1/abc", "bar/1",
-                    "bar/2/abc", "bar/2",
-                    "bar/3/abc", "bar/3",
-                    "foobar/1/abc", "foobar/1",
-                    "foobar/2/abc", "foobar/2",
-                    "foobar/3/abc", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].Foo[].Bar.Foo[{{0}}{identityPartsSeparator}abc]", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1{identityPartsSeparator}abc", $"foo{identityPartsSeparator}1",
+                    $"foo{identityPartsSeparator}2{identityPartsSeparator}abc", $"foo{identityPartsSeparator}2",
+                    $"foo{identityPartsSeparator}3{identityPartsSeparator}abc", $"foo{identityPartsSeparator}3",
+                    $"bar{identityPartsSeparator}1{identityPartsSeparator}abc", $"bar{identityPartsSeparator}1",
+                    $"bar{identityPartsSeparator}2{identityPartsSeparator}abc", $"bar{identityPartsSeparator}2",
+                    $"bar{identityPartsSeparator}3{identityPartsSeparator}abc", $"bar{identityPartsSeparator}3",
+                    $"foobar{identityPartsSeparator}1{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}1",
+                    $"foobar{identityPartsSeparator}2{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}2",
+                    $"foobar{identityPartsSeparator}3{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}3" }, ids);
             }
         }
 
-        [Fact]
-        public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work3()
+        [Theory]
+        [InlineData('/')]
+        [InlineData(':')]
+        public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work3(char identityPartsSeparator)
         {
             var obj = new DynamicJsonValue
             {
@@ -309,21 +319,21 @@ namespace FastTests.Utils
                     {
                         ["BarX"] = new DynamicJsonValue
                         {
-                            ["Foo"] = GetNestedObjectArray("foo")
+                            ["Foo"] = GetNestedObjectArray("foo", identityPartsSeparator)
                         }
                     },
                     new DynamicJsonValue
                     {
                         ["BarX"] = new DynamicJsonValue
                         {
-                            ["Foo"] = GetNestedObjectArray("bar")
+                            ["Foo"] = GetNestedObjectArray("bar", identityPartsSeparator)
                         }
                     },
                     new DynamicJsonValue
                     {
                         ["BarX"] = new DynamicJsonValue
                         {
-                            ["Foo"] = GetNestedObjectArray("foobar")
+                            ["Foo"] = GetNestedObjectArray("foobar", identityPartsSeparator)
                         }
                     },
                 })
@@ -333,60 +343,60 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].BarX.Foo[].Bar.Foo", ids, '/');
-                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].BarX.Foo[].Bar.Foo", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}3", $"bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].BarX.Foo[].Bar.Foo(abc/)", ids, '/');
-                Assert.Equal(new[] { "abc/foo/1", "foo/1",
-                    "abc/foo/2", "foo/2",
-                    "abc/foo/3", "foo/3",
-                    "abc/bar/1", "bar/1",
-                    "abc/bar/2", "bar/2",
-                    "abc/bar/3", "bar/3",
-                    "abc/foobar/1", "foobar/1",
-                    "abc/foobar/2", "foobar/2",
-                    "abc/foobar/3", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].BarX.Foo[].Bar.Foo(abc{identityPartsSeparator})", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"abc{identityPartsSeparator}foo{identityPartsSeparator}1", $"foo{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}2", $"foo{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foo{identityPartsSeparator}3", $"foo{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}1", $"bar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}2", $"bar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}bar{identityPartsSeparator}3", $"bar{identityPartsSeparator}3",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}1", $"foobar{identityPartsSeparator}1",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}2", $"foobar{identityPartsSeparator}2",
+                    $"abc{identityPartsSeparator}foobar{identityPartsSeparator}3", $"foobar{identityPartsSeparator}3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].BarX.Foo[].Bar.Foo[{0}/abc]", ids, '/');
-                Assert.Equal(new[] { "foo/1/abc", "foo/1",
-                    "foo/2/abc", "foo/2",
-                    "foo/3/abc", "foo/3",
-                    "bar/1/abc", "bar/1",
-                    "bar/2/abc", "bar/2",
-                    "bar/3/abc", "bar/3",
-                    "foobar/1/abc", "foobar/1",
-                    "foobar/2/abc", "foobar/2",
-                    "foobar/3/abc", "foobar/3" }, ids);
+                IncludeUtil.GetDocIdFromInclude(reader, $"ContactInfoId[].BarX.Foo[].Bar.Foo[{{0}}{identityPartsSeparator}abc]", ids, identityPartsSeparator);
+                Assert.Equal(new[] { $"foo{identityPartsSeparator}1{identityPartsSeparator}abc", $"foo{identityPartsSeparator}1",
+                    $"foo{identityPartsSeparator}2{identityPartsSeparator}abc", $"foo{identityPartsSeparator}2",
+                    $"foo{identityPartsSeparator}3{identityPartsSeparator}abc", $"foo{identityPartsSeparator}3",
+                    $"bar{identityPartsSeparator}1{identityPartsSeparator}abc", $"bar{identityPartsSeparator}1",
+                    $"bar{identityPartsSeparator}2{identityPartsSeparator}abc", $"bar{identityPartsSeparator}2",
+                    $"bar{identityPartsSeparator}3{identityPartsSeparator}abc", $"bar{identityPartsSeparator}3",
+                    $"foobar{identityPartsSeparator}1{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}1",
+                    $"foobar{identityPartsSeparator}2{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}2",
+                    $"foobar{identityPartsSeparator}3{identityPartsSeparator}abc", $"foobar{identityPartsSeparator}3" }, ids);
             }
         }
 
-        private static DynamicJsonArray GetStringArray(string prefix)
+        private static DynamicJsonArray GetStringArray(string prefix, char identityPartsSeparator)
         {
-            return new DynamicJsonArray(new[] { $"{prefix}/1", $"{prefix}/2", $"{prefix}/3" });
+            return new DynamicJsonArray(new[] { $"{prefix}{identityPartsSeparator}1", $"{prefix}{identityPartsSeparator}2", $"{prefix}{identityPartsSeparator}3" });
         }
 
-        private static DynamicJsonArray GetObjectArray(string prefix)
+        private static DynamicJsonArray GetObjectArray(string prefix, char identityPartsSeparator)
         {
             return new DynamicJsonArray(new[]
             {
                 new DynamicJsonValue
                 {
-                    ["Foo"] = $"{prefix}/1"
+                    ["Foo"] = $"{prefix}{identityPartsSeparator}1"
                 },
                 new DynamicJsonValue
                 {
-                    ["Foo"] = $"{prefix}/2"
+                    ["Foo"] = $"{prefix}{identityPartsSeparator}2"
                 },
                 new DynamicJsonValue
                 {
-                    ["Foo"] = $"{prefix}/3"
+                    ["Foo"] = $"{prefix}{identityPartsSeparator}3"
                 },
             });
         }
 
-        private static DynamicJsonArray GetNestedObjectArray(string prefix)
+        private static DynamicJsonArray GetNestedObjectArray(string prefix, char identityPartsSeparator)
         {
             return new DynamicJsonArray(new[]
             {
@@ -394,21 +404,21 @@ namespace FastTests.Utils
                 {
                     ["Bar"] = new DynamicJsonValue
                     {
-                        ["Foo"] = $"{prefix}/1"
+                        ["Foo"] = $"{prefix}{identityPartsSeparator}1"
                     }
                 },
                 new DynamicJsonValue
                 {
                     ["Bar"] = new DynamicJsonValue
                     {
-                        ["Foo"] = $"{prefix}/2"
+                        ["Foo"] = $"{prefix}{identityPartsSeparator}2"
                     }
                 },
                 new DynamicJsonValue
                 {
                     ["Bar"] = new DynamicJsonValue
                     {
-                        ["Foo"] = $"{prefix}/3"
+                        ["Foo"] = $"{prefix}{identityPartsSeparator}3"
                     }
                 },
             });
