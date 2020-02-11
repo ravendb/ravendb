@@ -47,13 +47,11 @@
                             </div>
                         </div>
                     </div>
-                    
                     <div class="col-lg-5">
                         <div class="toggle">
                             <input id="toggleIndexes" type="checkbox" data-bind="checked: includeIndexes" />
                             <label for="toggleIndexes">Include Indexes</label>
                         </div>
-
                         <div class="margin-left margin-left-lg">
                             <div class="toggle">
                                 <input id="toggleAnalyzers" type="checkbox" 
@@ -61,7 +59,6 @@
                                 <label for="toggleAnalyzers">Remove Analyzers</label>
                             </div>
                         </div>
-
                         <div class="toggle">
                             <input id="toggleIdentities" type="checkbox" data-bind="checked: includeIdentities" />
                             <label for="toggleIdentities">Include Identities</label>
@@ -70,10 +67,9 @@
                             <input id="toggleCmpXch" type="checkbox" data-bind="checked: includeCompareExchange" />
                             <label for="toggleCmpXch">Include Compare Exchange</label>
                         </div>
-
                         <div class="toggle">
-                            <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
-                            <label for="includeSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
+                            <input id="toggleSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
+                            <label for="toggleSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
                         </div>
                         <div class="toggle">
                             <input id="toggleConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
@@ -81,9 +77,16 @@
                             <button class="btn btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
                             <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
                         </div>
+                        <div class="toggle">
+                            <input id="toggleDocumentsTombstones" type="checkbox" data-bind="checked: includeDocumentsTombstones" />
+                            <label for="toggleDocumentsTombstones" class="margin-right margin-right-sm">Include Documents Tombstones</label>
+                        </div>
+                        <div class="toggle">
+                            <input id="toggleCmpXchTombstones" type="checkbox" data-bind="checked: includeCompareExchangeTombstones" />
+                            <label for="toggleCmpXchTombstones" class="margin-right margin-right-sm">Include Compare Exchange Tombstones</label>
+                        </div>
                     </div>
                 </div>
-                
                 <div class="row">
                     <div class="col-xs-12 col-sm-6">
                         <div data-bind="validationElement: exportDefinitionHasIncludes">
@@ -91,9 +94,7 @@
                         </div>
                     </div>
                 </div>
-                
                 <hr />
-                
                 <div class="row">
                     <div class="col-lg-6">
                         <div class="toggle">
@@ -110,7 +111,6 @@
                     </div>
                 </div>
             </div>
-            
             <div id="export-advanced" data-bind="collapse: showAdvancedOptions">
                 <hr />
                 <h3>Advanced</h3>
@@ -170,7 +170,6 @@
                             <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>    
                         </div>
                     </div>
-
                     <div class="form-group">
                         <label class="control-label">Command</label>
                         <div class="input-group">
@@ -181,13 +180,12 @@
                         </div>
                     </div>
                 </div>
-                
             </div>
             <hr/>
             <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
                 Advanced
             </button>
-            <button class="btn btn-primary" type="submit" download data-bind="disable: isExporting, css: { 'btn-spinner': isExporting() }"><span class="icon-export"></span> <span>Export Database</span></button>
+            <button class="btn btn-primary" type="submit" data-bind="disable: isExporting, css: { 'btn-spinner': isExporting() }"><span class="icon-export"></span> <span>Export Database</span></button>
         </form>
     </div>
 </div>
