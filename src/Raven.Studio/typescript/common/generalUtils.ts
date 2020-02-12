@@ -518,6 +518,22 @@ class genUtils {
         });
         return uuid;
     }
+    
+    static inMemoryRender(templateName: string, data: any) {
+        const div = $("<div>");
+        
+        try {
+            ko.applyBindingsToNode(div[0], { template: { name: templateName, data } });
+        } catch (e) {
+            console.error(e);
+            return "error";
+        }
+
+        const html = div.html();
+        ko.cleanNode(div[0]);
+        div.remove();
+        return html;
+    }
 } 
 
 export = genUtils;

@@ -370,3 +370,32 @@
         </div>
     </div>
 </script>
+
+
+<script type="text/html" id="time-series-graph-tooltip">
+    <div class="tooltip-inner" data-bind="visible: items.length">
+        <table>
+            <tbody>
+            <!-- ko foreach: items -->
+            <tr>
+                <td class="name">
+                    <span data-bind="attr: { class: $parent.getColorClass(series) + ' ' + $parent.type }">
+                        <i class="icon-stats"></i>
+                    </span>
+                    <span data-bind="text: name"></span>
+                </td>
+                <td class="value">
+                    <strong class="margin-left" data-bind="text: value"></strong>
+                </td>
+                <td class="date">
+                    <div class="margin-left" data-bind="text: dateDescription"></div>
+                </td>
+            </tr>
+            <!-- /ko -->
+            </tbody>
+        </table>
+        <div class="bg-info">
+            <small><i class="icon-info"></i> All dates are in local time zone</small>
+        </div>
+    </div>
+</script>
