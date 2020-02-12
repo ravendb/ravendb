@@ -45,11 +45,11 @@ namespace Raven.Embedded
             return (await server.Value.WithCancellation(token).ConfigureAwait(false)).ServerProcess.Id;
         }
 
-        public void Restart()
+        public Task RestartServer()
         {
             var existingServerTask = _serverTask;
             if (_serverOptions == null || existingServerTask == null || existingServerTask.IsValueCreated == false)
-                throw new InvalidOperationException("Cannot call Restart() before calling Start()");
+                throw new InvalidOperationException("Cannot call RestartServer() before calling Start()");
 
             try
             {
@@ -62,9 +62,9 @@ namespace Raven.Embedded
             }
 
             if (Interlocked.CompareExchange(ref _serverTask, null, existingServerTask) != existingServerTask)
-                throw new InvalidOperationException("The server changed while restarting it. Are you calling Restart() concurrently?");
+                throw new InvalidOperationException("The server changed while restarting it. Are you calling RestartServer() concurrently?");
 
-            StartServerInternal();
+            return StartServerInternal();
         }
 
         public void StartServer(ServerOptions? options = null)
@@ -91,17 +91,19 @@ namespace Raven.Embedded
                     // not supported on MacOSX
                 }
             }
-            StartServerInternal();
+
+            var task = StartServerInternal();
+            GC.KeepAlive(task); // make sure that we aren't allowing to elide the call
         }
 
-        private void StartServerInternal()
+        private Task StartServerInternal()
         {
             var startServer = new Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>(RunServer);
             if (Interlocked.CompareExchange(ref _serverTask, startServer, null) != null)
                 throw new InvalidOperationException("The server was already started");
 
             // this forces the server to start running in an async manner.
-            GC.KeepAlive(startServer.Value);
+            return startServer.Value;
         }
 
         public IDocumentStore GetDocumentStore(string database)
@@ -229,7 +231,12 @@ namespace Raven.Embedded
             }
         }
 
-        public event EventHandler? ServerProcessExited;
+        public class ServerProcessExitedEventArgs : EventArgs
+        {
+
+        }
+
+        public event EventHandler<ServerProcessExitedEventArgs>? ServerProcessExited;
 
         private async Task<(Uri ServerUrl, Process ServerProcess)> RunServer()
         {
@@ -240,7 +247,7 @@ namespace Raven.Embedded
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Starting global server: { process.Id }");
 
-            process.Exited += (sender, e) => ServerProcessExited?.Invoke(sender, e);
+            process.Exited += (sender, e) => ServerProcessExited?.Invoke(sender, new ServerProcessExitedEventArgs());
 
             bool domainBind;
 
