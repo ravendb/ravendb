@@ -294,8 +294,8 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("appendTs");
                 
-                const string signature = "appendTs(doc, timeseries, toAppend)";
-                const int requiredArgs = 3;
+                const string signature = "appendTs(doc, timeseries, timestamp, tag, values)";
+                const int requiredArgs = 5;
                 
                 if (args.Length != requiredArgs)
                     throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
@@ -303,63 +303,35 @@ namespace Raven.Server.Documents.Patch
                 var (id, doc) = GetIdAndDocFromArg(args[0], signature);
 
                 string timeseries = GetStringArg(args[1], signature, "timeseries");
-
-                if(args[2].IsArray() == false)
-                    throw new ArgumentException($"{signature}: The tuples argument should be an array but got {args[2].GetType().Name}");
-                var tuples = args[2].AsArray();
-
-                var toAppend = new TimeSeriesStorage.Reader.SingleResult[tuples.Length];
-                var valuesArrays = ArrayPool<double[]>.Shared.Rent((int)tuples.Length);       
+                var timestamp = GetDateArg(args[2], signature, "timestamp");
+                var tag = GetStringArg(args[3], signature, "tag");
+                
+                if(args[4].IsArray() == false)
+                    throw new ArgumentException($"{signature}: The values should be an array but got {args[4].GetType().Name}");
+                var jsValues = args[4].AsArray();
+                var values = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
                 try
                 {
-                    var i = 0;
-                    foreach (var (key, jsTuple) in tuples.GetOwnProperties())
-                    {
-                        if (key == "length")
-                            continue;
-                        if (jsTuple.Value.IsArray() == false)
-                            throw new ArgumentException($"{signature}: The tuple must be an array but got {jsTuple.Value.GetType().Name}");
+                    FillDoubleArrayFromJsArray(values, jsValues, signature);
 
-                        var tuple = jsTuple.Value.AsArray();
-                        var timestamp = GetDateArg(tuple[0], signature, "timestamp");
-                
-                        string tag = GetStringArg(tuple[1], signature, "tag");
-                        
-                        if(tuple[2].IsArray() == false)
-                            throw new ArgumentException($"{signature}: The values should be an array but got {tuple[2].GetType().Name}");
-                    
-                        var jsValues = tuple[2].AsArray();
-                        valuesArrays[i] = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
-                    
-                        FillDoubleArrayFromJsArray(valuesArrays[i], jsValues, signature);
-                    
-                        toAppend[i] = new TimeSeriesStorage.Reader.SingleResult
-                        {
-                            Values = new Memory<double>(valuesArrays[i], 0, (int)jsValues.Length),
-                            Tag = _jsonCtx.GetLazyString(tag),
-                            Timestamp = timestamp,
-                            Status = TimeSeriesValuesSegment.Live
-                        };
-                        ++i;
-                    }
-                    
+                    var toAppend = new TimeSeriesStorage.Reader.SingleResult
+                    {
+                        Values = new Memory<double>(values, 0, (int)jsValues.Length),
+                        Tag = _jsonCtx.GetLazyString(tag),
+                        Timestamp = timestamp,
+                        Status = TimeSeriesValuesSegment.Live
+                    };
+
                     _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(
                         _docsCtx,
                         id,
                         CollectionName.GetCollectionName(doc),
                         timeseries,
-                        toAppend);
+                        new[] { toAppend});
                 }
                 finally                
                 {
-                    foreach (double[] values in valuesArrays)
-                    {
-                        if(values == null)
-                            break;
-                        
-                        ArrayPool<double>.Shared.Return(values);
-                    }
-                    ArrayPool<double[]>.Shared.Return(valuesArrays);
+                    ArrayPool<double>.Shared.Return(values);
                 }
                 
                 return Undefined.Instance;
