@@ -273,19 +273,28 @@ namespace FastTests
 
                     store.BeforeDispose += (sender, args) =>
                     {
-                        if (CreatedStores.TryRemove(store) == false)
-                            return; // can happen if we are wrapping the store inside sharded one
-
-                        DeleteDatabaseResult result = null;
-                        if (options.DeleteDatabaseOnDispose)
+                        try
                         {
-                            result = DeleteDatabase(options, serverToUse, name, hardDelete, store);
+                            if (CreatedStores.TryRemove(store) == false)
+                                return; // can happen if we are wrapping the store inside sharded one
+
+                            DeleteDatabaseResult result = null;
+                            if (options.DeleteDatabaseOnDispose)
+                            {
+                                result = DeleteDatabase(options, serverToUse, name, hardDelete, store);
+                            }
+
+                            if (Servers.Contains(serverToUse) && result != null)
+                            {
+                                var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
+                                AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
+                            }
                         }
-
-                        if (Servers.Contains(serverToUse) && result != null)
+                        catch (Exception e)
                         {
-                            var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
+                            // we shouldn't throw in the dispose, since this might mask the real exception
+                            Console.WriteLine($"Failed to delete database {name}");
+                            Console.WriteLine(e);
                         }
                     };
                     CreatedStores.Add(store);
@@ -742,7 +751,12 @@ namespace FastTests
         protected override void Dispose(ExceptionAggregator exceptionAggregator)
         {
             foreach (var store in CreatedStores)
+            {
+                if (store.WasDisposed)
+                    continue;
+
                 exceptionAggregator.Execute(store.Dispose);
+            }
             CreatedStores.Clear();
         }
 
