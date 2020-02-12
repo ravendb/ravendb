@@ -226,13 +226,14 @@ namespace FastTests
 
                     if (options.CreateDatabase)
                     {
-                        if (IsGlobalOrLocalServer(serverToUse))
+
+                        if (Servers.Contains(serverToUse))
                         {
-                            CheckIfDatabaseExists(serverToUse, name);
+                            Servers.ForEach(server => CheckIfDatabaseExists(server, name));
                         }
                         else
                         {
-                            Servers.ForEach(server => CheckIfDatabaseExists(server, name));
+                            CheckIfDatabaseExists(serverToUse, name);
                         }
 
                         DatabasePutResult result;
@@ -256,18 +257,17 @@ namespace FastTests
 
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
 
-                        if (IsGlobalOrLocalServer(serverToUse))
-                        {
-                            // skip 'wait for requests' on DocumentDatabase dispose
-                            ApplySkipDrainAllRequestsToDatabase(serverToUse, name);
-                        }
-                        else
+                        if (Servers.Contains(serverToUse))
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
                             AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
 
                             // skip 'wait for requests' on DocumentDatabase dispose
                             Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name));
+                        }
+                        else
+                        {
+                            ApplySkipDrainAllRequestsToDatabase(serverToUse, name);
                         }
                     }
 
@@ -282,8 +282,7 @@ namespace FastTests
                             result = DeleteDatabase(options, serverToUse, name, hardDelete, store);
                         }
 
-                        if (IsGlobalOrLocalServer(serverToUse) == false && 
-                            result !=null)
+                        if (Servers.Contains(serverToUse) && result != null)
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
                             AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
@@ -353,17 +352,14 @@ namespace FastTests
             }
             catch
             {
-                if (IsGlobalOrLocalServer(serverToUse))
-                {
-                    if (serverToUse.Disposed)
-                        return null;
-                }
-
                 if (Servers.Contains(serverToUse))
                 {
                     if (Servers.All(s => s.Disposed))
                         return null;
                 }
+
+                if (serverToUse.Disposed)
+                    return null;
 
                 throw;
             }

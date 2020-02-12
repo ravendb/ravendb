@@ -400,7 +400,8 @@ namespace Tests.Infrastructure
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
             var serversToPorts = new Dictionary<RavenServer, string>();
-            var clustersServers = new List<RavenServer>();
+            var clusterNodes = new List<RavenServer>(); // we need this in case we create more than 1 cluster in the same test
+
             _electionTimeoutInMs = Math.Max(300, numberOfNodes * 80);
 
             if (customSettingsList != null && customSettingsList.Count != numberOfNodes)
@@ -449,7 +450,7 @@ namespace Tests.Infrastructure
                 var prefix = useSsl ? "https" : "http";
                 serverUrl = UseFiddlerUrl($"{prefix}://127.0.0.1:{port}");
                 Servers.Add(server);
-                clustersServers.Add(server);
+                clusterNodes.Add(server);
 
                 serversToPorts.Add(server, serverUrl);
                 if (i == leaderIndex)
@@ -467,7 +468,7 @@ namespace Tests.Infrastructure
                     {
                         continue;
                     }
-                    var follower = clustersServers[i];
+                    var follower = clusterNodes[i];
                     // ReSharper disable once PossibleNullReferenceException
                     await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster);
                     if (watcherCluster)
@@ -489,7 +490,7 @@ namespace Tests.Infrastructure
                 states = GetLastStatesFromAllServersOrderedByTime();
             }
             Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
-            return (clustersServers, leader);
+            return (clusterNodes, leader);
         }
 
         protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null)
