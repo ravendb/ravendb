@@ -1357,7 +1357,9 @@ class normalCrudActions implements editDocumentCrudActions {
     private static resultItemToTimeSeriesItem(timeSeriesDetail: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesItemDetail): timeSeriesItem {
         return {
             numberOfEntries: timeSeriesDetail.NumberOfEntries,
-            name: timeSeriesDetail.Name
+            name: timeSeriesDetail.Name,
+            startDate: timeSeriesDetail.StartDate,
+            endDate: timeSeriesDetail.EndDate
         }
     }
 
