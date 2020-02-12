@@ -4,7 +4,9 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Lucene.Net.Documents;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
@@ -15,9 +17,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public class JintLuceneDocumentConverter : LuceneDocumentConverterBase
     {
-        public JintLuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool reduceOutput = false)
+        private readonly IndexFieldOptions _allFields;
+
+        public JintLuceneDocumentConverter(ICollection<IndexField> fields, MapIndexDefinition definition, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool reduceOutput = false)
+            : this(fields, definition.IndexDefinition, indexImplicitNull, indexEmptyEntries, reduceOutput)
+        {
+        }
+
+        public JintLuceneDocumentConverter(ICollection<IndexField> fields, MapReduceIndexDefinition definition, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool reduceOutput = false)
+            : this(fields, definition.IndexDefinition, indexImplicitNull, indexEmptyEntries, reduceOutput)
+        {
+        }
+
+        protected JintLuceneDocumentConverter(ICollection<IndexField> fields, IndexDefinition definition, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool reduceOutput = false)
             : base(fields, indexImplicitNull, indexEmptyEntries, reduceOutput)
         {
+            definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
         }
 
         private const string CreatedFieldValuePropertyName = "$value";
@@ -49,87 +64,72 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
                 if (_fields.TryGetValue(property, out var field) == false)
-                {
-                    field = new IndexField
-                    {
-                        Name = property,
-                        Indexing = _allFields.Indexing,
-                        Storage = _allFields.Storage,
-                        Analyzer = _allFields.Analyzer,
-                        Spatial = _allFields.Spatial,
-                        HasSuggestions = _allFields.HasSuggestions,
-                        TermVector = _allFields.TermVector
-                    };
-                }
+                    field = _fields[property] = IndexField.Create(property, new IndexFieldOptions(), _allFields);
 
-                var obj = propertyDescriptor.Value;
-                foreach (var v in EnumerateValues(obj))
+                object value;
+                var actualValue = propertyDescriptor.Value;
+                if (actualValue.IsObject() && actualValue.IsArray() == false)
                 {
-                    var actualValue = v;
-                    object value;
-                    if (actualValue.IsObject() && actualValue.IsArray() == false)
+                    //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name 
+                    //so we must use field.Name and not property from this point on.
+                    var val = TryDetectDynamicFieldCreation(property, actualValue.AsObject(), field);
+                    if (val != null)
                     {
-                        //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name 
-                        //so we must use field.Name and not property from this point on.
-                        var val = TryDetectDynamicFieldCreation(property, actualValue.AsObject(), field);
-                        if (val != null)
+                        if (val.IsObject() && val.AsObject().TryGetValue("$spatial", out _))
                         {
-                            if (val.IsObject() && val.AsObject().TryGetValue("$spatial", out _))
-                            {
-                                actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
-                            }
-                            else
-                            {
-                                value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, engine: documentToProcess.Engine, context: indexContext);
-                                newFields += GetRegularFields(instance, field, value, indexContext);
-                                continue;
-                            }
+                            actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
                         }
+                        else
+                        {
+                            value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, engine: documentToProcess.Engine, context: indexContext);
+                            newFields += GetRegularFields(instance, field, value, indexContext);
+                            continue;
+                        }
+                    }
 
-                        var objectValue = actualValue.AsObject();
-                        if (objectValue.HasOwnProperty("$spatial") && objectValue.TryGetValue("$spatial", out var inner))
+                    var objectValue = actualValue.AsObject();
+                    if (objectValue.HasOwnProperty("$spatial") && objectValue.TryGetValue("$spatial", out var inner))
+                    {
+
+                        SpatialField spatialField;
+                        IEnumerable<AbstractField> spatial;
+                        if (inner.IsString())
                         {
 
-                            SpatialField spatialField;
-                            IEnumerable<AbstractField> spatial;
-                            if (inner.IsString())
+                            spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
+                            spatial = StaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
+                        }
+                        else if (inner.IsObject())
+                        {
+                            var innerObject = inner.AsObject();
+                            if (innerObject.HasOwnProperty("Lat") && innerObject.HasOwnProperty("Lng") && innerObject.TryGetValue("Lat", out var lat)
+                                && lat.IsNumber() && innerObject.TryGetValue("Lng", out var lng) && lng.IsNumber())
                             {
-
                                 spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                spatial = StaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
-                            }
-                            else if (inner.IsObject())
-                            {
-                                var innerObject = inner.AsObject();
-                                if (innerObject.HasOwnProperty("Lat") && innerObject.HasOwnProperty("Lng") && innerObject.TryGetValue("Lat", out var lat)
-                                    && lat.IsNumber() && innerObject.TryGetValue("Lng", out var lng) && lng.IsNumber())
-                                {
-                                    spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                    spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
-                                }
-                                else
-                                {
-                                    continue; //Ignoring bad spatial field 
-                                }
+                                spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
                             }
                             else
                             {
                                 continue; //Ignoring bad spatial field 
                             }
-                            newFields += GetRegularFields(instance, field, spatial, indexContext, nestedArray: false);
-
-                            continue;
                         }
-                    }
+                        else
+                        {
+                            continue; //Ignoring bad spatial field 
+                        }
+                        newFields += GetRegularFields(instance, field, spatial, indexContext);
 
-                    value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value, flattenArrays: false, engine: documentToProcess.Engine, context: indexContext);
-                    newFields += GetRegularFields(instance, field, value, indexContext, nestedArray: true);
-
-                    if (value is IDisposable toDispose)
-                    {
-                        // the value was converted to a lucene field and isn't needed anymore
-                        toDispose.Dispose();
+                        continue;
                     }
+                }
+
+                value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value, flattenArrays: false, engine: documentToProcess.Engine, context: indexContext);
+                newFields += GetRegularFields(instance, field, value, indexContext);
+
+                if (value is IDisposable toDispose)
+                {
+                    // the value was converted to a lucene field and isn't needed anymore
+                    toDispose.Dispose();
                 }
             }
 
@@ -208,25 +208,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new ArgumentException($"Could not parse dynamic field option property '{propertyName}' value ('{optionValueAsString}') into '{typeof(TEnum).Name}' enum.");
 
                 return (TEnum)enumValue;
-            }
-        }
-
-        private static IEnumerable<JsValue> EnumerateValues(JsValue jv)
-        {
-            if (jv.IsArray())
-            {
-                var arr = jv.AsArray();
-                foreach (var (key, val) in arr.GetOwnProperties())
-                {
-                    if (key == "length")
-                        continue;
-
-                    yield return val.Value;
-                }
-            }
-            else
-            {
-                yield return jv;
             }
         }
     }

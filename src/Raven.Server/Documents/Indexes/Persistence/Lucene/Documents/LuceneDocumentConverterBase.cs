@@ -76,7 +76,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected readonly bool _reduceOutput;
 
         private byte[] _reduceValueBuffer;
-        protected IndexField _allFields;
 
         public void Clean()
         {
@@ -92,9 +91,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             foreach (var field in fields)
                 dictionary[field.Name] = field;
             _fields = dictionary;
-
-            if (_fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields) == false)
-                _allFields = new IndexField();
 
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;

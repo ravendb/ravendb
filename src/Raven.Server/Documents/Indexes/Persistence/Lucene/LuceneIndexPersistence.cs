@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Utils;
@@ -90,10 +91,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
                     break;
                 case IndexType.JavaScriptMap:
-                    _converter = new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
+                    _converter = new JintLuceneDocumentConverter(fields, (MapIndexDefinition)index.Definition, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
                     break;
                 case IndexType.JavaScriptMapReduce:
-                    _converter = new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, reduceOutput: true);
+                    _converter = new JintLuceneDocumentConverter(fields, (MapReduceIndexDefinition)index.Definition, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, reduceOutput: true);
                     break;
                 case IndexType.Faulty:
                     _converter = null;
