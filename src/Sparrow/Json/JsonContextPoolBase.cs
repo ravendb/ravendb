@@ -33,9 +33,12 @@ namespace Sparrow.Json
         public ThreadIdHolder[] ThreadIDs => _threadIds;
 
         private NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
+        private long Generation;
         private bool _disposed;
+
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly long MaxContextSizeToKeepInBytes;
 
         // because this is a finalizer object, we want to pool them to avoid having too many items in the finalization queue
         private static ObjectPool<ContextStack> _contextStackPool = new ObjectPool<ContextStack>(() => new ContextStack());
@@ -86,7 +89,6 @@ namespace Sparrow.Json
 
         [ThreadStatic]
         private static ContextStackThreadReleaser _releaser;
-        
 
         private void EnsureCurrentThreadContextWillBeReleased(int currentThreadId)
         {            
@@ -157,6 +159,17 @@ namespace Sparrow.Json
         }
 
         protected JsonContextPoolBase()
+        {
+            Initialize();
+        }
+
+        protected JsonContextPoolBase(Size? maxContextSizeToKeepInMb)
+        {
+            Initialize();
+            MaxContextSizeToKeepInBytes = maxContextSizeToKeepInMb?.GetValue(SizeUnit.Bytes) ?? long.MaxValue;
+        }
+
+        private void Initialize()
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanThreadLocalState;
             _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(this, s => ((JsonContextPoolBase<T>)s).EnumerateAllThreadContexts().ToList(),
@@ -296,6 +309,7 @@ namespace Sparrow.Json
             }
             // no choice, got to create it
             context = CreateContext();
+            context.PoolGeneration = Generation;
             return new ReturnRequestContext
             {
                 Parent = this,
@@ -321,7 +335,7 @@ namespace Sparrow.Json
                 disposable = new ReturnRequestContext
                 {
                     Parent = this,
-                    Context = context
+                    Context = context,
                 };
                 return true;
             }
@@ -341,10 +355,23 @@ namespace Sparrow.Json
             public void Dispose()
             {
                 if (Parent == null)
-                    return;// disposed already
+                    return; // disposed already
 
                 if (Context.DoNotReuse)
                 {
+                    Context.Dispose();
+                    return;
+                }
+
+                if (Context.AllocatedMemory > Parent.MaxContextSizeToKeepInBytes)
+                {
+                    Context.Dispose();
+                    return;
+                }
+
+                if (Parent.LowMemoryFlag.IsRaised() && Context.PoolGeneration < Parent.Generation)
+                {
+                    // releasing all the contexts which were created before we got the low memory event
                     Context.Dispose();
                     return;
                 }
@@ -378,7 +405,7 @@ namespace Sparrow.Json
             while (true)
             {
                 var current = threadHeader.Head;
-                if(current == ContextStack.HeaderDisposed)
+                if (current == ContextStack.HeaderDisposed)
                 {
                     context.Dispose();
                     return;
@@ -417,7 +444,10 @@ namespace Sparrow.Json
         public void LowMemory()
         {
             if (LowMemoryFlag.Raise())
+            {
+                Interlocked.Increment(ref Generation);
                 _nativeMemoryCleaner?.CleanNativeMemory(null);
+            }
         }
 
         public void LowMemoryOver()

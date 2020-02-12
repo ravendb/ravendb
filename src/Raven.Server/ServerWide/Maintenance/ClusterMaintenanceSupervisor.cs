@@ -29,7 +29,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly ConcurrentDictionary<string, ClusterNode> _clusterNodes = new ConcurrentDictionary<string, ClusterNode>();
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private readonly JsonContextPool _contextPool = new JsonContextPool();
+        private readonly JsonContextPool _contextPool;
 
         internal readonly ClusterConfiguration Config;
         private readonly ServerStore _server;
@@ -39,6 +39,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _leaderClusterTag = leaderClusterTag;
             _term = term;
             _server = server;
+            _contextPool = new JsonContextPool(server.Configuration.Memory.MaxContextSizeToKeep);
             Config = server.Configuration.Cluster;
         }
 
@@ -397,7 +398,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 string url;
                 (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
 
-                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, timeout);
+                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Server.CipherSuitesPolicy, timeout);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {

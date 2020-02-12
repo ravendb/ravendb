@@ -17,7 +17,7 @@ namespace Raven.Server.Https
     public class HttpsConnectionMiddleware
     {
         private readonly RavenServer _server;
-        private readonly CipherSuitesPolicy _cipherSuitesPolicy;
+        public readonly CipherSuitesPolicy CipherSuitesPolicy;
 
         // See http://oid-info.com/get/1.3.6.1.5.5.7.3.1
         // Indicates that a certificate can be used as a SSL server certificate
@@ -28,7 +28,7 @@ namespace Raven.Server.Https
         public HttpsConnectionMiddleware(RavenServer server, KestrelServerOptions options)
         {
             _server = server;
-            _cipherSuitesPolicy = server.Configuration.Security.TlsCipherSuites != null && server.Configuration.Security.TlsCipherSuites.Length > 0
+            CipherSuitesPolicy = server.Configuration.Security.TlsCipherSuites != null && server.Configuration.Security.TlsCipherSuites.Length > 0
                 ? new CipherSuitesPolicy(server.Configuration.Security.TlsCipherSuites)
                 : null;
 
@@ -58,8 +58,8 @@ namespace Raven.Server.Https
                 };
                 o.ServerCertificateSelector = (_, __) => _serverCertificate;
 
-                if (_cipherSuitesPolicy != null)
-                    o.OnAuthenticate = (_, sslServerAuthenticationOptions) => sslServerAuthenticationOptions.CipherSuitesPolicy = _cipherSuitesPolicy;
+                if (CipherSuitesPolicy != null)
+                    o.OnAuthenticate = (_, sslServerAuthenticationOptions) => sslServerAuthenticationOptions.CipherSuitesPolicy = CipherSuitesPolicy;
             });
         }
 

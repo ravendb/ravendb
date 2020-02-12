@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -203,7 +204,11 @@ namespace RachisTests.DatabaseCluster
             var numberOfDatabases = 25;
 
             var clusterSize = 3;
-            var cluster = await CreateRaftCluster(clusterSize, false, 0, watcherCluster: true);
+            var settings = new Dictionary<string,string>()
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
+            };
+            var cluster = await CreateRaftCluster(clusterSize, false, 0, watcherCluster: true, customSettings: settings);
             using (var store = new DocumentStore { Urls = new[] { cluster.Leader.WebUrl } }.Initialize())
             {
                 var names = new List<string>();
@@ -213,7 +218,7 @@ namespace RachisTests.DatabaseCluster
                     names.Add(name);
                     var doc = new DatabaseRecord(name);
                     var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                    Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
+                    Assert.Equal(clusterSize, databaseResult.Topology.Count);
                     await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 }
 
@@ -228,12 +233,13 @@ namespace RachisTests.DatabaseCluster
                     Assert.Equal(1, val);
                 }
 
+                settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url;
                 cluster.Nodes[2] = GetNewServer(new ServerCreationOptions
                 {
                     DeletePrevious = false,
                     RunInMemory = false,
                     DataDirectory = result.DataDirectory,
-                    CustomSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url }
+                    CustomSettings = settings
                 });
 
                 var preferredCount = new Dictionary<string, int> { ["A"] = 0, ["B"] = 0, ["C"] = 0 };

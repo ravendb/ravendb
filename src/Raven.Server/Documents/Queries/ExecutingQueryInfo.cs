@@ -17,6 +17,8 @@ namespace Raven.Server.Documents.Queries
 
         public long QueryId { get; }
 
+        public bool IsStreaming { get; }
+        
         public OperationCancelToken Token { get; }
 
         public long DurationInMs => _stopwatch.ElapsedMilliseconds;
@@ -25,12 +27,13 @@ namespace Raven.Server.Documents.Queries
 
         private readonly Stopwatch _stopwatch;
 
-        public ExecutingQueryInfo(DateTime startTime, string indexName, IIndexQuery queryInfo, long queryId, OperationCancelToken token)
+        public ExecutingQueryInfo(DateTime startTime, string indexName, IIndexQuery queryInfo, long queryId, bool isStreaming, OperationCancelToken token)
         {
             StartTime = startTime;
             IndexName = indexName;
             QueryInfo = queryInfo;
             QueryId = queryId;
+            IsStreaming = isStreaming;
             _stopwatch = Stopwatch.StartNew();
             Token = token;
         }
@@ -61,6 +64,10 @@ namespace Raven.Server.Documents.Queries
 
             writer.WritePropertyName(nameof(QueryInfo));
             writer.WriteIndexQuery(context, QueryInfo);
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(IsStreaming));
+            writer.WriteBool(IsStreaming);
 
             writer.WriteEndObject();
         }

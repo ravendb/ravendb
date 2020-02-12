@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Handlers
 
             includeDocs.Fill(includes);
 
-            var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes);
+            var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters);
 
             var etag = GetStringFromHeaders("If-None-Match");
             if (etag == actualEtag)

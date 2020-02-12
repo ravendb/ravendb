@@ -312,12 +312,12 @@ namespace Raven.Server.Documents.Queries
             return new InvalidOperationException($"Could not execute query. Tried {NumberOfRetries} times.", inner);
         }
 
-        public QueryMarker MarkQueryAsRunning(string name, IndexQueryServerSide query, OperationCancelToken token)
+        public QueryMarker MarkQueryAsRunning(string name, IndexQueryServerSide query, OperationCancelToken token, bool isStreaming = false)
         {
             var queryStartTime = DateTime.UtcNow;
             var queryId = Interlocked.Increment(ref _nextQueryId);
 
-            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, name, query, queryId, token);
+            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, name, query, queryId, isStreaming, token);
 
             _currentlyRunningQueries.TryAdd(executingQueryInfo);
 

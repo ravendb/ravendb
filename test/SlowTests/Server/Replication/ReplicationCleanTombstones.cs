@@ -465,6 +465,8 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.True(WaitForDocument(store2, id));
 
+                var lastUpdate = LastRaftIndexForCommand(Server, nameof(UpdateExternalReplicationStateCommand));
+
                 using (var session = store1.OpenSession())
                 {
                     session.Delete(id);
@@ -483,6 +485,8 @@ namespace SlowTests.Server.Replication
                 {
                     Assert.Equal(2, storage2.DocumentsStorage.GetNumberOfTombstones(ctx));
                 }
+                
+                Assert.True(await WaitForValueAsync(() => LastRaftIndexForCommand(Server, nameof(UpdateExternalReplicationStateCommand)) > lastUpdate, true));
 
                 await storage1.TombstoneCleaner.ExecuteCleanup();
                 await storage2.TombstoneCleaner.ExecuteCleanup();

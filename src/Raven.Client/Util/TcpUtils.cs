@@ -19,6 +19,7 @@ namespace Raven.Client.Util
             SslProtocols.Tls12;
 #else
             SslProtocols.Tls13 | SslProtocols.Tls12;
+
 #endif
 
         private static void SetTimeouts(TcpClient client, TimeSpan timeout)
@@ -45,8 +46,8 @@ namespace Raven.Client.Util
             {
                 if (log.IsInfoEnabled)
                     log.Info(
-                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted. 
-                            This is not necessarily an issue, it might be that replication destination document has changed at 
+                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted.
+                            This is not necessarily an issue, it might be that replication destination document has changed at
                             the same time we tried to connect. We will try to reconnect later.",
                         ae.InnerException);
                 throw;
@@ -55,8 +56,8 @@ namespace Raven.Client.Util
             {
                 if (log.IsInfoEnabled)
                     log.Info(
-                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted. 
-                            This is not necessarily an issue, it might be that replication destination document has changed at 
+                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted.
+                            This is not necessarily an issue, it might be that replication destination document has changed at
                             the same time we tried to connect. We will try to reconnect later.",
                         e);
                 throw;
@@ -106,7 +107,13 @@ namespace Raven.Client.Util
             return tcpClient;
         }
 
-        internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info, X509Certificate2 storeCertificate,
+        internal static async Task<Stream> WrapStreamWithSslAsync(
+            TcpClient tcpClient,
+            TcpConnectionInfo info,
+            X509Certificate2 storeCertificate,
+#if !(NETSTANDARD2_0 || NETCOREAPP2_1)
+            CipherSuitesPolicy cipherSuitesPolicy,
+#endif
             TimeSpan? timeout)
         {
             var networkStream = tcpClient.GetStream();
@@ -115,22 +122,36 @@ namespace Raven.Client.Util
                 networkStream.ReadTimeout =
                     networkStream.WriteTimeout = (int)timeout.Value.TotalMilliseconds;
             }
-            Stream stream = networkStream;
+
             if (info.Certificate == null)
-                return stream;
+                return networkStream;
 
             var expectedCert = new X509Certificate2(Convert.FromBase64String(info.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
-            var sslStream = new SslStream(stream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
+            var sslStream = new SslStream(networkStream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
 
-            await sslStream.AuthenticateAsClientAsync(new Uri(info.Url).Host, new X509CertificateCollection(new X509Certificate[] { storeCertificate }), SupportedSslProtocols, false).ConfigureAwait(false);
-            stream = sslStream;
-            return stream;
+            var targetHost = new Uri(info.Url).Host;
+            var clientCertificates = new X509CertificateCollection(new X509Certificate[] { storeCertificate });
+
+#if !(NETSTANDARD2_0 || NETCOREAPP2_1)
+            await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+            {
+                TargetHost = targetHost,
+                ClientCertificates = clientCertificates,
+                EnabledSslProtocols = SupportedSslProtocols,
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                CipherSuitesPolicy = cipherSuitesPolicy
+            }).ConfigureAwait(false);
+#else
+            await sslStream.AuthenticateAsClientAsync(targetHost, clientCertificates, SupportedSslProtocols, checkCertificateRevocation: false).ConfigureAwait(false);
+#endif
+
+            return sslStream;
         }
 
         private static TcpClient NewTcpClient(TimeSpan? timeout, bool useIPv6)
         {
             // We start with a IPv4 TcpClient and we fallback to use IPv6 TcpClient only if we fail.
-            // This is because that dual mode of IPv6 has a timeout of 1 second 
+            // This is because that dual mode of IPv6 has a timeout of 1 second
             // which is bigger than the election time in the cluster which is 300ms.
             TcpClient tcpClient;
             if (useIPv6)

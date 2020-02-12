@@ -214,7 +214,14 @@ namespace Raven.Client.Documents.Subscriptions
                 _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
                 _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
                 _stream = _tcpClient.GetStream();
-                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpInfo, _store.Certificate, requestExecutor.DefaultTimeout).ConfigureAwait(false);
+                _stream = await TcpUtils.WrapStreamWithSslAsync(
+                    _tcpClient,
+                    tcpInfo,
+                    _store.Certificate,
+#if !(NETSTANDARD2_0 || NETCOREAPP2_1)
+                    null,
+#endif
+                    requestExecutor.DefaultTimeout).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
 

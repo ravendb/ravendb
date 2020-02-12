@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             if (DocumentsStorage != null &&
                 _context is DocumentsOperationContext ctx)
-                return DocumentsStorage.CountersStorage.GetCounterValue(ctx, docId, name);
+                return DocumentsStorage.CountersStorage.GetCounterValue(ctx, docId, name)?.Value;
             return null;
         }
 
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             var djv = new DynamicJsonValue();
 
-            foreach (var (cv, val) in DocumentsStorage.CountersStorage.GetCounterValues(ctx, docId, name))
+            foreach (var (cv, val, etag) in DocumentsStorage.CountersStorage.GetCounterValues(ctx, docId, name))
             {
                 djv[cv] = val;
             }

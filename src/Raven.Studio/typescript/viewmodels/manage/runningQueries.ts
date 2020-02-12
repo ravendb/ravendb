@@ -97,10 +97,13 @@ class runningQueries extends viewModelBase {
                 new textColumn<ExecutingQueryInfoWithCache>(grid, x => x.IndexName, "Index Name", "20%", {
                     sortable: "string"
                 }),
-                new textColumn<ExecutingQueryInfoWithCache>(grid, x => x.RunningQuery.DurationInMs.toLocaleString() + " ms", "Duration", "15%", {
+                new textColumn<ExecutingQueryInfoWithCache>(grid, x => x.RunningQuery.DurationInMs.toLocaleString() + " ms", "Duration", "10%", {
                     sortable: x => x.RunningQuery.DurationInMs
                 }),
-                new textColumn<ExecutingQueryInfoWithCache>(grid, x => (x.RunningQuery.QueryInfo as Raven.Client.Documents.Queries.IndexQuery<any>).Query, "Query", "35%", {
+                new textColumn<ExecutingQueryInfoWithCache>(grid, x => x.RunningQuery.IsStreaming, "Streaming", "10%", {
+                    sortable: "string"
+                }),
+                new textColumn<ExecutingQueryInfoWithCache>(grid, x => (x.RunningQuery.QueryInfo as Raven.Client.Documents.Queries.IndexQuery<any>).Query, "Query", "30%", {
                     sortable: "string"
                 }),
                 new textColumn<ExecutingQueryInfoWithCache>(grid, x => x.RunningQuery.QueryInfo, "Details", "15%")

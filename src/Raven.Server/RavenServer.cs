@@ -8,7 +8,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -85,6 +84,7 @@ namespace Raven.Server
 
         private readonly Logger _tcpLogger;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
+        internal readonly JsonContextPool _tcpContextPool;
 
         public event Action AfterDisposal;
 
@@ -95,6 +95,8 @@ namespace Raven.Server
         public ICpuUsageCalculator CpuUsageCalculator;
 
         internal bool ThrowOnLicenseActivationFailure;
+
+        internal CipherSuitesPolicy CipherSuitesPolicy => _httpsConnectionMiddleware?.CipherSuitesPolicy;
 
         public RavenServer(RavenConfiguration configuration)
         {
@@ -117,12 +119,14 @@ namespace Raven.Server
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
             _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
+            _tcpContextPool = new JsonContextPool(Configuration.Memory.MaxContextSizeToKeep);
         }
 
         public TcpListenerStatus GetTcpServerStatus()
         {
             return _tcpListenerStatus;
         }
+
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
@@ -245,7 +249,7 @@ namespace Raven.Server
                             // here we wait a bit, just enough so for normal servers
                             // we'll be successful, but not enough to hang the server
                             // startup if there is some issue talking to the node because
-                            // of firewall, ssl issues, etc. 
+                            // of firewall, ssl issues, etc.
                             .Wait(250);
                     }
                     catch (Exception)
@@ -281,7 +285,6 @@ namespace Raven.Server
                     throw;
                 }
 
-
                 ServerStore.TriggerDatabases();
 
                 StartSnmp();
@@ -302,7 +305,7 @@ namespace Raven.Server
                     CpuCreditsBalance.BaseCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.MaxCredits = Configuration.Server.CpuCreditsMax.Value;
                     CpuCreditsBalance.BackgroundTasksThreshold =
-                        // default to 1/4 of the base CPU credits 
+                        // default to 1/4 of the base CPU credits
                         Configuration.Server.CpuCreditsExhaustionBackgroundTasksThreshold ?? CpuCreditsBalance.BaseCredits / 4;
                     CpuCreditsBalance.FailoverThreshold =
                         // default to disabled
@@ -332,7 +335,7 @@ namespace Raven.Server
                 throw;
             }
         }
-        
+
         public void ClearExternalCertificateValidationCache()
         {
             // Can be called from the Admin JS Console
@@ -1038,7 +1041,7 @@ namespace Raven.Server
             // the process of updating a new certificate is the same as deleting a database
             // we first send the certificate to all the nodes, then we get acknowledgments
             // about that from them, and we replace only when they are confirmed to have been
-            // successful. However, if we have less than 3 days for renewing the cert or if 
+            // successful. However, if we have less than 3 days for renewing the cert or if
             // replaceImmediately is true, we'll replace immediately
 
             try
@@ -1163,7 +1166,7 @@ namespace Raven.Server
             // remove the root domain
             var substring = hosts[0].Substring(0, hosts[0].Length - usedRootDomain.Length - 1);
             var firstDot = substring.IndexOf('.');
-            // remove the *. 
+            // remove the *.
             var domain = substring.Substring(firstDot + 1);
 
             if (userDomainsResult.Domains.Any(userDomain => string.Equals(userDomain.Key, domain, StringComparison.OrdinalIgnoreCase)) == false)
@@ -1294,7 +1297,7 @@ namespace Raven.Server
                 if (AuthorizedDatabases.TryGetValue(db, out mode) == false)
                     return false;
 
-                // Technically speaking, since this is per connection, this is single threaded. But I'm 
+                // Technically speaking, since this is per connection, this is single threaded. But I'm
                 // worried about race conditions here if we move to HTTP 2.0 at some point. At that point,
                 // we'll probably want to handle this concurrently, and the cost of adding it in this manner
                 // is pretty small for most cases anyway
@@ -1547,15 +1550,12 @@ namespace Raven.Server
                     issuerPinningHash = currentElementPinningHash;
                     return false;
                 }
-
             }
 
             return true;
         }
 
         public string WebUrl { get; private set; }
-
-        internal readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
         internal CertificateHolder Certificate;
 
@@ -1807,7 +1807,6 @@ namespace Raven.Server
                         {
                             if (tcpAuditLog != null)
                                 tcpAuditLog.Info($"Closed TCP connection {remoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
-
                         }
                     }
                 }
@@ -1947,7 +1946,6 @@ namespace Raven.Server
             return header;
         }
 
-
         private async Task<TcpClient> AcceptTcpClientAsync(TcpListener listener)
         {
             var backoffSecondsDelay = 0;
@@ -2043,6 +2041,7 @@ namespace Raven.Server
                 writer.Flush();
             }
         }
+
         private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
         {
             var tcpStream = tcp?.Stream;
@@ -2106,7 +2105,7 @@ namespace Raven.Server
 
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats)
             {
-                // check for the term          
+                // check for the term
                 using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                 using (var headerJson = await context.ParseToMemoryAsync(
                     tcp.Stream,
@@ -2188,7 +2187,7 @@ namespace Raven.Server
 
             //since the responses to TCP connections mostly continue to run
             //beyond this point, no sense to dispose the connection now, so set it to null.
-            //this way the responders are responsible to dispose the connection and the context                    
+            //this way the responders are responsible to dispose the connection and the context
             // ReSharper disable once RedundantAssignment
             tcp = null;
             return false;
@@ -2202,18 +2201,20 @@ namespace Raven.Server
                         // it is fine that the client doesn't have a cert, we just care that they
                         // are connecting to us securely. At any rate, we'll ensure that if certificate
                         // is required, we'll validate that it is one of the expected ones on the server
-                        // and that the client is authorized to do so. 
+                        // and that the client is authorized to do so.
                         // Otherwise, we'll generate an error, but we'll do that at a higher level then
                         // SSL, because that generate a nicer error for the user to read then just aborted
                         // connection because SSL negotiation failed.
                         true);
+
                 await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                 {
                     ServerCertificate = Certificate.Certificate,
                     ClientCertificateRequired = true,
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                     EncryptionPolicy = EncryptionPolicy.RequireEncryption,
-                    EnabledSslProtocols = TcpUtils.SupportedSslProtocols
+                    EnabledSslProtocols = TcpUtils.SupportedSslProtocols,
+                    CipherSuitesPolicy = CipherSuitesPolicy
                 });
 
                 return (sslStream, HttpsConnectionMiddleware.ConvertToX509Certificate2(sslStream.RemoteCertificate));
@@ -2221,7 +2222,6 @@ namespace Raven.Server
 
             return (stream, null);
         }
-
 
         private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg)
         {

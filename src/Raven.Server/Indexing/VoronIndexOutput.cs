@@ -78,15 +78,29 @@ namespace Raven.Server.Indexing
         /// <summary>Random-access methods </summary>
         public override void Seek(long pos)
         {
-            base.Seek(pos);
-            _file.Seek(pos, SeekOrigin.Begin);
+            try
+            {
+                base.Seek(pos);
+                _file.Seek(pos, SeekOrigin.Begin);
+            }
+            catch (IOException ioe) when (IsOutOfDiskSpaceException(ioe))
+            {
+                ThrowDiskFullException();
+            }
         }
 
         public override long Length => _file.Length;
 
         public override void SetLength(long length)
         {
-            _file.SetLength(length);
+            try
+            {
+                _file.SetLength(length);
+            }
+            catch (IOException ioe) when (IsOutOfDiskSpaceException(ioe))
+            {
+                ThrowDiskFullException();
+            }
         }
 
         protected override void Dispose(bool disposing)
