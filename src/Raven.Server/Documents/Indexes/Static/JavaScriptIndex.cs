@@ -7,6 +7,7 @@ using Jint.Native;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
@@ -89,6 +90,9 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 foreach (var item in definition.Fields)
                 {
+                    if (string.Equals(item.Key, Constants.Documents.Indexing.Fields.AllFields))
+                        continue;
+
                     fields.Add(item.Key);
                 }
             }
