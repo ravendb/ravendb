@@ -57,6 +57,7 @@ namespace Raven.Server.Rachis
         private readonly ConcurrentDictionary<string, FollowerAmbassador> _nonVoters =
             new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
 
+        // Use for debug only
         public Dictionary<string, FollowerAmbassador> CurrentPeers => new  Dictionary<string, FollowerAmbassador>(_voters.Concat(_nonVoters).Concat(_promotables));
 
         public ConcurrentDictionary<string, int> PeersVersion = new ConcurrentDictionary<string, int>();

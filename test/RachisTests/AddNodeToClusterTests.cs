@@ -100,7 +100,7 @@ namespace RachisTests
         [InlineData(false)]
         public async Task ReAddMemberNode(bool withManyCompareExchange)
         {
-            var timeout = withManyCompareExchange ? TimeSpan.FromMinutes(10) : TimeSpan.FromSeconds(15);
+            var timeout = withManyCompareExchange ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1);
             using (var cts = new CancellationTokenSource(timeout))
             {
                 var customSettings = new Dictionary<string, string>
