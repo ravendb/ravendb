@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -329,6 +330,17 @@ namespace FastTests
             }
         }
 
+        private static void CheckServerLeak()
+        {
+            foreach (var leakedServer in LeakedServers)
+            {
+                if (leakedServer.Key.Disposed)
+                    continue;
+
+                Console.WriteLine($"[ Leak!! ] The test {leakedServer.Value} leaks a server.");
+            }
+        }
+
         private static void UnloadServer(AssemblyLoadContext obj)
         {
             try
@@ -402,6 +414,7 @@ namespace FastTests
             finally
             {
                 TestResourcesAnalyzer.Complete();
+                CheckServerLeak();
             }
         }
 
@@ -528,6 +541,7 @@ namespace FastTests
             public Action<ServerStore> BeforeDatabasesStartup;
         }
 
+        private static readonly ConcurrentDictionary<RavenServer, string> LeakedServers = new ConcurrentDictionary<RavenServer, string>();
         protected virtual RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
         {
             if (options == null)
@@ -603,6 +617,9 @@ namespace FastTests
 
                 if (options.RegisterForDisposal)
                     ServersForDisposal.Add(server);
+
+                if (LeakedServers.TryAdd(server, Context.UniqueTestName))
+                    server.AfterDisposal += () => LeakedServers.TryRemove(server, out _);
 
                 return server;
             }
@@ -697,7 +714,7 @@ namespace FastTests
                     server.Dispose();
                 });
             }
-
+            
             ServersForDisposal = null;
 
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
