@@ -9,14 +9,12 @@ using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -28,7 +26,7 @@ namespace Raven.Server.Rachis
 {
     /// <summary>
     /// This class implements the leader behavior. Note that only a single thread
-    /// actually does work in here, the leader thread. All other work is requested 
+    /// actually does work in here, the leader thread. All other work is requested
     /// from it and it is done
     /// </summary>
     public class Leader : IDisposable
@@ -52,17 +50,24 @@ namespace Raven.Server.Rachis
 
         private readonly ConcurrentDictionary<string, FollowerAmbassador> _voters =
             new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+
         private readonly ConcurrentDictionary<string, FollowerAmbassador> _promotables =
             new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+
         private readonly ConcurrentDictionary<string, FollowerAmbassador> _nonVoters =
             new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// DEBUG ONLY
+        /// </summary>
+        public Dictionary<string, FollowerAmbassador> CurrentPeers => new Dictionary<string, FollowerAmbassador>(_voters.Concat(_nonVoters).Concat(_promotables));
 
         public ConcurrentDictionary<string, int> PeersVersion = new ConcurrentDictionary<string, int>();
 
         private PoolOfThreads.LongRunningWork _leaderLongRunningWork;
 
         private int _previousPeersWereDisposed;
-        
+
         public long LowestIndexInEntireCluster
         {
             get { return _lowestIndexInEntireCluster; }
@@ -70,6 +75,7 @@ namespace Raven.Server.Rachis
         }
 
         public readonly long Term;
+
         public Leader(RachisConsensus engine, long term)
         {
             Term = term;
@@ -116,8 +122,6 @@ namespace Raven.Server.Rachis
             old.TrySetResult(null);
         }
 
-
-
         public Dictionary<string, NodeStatus> GetStatus()
         {
             var dict = new Dictionary<string, NodeStatus>();
@@ -161,7 +165,7 @@ namespace Raven.Server.Rachis
                     }
                     return;
                 }
-                
+
                 if (Term != _engine.CurrentTerm)
                 {
                     if (_engine.Log.IsInfoEnabled)
@@ -170,7 +174,7 @@ namespace Raven.Server.Rachis
                     }
                     return;
                 }
-                
+
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"{ToString()}: Refreshing ambassadors");
@@ -251,7 +255,7 @@ namespace Raven.Server.Rachis
                     }
                     ambassador.Start();
                 }
-                
+
                 if (old.Count > 0)
                 {
                     foreach (var ambassador in old)
@@ -329,11 +333,11 @@ namespace Raven.Server.Rachis
                     _engine.ReportLeaderTime(LeaderShipDuration);
 
                     // don't truncate if we are disposing an old peer
-                    // otherwise he would not receive notification that he was 
+                    // otherwise he would not receive notification that he was
                     // kick out of the cluster
-                    if (_previousPeersWereDisposed > 0) // Not Interlocked, because the race here is not interesting. 
+                    if (_previousPeersWereDisposed > 0) // Not Interlocked, because the race here is not interesting.
                         continue;
-                    
+
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {
@@ -402,7 +406,6 @@ namespace Raven.Server.Rachis
                     $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.StatusMessage} - {followerAmbassador.ThreadStatus}");
             }
 
-
             if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
             {
                 _engine.Log.Info($"{ToString()}:VoteOfNoConfidence{Environment.NewLine } {sb}");
@@ -417,6 +420,7 @@ namespace Raven.Server.Rachis
         }
 
         private long _lastCommit;
+
         private void OnVoterConfirmation()
         {
             TransactionOperationContext context;
@@ -488,12 +492,13 @@ namespace Raven.Server.Rachis
             // we have still items to process, run them in 1 node cluster
             // and speed up the followers ambassadors if they can
             _newEntry.Set();
-            
+
             if (changedFromLeaderElectToLeader)
                 _engine.LeaderElectToLeaderChanged();
         }
 
         private readonly List<(FollowerAmbassador voter, TimeSpan time)> _timeoutsForVoters = new List<(FollowerAmbassador, TimeSpan)>();
+
         private void EnsureThatWeHaveLeadership(int majority)
         {
             var now = DateTime.UtcNow;
@@ -513,12 +518,12 @@ namespace Raven.Server.Rachis
         /// <summary>
         /// This method works on the match indexes, assume that we have three nodes
         /// A, B and C, and they have the following index values:
-        /// 
+        ///
         /// { A = 4, B = 3, C = 2 }
-        /// 
-        /// 
+        ///
+        ///
         /// In this case, the quorum agrees on 3 as the committed index.
-        /// 
+        ///
         /// Why? Because A has 4 (which implies that it has 3) and B has 3 as well.
         /// So we have 2 nodes that have 3, so that is the quorum.
         /// </summary>
@@ -643,7 +648,7 @@ namespace Raven.Server.Rachis
                                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
                             }
 
-                            // if the command is already dequeued we must let it continue to keep its context valid. 
+                            // if the command is already dequeued we must let it continue to keep its context valid.
                             await rachisMergedCommand.Tcs.Task;
                         }
                     }
@@ -781,7 +786,7 @@ namespace Raven.Server.Rachis
                     return null;
             }
         }
-        
+
         public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
 
         public void NotifyAboutException(string node, string title, string message, Exception e)
@@ -803,10 +808,11 @@ namespace Raven.Server.Rachis
                 ErrorsList.Reduce(25);
             }
         }
+
         private DisposeLock _disposerLock = new DisposeLock("Leader");
+
         public void Dispose()
         {
-
             using (_disposerLock.StartDisposing())
             {
                 bool lockTaken = false;
@@ -852,7 +858,6 @@ namespace Raven.Server.Rachis
                     if (_leaderLongRunningWork != null && _leaderLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                         _leaderLongRunningWork.Join(int.MaxValue);
 
-
                     _engine.ForTestingPurposes?.LeaderDispose();
 
                     var ae = new ExceptionAggregator("Could not properly dispose Leader");
@@ -886,7 +891,6 @@ namespace Raven.Server.Rachis
                         Monitor.Exit(this);
                 }
             }
-
         }
 
         public Task WaitForNewEntries()
@@ -1014,7 +1018,7 @@ namespace Raven.Server.Rachis
                     Interlocked.Exchange(ref _topologyModification, null)?.TrySetException(e);
                     throw;
                 }
-               
+
                 _hasNewTopology.Raise();
                 _voterResponded.Set();
                 _newEntry.Set();
@@ -1022,7 +1026,7 @@ namespace Raven.Server.Rachis
                 return true;
             }
         }
-        
+
         public override string ToString()
         {
             return $"Leader {_engine.Tag} in term {Term}";

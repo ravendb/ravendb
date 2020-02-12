@@ -20,6 +20,8 @@ class migrateRavenDbDatabaseModel {
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(true);
     includeSubscriptions = ko.observable(true);
+    includeDocumentsTombstones = ko.observable(true);
+    includeCompareExchangeTombstones = ko.observable(true);
 
     databaseModel = new smugglerDatabaseRecord();
     
@@ -138,8 +140,11 @@ class migrateRavenDbDatabaseModel {
             if (this.includeSubscriptions() && !this.isLegacy()) {
                 operateOnTypes.push("Subscriptions");
             }
-            if (this.includeTimeSeries() && !this.isLegacy()) {
-                operateOnTypes.push("TimeSeries");
+            if (this.includeDocumentsTombstones() && !this.isLegacy()) {
+                operateOnTypes.push("Tombstones");
+            }
+            if (this.includeCompareExchangeTombstones() && this.isV42orAbove()) {
+                operateOnTypes.push("CompareExchangeTombstones");
             }
         }
 
@@ -312,6 +317,18 @@ class migrateRavenDbDatabaseModel {
             }
         });
 
+        this.includeCounters.subscribe(counters => {
+            if (counters) {
+                this.includeDocuments(true);
+            }
+        });
+
+        this.includeAttachments.subscribe(attachments => {
+            if (attachments) {
+                this.includeAttachments(true);
+            }
+        });
+
         this.removeAnalyzers.subscribe(analyzers => {
             if (analyzers) {
                 this.includeIndexes(true);
@@ -385,7 +402,9 @@ class migrateRavenDbDatabaseModel {
                     this.includeSubscriptions() ||
                     this.includeIdentities() || 
                     this.includeCompareExchange() || 
-                    this.includeCounters();
+                    this.includeCounters()||
+                    this.includeDocumentsTombstones() ||
+                    (this.includeCompareExchangeTombstones() && this.isV42orAbove());
             }
 
             const hasIncludes = this.includeDocuments() || 

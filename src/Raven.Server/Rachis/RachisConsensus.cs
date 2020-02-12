@@ -32,6 +32,7 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using System.Linq;
 using Raven.Server.Rachis.Remote;
+using System.Net.Security;
 
 namespace Raven.Server.Rachis
 {
@@ -40,9 +41,9 @@ namespace Raven.Server.Rachis
     {
         private readonly ServerStore _serverStore;
 
-        public RachisConsensus(ServerStore serverStore, int? seed = null) : base( seed)
+        public RachisConsensus(ServerStore serverStore, int? seed = null) : base(serverStore.Server.CipherSuitesPolicy, seed)
         {
-            _serverStore = serverStore;            
+            _serverStore = serverStore;
         }
 
         public TStateMachine StateMachine;
@@ -64,7 +65,7 @@ namespace Raven.Server.Rachis
             StateMachine = new TStateMachine();
             StateMachine.Initialize(this, context);
         }
-        
+
         public override void Dispose()
         {
             SetNewState(RachisState.Follower, new NullDisposable(), -1, "Disposing Rachis", asyncDispose: false);
@@ -135,7 +136,7 @@ namespace Raven.Server.Rachis
         public DateTime At = DateTime.UtcNow;
         public string Message;
         public long Ticks;
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -150,14 +151,14 @@ namespace Raven.Server.Rachis
     {
         public readonly ConcurrentBag<RachisLogEntry> Timings = new ConcurrentBag<RachisLogEntry>();
     }
-    
+
     public class RachisLogRecorder
     {
         private readonly ConcurrentQueue<RachisTimings> _queue;
         private readonly Stopwatch _sp = Stopwatch.StartNew();
         private RachisTimings _current;
         private ConcurrentBag<RachisLogEntry> Timings => _current.Timings;
-        
+
         public RachisLogRecorder(ConcurrentQueue<RachisTimings> queue)
         {
             _queue = queue;
@@ -174,7 +175,7 @@ namespace Raven.Server.Rachis
             });
             _sp.Restart();
         }
-        
+
         public void Record(string message)
         {
             Timings.Add(new RachisLogEntry
@@ -201,7 +202,7 @@ namespace Raven.Server.Rachis
             }
             return new RachisLogRecorder(queue);
         }
-        
+
         public void RemoveRecorder(string name)
         {
             if (TimingTracking.Remove(name, out var q))
@@ -223,9 +224,9 @@ namespace Raven.Server.Rachis
                     inner.Add(new DynamicJsonArray(queue.Timings.OrderBy(x => x.At)));
                 }
             }
-            
+
             var stateTracking = new DynamicJsonArray(StateChangeTracking);
-           
+
             return new DynamicJsonValue
             {
                 [nameof(TimingTracking)] = timingTracking,
@@ -358,8 +359,9 @@ namespace Raven.Server.Rachis
         private string _lastStateChangeReason;
         public Candidate Candidate { get; private set; }
 
-        protected RachisConsensus(int? seed = null)
+        protected RachisConsensus(CipherSuitesPolicy cipherSuitesPolicy, int? seed = null)
         {
+            CipherSuitesPolicy = cipherSuitesPolicy;
             _rand = seed.HasValue ? new Random(seed.Value) : new Random();
             LogHistory = new RachisLogHistory();
         }
@@ -390,7 +392,7 @@ namespace Raven.Server.Rachis
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
-                ContextPool = new TransactionContextPool(_persistentState);
+                ContextPool = new TransactionContextPool(_persistentState, configuration.Memory.MaxContextSizeToKeep);
 
                 ClusterTopology topology;
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -449,7 +451,7 @@ namespace Raven.Server.Rachis
                 throw;
             }
         }
-        
+
         private unsafe long ReadTerm(TransactionOperationContext context)
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
@@ -492,7 +494,7 @@ namespace Raven.Server.Rachis
                 Log.Info("Switching to leader state");
             }
             var leader = new Leader(this, electionTerm);
-            SetNewStateInTx(context, RachisState.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader" , () => _currentLeader = leader);
+            SetNewStateInTx(context, RachisState.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader", () => _currentLeader = leader);
             SwitchToSingleLeaderAction?.Invoke(context);
 
             Candidate = null;
@@ -605,7 +607,7 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
-                SetNewStateInTx(context, rachisState, disposable, expectedTerm, stateChangedReason , beforeStateChangedEvent, asyncDispose);
+                SetNewStateInTx(context, rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose);
                 context.Transaction.Commit();
             }
             _leadershipTimeChanged.SetAndResetAtomically();
@@ -702,7 +704,7 @@ namespace Raven.Server.Rachis
             }
 
             var sp = Stopwatch.StartNew();
-            
+
             _currentLeader = null;
             LastStateChangeReason = stateChangedReason;
             var toDispose = new List<IDisposable>(_disposables);
@@ -716,7 +718,7 @@ namespace Raven.Server.Rachis
             {
                 // if we are back to null state, wait to become candidate if no one talks to us
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
-            } 
+            }
 
             if (rachisState == RachisState.Passive)
             {
@@ -731,7 +733,7 @@ namespace Raven.Server.Rachis
                 Reason = stateChangedReason,
                 When = DateTime.UtcNow
             };
-            
+
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
 
@@ -793,8 +795,8 @@ namespace Raven.Server.Rachis
                     }
                 }
             };
-            
-            
+
+
         }
 
         private void ParallelDispose(List<IDisposable> toDispose)
@@ -873,7 +875,7 @@ namespace Raven.Server.Rachis
             {
                 ClusterCommandsVersionManager.SetClusterVersion(version);
                 _currentLeader = leader;
-                
+
             });
             leader.Start(connections);
         }
@@ -911,7 +913,7 @@ namespace Raven.Server.Rachis
                             Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
                         }
 
-                        SetNewStateInTx(context, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive" );
+                        SetNewStateInTx(context, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive");
                         ctx.Commit();
                         return;
                     }
@@ -924,7 +926,7 @@ namespace Raven.Server.Rachis
                         // we aren't a member, nothing that we can do here
                         return;
                     }
-                    if (clusterTopology.AllNodes.Count == 1 && 
+                    if (clusterTopology.AllNodes.Count == 1 &&
                         clusterTopology.Members.Count == 1)
                     {
                         if (Log.IsInfoEnabled)
@@ -1042,14 +1044,14 @@ namespace Raven.Server.Rachis
 
             return topologyJson;
         }
-        
+
         public void NotifyTopologyChange(bool propagateError = false)
         {
             try
             {
                 if (IsDisposed)
                     return;
-                
+
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -1092,7 +1094,7 @@ namespace Raven.Server.Rachis
                         if (clusterTopology.TopologyId == initialMessage.TopologyId && initialMessage.DebugSourceIdentifier == _tag)
                         {
                             throw new TopologyMismatchException($"Connection from ({remoteEndpoint}_ with the same topology id and tag {_tag}. " +
-                                                                "It is possible that you have DNS or routing issues that cause multiple URLs to go to the same node."  +
+                                                                "It is possible that you have DNS or routing issues that cause multiple URLs to go to the same node." +
                                                                 $"Connection from {initialMessage.SourceUrl} and attempted to connect to {initialMessage.DestinationUrl}");
                         }
 
@@ -1222,7 +1224,7 @@ namespace Raven.Server.Rachis
             RachisEntryFlags flags)
         {
             Debug.Assert(context.Transaction != null);
-            
+
             ValidateTerm(term);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
@@ -1697,7 +1699,7 @@ namespace Raven.Server.Rachis
                 throw new ConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
             }
         }
-        
+
         public unsafe void CastVoteInTerm(TransactionOperationContext context, long term, string votedFor, string reason)
         {
             Debug.Assert(context.Transaction != null);
@@ -1729,10 +1731,10 @@ namespace Raven.Server.Rachis
             CurrentTerm = term;
 
             // give the other side enough time to become the leader before challenging them
-            Timeout.Defer(votedFor); 
-            
+            Timeout.Defer(votedFor);
+
             var currentlyTheLeader = _currentLeader;
-            if (currentlyTheLeader == null) 
+            if (currentlyTheLeader == null)
                 return;
 
             TaskExecutor.Execute(_ =>
@@ -1893,7 +1895,7 @@ namespace Raven.Server.Rachis
 
                 if (topologyId != oldTopology.TopologyId)
                     // if we are going to add this to a different cluster we must get a snapshot
-                    SetSnapshotRequest(ctx, true); 
+                    SetSnapshotRequest(ctx, true);
 
                 SetTopology(this, ctx, topology);
 
@@ -1944,7 +1946,7 @@ namespace Raven.Server.Rachis
                 await task;
 
             await task;
-          
+
         }
 
         private string _leaderTag;
@@ -1967,7 +1969,7 @@ namespace Raven.Server.Rachis
                 case RachisState.Leader:
                     if (CurrentLeader?.Running != true)
                         return null;
-                    return safe ? Volatile.Read(ref _tag) : _tag; 
+                    return safe ? Volatile.Read(ref _tag) : _tag;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -1986,7 +1988,7 @@ namespace Raven.Server.Rachis
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
 
-        public void InvokeBeforeAppendToRaftLog(TransactionOperationContext context,CommandBase cmd)
+        public void InvokeBeforeAppendToRaftLog(TransactionOperationContext context, CommandBase cmd)
         {
             BeforeAppendToRaftLog?.Invoke(context, cmd);
         }
@@ -2009,7 +2011,8 @@ namespace Raven.Server.Rachis
         private TimeSpan _electionTimeout;
         private TimeSpan _tcpConnectionTimeout;
         private DateTime _lastStateChangeTime;
-        private readonly string _clusterIdBase64Id = new string(' ',22);
+        private readonly string _clusterIdBase64Id = new string(' ', 22);
+        public readonly CipherSuitesPolicy CipherSuitesPolicy;
 
         private unsafe void SetClusterBase(string str)
         {

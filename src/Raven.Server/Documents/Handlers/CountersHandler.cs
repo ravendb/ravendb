@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Policy;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -720,15 +721,16 @@ namespace Raven.Server.Documents.Handlers
             string counterName, bool addFullValues, CountersDetail result)
         {
 
-            long? value = null;
+            long value = 0;
+            long etag = 0;
             Dictionary<string, long> fullValues = null;
             if (addFullValues)
             {
                 fullValues = new Dictionary<string, long>();
-                foreach (var (cv, val) in database.DocumentsStorage.CountersStorage.GetCounterValues(context,
+                foreach (var (cv, val, curEtag) in database.DocumentsStorage.CountersStorage.GetCounterValues(context,
                     docId, counterName))
                 {
-                    value = value ?? 0;
+                    etag = HashCode.Combine(etag, curEtag);
                     try
                     {
                         value = checked(value + val);
@@ -739,16 +741,15 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     fullValues[cv] = val;
-
                 }
             }
             else
             {
-                value = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName);
+                var v = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName);
+                if (v == null)
+                    return;
+                (value, etag) = v.Value;
             }
-
-            if (value == null)
-                return;
 
             if (result.Counters == null)
                 result.Counters = new List<CounterDetail>();
@@ -757,8 +758,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 DocumentId = docId,
                 CounterName = counterName,
-                TotalValue = value.Value,
-                CounterValues = fullValues
+                TotalValue = value,
+                CounterValues = fullValues,
+                Etag = etag
             });
         }
 

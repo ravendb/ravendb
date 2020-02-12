@@ -25,11 +25,11 @@ namespace StressTests.Server.Replication
         {
             for (int i = 0; i < 10; i++)
             {
-                Parallel.For(0, 3, RavenTestHelper.DefaultParallelOptions, _ =>
+                Parallel.For(0, 3, RavenTestHelper.DefaultParallelOptions, async _ =>
                 {
                     using (var test = new ExternalReplicationTests(Output))
                     {
-                        test.ExternalReplicationShouldWorkWithSmallTimeoutStress(20000).Wait();
+                        await test.ExternalReplicationShouldWorkWithSmallTimeoutStress(20000);
                     }
                 });
             }

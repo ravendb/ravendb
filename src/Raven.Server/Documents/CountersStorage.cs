@@ -1211,17 +1211,18 @@ namespace Raven.Server.Documents
             return new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
         }
 
-        public long? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
+        public (long Value, long Etag)? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
         {
-            if (TryGetRawBlob(context, docId, counterName, out var blob) == false)
+            if (TryGetRawBlob(context, docId, counterName, out var etag, out var blob) == false)
                 return null;
 
-            return InternalGetCounterValue(blob, docId, counterName);
+            return (InternalGetCounterValue(blob, docId, counterName), etag);
         }
 
-        private static bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out BlittableJsonReaderObject.RawBlob blob)
+        private static bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out long etag, out BlittableJsonReaderObject.RawBlob blob)
         {
             blob = null;
+            etag = -1;
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
@@ -1233,6 +1234,7 @@ namespace Raven.Server.Documents
                     return false;
 
                 var data = GetCounterValuesData(context, ref tvr);
+                etag = GetCounterEtag(ref tvr);
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
                     counters.TryGetMember(counterName, out object counterValues) == false ||
                     counterValues is LazyStringValue)
@@ -1251,7 +1253,7 @@ namespace Raven.Server.Documents
             return scope;
         }
 
-        public IEnumerable<(string ChangeVector, long Value)> GetCounterValues(DocumentsOperationContext context, string docId, string counterName)
+        public IEnumerable<(string ChangeVector, long Value, long ETag)> GetCounterValues(DocumentsOperationContext context, string docId, string counterName)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
@@ -1264,6 +1266,7 @@ namespace Raven.Server.Documents
                     yield break;
 
                 var data = GetCounterValuesData(context, ref tvr);
+                var etag = GetCounterEtag(ref tvr);
                 if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false ||
                     data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
                     counters.TryGetMember(counterName, out object counterValues) == false ||
@@ -1280,10 +1283,15 @@ namespace Raven.Server.Documents
                     var dbId = dbIds[dbIdIndex].ToString();
                     var val = GetPartialValue(dbIdIndex, blob);
                     var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId);
-                    yield return ($"{nodeTag ?? "?"}-{dbId}", val);
+                    yield return ($"{nodeTag ?? "?"}-{dbId}", val, etag);
                 }
 
             }
+        }
+
+        private static long GetCounterEtag(ref TableValueReader tvr)
+        {
+            return Bits.SwapBytes(*(long*)tvr.Read((int)CountersTable.Etag, out _));
         }
 
         internal static long GetPartialValue(int index, BlittableJsonReaderObject.RawBlob counterValues)

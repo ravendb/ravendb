@@ -147,9 +147,18 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         [ThreadStatic]
         private static Random _random;
 
-        internal static int Shuffle(string _, string __)
+        // Fisher-Yates shuffle algorithm
+        public static void Shuffle<T>(this IList<T> list)
         {
-            return (_random ??= new Random()).Next(-100, 100);
+            var n = list.Count;
+            while (n > 1)
+            {
+                n--;
+                var k = (_random ??= new Random()).Next(n + 1);
+                var value = list[k];
+                list[k] = list[n];
+                list[n] = value;
+            }
         }
     }
 
@@ -170,7 +179,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
 
         internal void ReorderMembers()
         {
-            Members.Sort(ThreadSafeRandom.Shuffle);
+            Members.Shuffle();
 
             if (PriorityOrder == null || PriorityOrder.Count == 0)
                 return;

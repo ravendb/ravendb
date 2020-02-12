@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
@@ -99,46 +100,44 @@ namespace RachisTests
         [InlineData(false)]
         public async Task ReAddMemberNode(bool withManyCompareExchange)
         {
-            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10)))
+            var timeout = withManyCompareExchange ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1);
+            using (var cts = new CancellationTokenSource(timeout))
             {
                 var customSettings = new Dictionary<string, string>
                 {
                     {"Cluster.TcpTimeoutInMs", "3000"}
                 };
 
-                var (nodes, leader) = await CreateRaftCluster(2, customSettings: customSettings);
+                var (nodes, leader) = await CreateRaftCluster(2, customSettings: customSettings, watcherCluster: true);
                 var follower = nodes.Single(x => x != leader);
-
-                var databaseName = GetDatabaseName();
-
-                using (var store = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName }.Initialize())
-                using (EnsureDatabaseDeletion(store.Database, store))
+                using (var store = GetDocumentStore(new Options
                 {
-                    try
-                    {
-                        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(databaseName), 2), cts.Token);
-                    }
-                    catch (ConcurrencyException)
-                    {
-                    }
-
+                    Server = leader,
+                    ReplicationFactor = 2
+                }))
+                {
                     if (withManyCompareExchange)
                         await AddManyCompareExchange(store, cts.Token);
-
-                    leader = await ActionWithLeader(l =>
+                    var followerAmbassador = leader.ServerStore.Engine.CurrentLeader.CurrentPeers[follower.ServerStore.NodeTag];
+                    await leader.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag, cts.Token);
+                    var removed = await WaitForValueAsync(() =>
                     {
-                        follower = nodes.Single(x => x != l);
-                        return l.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag, cts.Token);
-                    });
-                    await follower.ServerStore.WaitForState(RachisState.Passive, cts.Token);
+                        try
+                        {
+                            return followerAmbassador.Status != AmbassadorStatus.Connected;
+                        }
+                        catch
+                        {
+                            return true;
+                        }
+                    }, true);
 
-                    using (var store2 = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName }.Initialize())
-                    {
-                        await store2.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0), token: cts.Token);
-                    }
+                    Assert.True(removed,$"{followerAmbassador.Status}");
 
-                    await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl, follower.ServerStore.NodeTag, token: cts.Token);
-                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter, cts.Token);
+                    var result = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0), token: cts.Token);
+                    await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl, follower.ServerStore.NodeTag, asWatcher: true, token: cts.Token);
+                    await follower.ServerStore.Cluster.WaitForIndexNotification(result.Index, timeout);
+                  
                 }
             }
         }

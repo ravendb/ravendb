@@ -27,6 +27,7 @@ namespace Sparrow.Json
     public class JsonOperationContext : PooledItem
     {
         private int _generation;
+        internal long PoolGeneration;
         public const int InitialStreamSize = 4096;
         private const int MaxInitialStreamSize = 16 * 1024 * 1024;
         private readonly int _initialSize;

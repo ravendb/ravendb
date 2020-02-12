@@ -16,11 +16,11 @@ namespace StressTests.Issues
         [Fact]
         public void Should_not_throw_timeout_and_out_of_memory()
         {
-            Parallel.For(0, 3, RavenTestHelper.DefaultParallelOptions, i =>
+            Parallel.For(0, 3, RavenTestHelper.DefaultParallelOptions, async _ =>
             {
                 using (var store = new ReplicationTombstoneTests(Output))
                 {
-                    store.Two_tombstones_should_replicate_in_master_master().Wait();
+                    await store.Two_tombstones_should_replicate_in_master_master();
                 }
             });
         }

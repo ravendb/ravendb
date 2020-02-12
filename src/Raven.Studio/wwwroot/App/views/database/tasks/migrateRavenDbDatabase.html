@@ -24,7 +24,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div>
                             <div class="form-group" data-bind="visible: isSecuredConnection">
                                 <label class="control-label"></label>
@@ -34,7 +33,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="form-group" data-bind="validationElement: serverMajorVersion">
                             <label class="control-label">Server Version</label>
                             <div class="flex-grow">
@@ -49,7 +47,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="form-group" data-bind="visible: hasRavenFs">
                             <label class="control-label">Resource type</label>
                             <div class="flex-grow" data-bind="validationElement: authenticationMethod">
@@ -65,7 +62,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="form-group" data-bind="validationElement: resourceName">
                             <label class="control-label"><span data-bind="text: resourceTypeName"></span> name</label>
                             <div class="flex-grow">
@@ -83,7 +79,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div data-bind="visible: isLegacy">
                             <div class="form-group">
                                 <label class="control-label">Authentication method</label>
@@ -146,7 +141,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div data-bind="with: model" style="margin-left: 160px">
                     <div data-bind="visible: isRavenDb() && !ravenFsImport()">
                         <div class="row">
@@ -205,18 +199,25 @@
                                     <input id="migrate_cmp_xch" type="checkbox" data-bind="checked: includeCompareExchange" />
                                     <label for="migrate_cmp_xch">Include Compare Exchange</label>
                                 </div>
-
                                 <div class="toggle">
-                                    <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
-                                    <label for="includeSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
+                                    <input id="migrate_Subscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
+                                    <label for="migrate_Subscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
                                 </div>
                                 <div class="flex-horizontal" data-bind="visible: !isLegacy()">
                                     <div class="toggle">
-                                        <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
-                                        <label for="importConfiguration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
+                                        <input id="migrate_Configuration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
+                                        <label for="migrate_Configuration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
                                     </div>
                                     <button class="btn btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
                                     <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
+                                </div>
+                                <div class="toggle" data-bind="visible: !isLegacy()">
+                                    <input id="migrate_DocumentsTombstones" type="checkbox" data-bind="checked: includeDocumentsTombstones" />
+                                    <label for="migrate_DocumentsTombstones" class="margin-right margin-right-sm">Include Documents Tombstones</label>
+                                </div>
+                                <div class="toggle" data-bind="visible: isV42orAbove">
+                                    <input id="migrate_CmpXchTombstones" type="checkbox" data-bind="checked: includeCompareExchangeTombstones" />
+                                    <label for="migrate_CmpXchTombstones" class="margin-right margin-right-sm">Include Compare Exchange Tombstones</label>
                                 </div>
                             </div>
                         </div>
@@ -225,7 +226,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div data-bind="collapse: showAdvancedOptions">
                     <hr />
                     <h3>Advanced</h3>
@@ -245,14 +245,12 @@
                                 </pre>
                                 </div>
                             </div>
-
                             <div data-bind="with: databaseModel, visible: isRavenDb() && !ravenFsImport()">
                                 <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
                 <hr />
                 <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
                     Advanced

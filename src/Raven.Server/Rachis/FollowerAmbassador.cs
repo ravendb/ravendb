@@ -413,6 +413,7 @@ namespace Raven.Server.Rachis
                             if (_leader.TryModifyTopology(_tag, _url, Leader.TopologyModification.Remove, out _))
                             {
                                 StatusMessage = "No longer in the topology";
+                                Status = AmbassadorStatus.Disconnected;
                                 return;
                             }
                         }

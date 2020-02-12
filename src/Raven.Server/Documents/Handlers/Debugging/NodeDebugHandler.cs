@@ -147,8 +147,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
                     result.TcpInfoTime = sp.ElapsedMilliseconds;
                     using (var tcpClient = await TcpUtils.ConnectAsync(info.Url, ServerStore.Engine.TcpConnectionTimeout).ConfigureAwait(false))
-                    using (var stream = await TcpUtils
-                        .WrapStreamWithSslAsync(tcpClient, info, ServerStore.Engine.ClusterCertificate, ServerStore.Engine.TcpConnectionTimeout).ConfigureAwait(false))
+                    using (var stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy, ServerStore.Engine.TcpConnectionTimeout).ConfigureAwait(false))
                     using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
                         var msg = new DynamicJsonValue
