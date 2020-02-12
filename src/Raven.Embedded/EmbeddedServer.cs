@@ -6,9 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO;
+
 #if NETSTANDARD2_0
+
 using System.Runtime.Loader;
+
 #endif
+
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
@@ -37,7 +41,7 @@ namespace Raven.Embedded
 
         private ServerOptions? _serverOptions;
 
-        public async Task<int> GetServerProcessId(CancellationToken token = default)
+        public async Task<int> GetServerProcessIdAsync(CancellationToken token = default)
         {
             var server = _serverTask;
             if (server == null)
@@ -45,7 +49,7 @@ namespace Raven.Embedded
             return (await server.Value.WithCancellation(token).ConfigureAwait(false)).ServerProcess.Id;
         }
 
-        public Task RestartServer()
+        public async Task RestartServerAsync()
         {
             var existingServerTask = _serverTask;
             if (_serverOptions == null || existingServerTask == null || existingServerTask.IsValueCreated == false)
@@ -53,8 +57,8 @@ namespace Raven.Embedded
 
             try
             {
-                var serverProcess = existingServerTask.Value.ConfigureAwait(false).GetAwaiter().GetResult().ServerProcess;
-                ShutdownServerProcess(serverProcess);
+                var (ServerUrl, ServerProcess) = await existingServerTask.Value.ConfigureAwait(false);
+                ShutdownServerProcess(ServerProcess);
             }
             catch
             {
@@ -64,7 +68,7 @@ namespace Raven.Embedded
             if (Interlocked.CompareExchange(ref _serverTask, null, existingServerTask) != existingServerTask)
                 throw new InvalidOperationException("The server changed while restarting it. Are you calling RestartServer() concurrently?");
 
-            return StartServerInternal();
+            await StartServerInternal().ConfigureAwait(false);
         }
 
         public void StartServer(ServerOptions? options = null)
@@ -135,7 +139,6 @@ namespace Raven.Embedded
 
             token.ThrowIfCancellationRequested();
 
-            
             var lazy = new Lazy<Task<IDocumentStore>>(async () =>
             {
                 var serverUrl = await GetServerUriAsync(token).ConfigureAwait(false);
@@ -231,16 +234,11 @@ namespace Raven.Embedded
             }
         }
 
-        public class ServerProcessExitedEventArgs : EventArgs
-        {
-
-        }
-
         public event EventHandler<ServerProcessExitedEventArgs>? ServerProcessExited;
 
         private async Task<(Uri ServerUrl, Process ServerProcess)> RunServer()
         {
-            if(_serverOptions == null)
+            if (_serverOptions == null)
                 throw new ArgumentNullException(nameof(_serverOptions));
 
             var process = RavenServerRunner.Run(_serverOptions);
