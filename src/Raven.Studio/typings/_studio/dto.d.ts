@@ -124,6 +124,8 @@ interface attachmentItem {
 interface timeSeriesItem {
     name: string;
     numberOfEntries: number;
+    startDate: string;
+    endDate: string;
 }
 
 interface timeSeriesPlotItem {

@@ -188,16 +188,21 @@ class connectedDocuments {
                 { title: (x) => "Total value is: " + x.totalCounterValue.toLocaleString() })
         ];
         
+        const dateFormatter = (date: string) => moment.utc(date).local().format("YYYY-MM-DD");
+        
         this.timeSeriesColumns = [
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Name", "200px",
-                { title: () => "Time Series Name" }),
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries, "Items count", "100px",
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Name", "145px",
+                { title: x => "Time Series Name: " + x.name }),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => generalUtils.siFormat(x.numberOfEntries), "Items count", "60px",
                 { title: (x) => "Series items count: " + x.numberOfEntries.toLocaleString() }),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Date range", "170px", {
+                title: x => "Date range: " + generalUtils.formatUtcDateAsLocal(x.startDate) + " - " + generalUtils.formatUtcDateAsLocal(x.endDate)
+            }),
             new actionColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>,
                 x => this.goToTimeSeriesEdit(x),
                 "Details",
                 `<i class="icon-preview"></i>`,
-                "70px",
+                "50px",
                 { title: () => 'Go to time series details' })
         ]
     }
