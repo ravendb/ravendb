@@ -1,33 +1,19 @@
 ﻿using System;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace Sparrow.Server.Utils
 {
     public static class FileHelper
     {
-        public static unsafe int CalculateHash(string filePath)
+        public static string CalculateHash(string filePath)
         {
             if (File.Exists(filePath) == false)
-                return 0;
+                return null;
 
             using var stream = File.OpenRead(filePath);
-            var ctx = new Hashing.Streamed.XXHash32Context();
-            Hashing.Streamed.XXHash32.BeginProcess(ref ctx);
-
-            const int len = 1024*16;
-            var buffer = stackalloc byte[len];
-            Span<byte> span = new Span<byte>(buffer, len);
-
-            while (true)
-            {
-                var toProcess = stream.Read(span);
-                if (toProcess <= 0)
-                    break;
-
-                Hashing.Streamed.XXHash32.Process(ref ctx, buffer, toProcess);
-            }
-
-            return (int)Hashing.Streamed.XXHash32.EndProcess(ref ctx);
+            using var hash = SHA256.Create();
+            return Convert.ToBase64String(hash.ComputeHash(stream));
         }
     }
 }
