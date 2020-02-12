@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.Queries
     {
         private readonly OperatorType _operator;
 
+        public bool AnyBoost => Math.Abs(Boost - 1.0f) >= float.Epsilon;
+
         public RavenBooleanQuery(OperatorType @operator)
         {
             _operator = @operator;
@@ -78,7 +80,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (query is RavenBooleanQuery booleanQuery)
             {
-                if (booleanQuery._operator == @operator)
+                if (booleanQuery._operator == @operator && booleanQuery.AnyBoost == false)
                 {
                     foreach (var booleanClause in booleanQuery.Clauses)
                         Add(booleanClause);
