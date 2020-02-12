@@ -111,7 +111,7 @@ namespace Raven.Client.Util
             TcpClient tcpClient,
             TcpConnectionInfo info,
             X509Certificate2 storeCertificate,
-#if !(NETSTANDARD2_0 || NETCOREAPP2_1)
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
             CipherSuitesPolicy cipherSuitesPolicy,
 #endif
             TimeSpan? timeout)
@@ -132,7 +132,7 @@ namespace Raven.Client.Util
             var targetHost = new Uri(info.Url).Host;
             var clientCertificates = new X509CertificateCollection(new X509Certificate[] { storeCertificate });
 
-#if !(NETSTANDARD2_0 || NETCOREAPP2_1)
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
                 TargetHost = targetHost,

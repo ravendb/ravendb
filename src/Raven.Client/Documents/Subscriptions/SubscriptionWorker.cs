@@ -218,7 +218,7 @@ namespace Raven.Client.Documents.Subscriptions
                     _tcpClient,
                     tcpInfo,
                     _store.Certificate,
-#if !(NETSTANDARD2_0 || NETCOREAPP2_1)
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
                     null,
 #endif
                     requestExecutor.DefaultTimeout).ConfigureAwait(false);
