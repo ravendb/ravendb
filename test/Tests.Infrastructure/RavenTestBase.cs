@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -273,6 +274,7 @@ namespace FastTests
 
                     store.BeforeDispose += (sender, args) =>
                     {
+                        var realException = Context.GetType().GetField("Exception", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)?.GetValue(Context) as Exception;
                         try
                         {
                             if (CreatedStores.TryRemove(store) == false)
@@ -286,15 +288,18 @@ namespace FastTests
 
                             if (Servers.Contains(serverToUse) && result != null)
                             {
-                                var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
+                                var timeout = TimeSpan.FromSeconds(Debugger.IsAttached ? 5 : 1);
                                 AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
                             }
                         }
                         catch (Exception e)
                         {
-                            // we shouldn't throw in the dispose, since this might mask the real exception
-                            Console.WriteLine($"Failed to delete database {name}");
-                            Console.WriteLine(e);
+                            if (realException != null)
+                            {
+                                throw new AggregateException(realException, e);
+                            }
+
+                            throw;
                         }
                     };
                     CreatedStores.Add(store);

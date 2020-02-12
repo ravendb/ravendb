@@ -618,7 +618,7 @@ namespace FastTests
                 if (options.RegisterForDisposal)
                     ServersForDisposal.Add(server);
 
-                if (LeakedServers.TryAdd(server, Context.UniqueTestName))
+                if (LeakedServers.TryAdd(server, server.DebugTag))
                     server.AfterDisposal += () => LeakedServers.TryRemove(server, out _);
 
                 return server;
