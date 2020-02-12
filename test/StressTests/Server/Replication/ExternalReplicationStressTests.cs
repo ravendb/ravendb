@@ -66,7 +66,7 @@ namespace StressTests.Server.Replication
                 var nextNow = now + TimeSpan.FromSeconds(60);
                 while (now < nextNow && server.ServerStore.IdleDatabases.Count < 2)
                 {
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                     now = DateTime.Now;
                 }
                 Assert.Equal(2, server.ServerStore.IdleDatabases.Count);
@@ -79,7 +79,7 @@ namespace StressTests.Server.Replication
                 var replicatedDocs = store2.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;
                 while (docs != replicatedDocs && count < 20)
                 {
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                     replicatedDocs = store2.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;
                     count++;
                 }
@@ -89,7 +89,7 @@ namespace StressTests.Server.Replication
                 nextNow = DateTime.Now + TimeSpan.FromMinutes(5);
                 while (server.ServerStore.IdleDatabases.Count == 0 && now < nextNow)
                 {
-                    Thread.Sleep(500);
+                    await Task.Delay(500);
                     if (count % 10 == 0)
                         store1.Maintenance.Send(new GetStatisticsOperation());
 
@@ -101,7 +101,7 @@ namespace StressTests.Server.Replication
                 nextNow = DateTime.Now + TimeSpan.FromSeconds(15);
                 while (now < nextNow)
                 {
-                    Thread.Sleep(2000);
+                    await Task.Delay(2000);
                     store1.Maintenance.Send(new GetStatisticsOperation());
                     Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
                     now = DateTime.Now;
@@ -110,7 +110,7 @@ namespace StressTests.Server.Replication
                 nextNow = DateTime.Now + TimeSpan.FromMinutes(10);
                 while (now < nextNow && server.ServerStore.IdleDatabases.Count < 2)
                 {
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                     now = DateTime.Now;
                 }
                 Assert.Equal(2, server.ServerStore.IdleDatabases.Count);
@@ -132,7 +132,7 @@ namespace StressTests.Server.Replication
                 nextNow = DateTime.Now + TimeSpan.FromMinutes(2);
                 while (now < nextNow && server.ServerStore.IdleDatabases.Count > 0)
                 {
-                    Thread.Sleep(5000);
+                    await Task.Delay(5000);
                     now = DateTime.Now;
                 }
                 Assert.Equal(0, server.ServerStore.IdleDatabases.Count);
@@ -140,7 +140,7 @@ namespace StressTests.Server.Replication
                 nextNow = DateTime.Now + TimeSpan.FromMinutes(10);
                 while (server.ServerStore.IdleDatabases.Count == 0 && now < nextNow)
                 {
-                    Thread.Sleep(500);
+                    await Task.Delay(500);
                     if (count % 10 == 0)
                         store2.Maintenance.Send(new GetStatisticsOperation());
 
@@ -152,7 +152,7 @@ namespace StressTests.Server.Replication
                 nextNow = DateTime.Now + TimeSpan.FromSeconds(15);
                 while (now < nextNow)
                 {
-                    Thread.Sleep(2000);
+                    await Task.Delay(2000);
                     store2.Maintenance.Send(new GetStatisticsOperation());
                     Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
                     now = DateTime.Now;
@@ -199,7 +199,7 @@ namespace StressTests.Server.Replication
                 var nextNow = now + TimeSpan.FromSeconds(60);
                 while (now < nextNow && server.ServerStore.IdleDatabases.Count < 2)
                 {
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                     now = DateTime.Now;
                 }
 
@@ -213,7 +213,7 @@ namespace StressTests.Server.Replication
                 var replicatedDocs = store2.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;
                 while (docs != replicatedDocs && count < 20)
                 {
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                     replicatedDocs = store2.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;
                     count++;
                 }
@@ -223,7 +223,7 @@ namespace StressTests.Server.Replication
                 nextNow = DateTime.Now + TimeSpan.FromMinutes(5);
                 while (server.ServerStore.IdleDatabases.Count == 0 && now < nextNow)
                 {
-                    Thread.Sleep(500);
+                    await Task.Delay(500);
                     if (count % 10 == 0)
                         store1.Maintenance.Send(new GetStatisticsOperation());
 
@@ -235,7 +235,7 @@ namespace StressTests.Server.Replication
                 nextNow = DateTime.Now + TimeSpan.FromSeconds(15);
                 while (now < nextNow)
                 {
-                    Thread.Sleep(2000);
+                    await Task.Delay(2000);
                     store1.Maintenance.Send(new GetStatisticsOperation());
                     Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
                     now = DateTime.Now;
@@ -285,7 +285,7 @@ namespace StressTests.Server.Replication
             var nextNow = now + TimeSpan.FromSeconds(300);
             while (now < nextNow && GetIdleCount() < clusterSize)
             {
-                Thread.Sleep(3000);
+                await Task.Delay(3000);
                 now = DateTime.Now;
             }
 
@@ -331,7 +331,7 @@ namespace StressTests.Server.Replication
             nextNow = DateTime.Now + TimeSpan.FromSeconds(300);
             while (now < nextNow && GetIdleCount() > 0)
             {
-                Thread.Sleep(3000);
+                await Task.Delay(3000);
                 now = DateTime.Now;
             }
 
@@ -361,7 +361,7 @@ namespace StressTests.Server.Replication
             {
                 while (now < nextNow && GetIdleCount() < 2)
                 {
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                     await store.Maintenance.SendAsync(new GetStatisticsOperation());
                     now = DateTime.Now;
                 }

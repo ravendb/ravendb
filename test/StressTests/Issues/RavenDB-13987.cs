@@ -82,7 +82,7 @@ namespace StressTests.Issues
                 var nextNow = now + TimeSpan.FromSeconds(300);
                 while (now < nextNow && GetIdleCount() < 3)
                 {
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                     now = DateTime.Now;
                 }
 

@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                     [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
                 }
             });
-
+            var testDatabaseName = GetDatabaseName();
             try
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -46,14 +46,14 @@ namespace SlowTests.Issues
                 using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
                 var dbName = store.Database;
 
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("Test")));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(testDatabaseName)));
 
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "EGOR" }, "su");
                     await session.SaveChangesAsync();
                 }
-                using (var session = store.OpenAsyncSession("Test"))
+                using (var session = store.OpenAsyncSession(testDatabaseName))
                 {
                     await session.StoreAsync(new User { Name = "egor" }, "susu");
                     await session.StoreAsync(new User { Name = "egor2" }, "sususu");
@@ -70,8 +70,8 @@ namespace SlowTests.Issues
                     var nextNow = now + TimeSpan.FromSeconds(60);
                     while (now < nextNow && server.ServerStore.IdleDatabases.Count < 1)
                     {
-                        Thread.Sleep(3000);
-                        await store.Maintenance.ForDatabase("Test").SendAsync(new GetStatisticsOperation());
+                        await Task.Delay(3000);
+                        await store.Maintenance.ForDatabase(testDatabaseName).SendAsync(new GetStatisticsOperation());
                         now = DateTime.Now;
                     }
 
@@ -103,8 +103,8 @@ namespace SlowTests.Issues
                     nextNow = DateTime.Now + TimeSpan.FromSeconds(122);
                     while (now < nextNow && server.ServerStore.IdleDatabases.Count > 0)
                     {
-                        Thread.Sleep(2000);
-                        store.Maintenance.ForDatabase("Test").Send(new GetStatisticsOperation());
+                        await Task.Delay(2000);
+                        store.Maintenance.ForDatabase(testDatabaseName).Send(new GetStatisticsOperation());
                         now = DateTime.Now;
                     }
 
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, value);
 
                     Assert.True(2 == Directory.GetDirectories(backupPath).Length, $"2 == Directory.GetDirectories(backupPath).Length({Directory.GetDirectories(backupPath).Length})");
-                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, "Test")).Length, $"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, 'Test')).Length({Directory.GetDirectories(Path.Combine(backupPath, "Test")).Length})");
+                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, testDatabaseName)).Length, $"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, '{testDatabaseName}')).Length({Directory.GetDirectories(Path.Combine(backupPath, testDatabaseName)).Length})");
                     Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length, $"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length({Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length})");
                 }
             }
