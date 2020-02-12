@@ -146,7 +146,7 @@ namespace Raven.Embedded
                 {
                     Urls = new[] { serverUrl.AbsoluteUri },
                     Database = databaseName,
-                    Certificate = _serverOptions!.Security.ClientCertificate,
+                    Certificate = _serverOptions!.Security?.ClientCertificate,
                     Conventions = options.Conventions
                 };
 
