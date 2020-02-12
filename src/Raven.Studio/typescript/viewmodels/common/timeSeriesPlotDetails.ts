@@ -3,7 +3,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import d3 = require("d3");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import colorsManager = require("common/colorsManager");
-
+import genUtils = require("common/generalUtils");
 
 interface graphData {
     pointSeries: graphSeries<dataPoint>[];
@@ -13,6 +13,19 @@ interface graphData {
 interface dataPoint {
     date: Date;
     value: number;
+}
+
+interface closestItem<T> {
+    series: graphSeries<T>;
+    closestIndex: number;
+}
+
+interface tooltipItem {
+    dateDescription: string;
+    name: string;
+    value: string;
+    series: graphSeries<any>;
+    type: timeSeriesResultType;
 }
 
 interface dataRangePoint {
@@ -44,6 +57,8 @@ abstract class timeSeriesContainer<T> {
     abstract type: timeSeriesResultType;
     onChange: () => void;
     series = ko.observableArray<graphSeries<T>>();
+
+    static readonly dateFormat = "DD/MM/YYYY HH:mm:ss";
     
     protected constructor(item: timeSeriesPlotItem, onChange: () => void) {
         this.documentId = item.documentId;
@@ -60,6 +75,8 @@ abstract class timeSeriesContainer<T> {
         return this.series()
             .filter(x => x.visible());
     }
+    
+    abstract getClosestItems(pointInTime: Date): Array<closestItem<T>>;
 }
 
 class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
@@ -92,6 +109,28 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
         
         this.series(series);
     }
+    
+    getClosestItems(pointInTime: Date): Array<closestItem<dataRangePoint>> {
+        return this.series()
+            .filter(x => x.visible())
+            .map(x => {
+                const approxIndex = _.sortedIndexBy(x.points, { from: pointInTime }, p => p.from);
+                
+                if (approxIndex > 0) {
+                    // check if point in time is between
+                    const point = x.points[approxIndex - 1];
+
+                    if (pointInTime < point.to) {
+                        return {
+                            series: x,
+                            closestIndex: approxIndex - 1
+                        } as closestItem<dataRangePoint>;    
+                    }
+                }
+                return undefined;
+            })
+            .filter(x => !!x);
+    }
 }
 
 class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
@@ -102,10 +141,10 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
 
         this.prepareSeries();
     }
-
-    private prepareSeries() { //TODO: check if variable values length! - use max!
+    
+    private prepareSeries() {
         const rawValues = this.value.Results as Array<timeSeriesRawItemResultDto>;
-        const valuesCount = rawValues[0].Values.length;
+        const valuesCount = _.max(rawValues.map(x => x.Values.length));
         const seriesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
         
         const datePoints = rawValues.map(x => new Date(x.Timestamp));
@@ -117,6 +156,32 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
             }));
             return new graphSeries<dataPoint>(name, dataPoints, this.onChange);
         }));
+    }
+ 
+    getClosestItems(pointInTime: Date): Array<closestItem<dataPoint>> {
+        return this.series()
+            .filter(x => x.visible())
+            .map(x => {
+                const approxIndex = _.clamp(_.sortedIndexBy(x.points, { date: pointInTime }, p => p.date), 0, x.points.length - 1);
+
+                let effectiveIndex = approxIndex;
+                if (effectiveIndex > 0) {
+                    // check which item is closer: approxIndex - 1, or approxIndex
+                    
+                    const leftDistance = pointInTime.getTime() - x.points[approxIndex - 1].date.getTime();
+                    const rightDistance = x.points[approxIndex].date.getTime() - pointInTime.getTime();
+
+                    if (leftDistance < rightDistance) {
+                        // use previous value
+                        effectiveIndex--;
+                    }
+                }
+                
+                return {
+                    series: x,
+                    closestIndex: effectiveIndex
+                } as closestItem<dataPoint>;
+            });
     }
 }
 
@@ -170,9 +235,15 @@ class timeSeriesPlotDetails extends viewModelBase {
 
     private focusCanvas: d3.Selection<any>;
     private contextCanvas: d3.Selection<any>;
+
+    private pointer: d3.Selection<void>;
+    private tooltip: d3.Selection<void>;
+    private acceptMoveEvents: boolean = false;
     
     private svg: d3.Selection<void>;
+    private hoverSvg: d3.Selection<void>;
     private focus: d3.Selection<void>;
+    private hoverFocus: d3.Selection<void>;
     private context: d3.Selection<void>;
     
     private zoom: d3.behavior.Zoom<void>;
@@ -201,7 +272,7 @@ class timeSeriesPlotDetails extends viewModelBase {
         _.bindAll(this, "getColor", "getColorClass");
 
         this.colorClassScale = d3.scale.ordinal<string>()
-            .range(_.range(1, 12).map(x => "color-" + x));
+            .range(_.range(1, 11).map(x => "color-" + x));
     }
     
     getColorClass(series: graphSeries<any>) {
@@ -218,6 +289,8 @@ class timeSeriesPlotDetails extends viewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
+
+        this.tooltip = d3.select(".ts-tooltip");
 
         colorsManager.setup(".time-series-details", this.colors);
         
@@ -339,6 +412,230 @@ class timeSeriesPlotDetails extends viewModelBase {
             .selectAll("rect")
             .attr("y", 1)
             .attr("height", this.heightBrush - 1);
+
+        this.hoverSvg = container
+            .append("svg:svg")
+            .attr("class", "hover-area")
+            .attr("width", this.containerWidth)
+            .attr("height", this.containerHeight);
+
+        const pointer = this.hoverSvg
+            .append("g")
+            .attr("class", "pointer");
+        
+        this.hoverFocus = this.hoverSvg.append("g")
+            .attr("class", "hover-focus")
+            .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
+        
+        this.hoverFocus.append("g")
+            .attr("class", "ranges");
+        
+        this.hoverFocus.append("g")
+            .attr("class", "points");
+        
+        this.pointer = pointer.append("line")
+            .attr("class", "pointer-line")
+            .attr("x1", 0)
+            .attr("x2", 0)
+            .attr("y1", this.margin.top)
+            .attr("y2", this.margin.top + this.heightGraph)
+            .style("stroke-opacity", 0);
+
+        this.setupMouseEvents();
+    }
+    
+    private setupMouseEvents() {
+        this.svg
+            .select(".pane")
+            .on("mousedown.tip", () => this.hideTooltip())
+            .on("mouseup.tip", () => this.showTooltip())
+            .on("mouseenter.tip", () => this.showTooltip())
+            .on("mouseleave.tip", () => this.hideTooltip())
+            .on("mousemove.tip", () => {
+                if (this.acceptMoveEvents) {
+                    const node = this.svg.node();
+                    const mouseLocation = d3.mouse(node);
+                    this.pointer
+                        .attr("x1", mouseLocation[0] + 0.5)
+                        .attr("x2", mouseLocation[0] + 0.5);
+
+                    this.updateTooltip();    
+                }
+            });
+    }
+    
+    private showTooltip() {
+        this.acceptMoveEvents = true;
+        
+        this.pointer
+            .transition()
+            .duration(200)
+            .style("stroke-opacity", 1);
+        
+        this.tooltip
+            .style("display", undefined)
+            .transition("opacity")
+            .duration(250)
+            .style("opacity", 1);
+
+        const svgLocation = d3.mouse(this.svg.node());
+        this.updateHighlightInfo(svgLocation);
+    }
+    
+    private hideTooltip() {
+        this.pointer
+            .transition()
+            .duration(100)
+            .style("stroke-opacity", 0);
+
+        this.acceptMoveEvents = false;
+        
+        this.updateHighlightInfo(null);
+        this.tooltip.html("");
+        
+        this.tooltip.transition("opacity")
+            .duration(250)
+            .style("opacity", 0)
+            .each("end", () => this.tooltip.style('display', 'none'));
+    }
+    
+    private updateTooltip() {
+        const svgLocation = d3.mouse(this.svg.node());
+        
+        const globalLocation = d3.mouse(d3.select(".time-series-details").node());
+        const [x, y] = globalLocation;
+        
+        this.tooltip
+            .transition("move");
+        
+        this.tooltip
+            .style("display", undefined)
+            .transition("move")
+            .delay(30)
+            .duration(200)
+            .style("left", (x + 10) + "px")
+            .style("top", (y + 10) + "px");
+        
+        this.updateHighlightInfo(svgLocation);
+    }
+    
+    private updateHighlightInfo(location: [number, number]) {
+        if (location) {
+            const cursorDate = this.x.invert(location[0] - this.margin.left);
+
+            const rangeItems = _.flatten(this.rangeTimeSeries.map(x => x.getClosestItems(cursorDate)));
+            const pointItems = _.flatten(this.pointTimeSeries.map(x => x.getClosestItems(cursorDate)));
+
+            const tooltipHtml = this.tooltipContents(rangeItems, pointItems);
+            this.tooltip.html(tooltipHtml);
+            
+            const onlyDefinedRangeItems = rangeItems
+                .filter(x => typeof x.series.points[x.closestIndex].value !== "undefined");
+            const onlyDefinedPointItems = pointItems
+                .filter(x => typeof x.series.points[x.closestIndex].value !== "undefined");
+
+            const points = this.hoverFocus
+                .select(".points")
+                .selectAll(".point")
+                .data(onlyDefinedPointItems, x => x.closestIndex + "@" + x.series.uniqueId);
+
+            points
+                .attr("cx", d => this.x(d.series.points[d.closestIndex].date))
+                .attr("cy", d => this.y(d.series.points[d.closestIndex].value));
+
+            points.exit()
+                .filter(":not(.processed)")
+                .classed("processed", true)
+                .transition("circle")
+                .attr("r", 0)
+                .remove();
+
+            points
+                .enter()
+                .append("circle")
+                .attr("class", x => "point " + this.getColorClass(x.series))
+                .attr("r", 0)
+                .attr("cx", d => this.x(d.series.points[d.closestIndex].date))
+                .attr("cy", d => this.y(d.series.points[d.closestIndex].value))
+                .transition("circle")
+                .attr("r", 4);
+            
+            const ranges = this.hoverFocus
+                .select(".ranges")
+                .selectAll(".range")
+                .data(onlyDefinedRangeItems, x => x.closestIndex + "@" + x.series.uniqueId);
+            
+            const computeX = (d: closestItem<dataRangePoint>, accessor: (point: dataRangePoint) => Date) => {
+                const point = d.series.points[d.closestIndex];
+                const x = this.x(accessor(point));
+                return _.clamp(x, 0, this.width);
+            };
+            
+            ranges
+                .attr("x1", d => computeX(d, p => p.from))
+                .attr("x2", d => computeX(d, p => p.to));
+            
+            ranges.exit()
+                .transition()
+                .style("opacity", 0)
+                .remove();
+            
+            ranges.enter()
+                .append("line")
+                .attr("class", x => "range " + this.getColorClass(x.series))
+                .attr("x1", d => computeX(d, p => p.from))
+                .attr("x2", d => computeX(d, p => p.to))
+                .attr("y1", d => this.y(d.series.points[d.closestIndex].value))
+                .attr("y2", d => this.y(d.series.points[d.closestIndex].value))
+                .style("opacity", 0)
+                .transition()
+                .style("opacity", 1);
+        } else {
+            this.hoverFocus
+                .select(".points")
+                .selectAll(".point")
+                .remove();
+            
+            this.hoverFocus
+                .select(".ranges")
+                .selectAll(".range")
+                .remove();
+        }
+    }
+    
+    private tooltipContents(rangeItems: closestItem<dataRangePoint>[], pointItems: closestItem<dataPoint>[]) {
+        const formatDate = (d: Date) => moment.utc(d).local().format(timeSeriesContainer.dateFormat);
+        
+        const mappedRange = rangeItems.map(x => {
+            const closestItem = x.series.points[x.closestIndex];
+            const date = formatDate(closestItem.from) + " - " + formatDate(closestItem.to);
+            
+            return {
+                name: x.series.name,
+                series: x.series,
+                dateDescription: date,
+                type: "grouped",
+                value: typeof closestItem.value !== "undefined" ? closestItem.value.toLocaleString() : "N/A"
+            } as tooltipItem;
+        });
+        
+        const mappedPoints = pointItems.map(x => {
+            const closestItem = x.series.points[x.closestIndex];
+            const date = formatDate(closestItem.date);
+
+            return {
+                series: x.series,
+                name: x.series.name,
+                dateDescription: date,
+                type: "raw",
+                value: typeof closestItem.value !== "undefined" ? closestItem.value.toLocaleString() : "N/A"
+            } as tooltipItem;
+        });
+        
+        return genUtils.inMemoryRender("time-series-graph-tooltip", {
+            items: [...mappedRange, ...mappedPoints],
+            getColorClass: this.getColorClass
+        });
     }
     
     private onBrushed() {
@@ -353,6 +650,12 @@ class timeSeriesPlotDetails extends viewModelBase {
     private draw(dataUpdated: boolean, resetXScale: boolean) {
         if (dataUpdated) {
             this.cachedData = this.getDataToPlot();
+        }
+
+        if (d3.event) {
+            // if we can access surrounding event, then redraw highlights  
+            const svgLocation = d3.mouse(this.svg.node());
+            this.updateHighlightInfo(svgLocation);
         }
         
         const data = this.cachedData;
