@@ -83,21 +83,17 @@ namespace Raven.Server.Documents.Indexes.Static
             private readonly int _hash;
             private readonly List<string> _items;
 
-            public unsafe CacheKey(List<string> items)
+            public CacheKey(List<string> items)
             {
                 _items = items;
 
-                var ctx = new Hashing.Streamed.XXHash32Context();
-                Hashing.Streamed.XXHash32.BeginProcess(ref ctx);
-                foreach (var str in items)
+                var hasher = new HashCode();
+                foreach (var item in items)
                 {
-                    fixed (char* buffer = str)
-                    {
-                        Hashing.Streamed.XXHash32.Process(ref ctx, (byte*)buffer, str.Length*sizeof(char));
-
-                    }
+                    hasher.Add(item);
                 }
-                _hash = (int)Hashing.Streamed.XXHash32.EndProcess(ref ctx);
+
+                _hash = hasher.ToHashCode();
             }
 
             public override bool Equals(object obj)
