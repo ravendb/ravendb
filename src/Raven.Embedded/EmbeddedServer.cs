@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,26 +31,48 @@ namespace Raven.Embedded
         }
 
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<EmbeddedServer>("Embedded");
-        private Lazy<Task<(Uri ServerUrl, Process ServerProcess)>> _serverTask;
+        private Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>? _serverTask;
 
         private readonly ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>> _documentStores = new ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>>();
-        private X509Certificate2 _certificate;
 
-        private TimeSpan _gracefulShutdownTimeout;
+        private ServerOptions? _serverOptions;
 
-        public void StartServer(ServerOptions options = null)
+        public async Task<int> GetServerProcessId(CancellationToken token = default)
         {
-            options = options ?? ServerOptions.Default;
+            var server = _serverTask;
+            if (server == null)
+                throw new InvalidOperationException($"Please run {nameof(StartServer)}() before trying to use the server");
+            return (await server.Value.WithCancellation(token).ConfigureAwait(false)).ServerProcess.Id;
+        }
 
-            _gracefulShutdownTimeout = options.GracefulShutdownTimeout;
-            var startServer = new Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>(() => RunServer(options));
-            if (Interlocked.CompareExchange(ref _serverTask, startServer, null) != null)
-                throw new InvalidOperationException("The server was already started");
+        public void Restart()
+        {
+            var existingServerTask = _serverTask;
+            if (_serverOptions == null || existingServerTask == null || existingServerTask.IsValueCreated == false)
+                throw new InvalidOperationException("Cannot call Restart() before calling Start()");
+
+            try
+            {
+                var serverProcess = existingServerTask.Value.ConfigureAwait(false).GetAwaiter().GetResult().ServerProcess;
+                ShutdownServerProcess(serverProcess);
+            }
+            catch
+            {
+                // we will ignore errors here, the process might already be dead, we failed to start, etc
+            }
+
+            if (Interlocked.CompareExchange(ref _serverTask, null, existingServerTask) != existingServerTask)
+                throw new InvalidOperationException("The server changed while restarting it. Are you calling Restart() concurrently?");
+
+            StartServerInternal();
+        }
+
+        public void StartServer(ServerOptions? options = null)
+        {
+            _serverOptions = options ??= ServerOptions.Default;
 
             if (options.Security != null)
             {
-                _certificate = options.Security.ClientCertificate;
-
                 try
                 {
                     var thumbprint = options.Security.ServerCertificateThumbprint;
@@ -67,6 +91,14 @@ namespace Raven.Embedded
                     // not supported on MacOSX
                 }
             }
+            StartServerInternal();
+        }
+
+        private void StartServerInternal()
+        {
+            var startServer = new Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>(RunServer);
+            if (Interlocked.CompareExchange(ref _serverTask, startServer, null) != null)
+                throw new InvalidOperationException("The server was already started");
 
             // this forces the server to start running in an async manner.
             GC.KeepAlive(startServer.Value);
@@ -93,11 +125,15 @@ namespace Raven.Embedded
             if (string.IsNullOrWhiteSpace(databaseName))
                 throw new ArgumentNullException(nameof(options.DatabaseRecord.DatabaseName), "The database name is mandatory");
 
+            if (_serverOptions == null)
+                throw new InvalidOperationException("Cannot get document document before the server was started");
+
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Creating document store for '{databaseName}'.");
 
             token.ThrowIfCancellationRequested();
 
+            
             var lazy = new Lazy<Task<IDocumentStore>>(async () =>
             {
                 var serverUrl = await GetServerUriAsync(token).ConfigureAwait(false);
@@ -105,7 +141,7 @@ namespace Raven.Embedded
                 {
                     Urls = new[] { serverUrl.AbsoluteUri },
                     Database = databaseName,
-                    Certificate = _certificate,
+                    Certificate = _serverOptions!.Security.ClientCertificate,
                     Conventions = options.Conventions
                 };
 
@@ -162,17 +198,17 @@ namespace Raven.Embedded
 
                     using (var inputStream = process.StandardInput)
                     {
-                        inputStream.WriteLine($"shutdown no-confirmation");
+                        inputStream.WriteLine("shutdown no-confirmation");
                     }
 
-                    if (process.WaitForExit((int)_gracefulShutdownTimeout.TotalMilliseconds))
+                    if (process.WaitForExit((int)_serverOptions!.GracefulShutdownTimeout.TotalMilliseconds))
                         return;
                 }
                 catch (Exception e)
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Failed to shutdown server PID {process.Id} gracefully in {_gracefulShutdownTimeout.ToString()}", e);
+                        _logger.Info($"Failed to shutdown server PID {process.Id} gracefully in {_serverOptions!.GracefulShutdownTimeout.ToString()}", e);
                     }
                 }
 
@@ -193,13 +229,20 @@ namespace Raven.Embedded
             }
         }
 
-        private async Task<(Uri ServerUrl, Process ServerProcess)> RunServer(ServerOptions options)
+        public event EventHandler? ServerProcessExited;
+
+        private async Task<(Uri ServerUrl, Process ServerProcess)> RunServer()
         {
-            var process = RavenServerRunner.Run(options);
+            if(_serverOptions == null)
+                throw new ArgumentNullException(nameof(_serverOptions));
+
+            var process = RavenServerRunner.Run(_serverOptions);
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Starting global server: { process.Id }");
 
-            var domainBind = false;
+            process.Exited += (sender, e) => ServerProcessExited?.Invoke(sender, e);
+
+            bool domainBind;
 
 #if NETSTANDARD2_0
             AssemblyLoadContext.Default.Unloading += c =>
@@ -219,14 +262,14 @@ namespace Raven.Embedded
             if (domainBind == false)
                 throw new InvalidOperationException("Should not happen!");
 
-            string url = null;
+            string? url = null;
             var startupDuration = Stopwatch.StartNew();
 
-            var outputString = await ReadOutput(process.StandardOutput, startupDuration, options, async (line, builder) =>
+            var outputString = await ReadOutput(process.StandardOutput, startupDuration, _serverOptions, async (line, builder) =>
             {
                 if (line == null)
                 {
-                    var errorString = await ReadOutput(process.StandardError, startupDuration, options, null).ConfigureAwait(false);
+                    var errorString = await ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
 
                     ShutdownServerProcess(process);
 
@@ -245,7 +288,7 @@ namespace Raven.Embedded
 
             if (url == null)
             {
-                var errorString = await ReadOutput(process.StandardError, startupDuration, options, null).ConfigureAwait(false);
+                var errorString = await ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
 
                 ShutdownServerProcess(process);
 
@@ -275,11 +318,11 @@ namespace Raven.Embedded
             return sb.ToString();
         }
 
-        private static async Task<string> ReadOutput(StreamReader output, Stopwatch startupDuration, ServerOptions options, Func<string, StringBuilder, Task<bool>> onLine)
+        private static async Task<string> ReadOutput(StreamReader output, Stopwatch startupDuration, ServerOptions options, Func<string, StringBuilder, Task<bool>>? onLine)
         {
             var sb = new StringBuilder();
 
-            Task<string> readLineTask = null;
+            Task<string>? readLineTask = null;
             while (true)
             {
                 if (readLineTask == null)
@@ -297,12 +340,14 @@ namespace Raven.Embedded
 
                 readLineTask = null;
 
+                var shouldStop = false;
                 if (line != null)
+                {
                     sb.AppendLine(line);
 
-                var shouldStop = false;
-                if (onLine != null)
-                    shouldStop = await onLine(line, sb).ConfigureAwait(false);
+                    if (onLine != null)
+                        shouldStop = await onLine(line, sb).ConfigureAwait(false);
+                }
 
                 if (shouldStop)
                     break;
