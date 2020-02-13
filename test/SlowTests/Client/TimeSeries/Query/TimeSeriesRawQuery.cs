@@ -5284,24 +5284,14 @@ select out(p)
 
                 using (var session = store.OpenSession())
                 {
-                    var id = $"people/1";
-
-                    session.Store(new Person
+                    var person = new Person
                     {
-                        Name = "Oren",
-                        Age = 30,
-                    }, id);
+                        Name = "Oren"
+                    };
 
-                    session.Store(new Watch
-                    {
-                        Accuracy = 2.5
-                    }, "watches/fitbit");
-                    session.Store(new Watch
-                    {
-                        Accuracy = 1.8
-                    }, "watches/apple");
+                    session.Store(person);
 
-                    var tsf = session.TimeSeriesFor(id);
+                    var tsf = session.TimeSeriesFor(person);
 
                     tsf.Append("HeartRate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
                     tsf.Append("HeartRate", baseline.AddMinutes(2), "watches/apple", new[] { 79d });
@@ -5349,42 +5339,63 @@ select out(p)
 
                     var agg = query.First();
 
-                    Assert.Equal(9, agg.Count);
+                    Assert.Equal(12, agg.Count);
 
-                    Assert.Equal(3, agg.Results.Length);
+                    Assert.Equal(4, agg.Results.Length);
 
                     var rangeAggregation = agg.Results[0];
 
-                    Assert.Equal(259, rangeAggregation.Min[0]);
-                    Assert.Equal(279, rangeAggregation.Max[0]);
+                    Assert.Equal(59, rangeAggregation.Min[0]);
+                    Assert.Equal(79, rangeAggregation.Max[0]);
 
-                    var expectedFrom = baseline.AddHours(2);
+                    var offset = TimeSpan.FromHours(2);
+
+                    var expectedFrom = baseline.Add(offset);
                     var expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
                     Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
                     rangeAggregation = agg.Results[1];
+
+                    Assert.Equal(159, rangeAggregation.Min[0]);
+                    Assert.Equal(179, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.Add(offset).AddHours(1);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From);
+                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+
+                    rangeAggregation = agg.Results[2];
+
+                    Assert.Equal(259, rangeAggregation.Min[0]);
+                    Assert.Equal(279, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.Add(offset).AddHours(2);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From);
+                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+
+                    rangeAggregation = agg.Results[3];
 
                     Assert.Equal(359, rangeAggregation.Min[0]);
                     Assert.Equal(379, rangeAggregation.Max[0]);
 
-                    expectedFrom = baseline.AddMonths(1);
+                    expectedFrom = baseline.Add(offset).AddMonths(1);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
                     Assert.Equal(expectedTo, rangeAggregation.To);
-
-                    rangeAggregation = agg.Results[2];
-
-                    Assert.Equal(459, rangeAggregation.Min[0]);
-                    Assert.Equal(479, rangeAggregation.Max[0]);
-
-                    expectedFrom = baseline.AddMonths(6).AddHours(1);
-                    expectedTo = expectedFrom.AddHours(1);
-
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
                 }
             }
         }
@@ -5405,15 +5416,6 @@ select out(p)
                         Name = "Oren",
                         Age = 30,
                     }, id);
-
-                    session.Store(new Watch
-                    {
-                        Accuracy = 2.5
-                    }, "watches/fitbit");
-                    session.Store(new Watch
-                    {
-                        Accuracy = 1.8
-                    }, "watches/apple");
 
                     var tsf = session.TimeSeriesFor(id);
 
@@ -5437,11 +5439,6 @@ select out(p)
                     tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-3).AddMinutes(2), "watches/sony", new[] { 479d });
                     tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-3).AddMinutes(3), "watches/fitbit", new[] { 469d });
 
-                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-2).AddMinutes(1), "watches/apple", new[] { 559d });
-                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-2).AddMinutes(2), "watches/sony", new[] { 579d });
-                    tsf.Append("HeartRate", baseline.AddMonths(6).AddHours(-2).AddMinutes(3), "watches/fitbit", new[] { 569d });
-
-
                     session.SaveChanges();
                 }
 
@@ -5463,53 +5460,140 @@ select out(p)
 
                     var agg = query.First();
 
-                    Assert.Equal(12, agg.Count);
+                    var offset = TimeSpan.FromHours(-2);
 
-                    Assert.Equal(4, agg.Results.Length);
+                    Assert.Equal(9, agg.Count);
+
+                    Assert.Equal(3, agg.Results.Length);
 
                     var rangeAggregation = agg.Results[0];
-
-                    Assert.Equal(159, rangeAggregation.Min[0]);
-                    Assert.Equal(179, rangeAggregation.Max[0]);
-
-                    var expectedFrom = baseline.AddHours(-2);
-                    var expectedTo = expectedFrom.AddHours(1);
-
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
-
-                    rangeAggregation = agg.Results[1];
 
                     Assert.Equal(259, rangeAggregation.Min[0]);
                     Assert.Equal(279, rangeAggregation.Max[0]);
 
-                    expectedFrom = baseline;
-                    expectedTo = expectedFrom.AddHours(1);
+                    var expectedFrom = baseline.Add(offset);
+                    var expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
                     Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
-                    rangeAggregation = agg.Results[2];
+                    rangeAggregation = agg.Results[1];
 
                     Assert.Equal(359, rangeAggregation.Min[0]);
                     Assert.Equal(379, rangeAggregation.Max[0]);
 
-                    expectedFrom = baseline.AddMonths(1);
+                    expectedFrom = baseline.Add(offset).AddMonths(1);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
                     Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
-                    rangeAggregation = agg.Results[3];
+                    rangeAggregation = agg.Results[2];
 
                     Assert.Equal(459, rangeAggregation.Min[0]);
                     Assert.Equal(479, rangeAggregation.Max[0]);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
-                    expectedFrom = baseline.AddMonths(6).AddHours(-3);
+                    expectedFrom = baseline.Add(offset).AddMonths(6).AddHours(-3);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
                     Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesRaw_WithOffset()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = new DateTime(2019, 1, 1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 30,
+                    }, "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("HeartRate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(2), "watches/apple", new[] { 79d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(3), "watches/sony", new[] { 69d });
+
+                    tsf.Append("HeartRate", baseline.AddHours(1).AddMinutes(1), "watches/fitbit", new[] { 159d });
+                    tsf.Append("HeartRate", baseline.AddHours(1).AddMinutes(2), "watches/apple", new[] { 179d });
+                    tsf.Append("HeartRate", baseline.AddHours(1).AddMinutes(3), "watches/sony", new[] { 169d });
+
+                    tsf.Append("HeartRate", baseline.AddDays(2).AddMinutes(1), "watches/fitbit", new[] { 259d });
+                    tsf.Append("HeartRate", baseline.AddDays(2).AddMinutes(2), "watches/apple", new[] { 279d });
+                    tsf.Append("HeartRate", baseline.AddDays(2).AddMinutes(3), "watches/sony", new[] { 269d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddMinutes(1), "watches/apple", new[] { 559d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddMinutes(2), "watches/sony", new[] { 579d });
+                    tsf.Append("HeartRate", baseline.AddMonths(6).AddMinutes(3), "watches/fitbit", new[] { 569d });
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+    offset '02:00'
+}
+from People as p
+select out(p)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddYears(1));
+
+                    var result = query.First();
+
+                    Assert.Equal(12, result.Count);
+
+                    var baselineWithOffset = baseline.Add(TimeSpan.FromHours(2));
+                    Assert.Equal(baselineWithOffset.AddMinutes(1), result.Results[0].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[0].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddMinutes(2), result.Results[1].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[1].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddMinutes(3), result.Results[2].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[2].Timestamp.Kind);
+
+                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(1), result.Results[3].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[3].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(2), result.Results[4].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[4].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(3), result.Results[5].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[5].Timestamp.Kind);
+
+                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(1), result.Results[6].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[6].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(2), result.Results[7].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[7].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(3), result.Results[8].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[8].Timestamp.Kind);
+
+                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(1), result.Results[9].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[9].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(2), result.Results[10].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[10].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(3), result.Results[11].Timestamp);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[11].Timestamp.Kind);
+
                 }
             }
         }
