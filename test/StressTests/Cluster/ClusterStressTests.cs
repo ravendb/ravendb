@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -23,7 +24,7 @@ namespace StressTests.Cluster
         }
 
         // the values are lower to make the cluster less stable
-        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
         {
             if (options == null)
             {
@@ -37,7 +38,7 @@ namespace StressTests.Cluster
             options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "3000";
             options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "50";
 
-            return base.GetNewServer(options);
+            return base.GetNewServer(options, caller);
         }
 
         [Fact]

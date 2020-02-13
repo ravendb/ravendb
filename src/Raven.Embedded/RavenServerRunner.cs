@@ -87,6 +87,7 @@ namespace Raven.Embedded
             try
             {
                 process = Process.Start(processStartInfo);
+                process.EnableRaisingEvents = true;
             }
             catch (Exception e)
             {
