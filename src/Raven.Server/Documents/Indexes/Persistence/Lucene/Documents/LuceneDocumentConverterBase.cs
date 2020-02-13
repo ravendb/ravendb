@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     public interface ILuceneDocumentWrapper
     {
         void Add(AbstractField field);
+
         IList<IFieldable> GetFields();
     }
 
@@ -77,7 +78,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected readonly bool _storeValue;
 
         private byte[] _storeValueBuffer;
-        protected IndexField _allFields;
 
         public void Clean()
         {
@@ -99,9 +99,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             foreach (var field in fields)
                 dictionary[field.Name] = field;
             _fields = dictionary;
-
-            if (_fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields) == false)
-                _allFields = new IndexField();
 
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
@@ -510,7 +507,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (IsNumber(value))
                 return ValueType.Numeric;
-
 
             return ValueType.ConvertToJson;
         }

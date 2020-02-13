@@ -1,4 +1,8 @@
-﻿using System.IO;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Embedded;
 using Xunit;
@@ -67,6 +71,57 @@ namespace EmbeddedTests
             }
         }
 
+        [Fact]
+        public async Task TestEmbeddedRestart()
+        {
+            var paths = CopyServer();
+
+            using (var embedded = new EmbeddedServer())
+            {
+                embedded.StartServer(new ServerOptions
+                {
+                    ServerDirectory = paths.ServerDirectory,
+                    DataDirectory = paths.DataDirectory,
+                });
+
+                var pid1 = await embedded.GetServerProcessIdAsync();
+                Assert.True(pid1 > 0);
+
+                var mre = new ManualResetEventSlim();
+
+                embedded.ServerProcessExited += (s, args) => mre.Set();
+
+                using (var process = Process.GetProcessById(pid1))
+                {
+                    try
+                    {
+                        process.Kill();
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
+
+                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
+
+                await embedded.RestartServerAsync();
+
+                var pid2 = await embedded.GetServerProcessIdAsync();
+                Assert.True(pid2 > 0);
+                Assert.NotEqual(pid1, pid2);
+
+                mre.Reset();
+                await embedded.RestartServerAsync();
+
+                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
+
+                var pid3 = await embedded.GetServerProcessIdAsync();
+                Assert.True(pid3 > 0);
+                Assert.NotEqual(pid2, pid3);
+            }
+        }
+
         private (string ServerDirectory, string DataDirectory) CopyServer()
         {
             var baseDirectory = NewDataPath();
@@ -93,7 +148,7 @@ namespace EmbeddedTests
             if (runtimeConfigFileInfo.Exists == false)
                 throw new FileNotFoundException("Could not find runtime config", runtimeConfigPath);
 
-            File.Copy(runtimeConfigPath, Path.Combine(serverDirectory, runtimeConfigFileInfo.Name));
+            File.Copy(runtimeConfigPath, Path.Combine(serverDirectory, runtimeConfigFileInfo.Name), true);
 
             foreach (var extension in new[] { "*.dll", "*.so", "*.dylib", "*.deps.json" })
             {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -120,7 +121,7 @@ namespace StressTests.Issues
             }
         }
 
-        private async Task<RavenServer> ToggleServer(RavenServer node)
+        private async Task<RavenServer> ToggleServer(RavenServer node, [CallerMemberName]string caller = null)
         {
             if (node.Disposed)
             {
@@ -135,7 +136,13 @@ namespace StressTests.Issues
 
                 var dataDirectory = node.Configuration.Core.DataDirectory.FullPath;
 
-                node = base.GetNewServer(new ServerCreationOptions() { DeletePrevious = false, RunInMemory = false, CustomSettings = settings, DataDirectory = dataDirectory });
+                node = base.GetNewServer(new ServerCreationOptions
+                {
+                    DeletePrevious = false,
+                    RunInMemory = false,
+                    CustomSettings = settings,
+                    DataDirectory = dataDirectory
+                }, caller);
             }
             else
             {

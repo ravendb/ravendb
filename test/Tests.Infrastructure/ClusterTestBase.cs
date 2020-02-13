@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -394,7 +395,8 @@ namespace Tests.Infrastructure
             bool useSsl = false,
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
-            bool watcherCluster = false)
+            bool watcherCluster = false,
+            [CallerMemberName]string caller = null)
         {
             string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
@@ -445,7 +447,7 @@ namespace Tests.Infrastructure
                     RegisterForDisposal = false,
                     NodeTag = allowedNodeTags[i]
                 };
-                var server = GetNewServer(co);
+                var server = GetNewServer(co, caller);
                 var port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);
                 var prefix = useSsl ? "https" : "http";
                 serverUrl = UseFiddlerUrl($"{prefix}://127.0.0.1:{port}");
@@ -498,7 +500,7 @@ namespace Tests.Infrastructure
             return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList)).Leader;
         }
 
-        protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0)
+        protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0, [CallerMemberName]string caller = null)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
@@ -516,7 +518,7 @@ namespace Tests.Infrastructure
                     RunInMemory = shouldRunInMemory,
                     RegisterForDisposal = false
                 };
-                var server = GetNewServer(co);
+                var server = GetNewServer(co, caller);
                 var proxy = new ProxyServer(ref proxyPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl()), delay);
                 serversToProxies.Add(server, proxy);
 

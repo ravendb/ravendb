@@ -96,6 +96,8 @@ namespace Raven.Server
 
         internal bool ThrowOnLicenseActivationFailure;
 
+        internal string DebugTag;
+
         internal CipherSuitesPolicy CipherSuitesPolicy => _httpsConnectionMiddleware?.CipherSuitesPolicy;
 
         public RavenServer(RavenConfiguration configuration)
