@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -14,6 +15,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -372,14 +374,15 @@ namespace RachisTests
             mainTI.Unregister(mainSubscribersCDE.WaitHandle);
         }
 
-        private static async Task WaitForRehab(string dbName, int index, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
+        private async Task WaitForRehab(string dbName, int index, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
         {
             var toggled = cluster.Nodes[index].ServerStore.NodeTag;
+            List<Exception> errors = new List<Exception>();
             for (var i = 0; i < cluster.Nodes.Count; i++)
             {
                 var curNode = cluster.Nodes[i];
-                var rehabCount = 0;
                 var attempts = 20;
+                List<string> rehabNodes;
                 do
                 {
                     using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -387,19 +390,59 @@ namespace RachisTests
                     {
                         try
                         {
-                            rehabCount = curNode.ServerStore.Cluster.ReadDatabaseTopology(context, dbName).Rehabs.Count;
+                            rehabNodes = curNode.ServerStore.Cluster.ReadDatabaseTopology(context, dbName).Rehabs;
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
-                            await Task.Delay(1000);
-                            rehabCount = 1;
-                            continue;
+                            errors.Add(e);
+                            rehabNodes = new List<string>{"error"};
                         }
-                        await Task.Delay(1000);
                     }
+                    await Task.Delay(1000);
                 }
-                while (--attempts > 0 && rehabCount > 0);
-                Assert.True(attempts >= 0 && rehabCount == 0, $"waited for rehab for too long, current node: {cluster.Nodes[i].ServerStore.NodeTag}, toggled node: {toggled}, rehabs: {rehabCount}, attempts: {attempts}");
+                while (--attempts > 0 && rehabNodes.Count > 0);
+
+                if ((attempts >= 0 && rehabNodes.Count == 0) == false)
+                {
+                    var sb = new StringBuilder();
+                    (ClusterObserverLogEntry[] List, long Iteration) logs;
+                    logs.List = null;
+                    await ActionWithLeader((l) =>
+                    {
+                        logs = l.ServerStore.Observer.ReadDecisionsForDatabase();
+                        return Task.CompletedTask;
+                    });
+
+                    sb.AppendLine("Cluster Observer Log Entries:\n-----------------------");
+                    foreach (var log in logs.List)
+                    {
+                        sb.AppendLine(
+                            $"{nameof(log.Date)}: {log.Date}\n{nameof(log.Database)}: {log.Database}\n{nameof(log.Iteration)}: {log.Iteration}\n{nameof(log.Message)}: {log.Message}\n-----------------------");
+                    }
+
+                    List<string> currentRehabNodes;
+                    string currentException = null;
+                    using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        try
+                        {
+                            currentRehabNodes = curNode.ServerStore.Cluster.ReadDatabaseTopology(context, dbName).Rehabs;
+                        }
+                        catch (Exception e)
+                        {
+                            currentException = e.ToString();
+                            currentRehabNodes = new List<string> { "another error" };
+                        }
+                    }
+
+                    sb.AppendLine($"\nLast attempt:\n rehabsCount: {currentRehabNodes.Count}, rehabNodes: {string.Join(", ", currentRehabNodes)}, exception: {currentException}");
+
+                    sb.AppendLine($"\nwaited for rehab for too long, current node: {cluster.Nodes[i].ServerStore.NodeTag}, toggled node: {toggled}, " +
+                                  $"rehabsCount: {rehabNodes.Count}, rehabNodes: {string.Join(", ", rehabNodes)}, " +
+                                  $"attempts: {attempts}, errors: {string.Join("\n", errors)}");
+                    Assert.True(attempts >= 0 && rehabNodes.Count == 0, sb.ToString());
+                }
             }
         }
 
