@@ -147,11 +147,10 @@ namespace Voron.Util
 
             lock (_transactionPages)
             {
-                while (_transactionPages.Count > 0 && _transactionPages.Keys[0] <= lastSyncedTransactionId)
+                while (_transactionPages.Count > 0 && _transactionPages.Keys[0] < lastSyncedTransactionId)
                 {
                     _transactionPages.RemoveAt(0);
                 }
-
             }
         }
 
