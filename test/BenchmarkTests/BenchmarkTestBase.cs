@@ -20,10 +20,10 @@ namespace BenchmarkTests
         protected BenchmarkTestBase(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         public abstract Task InitAsync(DocumentStore store);
 
-        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
         {
             if (options == null)
             {
@@ -34,7 +34,7 @@ namespace BenchmarkTests
 
             options.CustomSettings[RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = int.MaxValue.ToString();
 
-            return base.GetNewServer(options);
+            return base.GetNewServer(options, caller);
         }
 
         protected DocumentStore GetSimpleDocumentStore(string databaseName, bool deleteDatabaseOnDispose = true)

@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -29,7 +27,7 @@ namespace InterversionTests
         {
         }
 
-        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
         {
             if (options == null)
             {
@@ -41,7 +39,7 @@ namespace InterversionTests
             var key = RavenConfiguration.GetKey(x => x.Http.UseLibuv);
             if (options.CustomSettings.ContainsKey(key) == false)
                 options.CustomSettings[key] = "true";
-            return base.GetNewServer(options);
+            return base.GetNewServer(options, caller);
         }
 
         protected async Task<List<ProcessNode>> CreateCluster(string[] peers, IDictionary<string, string> customSettings = null, X509Certificate2 certificate = null)
@@ -72,7 +70,7 @@ namespace InterversionTests
                     await requestExecutor.ExecuteAsync(clusterTopology, context);
                     return clusterTopology.Result.Topology.Members.Count;
                 }, peers.Length);
-                
+
                 Assert.True(clusterCreated == peers.Length, "Failed to create initial cluster");
             }
 
@@ -82,7 +80,7 @@ namespace InterversionTests
         protected async Task<(RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers)> CreateMixedCluster(
             string[] peers, int localPeers = 0, IDictionary<string, string> customSettings = null, X509Certificate2 certificate = null)
         {
-            var leaderServer = GetNewServer(new ServerCreationOptions {CustomSettings = customSettings});
+            var leaderServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
             leaderServer.ServerStore.EnsureNotPassive(leaderServer.WebUrl);
 
             var nodeAdded = new ManualResetEvent(false);
@@ -100,7 +98,6 @@ namespace InterversionTests
                 }
             };
 
-
             using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderServer.WebUrl, certificate))
             {
@@ -108,7 +105,7 @@ namespace InterversionTests
 
                 for (int i = 0; i < localPeers; i++)
                 {
-                    var peer = GetNewServer(new ServerCreationOptions{CustomSettings = customSettings});
+                    var peer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
                     var addCommand = new AddClusterNodeCommand(peer.WebUrl);
                     await requestExecutor.ExecuteAsync(addCommand, context);
                     Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
@@ -145,7 +142,6 @@ namespace InterversionTests
 
             var stores = new List<DocumentStore>();
 
-            
             foreach (var peer in peers)
             {
                 var peerStore = await GetStore(peer.Url, peer.Process, database, new InterversionTestOptions
@@ -165,7 +161,7 @@ namespace InterversionTests
             }), stores);
         }
 
-        protected async Task<(IDisposable Disposable, List<DocumentStore> Stores)> GetStores(RavenServer leader, List<ProcessNode> peers, 
+        protected async Task<(IDisposable Disposable, List<DocumentStore> Stores)> GetStores(RavenServer leader, List<ProcessNode> peers,
             List<RavenServer> local = null, Action<DocumentStore> modifyDocumentStore = null)
         {
             if (modifyDocumentStore == null)

@@ -313,7 +313,7 @@ namespace FastTests
                 {
                     if (_globalServer == null || _globalServer.Disposed)
                     {
-                        var globalServer = GetNewServer(new ServerCreationOptions { RegisterForDisposal = false });
+                        var globalServer = GetNewServer(new ServerCreationOptions { RegisterForDisposal = false }, "Global");
                         using (var currentProcess = Process.GetCurrentProcess())
                         {
                             Console.WriteLine(
@@ -405,7 +405,7 @@ namespace FastTests
             }
         }
 
-        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool runInMemory = true, string customConfigPath = null)
+        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool runInMemory = true, string customConfigPath = null, [CallerMemberName]string caller = null)
         {
             if (_localServer != _globalServer && _globalServer != null)
                 _localServer?.Dispose();
@@ -417,7 +417,7 @@ namespace FastTests
                 CustomConfigPath = customConfigPath,
                 RegisterForDisposal = false
             };
-            _localServer = GetNewServer(co);
+            _localServer = GetNewServer(co, caller);
         }
 
         private readonly object _getNewServerSync = new object();
@@ -528,7 +528,7 @@ namespace FastTests
             public Action<ServerStore> BeforeDatabasesStartup;
         }
 
-        protected virtual RavenServer GetNewServer(ServerCreationOptions options = null)
+        protected virtual RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
         {
             if (options == null)
             {
@@ -589,7 +589,11 @@ namespace FastTests
                 if (options.DeletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
-                var server = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true };
+                var server = new RavenServer(configuration)
+                {
+                    ThrowOnLicenseActivationFailure = true,
+                    DebugTag = caller
+                };
 
                 if (options.BeforeDatabasesStartup != null)
                     server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged = options.BeforeDatabasesStartup;

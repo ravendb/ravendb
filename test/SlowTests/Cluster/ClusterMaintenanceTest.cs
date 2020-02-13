@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace SlowTests.Cluster
         {
         }
 
-        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
         {
             if (options == null)
             {
@@ -35,9 +36,8 @@ namespace SlowTests.Cluster
 
             options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.WorkerSamplePeriod)] = "1";
 
-            return base.GetNewServer(options);
+            return base.GetNewServer(options, caller);
         }
-
 
         [Fact64Bit]
         public async Task RavenDB_14044()
@@ -70,7 +70,7 @@ namespace SlowTests.Cluster
 
                             const string expectedValue1 = "InvalidDataException: Cannot have";
                             const string expectedValue2 = "InvalidStartOfObjectException";
-                            if (value.Contains(expectedValue1) || 
+                            if (value.Contains(expectedValue1) ||
                                 fullText.Contains(expectedValue1) ||
                                 value.Contains(expectedValue2) ||
                                 fullText.Contains(expectedValue2))
