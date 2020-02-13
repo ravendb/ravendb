@@ -128,9 +128,9 @@ namespace Raven.Server.Documents.Queries.AST
             public long Ticks;
             public int Months;
 
-            public DateTime GetRangeStart(DateTime timestamp)
+            public DateTime GetRangeStart(DateTime timestamp, bool hasOffset = false)
             {
-                if (timestamp.Kind != DateTimeKind.Utc)
+                if (hasOffset == false && timestamp.Kind != DateTimeKind.Utc)
                     throw new ArgumentException("The timestamp must be in UTC");
 
                 var ticks = timestamp.Ticks;
@@ -153,9 +153,9 @@ namespace Raven.Server.Documents.Queries.AST
                 return timestamp;
             }
 
-            public DateTime GetNextRangeStart(DateTime timestamp)
+            public DateTime GetNextRangeStart(DateTime timestamp, bool hasOffset = false)
             {
-                if (timestamp.Kind != DateTimeKind.Utc)
+                if (hasOffset == false && timestamp.Kind != DateTimeKind.Utc)
                     throw new ArgumentException("The timestamp must be in UTC");
 
                 if (Ticks != 0)

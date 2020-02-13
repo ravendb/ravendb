@@ -169,7 +169,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var ts);
 
-            _offset = $"offset '{ts}'";
+            _offset = $" offset '{ts}'";
         }
 
         private void TimeSeriesCall(MethodCallExpression mce)

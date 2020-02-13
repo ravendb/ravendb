@@ -542,9 +542,9 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public Reader GetReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to)
+        public Reader GetReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset = null)
         {
-            return new Reader(context, documentId, name, from, to);
+            return new Reader(context, documentId, name, from, to, offset);
         }
         
         public class Reader
@@ -560,17 +560,26 @@ namespace Raven.Server.Documents.TimeSeries
             private TimeSeriesValuesSegment.TagPointer _tagPointer;
             private LazyStringValue _tag;
             private TimeSeriesValuesSegment _currentSegment;
+            private TimeSpan? _offset;
 
-            public Reader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to)
+            public Reader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset)
             {
                 _context = context;
                 _documentId = documentId;
                 _name = name;
                 _table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
                 _tag = new LazyStringValue(null, null, 0, context);
+                _offset = offset;
 
                 _from = EnsureMillisecondsPrecision(from);
                 _to = EnsureMillisecondsPrecision(to);
+
+                if (_offset.HasValue)
+                {
+                    _from = _from.Add(_offset.Value);
+                    _to = _to.Add(_offset.Value);
+                }
+
             }
         
             internal bool Init()
@@ -689,6 +698,11 @@ namespace Raven.Server.Documents.TimeSeries
                         _states = new TimestampState[_currentSegment.NumberOfValues];
                     }
 
+                    if (_offset.HasValue)
+                    {
+                        baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value); 
+                    }
+
                     segmentResult.End = _currentSegment.GetLastTimestamp(baseline);
                     segmentResult.Start = baseline;
                     segmentResult.ChangeVector = GetCurrentSegmentChangeVector();
@@ -728,6 +742,11 @@ namespace Raven.Server.Documents.TimeSeries
                         {
                             _values = new double[_currentSegment.NumberOfValues];
                             _states = new TimestampState[_currentSegment.NumberOfValues];
+                        }
+
+                        if (_offset.HasValue)
+                        {
+                            baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
                         }
 
                         foreach (var val in YieldSegment(baseline))
