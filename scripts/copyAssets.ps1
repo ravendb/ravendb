@@ -72,7 +72,8 @@ function CopyWindowsServiceScripts ( $projectDir, $targetDir, $packOpts ) {
 
 function CopyLinuxServiceScripts ( $projectDir, $targetDir, $packOpts ) {
     $linuxServiceAssets = @(
-        [io.path]::combine("scripts", "linux", "install-daemon.sh")
+        [io.path]::combine("scripts", "linux", "install-daemon.sh"),
+        [io.path]::combine("scripts", "linux", "enable-debugging.sh")
     );
 
     foreach ($asset in $linuxServiceAssets) {
