@@ -53,15 +53,9 @@ namespace Raven.Server.Documents.Queries.Results
             var min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
             var max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
 
-            if (timeSeriesFunction.Offset.HasValue)
-            {
-                min = min.Add(timeSeriesFunction.Offset.Value);
-                max = max.Add(timeSeriesFunction.Offset.Value);
-            }
-
             long count = 0;
             var array = new DynamicJsonArray();
-            TimeSeriesStorage.Reader reader;
+            var reader = tss.GetReader(_context, documentId, source, min, max, timeSeriesFunction.Offset);
 
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
@@ -71,9 +65,13 @@ namespace Raven.Server.Documents.Queries.Results
 
             var groupBy = timeSeriesFunction.GroupBy?.GetValue(_queryParameters)?.ToString();
             if (groupBy != null)
+            {
                 rangeSpec = TimeSeriesFunction.ParseRangeFromString(groupBy);
+            }
             else
-                next = max;        
+            {
+                next = max;
+            }
 
             var aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
             InitializeAggregationStates(timeSeriesFunction, aggStates);
@@ -107,8 +105,8 @@ namespace Raven.Server.Documents.Queries.Results
                     array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
                 }
 
-                start = rangeSpec.GetRangeStart(ts);
-                next = rangeSpec.GetNextRangeStart(start);
+                start = rangeSpec.GetRangeStart(ts, hasOffset: timeSeriesFunction.Offset.HasValue);
+                next = rangeSpec.GetNextRangeStart(start, hasOffset: timeSeriesFunction.Offset.HasValue);
 
                 for (int i = 0; i < aggStates.Length; i++)
                 {
@@ -118,8 +116,6 @@ namespace Raven.Server.Documents.Queries.Results
 
             BlittableJsonReaderObject GetRawValues()
             {
-                reader = tss.GetReader(_context, documentId, source, min, max);
-
                 foreach (var singleResult in reader.AllValues())
                 {
                     if (ShouldFilter(singleResult, timeSeriesFunction.Where))
@@ -153,8 +149,6 @@ namespace Raven.Server.Documents.Queries.Results
 
             BlittableJsonReaderObject GetAggregatedValues()
             {
-                reader = tss.GetReader(_context, documentId, source, min, max);
-
                 foreach (var it in reader.SegmentsOrValues())
                 {
                     if (it.IndividualValues != null)
