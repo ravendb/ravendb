@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual bool HasDynamicFields => false;
 
+        public virtual bool HasCompareExchange => false;
+
         public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
         {
             Name = name;

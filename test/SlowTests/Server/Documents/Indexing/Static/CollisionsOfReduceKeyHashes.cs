@@ -133,7 +133,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
 
                     var stats = new IndexingStatsScope(new IndexingRunStats());
-                    reducer.Execute(null, indexContext,
+                    reducer.Execute(null, null, indexContext,
                         writeOperation,
                         stats, CancellationToken.None);
 
@@ -198,7 +198,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     {
 
                         var stats = new IndexingStatsScope(new IndexingRunStats());
-                        reducer.Execute(null, indexContext,
+                        reducer.Execute(null, null, indexContext,
                             writeOperation,
                             stats, CancellationToken.None);
 
@@ -261,7 +261,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     try
                     {
                         var stats = new IndexingStatsScope(new IndexingRunStats());
-                        reducer.Execute(null, indexContext,
+                        reducer.Execute(null, null, indexContext,
                             writeOperation,
                             stats, CancellationToken.None);
 

@@ -20,6 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private JavaScriptUtils _javaScriptUtils;
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentsOperationContext _documentsContext;
+        private readonly TransactionOperationContext _serverContext;
 
         public readonly UnmanagedBuffersPoolWithLowMemoryHandling UnmanagedBuffersPool;
 
@@ -29,6 +30,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollection;
+
+        /// [collection: [key: [referenceKeys]]]
+        public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> CompareExchangeReferencesByCollection;
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
@@ -50,10 +54,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public LuceneDocumentConverter CreateFieldConverter;
 
-        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
+        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, TransactionOperationContext serverContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
         {
             _documentsStorage = documentsStorage;
             _documentsContext = documentsContext;
+            _serverContext = serverContext;
             Index = index;
             UnmanagedBuffersPool = _unmanagedBuffersPool;
             IndexDefinition = indexDefinition;
@@ -76,12 +81,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return DynamicNullObject.Null;
 
                 var source = Source;
-                if (source == null)
-                    throw new ArgumentException("Cannot execute LoadDocument. Source is not set.");
-
-                var id = source.GetId() as LazyStringValue;
-                if (id == null)
-                    throw new ArgumentException("Cannot execute LoadDocument. Source does not have a key.");
+                var id = GetSourceId(source);
 
                 if (source is DynamicBlittableJson)
                 {
@@ -92,28 +92,8 @@ namespace Raven.Server.Documents.Indexes.Static
                         return source;
                 }
 
-                Slice keySlice;
-                if (keyLazy != null)
-                {
-                    if (keyLazy.Length == 0)
-                        return DynamicNullObject.Null;
-
-                    // we intentionally don't dispose of the scope here, this is being tracked by the references
-                    // and will be disposed there.
-                    Slice.External(_documentsContext.Allocator, keyLazy, out keySlice);
-                }
-                else
-                {
-                    if (keyString.Length == 0)
-                        return DynamicNullObject.Null;
-                    // we intentionally don't dispose of the scope here, this is being tracked by the references
-                    // and will be disposed there.
-                    Slice.From(_documentsContext.Allocator, keyString, out keySlice);
-                }
-
-                // making sure that we normalize the case of the key so we'll be able to find
-                // it in case insensitive manner
-                _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
+                if (TryGetKeySlice(keyLazy, keyString, out var keySlice) == false)
+                    return DynamicNullObject.Null;
 
                 Slice.From(_documentsContext.Allocator, id, out var idSlice);
                 var references = GetReferencesForItem(idSlice);
@@ -131,6 +111,76 @@ namespace Raven.Server.Documents.Indexes.Static
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
             }
+        }
+
+        public unsafe dynamic LoadCompareExchangeValue(LazyStringValue keyLazy, string keyString)
+        {
+            //using (_loadDocumentStats?.Start() ?? (_loadDocumentStats = _stats?.For(IndexingOperation.LoadDocument))) // TODO [ppekrol]
+            {
+                if (keyLazy == null && keyString == null)
+                    return DynamicNullObject.Null;
+
+                var source = Source;
+                var id = GetSourceId(source);
+
+                if (TryGetKeySlice(keyLazy, keyString, out var keySlice) == false)
+                    return DynamicNullObject.Null;
+
+                Slice.From(_documentsContext.Allocator, id, out var idSlice);
+                var references = GetCompareExchangeReferencesForItem(idSlice);
+
+                references.Add(keySlice);
+
+                var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, keySlice);
+
+                if (value.Value == null)
+                {
+                    return DynamicNullObject.Null;
+                }
+
+                return new DynamicBlittableJson(value.Value);
+            }
+        }
+
+        private LazyStringValue GetSourceId(AbstractDynamicObject source)
+        {
+            if (source == null)
+                throw new ArgumentException("Cannot execute Load. Source is not set.");
+
+            var id = source.GetId() as LazyStringValue;
+            if (id == null)
+                throw new ArgumentException("Cannot execute Load. Source does not have a key.");
+
+            return id;
+        }
+
+        private bool TryGetKeySlice(LazyStringValue keyLazy, string keyString, out Slice keySlice)
+        {
+            keySlice = default;
+            if (keyLazy != null)
+            {
+                if (keyLazy.Length == 0)
+                    return false;
+
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
+                Slice.External(_documentsContext.Allocator, keyLazy, out keySlice);
+            }
+            else
+            {
+                if (keyString.Length == 0)
+                    return false;
+
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
+                Slice.From(_documentsContext.Allocator, keyString, out keySlice);
+            }
+
+            // making sure that we normalize the case of the key so we'll be able to find
+            // it in case insensitive manner
+            _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
+
+            return true;
         }
 
         public SpatialField GetOrCreateSpatialField(string name)
@@ -161,6 +211,20 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (ReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
                 ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>());
+
+            if (referencesByCollection.TryGetValue(key, out HashSet<Slice> references) == false)
+                referencesByCollection.Add(key, references = new HashSet<Slice>(SliceComparer.Instance));
+
+            return references;
+        }
+
+        private HashSet<Slice> GetCompareExchangeReferencesForItem(Slice key)
+        {
+            if (CompareExchangeReferencesByCollection == null)
+                CompareExchangeReferencesByCollection = new Dictionary<string, Dictionary<Slice, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
+
+            if (CompareExchangeReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
+                CompareExchangeReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>());
 
             if (referencesByCollection.TryGetValue(key, out HashSet<Slice> references) == false)
                 referencesByCollection.Add(key, references = new HashSet<Slice>(SliceComparer.Instance));

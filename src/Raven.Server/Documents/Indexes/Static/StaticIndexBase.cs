@@ -204,6 +204,48 @@ namespace Raven.Server.Documents.Indexes.Static
                 keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
         }
 
+        public dynamic LoadCompareExchangeValue<TIGnored>(object keyOrEnumerable)
+        {
+            return LoadCompareExchangeValue(keyOrEnumerable);
+        }
+
+        public dynamic LoadCompareExchangeValue(object keyOrEnumerable)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException(
+                    "Indexing scope was not initialized. Key: " + keyOrEnumerable);
+
+            if (keyOrEnumerable is LazyStringValue keyLazy)
+                return CurrentIndexingScope.Current.LoadCompareExchangeValue(keyLazy, null);
+
+            if (keyOrEnumerable is string keyString)
+                return CurrentIndexingScope.Current.LoadCompareExchangeValue(null, keyString);
+
+            if (keyOrEnumerable is DynamicNullObject)
+                return DynamicNullObject.Null;
+
+            if (keyOrEnumerable is IEnumerable enumerable)
+            {
+                var enumerator = enumerable.GetEnumerator();
+                using (enumerable as IDisposable)
+                {
+                    var items = new List<dynamic>();
+                    while (enumerator.MoveNext())
+                    {
+                        items.Add(LoadCompareExchangeValue(enumerator.Current));
+                    }
+                    if (items.Count == 0)
+                        return DynamicNullObject.Null;
+
+                    return new DynamicArray(items);
+                }
+            }
+
+            throw new InvalidOperationException(
+                "LoadCompareExchangeValue may only be called with a string or an enumerable, but was called with a parameter of type " +
+                keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
+        }
+
         public IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
         {
             return new RecursiveFunction(item, func).Execute();

@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "Map";
 
-        public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
+        public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                    if (CanContinueBatch(databaseContext, serverContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, IndexWriteOperation indexWriter, long currentEtag, long maxEtag, long count)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext serverContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, IndexWriteOperation indexWriter, long currentEtag, long maxEtag, long count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (_index.ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, indexWriter, count) == false)
+            if (_index.CanContinueBatch(stats, documentsContext, serverContext, indexingContext, indexWriter, count) == false)
                 return false;
 
             return true;

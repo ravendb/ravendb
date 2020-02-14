@@ -220,11 +220,11 @@ namespace Raven.Server.ServerWide
         {
             add
             {
-                _onDatabaseChanged = _onDatabaseChanged.Concat(new[] {value}).ToArray();
+                _onDatabaseChanged = _onDatabaseChanged.Concat(new[] { value }).ToArray();
             }
             remove
             {
-                _onDatabaseChanged = _onDatabaseChanged.Where(x=> x != value).ToArray();
+                _onDatabaseChanged = _onDatabaseChanged.Where(x => x != value).ToArray();
             }
         }
 
@@ -997,7 +997,7 @@ namespace Raven.Server.ServerWide
                             if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
-                                tasks.Add(()=>OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
+                                tasks.Add(() => OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
                                     DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
 
                                 continue;
@@ -1021,7 +1021,7 @@ namespace Raven.Server.ServerWide
                         UpdateValue(index, items, lowerKey, key, updated);
                     }
 
-                    tasks.Add(()=>OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                    tasks.Add(() => OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
                 }
 
                 ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), tasks);
@@ -2276,17 +2276,22 @@ namespace Raven.Server.ServerWide
 
         public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue(TransactionOperationContext context, string key)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             using (Slice.From(context.Allocator, key, out Slice keySlice))
+                return GetCompareExchangeValue(context, keySlice);
+        }
+
+        public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue(TransactionOperationContext context, Slice key)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+
+            if (items.ReadByKey(key, out var reader))
             {
-                if (items.ReadByKey(keySlice, out var reader))
-                {
-                    var index = ReadCompareExchangeOrTombstoneIndex(reader);
-                    var value = ReadCompareExchangeValue(context, reader);
-                    return (index, value);
-                }
-                return (-1, null);
+                var index = ReadCompareExchangeOrTombstoneIndex(reader);
+                var value = ReadCompareExchangeValue(context, reader);
+                return (index, value);
             }
+
+            return (-1, null);
         }
 
         public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context,
@@ -2340,13 +2345,13 @@ namespace Raven.Server.ServerWide
             using (last.Scope)
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-               
+
                 var tvh = table.SeekOneBackwardFrom(CompareExchangeSchema.Indexes[CompareExchangeIndex], prefix.Slice, last.Slice);
 
                 if (tvh == null)
                     return 0;
 
-                return ReadCompareExchangeOrTombstoneIndex(tvh.Reader);             
+                return ReadCompareExchangeOrTombstoneIndex(tvh.Reader);
             }
         }
 
@@ -2593,7 +2598,7 @@ namespace Raven.Server.ServerWide
             using (Slice.From(context.Allocator, dbKey, out var key))
                 return items.VerifyKeyExists(key);
         }
-         
+
         public DatabaseRecord ReadDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
             where T : RavenTransaction
         {
@@ -3128,7 +3133,7 @@ namespace Raven.Server.ServerWide
                         }, token);
                     }
                 };
-               
+
                 context.Transaction.Commit();
             }
             token.ThrowIfCancellationRequested();
@@ -3195,7 +3200,7 @@ namespace Raven.Server.ServerWide
 
             ThrowCanceledException(index, LastModifiedIndex, isExecution: true);
         }
-        
+
         public async Task WaitForIndexNotification(long index, TimeSpan timeout)
         {
             while (true)
