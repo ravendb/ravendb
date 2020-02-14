@@ -132,15 +132,7 @@ namespace Raven.Server.Web.System
             {
                 var createDumpExecPath = Path.Combine(AppContext.BaseDirectory, "createdump");
 
-                desc =
-                    $"Make sure to {Environment.NewLine}" +
-                    $"sudo chown root:root {ravenDebugExecPath}{Environment.NewLine}" +
-                    $"sudo chown root:root {createDumpExecPath}{Environment.NewLine}" +
-                    $"sudo chmod +s {ravenDebugExecPath}{Environment.NewLine}" +
-                    $"sudo chmod +s {createDumpExecPath}{Environment.NewLine}" +
-                    $"sudo apt install libc6-dev{Environment.NewLine}" +
-                    $"sudo setcap cap_sys_ptrace=eip {ravenDebugExecPath}{Environment.NewLine}" +
-                    $"sudo setcap cap_sys_ptrace=eip {createDumpExecPath}{Environment.NewLine}";
+                desc = $"Make sure to run enable-debugging.sh script as root from the main RavenDB directory.";
             }
 
             throw new InvalidOperationException(

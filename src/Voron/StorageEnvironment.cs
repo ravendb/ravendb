@@ -1183,12 +1183,16 @@ namespace Voron
             if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
                 dataLength = overflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
 
-            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)pageNumber);
+            var ctx = new Hashing.Streamed.XXHash64Context
+            {
+                Seed = (ulong)pageNumber
+            };
+            Hashing.Streamed.XXHash64.BeginProcess(ref ctx);
 
-            Hashing.Streamed.XXHash64.Process(ctx, ptr, PageHeader.ChecksumOffset);
-            Hashing.Streamed.XXHash64.Process(ctx, ptr + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
+            Hashing.Streamed.XXHash64.Process(ref ctx, ptr, PageHeader.ChecksumOffset);
+            Hashing.Streamed.XXHash64.Process(ref ctx, ptr + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
 
-            return Hashing.Streamed.XXHash64.EndProcess(ctx);
+            return Hashing.Streamed.XXHash64.EndProcess(ref ctx);
         }
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)

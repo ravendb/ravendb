@@ -121,43 +121,17 @@ namespace Raven.Server.Documents.Indexes.Static
             private readonly int _hash;
             private readonly List<string> _items;
 
-            public unsafe CacheKey(List<string> items)
+            public CacheKey(List<string> items)
             {
                 _items = items;
 
-                byte[] temp = null;
-                var ctx = Hashing.Streamed.XXHash32.BeginProcess();
-                foreach (var str in items)
+                var hasher = new HashCode();
+                foreach (var item in items)
                 {
-                    fixed (char* buffer = str)
-                    {
-                        var toProcess = str.Length;
-                        var current = buffer;
-                        do
-                        {
-                            if (toProcess < Hashing.Streamed.XXHash32.Alignment)
-                            {
-                                if (temp == null)
-                                    temp = new byte[Hashing.Streamed.XXHash32.Alignment];
-
-                                fixed (byte* tempBuffer = temp)
-                                {
-                                    Memory.Set(tempBuffer, 0, temp.Length);
-                                    Memory.Copy(tempBuffer, (byte*)current, toProcess);
-
-                                    ctx = Hashing.Streamed.XXHash32.Process(ctx, tempBuffer, temp.Length);
-                                    break;
-                                }
-                            }
-
-                            ctx = Hashing.Streamed.XXHash32.Process(ctx, (byte*)current, Hashing.Streamed.XXHash32.Alignment);
-                            toProcess -= Hashing.Streamed.XXHash32.Alignment;
-                            current += Hashing.Streamed.XXHash32.Alignment;
-                        }
-                        while (toProcess > 0);
-                    }
+                    hasher.Add(item);
                 }
-                _hash = (int)Hashing.Streamed.XXHash32.EndProcess(ctx);
+
+                _hash = hasher.ToHashCode();
             }
 
             public override bool Equals(object obj)

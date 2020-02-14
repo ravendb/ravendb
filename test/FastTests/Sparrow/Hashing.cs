@@ -334,7 +334,8 @@ namespace FastTests.Sparrow
             {
                 blockSize = Hashing.Streamed.XXHash32.Alignment * iteration;
 
-                var context = Hashing.Streamed.XXHash32.BeginProcess(seed);
+                var context = new Hashing.Streamed.XXHash32Context {Seed = seed};
+                Hashing.Streamed.XXHash32.BeginProcess(ref context);
                 fixed (byte* buffer = values)
                 {
                     byte* current = buffer;
@@ -342,7 +343,7 @@ namespace FastTests.Sparrow
                     do
                     {
                         int block = Math.Min(blockSize, (int)(bEnd - current));
-                        context = Hashing.Streamed.XXHash32.Process(context, current, block);
+                        Hashing.Streamed.XXHash32.Process(ref context, current, block);
                         current += block;
                     }
                     while (current < bEnd);
@@ -350,7 +351,7 @@ namespace FastTests.Sparrow
 
                 iteration++;
 
-                var result = Hashing.Streamed.XXHash32.EndProcess(context);
+                var result = Hashing.Streamed.XXHash32.EndProcess(ref context);
                 var expected = Hashing.XXHash32.Calculate(values, -1, seed);
 
                 Assert.Equal(expected, result);
@@ -375,7 +376,8 @@ namespace FastTests.Sparrow
             {
                 blockSize = Hashing.Streamed.XXHash64.Alignment * iteration;
 
-                var context = Hashing.Streamed.XXHash64.BeginProcess(seed);
+                var context = new Hashing.Streamed.XXHash64Context {Seed = seed};
+                Hashing.Streamed.XXHash64.BeginProcess(ref context);
                 fixed (byte* buffer = values)
                 {
                     byte* current = buffer;
@@ -383,7 +385,7 @@ namespace FastTests.Sparrow
                     do
                     {
                         int block = Math.Min(blockSize, (int)(bEnd - current));
-                        context = Hashing.Streamed.XXHash64.Process(context, current, block);
+                        Hashing.Streamed.XXHash64.Process(ref context, current, block);
                         current += block;
                     }
                     while (current < bEnd);
@@ -391,7 +393,7 @@ namespace FastTests.Sparrow
 
                 iteration++;
 
-                var result = Hashing.Streamed.XXHash64.EndProcess(context);
+                var result = Hashing.Streamed.XXHash64.EndProcess(ref context);
                 var expected = Hashing.XXHash64.Calculate(values, -1, seed);
 
                 Assert.Equal(expected, result);

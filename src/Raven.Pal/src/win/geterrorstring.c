@@ -10,11 +10,16 @@ rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t* specia
 	
 	switch (error) {
 		case ERROR_NOT_ENOUGH_MEMORY:
+		case ERROR_OUTOFMEMORY:
+		case ERROR_COMMITMENT_MINIMUM:
 			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOMEM;
 			break;
 		case ERROR_FILE_NOT_FOUND:
 			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOENT;
 			break;
+        case ERROR_DISK_FULL:
+            *special_errno_flags = ERRNO_SPECIAL_CODES_ENOSPC;
+            break;
 		default:
 			*special_errno_flags = ERRNO_SPECIAL_CODES_NONE;
 			break;
