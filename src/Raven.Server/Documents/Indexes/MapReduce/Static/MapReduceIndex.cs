@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var staticIndex = staticMapIndex._compiled;
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
-                staticIndex.GroupByFields, staticIndex.HasDynamicFields);
+                staticIndex.GroupByFields, staticIndex.HasDynamicFields, staticIndex.HasCompareExchange);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             where TStaticIndexBase : AbstractStaticIndexBase
         {
             staticIndex = (TStaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
-            return new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields);
+            return new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields, staticIndex.HasCompareExchange);
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
@@ -332,6 +332,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var workers = new List<IIndexingWork>();
 
             workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
+
+            //if (_compiled.HasCompareExchange)
+            //    workers.Add(_handleReferences = new HandleCompareExchangeReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));

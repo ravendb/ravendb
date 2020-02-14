@@ -338,7 +338,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = index._indexStorage.GetReferenceTablesCount("Companies", tx);
+                    var counts = index._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
 
                     Assert.Equal(1, counts.ReferenceTableCount);
                     Assert.Equal(1, counts.CollectionTableCount);
@@ -358,7 +358,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = index._indexStorage.GetReferenceTablesCount("Companies", tx);
+                    var counts = index._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
 
                     Assert.Equal(0, counts.ReferenceTableCount);
                     Assert.Equal(0, counts.CollectionTableCount);
@@ -728,7 +728,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
                     {
-                        var counts = index._indexStorage.GetReferenceTablesCount("Companies", tx);
+                        var counts = index._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
 
                         Assert.Equal(0, counts.ReferenceTableCount);
                         Assert.Equal(0, counts.CollectionTableCount);

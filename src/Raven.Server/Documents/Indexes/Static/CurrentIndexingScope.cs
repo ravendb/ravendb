@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollection;
 
         /// [collection: [key: [referenceKeys]]]
-        public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> CompareExchangeReferencesByCollection;
+        public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollectionForCompareExchange;
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
@@ -131,14 +132,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 references.Add(keySlice);
 
-                var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, keySlice);
+                var actualKeyAsString = CompareExchangeCommandBase.GetActualKey(_documentsStorage.DocumentDatabase.Name, keySlice.ToString()); // TODO [ppekrol] optimize this
+                var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, actualKeyAsString);
 
-                if (value.Value == null)
-                {
+                if (value.Value == null || value.Value.TryGetMember("Object", out object result) == false)
                     return DynamicNullObject.Null;
-                }
 
-                return new DynamicBlittableJson(value.Value);
+                if (result is BlittableJsonReaderObject bjro)
+                    return new DynamicBlittableJson(bjro);
+
+                throw new InvalidOperationException("TODO ppekrol");
             }
         }
 
@@ -220,11 +223,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private HashSet<Slice> GetCompareExchangeReferencesForItem(Slice key)
         {
-            if (CompareExchangeReferencesByCollection == null)
-                CompareExchangeReferencesByCollection = new Dictionary<string, Dictionary<Slice, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
+            if (ReferencesByCollectionForCompareExchange == null)
+                ReferencesByCollectionForCompareExchange = new Dictionary<string, Dictionary<Slice, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
 
-            if (CompareExchangeReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
-                CompareExchangeReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>());
+            if (ReferencesByCollectionForCompareExchange.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
+                ReferencesByCollectionForCompareExchange.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>());
 
             if (referencesByCollection.TryGetValue(key, out HashSet<Slice> references) == false)
                 referencesByCollection.Add(key, references = new HashSet<Slice>(SliceComparer.Instance));

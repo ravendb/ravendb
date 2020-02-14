@@ -14,10 +14,15 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
-    public sealed class HandleDocumentReferences : HandleReferences
+    public class HandleDocumentReferences : HandleReferences
     {
         public HandleDocumentReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
-            : base(index, referencedCollections, documentsStorage, indexStorage, configuration)
+            : this(index, referencedCollections, documentsStorage, indexStorage, indexStorage.ReferencesForDocuments, configuration)
+        {
+        }
+
+        protected HandleDocumentReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexStorage.ReferencesBase referencesStorage, IndexingConfiguration configuration)
+            : base(index, referencedCollections, documentsStorage, indexStorage, referencesStorage, configuration)
         {
         }
 
@@ -39,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             var tx = indexContext.Transaction.InnerTransaction;
 
             using (Slice.External(tx.Allocator, tombstone.LowerId, out Slice tombstoneKeySlice))
-                _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
+                _referencesStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
     }
 
@@ -52,16 +57,17 @@ namespace Raven.Server.Documents.Indexes.Workers
         protected readonly DocumentsStorage _documentsStorage;
         private readonly IndexingConfiguration _configuration;
         protected readonly IndexStorage _indexStorage;
-
+        protected readonly IndexStorage.ReferencesBase _referencesStorage;
         protected readonly Reference _reference = new Reference();
 
-        public HandleReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
+        public HandleReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexStorage.ReferencesBase referencesStorage, IndexingConfiguration configuration)
         {
             _index = index;
             _referencedCollections = referencedCollections;
             _documentsStorage = documentsStorage;
             _configuration = configuration;
             _indexStorage = indexStorage;
+            _referencesStorage = referencesStorage;
             _logger = LoggingSource.Instance
                 .GetLogger<HandleReferences>(_indexStorage.DocumentDatabase.Name);
         }
@@ -135,10 +141,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                         switch (actionType)
                         {
                             case ActionType.Document:
-                                lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+                                lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
                                 break;
                             case ActionType.Tombstone:
-                                lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+                                lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
                                 break;
                             default:
                                 throw new NotSupportedException();
@@ -159,6 +165,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         {
                             var hasChanges = false;
 
+                            using (serverContext != null ? serverContext.OpenReadTransaction() : null)
                             using (databaseContext.OpenReadTransaction())
                             {
                                 sw.Restart();
@@ -170,13 +177,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         if (lastCollectionEtag == -1)
                                             lastCollectionEtag = _index.GetLastItemEtagInCollection(databaseContext, collection);
 
-                                        references = GetItemReferences(databaseContext, referencedCollection, lastEtag, pageSize);
+                                        references = GetItemReferences(databaseContext, serverContext, referencedCollection, lastEtag, pageSize);
                                         break;
                                     case ActionType.Tombstone:
                                         if (lastCollectionEtag == -1)
                                             lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
 
-                                        references = GetTombstoneReferences(databaseContext, referencedCollection, lastEtag, pageSize);
+                                        references = GetTombstoneReferences(databaseContext, serverContext, referencedCollection, lastEtag, pageSize);
                                         break;
                                     default:
                                         throw new NotSupportedException();
@@ -274,10 +281,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                         switch (actionType)
                         {
                             case ActionType.Document:
-                                _indexStorage.WriteLastReferenceEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
+                                _referencesStorage.WriteLastReferenceEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
                                 break;
                             case ActionType.Tombstone:
-                                _indexStorage.WriteLastReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
+                                _referencesStorage.WriteLastReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
                                 break;
                             default:
                                 throw new NotSupportedException();
@@ -291,7 +298,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, string collection, Reference referencedDocument, long lastIndexedEtag)
         {
-            foreach (var key in _indexStorage.GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
+            foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
             {
                 var item = GetItem(databaseContext, key);
 
@@ -315,7 +322,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
         }
 
-        protected IEnumerable<Reference> GetItemReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, long pageSize)
+        protected virtual IEnumerable<Reference> GetItemReferences(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
             return _documentsStorage
                 .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, DocumentFields.Id)
@@ -328,7 +335,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 });
         }
 
-        protected IEnumerable<Reference> GetTombstoneReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, long pageSize)
+        protected virtual IEnumerable<Reference> GetTombstoneReferences(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
             return _documentsStorage
                 .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
@@ -343,8 +350,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
 
-        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext,
-            IndexingStatsScope stats);
+        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private enum ActionType
         {

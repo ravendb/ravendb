@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
         private readonly TimeSeriesStorage _timeSeriesStorage;
 
         public HandleTimeSeriesReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, TimeSeriesStorage timeSeriesStorage, DocumentsStorage documentsStorage, IndexStorage indexStorage, Config.Categories.IndexingConfiguration configuration)
-            : base(index, referencedCollections, documentsStorage, indexStorage, configuration)
+            : base(index, referencedCollections, documentsStorage, indexStorage, indexStorage.ReferencesForDocuments, configuration)
         {
             _timeSeriesStorage = timeSeriesStorage;
         }
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             using (DocumentIdWorker.GetSliceFromId(indexContext, tombstone.LowerId, out Slice documentIdPrefixWithTsKeySeparator, SpecialChars.RecordSeparator))
-                _indexStorage.RemoveReferencesByPrefix(documentIdPrefixWithTsKeySeparator, collection, null, indexContext.Transaction);
+                _referencesStorage.RemoveReferencesByPrefix(documentIdPrefixWithTsKeySeparator, collection, null, indexContext.Transaction);
         }
     }
 }

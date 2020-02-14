@@ -14,16 +14,20 @@ namespace Raven.Server.Documents.Indexes.Static
     public class MapIndexDefinition : IndexDefinitionBase<IndexField>
     {
         private readonly bool _hasDynamicFields;
+        private readonly bool _hasCompareExchange;
         public readonly IndexDefinition IndexDefinition;
 
-        public MapIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields)
+        public MapIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields, bool hasCompareExchange)
             : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, GetFields(definition, outputFields))
         {
             _hasDynamicFields = hasDynamicFields;
+            _hasCompareExchange = hasCompareExchange;
             IndexDefinition = definition;
         }
 
         public override bool HasDynamicFields => _hasDynamicFields;
+
+        public override bool HasCompareExchange => _hasCompareExchange;
 
         private static IndexField[] GetFields(IndexDefinition definition, string[] outputFields)
         {

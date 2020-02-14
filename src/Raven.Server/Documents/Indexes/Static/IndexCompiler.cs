@@ -338,6 +338,9 @@ namespace Raven.Server.Documents.Indexes.Static
             if (methods.HasCreateField)
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
+            if (methods.HasLoadCompareExchangeValue)
+                statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasCompareExchange)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+
             if (methods.HasBoost)
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasBoostedFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
@@ -685,6 +688,8 @@ namespace Raven.Server.Documents.Indexes.Static
             public bool HasInclude { get; set; }
 
             public bool HasCreateField { get; set; }
+
+            public bool HasLoadCompareExchangeValue { get; set; }
 
             public bool HasBoost { get; set; }
         }

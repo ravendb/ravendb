@@ -130,6 +130,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool HasDynamicFields { get; set; }
 
+        public bool HasCompareExchange { get; set; }
+
         public bool HasBoostedFields { get; set; }
 
         public string Source;
