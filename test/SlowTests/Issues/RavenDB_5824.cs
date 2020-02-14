@@ -127,7 +127,7 @@ namespace SlowTests.Issues
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
-                    url = $"{node.Url}/databases/{node.Database}/indexes/staleness?name={_indexName}";
+                    url = $"{node.Url}/databases/{node.Database}/indexes/staleness?name={Uri.EscapeDataString(_indexName)}";
 
                     return new HttpRequestMessage
                     {

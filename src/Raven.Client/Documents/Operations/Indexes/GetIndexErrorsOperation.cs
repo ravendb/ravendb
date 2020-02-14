@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
@@ -41,7 +42,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 {
                     url += "?";
                     foreach (var indexName in _indexNames)
-                        url += $"&name={indexName}";
+                        url += $"&name={Uri.EscapeDataString(indexName)}";
                 }
 
                 return new HttpRequestMessage

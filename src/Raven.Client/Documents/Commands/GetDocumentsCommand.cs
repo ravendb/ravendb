@@ -95,9 +95,9 @@ namespace Raven.Client.Documents.Commands
                 pathBuilder.Append("&startsWith=").Append(Uri.EscapeDataString(_startWith));
 
                 if (_matches != null)
-                    pathBuilder.Append("&matches=").Append(_matches);
+                    pathBuilder.Append("&matches=").Append(Uri.EscapeDataString(_matches));
                 if (_exclude != null)
-                    pathBuilder.Append("&exclude=").Append(_exclude);
+                    pathBuilder.Append("&exclude=").Append(Uri.EscapeDataString(_exclude)); 
                 if (_startAfter != null)
                     pathBuilder.Append("&startAfter=").Append(Uri.EscapeDataString(_startAfter));
             }
@@ -106,20 +106,20 @@ namespace Raven.Client.Documents.Commands
             {
                 foreach (var include in _includes)
                 {
-                    pathBuilder.Append("&include=").Append(include);
+                    pathBuilder.Append("&include=").Append(Uri.EscapeDataString(include));
                 }
             }
 
             if (_includeAllCounters)
             {
-                pathBuilder.Append("&counter=").Append(Constants.Counters.All);
+                pathBuilder.Append("&counter=").Append(Uri.EscapeDataString(Constants.Counters.All));
             }
 
             else if (_counters != null && _counters.Length > 0)
             {
                 foreach (var counter in _counters)
                 {
-                    pathBuilder.Append("&counter=").Append(counter);
+                    pathBuilder.Append("&counter=").Append(Uri.EscapeDataString(counter));
                 }
             }
 

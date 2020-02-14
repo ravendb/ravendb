@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 {
                     foreach (var specificIndex in indexOptions.WaitForSpecificIndexes)
                     {
-                        sb.Append("&waitForSpecificIndex=").Append(specificIndex);
+                        sb.Append("&waitForSpecificIndex=").Append(Uri.EscapeDataString(specificIndex));
                     }
                 }
             }
