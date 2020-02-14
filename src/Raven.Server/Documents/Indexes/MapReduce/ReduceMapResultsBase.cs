@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public string Name { get; } = "Reduce";
 
-        public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
+        public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
         {
             if (_mapReduceContext.StoreByReduceKeyHash.Count == 0)
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, 
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext serverContext, TransactionOperationContext indexingContext, 
             IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count)
         {
             throw new NotSupportedException();

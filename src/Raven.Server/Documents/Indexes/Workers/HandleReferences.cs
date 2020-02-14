@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "References";
 
-        public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
+        public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             const long pageSize = long.MaxValue;
@@ -76,13 +76,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                             ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                             : TimeSpan.FromMinutes(15);
 
-            var moreWorkFound = HandleItems(ActionType.Tombstone, databaseContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
-            moreWorkFound |= HandleItems(ActionType.Document, databaseContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
+            var moreWorkFound = HandleItems(ActionType.Tombstone, databaseContext, serverContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
+            moreWorkFound |= HandleItems(ActionType.Document, databaseContext, serverContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
 
             return moreWorkFound;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext,
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext serverContext, TransactionOperationContext indexingContext,
             IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
@@ -97,13 +97,13 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (_index.ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, indexWriteOperation, count) == false)
+            if (_index.CanContinueBatch(stats, documentsContext, serverContext, indexingContext, indexWriteOperation, count) == false)
                 return false;
 
             return true;
         }
 
-        private unsafe bool HandleItems(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
+        private unsafe bool HandleItems(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
                                     }
 
-                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                    if (CanContinueBatch(databaseContext, serverContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
                                     {
                                         keepRunning = false;
                                         break;

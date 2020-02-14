@@ -1748,17 +1748,21 @@ namespace Raven.Server.Documents.Indexes
 
             bool mightBeMore = false;
 
+            TransactionOperationContext serverContext = null;
+
             using (DocumentDatabase.PreventFromUnloading())
             using (CultureHelper.EnsureInvariantCulture())
+            using (Definition.HasCompareExchange ? DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext) : null)
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext databaseContext))
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {
                 indexContext.PersistentContext.LongLivedTransactions = true;
                 databaseContext.PersistentContext.LongLivedTransactions = true;
+                serverContext.PersistentContext.LongLivedTransactions = true;
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 using (CurrentIndexingScope.Current =
-                    new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
+                    new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, databaseContext, serverContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
                 {
                     var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext));
 
@@ -1770,7 +1774,7 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 using (var scope = stats.For(work.Name))
                                 {
-                                    mightBeMore |= work.Execute(databaseContext, indexContext, writeOperation, scope,
+                                    mightBeMore |= work.Execute(databaseContext, serverContext, indexContext, writeOperation, scope,
                                         cancellationToken);
 
                                     if (mightBeMore)
@@ -3543,7 +3547,8 @@ namespace Raven.Server.Documents.Indexes
 
         public bool CanContinueBatch(
             IndexingStatsScope stats,
-            DocumentsOperationContext documentsOperationContext,
+            DocumentsOperationContext documentsContext,
+            TransactionOperationContext serverContext,
             TransactionOperationContext indexingContext,
             IndexWriteOperation indexWriteOperation,
             long count)
@@ -3551,7 +3556,7 @@ namespace Raven.Server.Documents.Indexes
             var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
             //We need to take the read transaction encryption size into account as we might read alot of document and produce very little indexing output.
-            txAllocationsInBytes += documentsOperationContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
+            txAllocationsInBytes += documentsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
 
             if (_indexDisabled)
             {
@@ -3599,7 +3604,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (DocumentDatabase.Is32Bits)
             {
-                IPagerLevelTransactionState pagerLevelTransactionState = documentsOperationContext.Transaction?.InnerTransaction?.LowLevelTransaction;
+                IPagerLevelTransactionState pagerLevelTransactionState = documentsContext.Transaction?.InnerTransaction?.LowLevelTransaction;
                 var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
@@ -3664,7 +3669,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Interlocked.Increment(ref _allocationCleanupNeeded);
 
-                    documentsOperationContext.DoNotReuse = true;
+                    documentsContext.DoNotReuse = true;
                     indexingContext.DoNotReuse = true;
 
                     if (stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)

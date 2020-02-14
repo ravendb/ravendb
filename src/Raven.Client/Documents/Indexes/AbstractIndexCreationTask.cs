@@ -317,6 +317,16 @@ namespace Raven.Client.Documents.Indexes
             throw new NotSupportedException("This can only be run on the server side");
         }
 
+        public T LoadCompareExchangeValue<T>(string key)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public T[] LoadCompareExchangeValue<T>(IEnumerable<string> keys)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
         /// <summary>
         /// Loads the specified document during the indexing process
         /// </summary>

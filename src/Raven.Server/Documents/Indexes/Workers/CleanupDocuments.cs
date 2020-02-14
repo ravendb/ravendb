@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "Cleanup";
 
-        public virtual bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
+        public virtual bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             const long pageSize = long.MaxValue;
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
-                                if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
+                                if (CanContinueBatch(databaseContext, serverContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
                                 {
                                     keepRunning = false;
                                     break;
@@ -138,6 +138,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public bool CanContinueBatch(
             DocumentsOperationContext documentsContext,
+            TransactionOperationContext serverContext,
             TransactionOperationContext indexingContext,
             IndexingStatsScope stats,
             IndexWriteOperation indexWriteOperation,
@@ -151,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, indexWriteOperation, count) == false)
+            if (_index.CanContinueBatch(stats, documentsContext, serverContext, indexingContext, indexWriteOperation, count) == false)
                 return false;
 
             return true;
