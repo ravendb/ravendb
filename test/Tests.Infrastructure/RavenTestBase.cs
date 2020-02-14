@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -61,7 +60,6 @@ namespace FastTests
         {
             store.Maintenance.Send(new CreateSampleDataOperation());
         }
-
 
         protected async Task SetDatabaseId(DocumentStore store, Guid dbId)
         {
@@ -126,7 +124,7 @@ namespace FastTests
                 }
             }
 
-            Assert.True(commandFound,$"{commandType} wasn't found in the log.");
+            Assert.True(commandFound, $"{commandType} wasn't found in the log.");
             return updateIndex;
         }
 
@@ -227,7 +225,6 @@ namespace FastTests
 
                     if (options.CreateDatabase)
                     {
-
                         if (Servers.Contains(serverToUse))
                         {
                             Servers.ForEach(server => CheckIfDatabaseExists(server, name));
@@ -256,7 +253,7 @@ namespace FastTests
                             result = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
                         }
 
-                        Assert.True(result.RaftCommandIndex > 0); //sanity check             
+                        Assert.True(result.RaftCommandIndex > 0); //sanity check
 
                         if (Servers.Contains(serverToUse))
                         {
@@ -274,7 +271,7 @@ namespace FastTests
 
                     store.BeforeDispose += (sender, args) =>
                     {
-                        var realException = Context.GetType().GetField("Exception", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)?.GetValue(Context) as Exception;
+                        var realException = Context.GetException();
                         try
                         {
                             if (CreatedStores.TryRemove(store) == false)
@@ -295,9 +292,7 @@ namespace FastTests
                         catch (Exception e)
                         {
                             if (realException != null)
-                            {
                                 throw new AggregateException(realException, e);
-                            }
 
                             throw;
                         }
@@ -342,7 +337,7 @@ namespace FastTests
                 if (options.AdminCertificate != null)
                 {
                     using (var adminStore =
-                        new DocumentStore {Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate}.Initialize())
+                        new DocumentStore { Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate }.Initialize())
                     {
                         return adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                     }
@@ -620,7 +615,6 @@ namespace FastTests
                 await Task.Delay(100);
             } while (true);
         }
-
 
         protected T WaitForValue<T>(Func<T> act, T expectedVal, int timeout = 15000)
         {
@@ -1029,6 +1023,7 @@ namespace FastTests
                     }
                 }
             }
+
             public bool RunInMemory
             {
                 get => _runInMemory;

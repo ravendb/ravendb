@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
-using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests
+namespace SlowTests.Utils
 {
     public class InfrastructureTests : ClusterTestBase
     {
@@ -20,7 +19,7 @@ namespace FastTests
             var ae = await Assert.ThrowsAsync<AggregateException>(async () =>
             {
                 var cluster = await CreateRaftCluster(2, leaderIndex: 0);
-                using (var store = GetDocumentStore(new Options{Server = cluster.Leader}))
+                using (var store = GetDocumentStore(new Options { Server = cluster.Leader }))
                 {
                     cluster.Nodes[1].Dispose();
                     throw new InvalidOperationException("Cows can fly!"); // this is the real exception
@@ -34,10 +33,11 @@ namespace FastTests
         [Fact]
         public async Task CanCatchException()
         {
+            DoNotReuseServer();
+
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
-                var cluster = await CreateRaftCluster(2, leaderIndex: 0);
-                using (var store = GetDocumentStore(new Options{Server = cluster.Leader}))
+                using (var store = GetDocumentStore())
                 {
                     throw new InvalidOperationException("Cows can fly!"); // this is the real exception
                 }
