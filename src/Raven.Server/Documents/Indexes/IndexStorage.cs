@@ -8,18 +8,38 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Voron;
-using Voron.Data.Tables;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Voron;
+using Voron.Data.BTrees;
+using Voron.Data.Tables;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Indexes
 {
     public class IndexStorage
     {
+        public class Constants
+        {
+            private Constants()
+            {
+            }
+
+            public const string DocumentReferencePrefix = "$";
+
+            public const string DocumentReferenceTombstonePrefix = "%";
+
+            public const string DocumentReferenceCollectionPrefix = "#";
+
+            public const string CompareExchangeReferencePrefix = "!";
+
+            public const string CompareExchangeReferenceTombstonePrefix = "^";
+
+            public const string CompareExchangeReferenceCollectionPrefix = "@";
+        }
+
         protected readonly Logger _logger;
 
         private readonly Index _index;
@@ -40,6 +60,10 @@ namespace Raven.Server.Documents.Indexes
 
         internal Exception SimulateIndexWriteException = null;
 
+        public readonly DocumentReferences ReferencesForDocuments;
+
+        public readonly CompareExchangeReferences ReferencesForCompareExchange;
+
         public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase database)
         {
             _index = index;
@@ -53,6 +77,9 @@ namespace Raven.Server.Documents.Indexes
                     .SelectMany(x => x.Value)
                     .Distinct()
                     .ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
+
+            ReferencesForDocuments = new DocumentReferences();
+            ReferencesForCompareExchange = new CompareExchangeReferences();
         }
 
         public void Initialize(StorageEnvironment environment)
@@ -98,6 +125,7 @@ namespace Raven.Server.Documents.Indexes
                 tx.InnerTransaction.CreateTree(IndexSchema.EtagsTree);
                 tx.InnerTransaction.CreateTree(IndexSchema.EtagsTombstoneTree);
                 tx.InnerTransaction.CreateTree(IndexSchema.References);
+                tx.InnerTransaction.CreateTree(IndexSchema.ReferencesForCompareExchange);
 
                 _index.Definition.Persist(context, _environment.Options);
 
@@ -276,34 +304,200 @@ namespace Raven.Server.Documents.Indexes
             return stats;
         }
 
+        public class DocumentReferences : ReferencesBase
+        {
+            public DocumentReferences() 
+                : base(IndexSchema.References, Constants.DocumentReferencePrefix, Constants.DocumentReferenceTombstonePrefix, Constants.DocumentReferenceCollectionPrefix)
+            {
+            }
+        }
+
+        public class CompareExchangeReferences : ReferencesBase
+        {
+            public CompareExchangeReferences()
+                : base(IndexSchema.ReferencesForCompareExchange, Constants.CompareExchangeReferencePrefix, Constants.CompareExchangeReferenceTombstonePrefix, Constants.CompareExchangeReferenceCollectionPrefix)
+            {
+            }
+        }
+
+        public abstract class ReferencesBase
+        {
+            private readonly string _referenceTreeName;
+            private readonly string _referencePrefix;
+            private readonly string _referenceTombstonePrefix;
+            private readonly string _referenceCollectionPrefix;
+
+            protected ReferencesBase(string referencesTreeName, string referencePrefix, string referenceTombstonePrefix, string referenceCollectionPrefix)
+            {
+                _referenceTreeName = referencesTreeName ?? throw new ArgumentNullException(nameof(referencesTreeName));
+                _referencePrefix = referencePrefix ?? throw new ArgumentNullException(nameof(referencePrefix));
+                _referenceTombstonePrefix = referenceTombstonePrefix ?? throw new ArgumentNullException(nameof(referenceTombstonePrefix));
+                _referenceCollectionPrefix = referenceCollectionPrefix ?? throw new ArgumentNullException(nameof(referenceCollectionPrefix));
+            }
+
+            public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
+            {
+                var tree = tx.InnerTransaction.ReadTree(_referencePrefix + collection);
+
+                var result = tree?.Read(referencedCollection.Name);
+                if (result == null)
+                    return 0;
+
+                return result.Reader.ReadLittleEndianInt64();
+            }
+
+            public unsafe void WriteLastReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
+            {
+                var tree = tx.InnerTransaction.CreateTree(_referencePrefix + collection);
+                using (Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable, out Slice collectionSlice))
+                using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
+                {
+                    tree.Add(collectionSlice, etagSlice);
+                }
+            }
+
+            public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
+            {
+                var tree = tx.InnerTransaction.ReadTree(_referenceTombstonePrefix + collection);
+
+                var result = tree?.Read(referencedCollection.Name);
+                if (result == null)
+                    return 0;
+
+                return result.Reader.ReadLittleEndianInt64();
+            }
+
+            public unsafe void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
+            {
+                var tree = tx.InnerTransaction.CreateTree(_referenceTombstonePrefix + collection);
+                using (Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable, out Slice collectionSlice))
+                using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
+                {
+                    tree.Add(collectionSlice, etagSlice);
+                }
+            }
+
+            public IEnumerable<Slice> GetItemKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
+            {
+                var collectionTree = tx.InnerTransaction.ReadTree(_referenceCollectionPrefix + collection);
+                if (collectionTree == null)
+                    yield break;
+
+                using (DocumentIdWorker.GetLower(tx.InnerTransaction.Allocator, referenceKey, out var k))
+                using (var it = collectionTree.MultiRead(k))
+                {
+                    if (it.Seek(Slices.BeforeAllKeys) == false)
+                        yield break;
+
+                    do
+                    {
+                        yield return it.CurrentKey;
+                    } while (it.MoveNext());
+                }
+            }
+
+            public void RemoveReferences(Slice key, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
+            {
+                var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
+
+                List<Slice> referenceKeys;
+                using (var it = referencesTree.MultiRead(key))
+                {
+                    if (it.Seek(Slices.BeforeAllKeys) == false)
+                        return;
+
+                    referenceKeys = new List<Slice>();
+
+                    do
+                    {
+                        if (referenceKeysToSkip == null || referenceKeysToSkip.Contains(it.CurrentKey) == false)
+                            referenceKeys.Add(it.CurrentKey.Clone(tx.InnerTransaction.Allocator, ByteStringType.Immutable));
+                    } while (it.MoveNext());
+                }
+
+                if (referenceKeys.Count == 0)
+                    return;
+
+                var collectionTree = tx.InnerTransaction.ReadTree(_referenceCollectionPrefix + collection);
+
+                foreach (var referenceKey in referenceKeys)
+                {
+                    referencesTree.MultiDelete(key, referenceKey);
+                    collectionTree?.MultiDelete(referenceKey, key);
+                    referenceKey.Release(tx.InnerTransaction.Allocator);
+                }
+            }
+
+            public void RemoveReferencesByPrefix(Slice prefixKey, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
+            {
+                var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
+
+                while (true)
+                {
+                    using (var it = referencesTree.Iterate(false))
+                    {
+                        it.SetRequiredPrefix(prefixKey);
+
+                        if (it.Seek(prefixKey) == false)
+                            return;
+
+                        var key = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
+
+                        try
+                        {
+                            RemoveReferences(key, collection, referenceKeysToSkip, tx);
+                        }
+                        finally
+                        {
+                            key.Release(tx.InnerTransaction.Allocator);
+                        }
+                    }
+                }
+            }
+
+            public void WriteReferences(Dictionary<string, Dictionary<Slice, HashSet<Slice>>> referencesByCollection, RavenTransaction tx)
+            {
+                var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
+
+                foreach (var collections in referencesByCollection)
+                {
+                    var collectionTree = tx.InnerTransaction.CreateTree(_referenceCollectionPrefix + collections.Key); // #collection
+
+                    foreach (var keys in collections.Value)
+                    {
+                        var key = keys.Key;
+                        foreach (var referenceKey in keys.Value)
+                        {
+                            collectionTree.MultiAdd(referenceKey, key);
+                            referencesTree.MultiAdd(key, referenceKey);
+                        }
+
+                        RemoveReferences(key, collections.Key, keys.Value, tx);
+                    }
+                }
+            }
+
+            internal (long ReferenceTableCount, long CollectionTableCount) GetReferenceTablesCount(string collection, RavenTransaction tx)
+            {
+                var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
+
+                var referencesCount = referencesTree.State.NumberOfEntries;
+
+                var collectionTree = tx.InnerTransaction.ReadTree(_referenceCollectionPrefix + collection);
+
+                if (collectionTree != null)
+                    return (referencesCount, collectionTree.State.NumberOfEntries);
+
+                return (referencesCount, 0);
+            }
+        }
+
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
             using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
                 return ReadLastEtag(tx, IndexSchema.EtagsTombstoneTree, collectionSlice);
             }
-        }
-
-        public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
-        {
-            var tree = tx.InnerTransaction.ReadTree("$" + collection);
-
-            var result = tree?.Read(referencedCollection.Name);
-            if (result == null)
-                return 0;
-
-            return result.Reader.ReadLittleEndianInt64();
-        }
-
-        public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
-        {
-            var tree = tx.InnerTransaction.ReadTree("%" + collection);
-
-            var result = tree?.Read(referencedCollection.Name);
-            if (result == null)
-                return 0;
-
-            return result.Reader.ReadLittleEndianInt64();
         }
 
         public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
@@ -314,31 +508,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public unsafe void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
-        {
-            var tree = tx.InnerTransaction.CreateTree("%" + collection);
-            using (Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable, out Slice collectionSlice))
-            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
-            {
-                tree.Add(collectionSlice, etagSlice);
-            }
-        }
-
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
             using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
                 WriteLastEtag(tx, IndexSchema.EtagsTombstoneTree, collectionSlice, etag);
-            }
-        }
-
-        public unsafe void WriteLastReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
-        {
-            var tree = tx.InnerTransaction.CreateTree("$" + collection);
-            using (Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable, out Slice collectionSlice))
-            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
-            {
-                tree.Add(collectionSlice, etagSlice);
             }
         }
 
@@ -521,25 +695,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IEnumerable<Slice> GetItemKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
-        {
-            var collectionTree = tx.InnerTransaction.ReadTree("#" + collection);
-            if (collectionTree == null)
-                yield break;
-
-            using (DocumentIdWorker.GetLower(tx.InnerTransaction.Allocator, referenceKey, out var k))
-            using (var it = collectionTree.MultiRead(k))
-            {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
-                    yield break;
-
-                do
-                {
-                    yield return it.CurrentKey;
-                } while (it.MoveNext());
-            }
-        }
-
         public unsafe void WriteReferences(CurrentIndexingScope indexingScope, RavenTransaction tx)
         {
             // IndexSchema:
@@ -557,87 +712,11 @@ namespace Raven.Server.Documents.Indexes
             // $Users (tree) - holding highest visible etag of 'referenced collection' per collection, so we will have a starting point for references processing
             // |- Addresses (key) -> 5
             if (indexingScope.ReferencesByCollection != null)
-            {
-                var referencesTree = tx.InnerTransaction.ReadTree(IndexSchema.References);
+                ReferencesForDocuments.WriteReferences(indexingScope.ReferencesByCollection, tx);
 
-                foreach (var collections in indexingScope.ReferencesByCollection)
-                {
-                    var collectionTree = tx.InnerTransaction.CreateTree("#" + collections.Key); // #collection
-
-                    foreach (var keys in collections.Value)
-                    {
-                        var key = keys.Key;
-                        foreach (var referenceKey in keys.Value)
-                        {
-                            collectionTree.MultiAdd(referenceKey, key);
-                            referencesTree.MultiAdd(key, referenceKey);
-                        }
-
-                        RemoveReferences(key, collections.Key, keys.Value, tx);
-                    }
-                }
-            }
+            if (indexingScope.ReferencesByCollectionForCompareExchange != null)
+                ReferencesForCompareExchange.WriteReferences(indexingScope.ReferencesByCollectionForCompareExchange, tx);
         }
-
-        public void RemoveReferences(Slice key, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
-        {
-            var referencesTree = tx.InnerTransaction.ReadTree(IndexSchema.References);
-
-            List<Slice> referenceKeys;
-            using (var it = referencesTree.MultiRead(key))
-            {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
-                    return;
-
-                referenceKeys = new List<Slice>();
-
-                do
-                {
-                    if (referenceKeysToSkip == null || referenceKeysToSkip.Contains(it.CurrentKey) == false)
-                        referenceKeys.Add(it.CurrentKey.Clone(tx.InnerTransaction.Allocator, ByteStringType.Immutable));
-                } while (it.MoveNext());
-            }
-
-            if (referenceKeys.Count == 0)
-                return;
-
-            var collectionTree = tx.InnerTransaction.ReadTree("#" + collection);
-
-            foreach (var referenceKey in referenceKeys)
-            {
-                referencesTree.MultiDelete(key, referenceKey);
-                collectionTree?.MultiDelete(referenceKey, key);
-                referenceKey.Release(tx.InnerTransaction.Allocator);
-            }
-        }
-
-        public void RemoveReferencesByPrefix(Slice prefixKey, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
-        {
-            var referencesTree = tx.InnerTransaction.ReadTree(IndexSchema.References);
-
-            while (true)
-            {
-                using (var it = referencesTree.Iterate(false))
-                {
-                    it.SetRequiredPrefix(prefixKey);
-
-                    if (it.Seek(prefixKey) == false)
-                        return;
-
-                    var key = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
-
-                    try
-                    {
-                        RemoveReferences(key, collection, referenceKeysToSkip, tx);
-                    }
-                    finally
-                    {
-                        key.Release(tx.InnerTransaction.Allocator);
-                    }
-                }
-            }
-        }
-
 
         public void Rename(string name)
         {
@@ -653,20 +732,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal (long ReferenceTableCount, long CollectionTableCount) GetReferenceTablesCount(string collection, RavenTransaction tx)
-        {
-            var referencesTree = tx.InnerTransaction.ReadTree(IndexSchema.References);
-
-            var referencesCount = referencesTree.State.NumberOfEntries;
-
-            var collectionTree = tx.InnerTransaction.ReadTree("#" + collection);
-
-            if (collectionTree != null)
-                return (referencesCount, collectionTree.State.NumberOfEntries);
-
-            return (referencesCount, 0);
-        }
-
         private class IndexSchema
         {
             public const string StatsTree = "Stats";
@@ -676,6 +741,8 @@ namespace Raven.Server.Documents.Indexes
             public const string EtagsTombstoneTree = "Etags.Tombstone";
 
             public const string References = "References";
+
+            public const string ReferencesForCompareExchange = "ReferencesForCompareExchange";
 
             public static readonly Slice TypeSlice;
 

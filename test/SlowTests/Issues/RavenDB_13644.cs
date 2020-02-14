@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
@@ -34,6 +35,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
+                Thread.Sleep(100000);
                 WaitForIndexing(store);
             }
         }

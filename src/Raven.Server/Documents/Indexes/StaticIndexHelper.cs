@@ -69,8 +69,8 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var referencedCollection in referencedCollections)
                 {
                     var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
-                    var lastProcessedReferenceEtag = index._indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
-                    var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+                    var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+                    var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
 
                     if (referenceCutoff == null)
                     {
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var referencedCollection in referencedCollections)
                 {
                     var lastDocEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection.Name);
-                    var lastProcessedReferenceEtag = index._indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+                    var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
 
                     var lastTombstoneEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, referencedCollection.Name);
                     var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Indexes
 
                     foreach (var collectionName in collectionNames)
                     {
-                        var etag = indexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, collection, collectionName);
+                        var etag = indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(tx, collection, collectionName);
                         if (etags.TryGetValue(collectionName.Name, out long currentEtag) == false || etag < currentEtag)
                             etags[collectionName.Name] = etag;
                     }

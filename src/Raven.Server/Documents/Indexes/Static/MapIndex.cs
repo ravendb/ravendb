@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.Indexes.Static
         protected internal readonly StaticIndexBase _compiled;
         private bool? _isSideBySide;
 
-        private HandleReferences _handleReferences;
-        //private HandleSuggestions _handleSuggestions;
+        private HandleDocumentReferences _handleReferences;
+        private HandleCompareExchangeReferences _handleCompareExchangeReferences;
 
         protected MapIndex(MapIndexDefinition definition, StaticIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
@@ -65,6 +65,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
             };
 
+            if (_compiled.HasCompareExchange)
+                workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
@@ -75,6 +78,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
+            if (_compiled.HasCompareExchange)
+                _handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+
             if (_referencedCollections.Count > 0)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
 
@@ -179,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticMapIndex = (MapIndex)index;
             var staticIndex = staticMapIndex._compiled;
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.HasCompareExchange);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
@@ -187,7 +193,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var staticIndex = (StaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.HasCompareExchange);
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);
             return instance;
         }

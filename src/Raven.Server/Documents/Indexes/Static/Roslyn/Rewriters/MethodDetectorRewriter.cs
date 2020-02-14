@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -32,6 +33,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "this.CreateField":
                 case "CreateField":
                     Methods.HasCreateField = true;
+                    break;
+                case "this.LoadCompareExchangeValue":
+                case "LoadCompareExchangeValue":
+                    Methods.HasLoadCompareExchangeValue = true;
                     break;
             }
 

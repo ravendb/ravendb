@@ -63,6 +63,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastCollectionEtag = -1L;
                     while (keepRunning)
                     {
+                        using (serverContext != null ? serverContext.OpenReadTransaction() : null)
                         using (databaseContext.OpenReadTransaction())
                         {
                             sw.Restart();

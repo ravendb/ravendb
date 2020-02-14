@@ -1758,7 +1758,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 indexContext.PersistentContext.LongLivedTransactions = true;
                 databaseContext.PersistentContext.LongLivedTransactions = true;
-                serverContext.PersistentContext.LongLivedTransactions = true;
+
+                if (serverContext != null)
+                    serverContext.PersistentContext.LongLivedTransactions = true;
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 using (CurrentIndexingScope.Current =
@@ -2231,8 +2233,8 @@ namespace Raven.Server.Documents.Indexes
                                 continue;
                             }
 
-                            var lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection.Key, value);
-                            var lastReferenceTombstoneEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, referencedCollection.Key, value);
+                            var lastReferenceEtag = _indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection.Key, value);
+                            var lastReferenceTombstoneEtag = _indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, referencedCollection.Key, value);
                             var lastEtags = GetLastEtags(_inMemoryReferencesIndexProgress, collectionName, lastReferenceEtag, lastReferenceTombstoneEtag);
 
                             progressStats = progress.Collections[collectionName] = new IndexProgress.CollectionStats
