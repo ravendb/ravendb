@@ -112,13 +112,7 @@ namespace Raven.Debug
                             desc = "";
                         else
                         {
-                            var apppath = typeof(CommandLineApp).Assembly.Location;
-                            desc =
-                                $"Make sure to {Environment.NewLine}" +
-                                $"sudo chown root:root {apppath}{Environment.NewLine}" +
-                                $"sudo chmod +s {apppath}{Environment.NewLine}" +
-                                $"sudo apt install libc6-dev{Environment.NewLine}" +
-                                $"sudo setcap cap_sys_ptrace=eip {apppath}{Environment.NewLine}";
+                            desc = $"Make sure to run enable-debugging.sh script as root from the main RavenDB directory.";
                         }
 
                         return cmd.ExitWithError($"Failed to show the stacktrace. {desc}Error: {e}");

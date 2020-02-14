@@ -239,17 +239,21 @@ namespace Voron.Impl.FileHeaders
 
         public static ulong CalculateFileHeaderHash(FileHeader* header)
         {
-            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)header->TransactionId);
+            var ctx = new Hashing.Streamed.XXHash64Context
+            {
+                Seed = (ulong)header->TransactionId
+            };
+            Hashing.Streamed.XXHash64.BeginProcess(ref ctx);
 
             // First part of header, until the Hash field
-            Hashing.Streamed.XXHash64.Process(ctx, (byte*)header, FileHeader.HashOffset);
+            Hashing.Streamed.XXHash64.Process(ref ctx, (byte*)header, FileHeader.HashOffset);
 
             // Second part of header, after the hash field
             var secondPartOfHeaderLength = sizeof(FileHeader) - (FileHeader.HashOffset + sizeof(ulong));
             if (secondPartOfHeaderLength > 0)
-                Hashing.Streamed.XXHash64.Process(ctx, (byte*)header + FileHeader.HashOffset + sizeof(ulong), secondPartOfHeaderLength);
+                Hashing.Streamed.XXHash64.Process(ref ctx, (byte*)header + FileHeader.HashOffset + sizeof(ulong), secondPartOfHeaderLength);
 
-            return Hashing.Streamed.XXHash64.EndProcess(ctx);
+            return Hashing.Streamed.XXHash64.EndProcess(ref ctx);
         }
 
         public static bool ValidHash(FileHeader* header)

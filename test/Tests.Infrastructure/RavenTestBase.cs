@@ -3,8 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -60,7 +60,6 @@ namespace FastTests
         {
             store.Maintenance.Send(new CreateSampleDataOperation());
         }
-
 
         protected async Task SetDatabaseId(DocumentStore store, Guid dbId)
         {
@@ -125,7 +124,7 @@ namespace FastTests
                 }
             }
 
-            Assert.True(commandFound,$"{commandType} wasn't found in the log.");
+            Assert.True(commandFound, $"{commandType} wasn't found in the log.");
             return updateIndex;
         }
 
@@ -226,7 +225,6 @@ namespace FastTests
 
                     if (options.CreateDatabase)
                     {
-
                         if (Servers.Contains(serverToUse))
                         {
                             Servers.ForEach(server => CheckIfDatabaseExists(server, name));
@@ -255,7 +253,7 @@ namespace FastTests
                             result = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
                         }
 
-                        Assert.True(result.RaftCommandIndex > 0); //sanity check             
+                        Assert.True(result.RaftCommandIndex > 0); //sanity check
 
                         if (Servers.Contains(serverToUse))
                         {
@@ -273,19 +271,30 @@ namespace FastTests
 
                     store.BeforeDispose += (sender, args) =>
                     {
-                        if (CreatedStores.TryRemove(store) == false)
-                            return; // can happen if we are wrapping the store inside sharded one
-
-                        DeleteDatabaseResult result = null;
-                        if (options.DeleteDatabaseOnDispose)
+                        var realException = Context.GetException();
+                        try
                         {
-                            result = DeleteDatabase(options, serverToUse, name, hardDelete, store);
+                            if (CreatedStores.TryRemove(store) == false)
+                                return; // can happen if we are wrapping the store inside sharded one
+
+                            DeleteDatabaseResult result = null;
+                            if (options.DeleteDatabaseOnDispose)
+                            {
+                                result = DeleteDatabase(options, serverToUse, name, hardDelete, store);
+                            }
+
+                            if (Servers.Contains(serverToUse) && result != null)
+                            {
+                                var timeout = TimeSpan.FromSeconds(Debugger.IsAttached ? 5 : 1);
+                                AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
+                            }
                         }
-
-                        if (Servers.Contains(serverToUse) && result != null)
+                        catch (Exception e)
                         {
-                            var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
+                            if (realException != null)
+                                throw new AggregateException(realException, e);
+
+                            throw;
                         }
                     };
                     CreatedStores.Add(store);
@@ -328,7 +337,7 @@ namespace FastTests
                 if (options.AdminCertificate != null)
                 {
                     using (var adminStore =
-                        new DocumentStore {Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate}.Initialize())
+                        new DocumentStore { Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate }.Initialize())
                     {
                         return adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                     }
@@ -607,7 +616,6 @@ namespace FastTests
             } while (true);
         }
 
-
         protected T WaitForValue<T>(Func<T> act, T expectedVal, int timeout = 15000)
         {
             if (Debugger.IsAttached)
@@ -742,7 +750,12 @@ namespace FastTests
         protected override void Dispose(ExceptionAggregator exceptionAggregator)
         {
             foreach (var store in CreatedStores)
+            {
+                if (store.WasDisposed)
+                    continue;
+
                 exceptionAggregator.Execute(store.Dispose);
+            }
             CreatedStores.Clear();
         }
 
@@ -1010,6 +1023,7 @@ namespace FastTests
                     }
                 }
             }
+
             public bool RunInMemory
             {
                 get => _runInMemory;
