@@ -45,7 +45,8 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes/terms?name={Uri.EscapeDataString(_indexName)}&field={Uri.EscapeDataString(_field)}&fromValue={Uri.EscapeDataString(_fromValue)}&pageSize={_pageSize}";
+                var fromValue = _fromValue != null ? Uri.EscapeDataString(_fromValue) : ""; 
+                url = $"{node.Url}/databases/{node.Database}/indexes/terms?name={Uri.EscapeDataString(_indexName)}&field={Uri.EscapeDataString(_field)}&fromValue={fromValue}&pageSize={_pageSize}";
 
                 return new HttpRequestMessage
                 {
