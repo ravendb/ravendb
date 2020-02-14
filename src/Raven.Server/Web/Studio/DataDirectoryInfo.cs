@@ -230,8 +230,8 @@ namespace Raven.Server.Web.Studio
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 var path = _isBackup
-                    ? $"databases/{_name}/admin/backup-data-directory?path={_path}"
-                    : $"admin/studio-tasks/full-data-directory?path={_path}&name={_name}";
+                    ? $"databases/{_name}/admin/backup-data-directory?path={Uri.EscapeDataString(_path)}"
+                    : $"admin/studio-tasks/full-data-directory?path={Uri.EscapeDataString(_path)}&name={_name}";
 
                 url = $"{node.Url}/{path}";
 

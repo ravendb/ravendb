@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ETL;
@@ -52,7 +53,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 url = $"{node.Url}/databases/{node.Database}/admin/connection-strings";
                 if (_connectionStringName != null)
                 {
-                    url += $"?connectionStringName={_connectionStringName}&type={_type}";
+                    url += $"?connectionStringName={Uri.EscapeDataString(_connectionStringName)}&type={_type}";
                 }
 
                 var request = new HttpRequestMessage

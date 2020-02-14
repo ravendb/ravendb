@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
@@ -17,7 +18,7 @@ namespace Raven.Client.Documents.Commands
         }
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/subscriptions/state?name={_subscriptionName}";
+            url = $"{node.Url}/databases/{node.Database}/subscriptions/state?name={Uri.EscapeDataString(_subscriptionName)}";
 
             var request = new HttpRequestMessage
             {
