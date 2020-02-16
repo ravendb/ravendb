@@ -219,7 +219,7 @@
         }
     }
 
-    #copy-document-id {
+    #copy-document-id, #copy-change-vector {
         visibility: hidden;
         color: @gray-light;
 
@@ -231,6 +231,14 @@
     #document-id-header-area {
         &:hover {
             #copy-document-id {
+                visibility: visible;
+            }
+        }
+    }
+
+    #document-properties-area {
+        &:hover {
+            #copy-change-vector {
                 visibility: visible;
             }
         }

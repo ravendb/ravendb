@@ -159,7 +159,7 @@
         </div>
     </div>
     <div id="right-options-panel" class="flex-window">
-        <div class="panel document-properties flex-window-head">
+        <div class="panel document-properties flex-window-head" id="document-properties-area">
             <div class="panel-body">
                 <h3 class="margin-none">Properties</h3>
                 <hr class="small" />
@@ -167,17 +167,19 @@
                     <div data-bind="visible: !$root.isCreatingNewDocument()">
                         <dt>Change Vector:</dt>
                         <dd>
-                            <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
-                                  data-bind="attr: { 'data-original-title': $root.changeVectorHtml() }">
-                                    <span data-bind="foreach: $root.changeVector">
-                                        <span class="badge badge-default" data-bind="text: shortFormat"></span>
-                                    </span>
-                             </span>
+                            <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true" data-bind="tooltipText: $root.changeVectorHtml()" id="changeVector">
+                                <span data-bind="foreach: $root.changeVector">
+                                    <span class="badge badge-default" data-bind="text: shortFormat"></span>
+                                </span>
+                            </span>
+                            <a class="margin-left margin-left-sm" href="#" id="copy-change-vector" title="Copy change vector" data-bind="click: $root.copyChangeVectorToClipboard">
+                                <i class="icon-copy"></i>
+                            </a>
                         </dd>
                         <dt>Modified:</dt>
                         <dd>
-                            <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
-                                  data-bind="attr: { 'data-original-title': '<h4>Last Modified Time</h4>' + lastModifiedFullDate() }">
+                            <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                                  data-bind="tooltipText: '<div><strong>Last Modified Time</strong></div>' + lastModifiedFullDate()">
                                 <span data-bind="text: lastModifiedInterval"></span>
                             </span>
                         </dd>
@@ -185,8 +187,8 @@
                     <div data-bind="if: expirationDateInterval">
                         <dt>Expires:</dt>
                         <dd>
-                             <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
-                                   data-bind="attr: { 'data-original-title': '<h4>Expiration Date</h4>' + expirationDateFullDate() }">
+                             <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                                   data-bind="tooltipText: '<div><strong>Expiration Date</strong></div>' + expirationDateFullDate()">
                                 <span data-bind="text: expirationDateInterval"></span>
                             </span>
                             <i class="icon-danger text-warning" data-toggle="tooltip" data-animation="true" data-html="true" 
@@ -197,8 +199,8 @@
                     <div data-bind="if: refreshDateInterval">
                         <dt>Refresh:</dt>
                         <dd>
-                             <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
-                                   data-bind="attr: { 'data-original-title': '<h4>Refresh Date</h4>' + refreshDateFullDate() }">
+                             <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                                   data-bind="tooltipText: '<div><strong>Refresh Date</strong></div>' + refreshDateFullDate()">
                                 <span data-bind="text: refreshDateInterval"></span>
                             </span>
                             <i class="icon-danger text-warning" data-toggle="tooltip" data-animation="true" data-html="true"
@@ -208,8 +210,8 @@
                     </div>
                     <dt>Size:</dt>
                     <dd>
-                        <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
-                             data-bind="attr: { 'data-original-title': $root.documentSizeHtml() }">
+                        <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                             data-bind="tooltipText: $root.documentSizeHtml()">
                             <span data-bind="text: $root.computedDocumentSize()"></span>
                         </span>
                     </dd>
