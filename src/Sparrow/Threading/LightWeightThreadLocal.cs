@@ -11,13 +11,27 @@ namespace Sparrow.Threading
         [ThreadStatic]
         private static CurrentThreadState _state;
 
-        private ConcurrentDictionary<CurrentThreadState, T> _values = new ConcurrentDictionary<CurrentThreadState, T>(ReferenceEqualityComparer<CurrentThreadState>.Default);
+        private readonly WeakReferenceCompareValue<LightWeightThreadLocal<T>> SelfReference;
+        private ConcurrentDictionary<WeakReferenceCompareValue<CurrentThreadState>, T> _values = new ConcurrentDictionary<WeakReferenceCompareValue<CurrentThreadState>, T>();
         private readonly Func<T> _generator;
         private readonly GlobalState _globalState = new GlobalState();
 
         public LightWeightThreadLocal(Func<T> generator = null)
         {
             _generator = generator;
+            SelfReference = new WeakReferenceCompareValue<LightWeightThreadLocal<T>>(this);
+        }
+
+        public List<object> GetTargets()
+        {
+            var list = new List<object>();
+            foreach (var key in _values.Keys)
+            {
+                if(key.TryGetTarget(out var state))
+                    list.Add(state);
+            }
+
+            return list;
         }
 
         public ICollection<T> Values
@@ -37,7 +51,7 @@ namespace Sparrow.Threading
                 if (_globalState.Disposed != 0)
                     throw new ObjectDisposedException(nameof(LightWeightThreadLocal<T>));
 
-                return _state != null && _values.ContainsKey(_state);
+                return _state != null && _values.ContainsKey(_state.SelfReference);
             }
         }
 
@@ -48,11 +62,11 @@ namespace Sparrow.Threading
                 if (_globalState.Disposed != 0)
                     throw new ObjectDisposedException(nameof(LightWeightThreadLocal<T>));
                 (_state ??= new CurrentThreadState()).Register(this);
-                if (_values.TryGetValue(_state, out var v) == false &&
+                if (_values.TryGetValue(_state.SelfReference, out var v) == false &&
                     _generator != null)
                 {
                     v = _generator();
-                    _values[_state] = v;
+                    _values[_state.SelfReference] = v;
                 }
                 return v;
             }
@@ -63,7 +77,7 @@ namespace Sparrow.Threading
                     throw new ObjectDisposedException(nameof(LightWeightThreadLocal<T>));
 
                 (_state ??= new CurrentThreadState()).Register(this);
-                _values[_state] = value;
+                _values[_state.SelfReference] = value;
             }
         }
 
@@ -95,15 +109,22 @@ namespace Sparrow.Threading
 
         private sealed class CurrentThreadState
         {
-            private readonly HashSet<WeakReferenceToLightWeightThreadLocal> _parents
-                = new HashSet<WeakReferenceToLightWeightThreadLocal>();
+            private readonly HashSet<WeakReferenceCompareValue<LightWeightThreadLocal<T>>> _parents
+                = new HashSet<WeakReferenceCompareValue<LightWeightThreadLocal<T>>>();
+
+            public readonly WeakReferenceCompareValue<CurrentThreadState> SelfReference;
 
             private readonly LocalState _localState = new LocalState();
+
+            public CurrentThreadState()
+            {
+                SelfReference = new WeakReferenceCompareValue<CurrentThreadState>(this);
+            }
 
             public void Register(LightWeightThreadLocal<T> parent)
             {
                 parent._globalState.UsedThreads.TryAdd(_localState, null);
-                _parents.Add(new WeakReferenceToLightWeightThreadLocal(parent));
+                _parents.Add(parent.SelfReference);
                 int parentsDisposed = _localState.ParentsDisposed;
                 if (parentsDisposed > 0)
                 {
@@ -115,7 +136,7 @@ namespace Sparrow.Threading
 
             private void RemoveDisposedParents()
             {
-                var toRemove = new List<WeakReferenceToLightWeightThreadLocal>();
+                var toRemove = new List<WeakReferenceCompareValue<LightWeightThreadLocal<T>>>();
                 foreach (var local in _parents)
                 {
                     if (local.TryGetTarget(out var target) == false || target._globalState.Disposed != 0)
@@ -136,10 +157,11 @@ namespace Sparrow.Threading
                 {
                     if (parent.TryGetTarget(out var liveParent) == false)
                         continue;
+
                     var copy = liveParent._values;
                     if (copy == null)
                         continue;
-                    if (copy.TryRemove(this, out var value)
+                    if (copy.TryRemove(SelfReference, out var value)
                         && value is IDisposable d)
                     {
                         d.Dispose();
@@ -148,23 +170,24 @@ namespace Sparrow.Threading
             }
         }
 
-        private sealed class WeakReferenceToLightWeightThreadLocal : IEquatable<WeakReferenceToLightWeightThreadLocal>
+        private sealed class WeakReferenceCompareValue<TK> : IEquatable<WeakReferenceCompareValue<TK>>
+            where TK  : class
         {
-            private readonly WeakReference<LightWeightThreadLocal<T>> _weak;
+            private readonly WeakReference<TK> _weak;
             private readonly int _hashCode;
 
-            public bool TryGetTarget(out LightWeightThreadLocal<T> target)
+            public bool TryGetTarget(out TK target)
             {
                 return _weak.TryGetTarget(out target);
             }
 
-            public WeakReferenceToLightWeightThreadLocal(LightWeightThreadLocal<T> instance)
+            public WeakReferenceCompareValue(TK instance)
             {
                 _hashCode = instance.GetHashCode();
-                _weak = new WeakReference<LightWeightThreadLocal<T>>(instance);
+                _weak = new WeakReference<TK>(instance);
             }
 
-            public bool Equals(WeakReferenceToLightWeightThreadLocal other)
+            public bool Equals(WeakReferenceCompareValue<TK> other)
             {
                 if (ReferenceEquals(null, other))
                     return false;
@@ -184,9 +207,18 @@ namespace Sparrow.Threading
                     return false;
                 if (ReferenceEquals(this, obj))
                     return true;
+                if (obj.GetType() == typeof(TK))
+                {
+                    int hashCode = obj.GetHashCode();
+                    if (hashCode != _hashCode)
+                        return false;
+                    if (_weak.TryGetTarget(out var other) == false)
+                        return false;
+                    return ReferenceEquals(other, obj);
+                }
                 if (obj.GetType() != GetType())
                     return false;
-                return Equals((WeakReferenceToLightWeightThreadLocal)obj);
+                return Equals((WeakReferenceCompareValue<TK>)obj);
             }
 
             public override int GetHashCode()
