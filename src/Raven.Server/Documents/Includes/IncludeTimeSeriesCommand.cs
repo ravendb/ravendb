@@ -63,15 +63,23 @@ namespace Raven.Server.Documents.Includes
         {
             var values = new List<TimeSeriesEntry>();
             var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_context, docId, name, from, to);
+            var hc = new HashCode();
 
-            foreach (var singleResult in reader.AllValues())
+            foreach (var (individualValues, segmentResult) in reader.SegmentsOrValues())
             {
-                values.Add(new TimeSeriesEntry
+                var enumerable = individualValues ?? segmentResult.Values;
+
+                foreach (var singleResult in enumerable)
                 {
-                    Timestamp = singleResult.Timestamp,
-                    Tag = singleResult.Tag,
-                    Values = singleResult.Values.ToArray()
-                });
+                    values.Add(new TimeSeriesEntry
+                    {
+                        Timestamp = singleResult.Timestamp,
+                        Tag = singleResult.Tag,
+                        Values = singleResult.Values.ToArray()
+                    });
+                }
+
+                hc.Add(segmentResult?.ChangeVector ?? string.Empty);
             }
 
             return new TimeSeriesRangeResult
@@ -79,7 +87,8 @@ namespace Raven.Server.Documents.Includes
                 Name = name,
                 From = from,
                 To = to,
-                Entries = values.ToArray()
+                Entries = values.ToArray(),
+                HashCode = hc.ToHashCode()
             };
 
         }
