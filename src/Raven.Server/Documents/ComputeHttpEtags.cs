@@ -11,13 +11,15 @@ namespace Raven.Server.Documents
 {
     public static class ComputeHttpEtags
     {
-        public static unsafe string ComputeEtagForDocuments(List<Document> documents, List<Document>? includes, IncludeCountersCommand? includeCounters)
+        public static unsafe string ComputeEtagForDocuments(List<Document> documents, List<Document>? includes, IncludeCountersCommand? includeCounters,
+            IncludeTimeSeriesCommand? includeTimeSeries)
         {
             // This method is efficient because we aren't materializing any values
             // except the change vector, which we need
             if (documents.Count == 1 && 
                 (includes == null || includes.Count == 0) &&
-                includeCounters == null)
+                includeCounters == null &&
+                includeTimeSeries == null)
                 return documents[0]?.ChangeVector ?? string.Empty;
 
             var size = Sodium.crypto_generichash_bytes();
@@ -53,6 +55,19 @@ namespace Raven.Server.Documents
                     foreach (var counterDetail in countersResult.Value)
                     {
                         HashNumber(state, counterDetail.Etag);
+                    }
+                }
+            }
+
+            if (includeTimeSeries != null)
+            {
+                foreach (var tsIncludes in includeTimeSeries.Results)
+                {
+                    HashNumber(state, tsIncludes.Value.Count);
+                    foreach (var rangeResult in tsIncludes.Value)
+                    {
+                        HashNumber(state, rangeResult.Entries.Length);
+                        HashNumber(state, rangeResult.HashCode);
                     }
                 }
             }

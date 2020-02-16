@@ -217,7 +217,6 @@ namespace Raven.Server.Documents.Handlers
 
             GetTimeSeriesQueryString(Database, context, out var includeTimeSeries);
 
-
             foreach (var id in ids)
             {
                 var document = Database.DocumentsStorage.Get(context, id);
@@ -235,7 +234,7 @@ namespace Raven.Server.Documents.Handlers
 
             includeDocs.Fill(includes);
 
-            var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters);
+            var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries);
 
             var etag = GetStringFromHeaders("If-None-Match");
             if (etag == actualEtag)
