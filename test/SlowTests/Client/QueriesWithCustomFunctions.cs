@@ -2383,6 +2383,37 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
         }
 
         [Fact]
+        public async Task QueryCompareExchangeWithNullValue()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query =
+                        from u in session.Query<User>()
+                        let user = RavenQuery.CmpXchg<User>("users/1")
+                        select new
+                        {
+                            UserCompareExchange = user,
+                            UserCompareExchangeName = user.Name
+                        };
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(null, queryResult[0].UserCompareExchange);
+                    Assert.Equal(null, queryResult[0].UserCompareExchangeName);
+                }
+            }
+        }
+
+        [Fact]
         public async Task QueryCompareExchangeWhere(){
         
             using (var store = GetDocumentStore())
