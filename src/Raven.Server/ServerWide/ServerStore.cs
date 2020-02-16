@@ -122,11 +122,11 @@ namespace Raven.Server.ServerWide
 
         public long LastClientConfigurationIndex { get; private set; } = -2;
 
+        public int MaxNumberOfConcurrentBackups { get; private set; }
+
+        public SemaphoreSlim ConcurrentBackupsSemaphore { get; private set; }
+
         public Operations Operations { get; }
-
-        public GlobalBackupConfiguration GlobalBackupConfiguration { get; private set; }
-
-        private readonly bool _skipChangingMaxConcurrentBackups;
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
@@ -176,21 +176,6 @@ namespace Raven.Server.ServerWide
             HasFixedPort = Configuration.Core.ServerUrls == null ||
                            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
                            uri.Port != 0;
-
-            _skipChangingMaxConcurrentBackups = Configuration.Backup.MaxNumberOfConcurrentBackups != null;
-            GlobalBackupConfiguration = new GlobalBackupConfiguration(Configuration.Backup.MaxNumberOfConcurrentBackups ?? int.MaxValue);
-        }
-
-        public void UpdateMaxConcurrentBackups(int utilizedCores)
-        {
-            if (_skipChangingMaxConcurrentBackups)
-                return;
-
-            var maxNumberOfConcurrentBackups = Math.Max(utilizedCores / 2, 1);
-            if (maxNumberOfConcurrentBackups == GlobalBackupConfiguration.MaxNumberOfConcurrentBackups)
-                return;
-
-            GlobalBackupConfiguration = new GlobalBackupConfiguration(maxNumberOfConcurrentBackups);
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
@@ -734,6 +719,18 @@ namespace Raven.Server.ServerWide
 
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);
+
+            if (Configuration.Backup.MaxNumberOfConcurrentBackups != null)
+            {
+                MaxNumberOfConcurrentBackups = Configuration.Backup.MaxNumberOfConcurrentBackups.Value;
+            }
+            else
+            {
+                LicenseManager.GetCoresLimitForNode(out var utilizedCores);
+                MaxNumberOfConcurrentBackups = Math.Max(1, utilizedCores / 2);
+            }
+
+            ConcurrentBackupsSemaphore = new SemaphoreSlim(MaxNumberOfConcurrentBackups);
 
             ConfigureAuditLog();
 

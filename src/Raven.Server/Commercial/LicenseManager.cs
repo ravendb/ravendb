@@ -237,15 +237,12 @@ namespace Raven.Server.Commercial
             {
                 using (var process = Process.GetCurrentProcess())
                 {
-                    var licenseLimits = _serverStore.LoadLicenseLimits();
-                    if (licenseLimits?.NodeLicenseDetails != null &&
-                        licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
+                    if (GetCoresLimitForNode(out var utilizedCores))
                     {
-                        var cores = Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
-                        SetAffinity(process, cores, addPerformanceHint);
+                        SetAffinity(process, utilizedCores, addPerformanceHint);
 
                         var clusterSize = GetClusterSize();
-                        var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, cores * _licenseStatus.Ratio);
+                        var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, utilizedCores * _licenseStatus.Ratio);
                         SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
                     }
                     else
@@ -260,6 +257,21 @@ namespace Raven.Server.Commercial
             {
                 Logger.Info("Failed to reload license limits", e);
             }
+        }
+
+        public bool GetCoresLimitForNode(out int utilizedCores)
+        {
+            var licenseLimits = _serverStore.LoadLicenseLimits();
+            if (licenseLimits?.NodeLicenseDetails != null &&
+                licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
+            {
+                utilizedCores = Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
+                return true;
+                
+            }
+
+            utilizedCores = _licenseStatus.MaxCores;
+            return false;
         }
 
         private int GetClusterSize()
@@ -1063,8 +1075,6 @@ namespace Raven.Server.Commercial
                                 $"when the number of cores on this machine is: {ProcessorInfo.ProcessorCount}");
                 return;
             }
-
-            _serverStore.UpdateMaxConcurrentBackups(cores);
 
             try
             {
