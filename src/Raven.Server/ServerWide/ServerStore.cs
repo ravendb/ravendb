@@ -122,8 +122,6 @@ namespace Raven.Server.ServerWide
 
         public long LastClientConfigurationIndex { get; private set; } = -2;
 
-        public int MaxNumberOfConcurrentBackups { get; private set; }
-
         public ConcurrentBackupsCounter ConcurrentBackupsCounter { get; private set; }
 
         public Operations Operations { get; }
@@ -720,17 +718,7 @@ namespace Raven.Server.ServerWide
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);
 
-            if (Configuration.Backup.MaxNumberOfConcurrentBackups != null)
-            {
-                MaxNumberOfConcurrentBackups = Configuration.Backup.MaxNumberOfConcurrentBackups.Value;
-            }
-            else
-            {
-                LicenseManager.GetCoresLimitForNode(out var utilizedCores);
-                MaxNumberOfConcurrentBackups = Math.Max(1, utilizedCores / 2);
-            }
-
-            ConcurrentBackupsCounter = new ConcurrentBackupsCounter(MaxNumberOfConcurrentBackups);
+            ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup.MaxNumberOfConcurrentBackups, LicenseManager);
 
             ConfigureAuditLog();
 
