@@ -153,17 +153,18 @@ namespace RachisTests
             }
         }
 
-        [Theory]
-        [InlineData(5)]
-        public async Task MakeSureAllNodesAreRoundRobined(int clusterSize)
+        [Fact]
+        public async Task MakeSureAllNodesAreRoundRobined()
         {
+            const int clusterSize = 5;
             var cluster = AsyncHelpers.RunSync(() => CreateRaftCluster(clusterSize, shouldRunInMemory: false));
 
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = clusterSize,
-                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin
+                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin,
+                DeleteDatabaseOnDispose = false
             }))
             {
                 using (var session = store.OpenSession())
@@ -174,7 +175,7 @@ namespace RachisTests
                 var databaseName = store.Database;
 
                 var subsId = store.Subscriptions.Create<User>();
-                var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
+                using var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
                 }
@@ -190,26 +191,33 @@ namespace RachisTests
 
                 var sp = Stopwatch.StartNew();
 
-                var nodes = store.GetRequestExecutor().TopologyNodes.Select(x => x.ClusterTag).ToList();
-                Assert.Equal(clusterSize, cluster.Nodes.Count);
-                Assert.Equal(clusterSize, nodes.Count);
-
-                foreach (var node in nodes)
+                List<string> toggledNodes = new List<string>();
+                var toggleCount = Math.Round(clusterSize * 0.51);
+                for (int i = 0; i < toggleCount; i++)
                 {
-                    var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == node);
-                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, nodeIndex, shouldTrapRevivedNodesIntoCandidate: true);
+                    string responsibleNode = null;
+                    await ActionWithLeader(async l =>
+                    {
+                        var documentDatabase = await l.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                        using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            responsibleNode = documentDatabase.SubscriptionStorage.GetResponsibleNode(context, subsId);
+                        }
+                    });
+                    Assert.NotNull(responsibleNode);
+                    toggledNodes.Add(responsibleNode);
+                    var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == responsibleNode);
+                    var node = cluster.Nodes[nodeIndex];
 
+                    var res = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+                    Assert.Equal(responsibleNode, res.NodeTag);
+                    await Task.Delay(5000);
                 }
                 while (clusterSize != redirects.Count)
                 {
-                    await ActionWithLeader((l) =>
-                    {
-                        l.ServerStore.Engine.CurrentLeader?.StepDown();
-                        return Task.CompletedTask;
-                    });
-
-                    Thread.Sleep(16);
-                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(5), $"sp.Elapsed < TimeSpan.FromMinutes(5), redirects count : {redirects.Count}, leaderNodeTag: {cluster.Leader.ServerStore.NodeTag}, missing: {string.Join(", ", cluster.Nodes.Select(x => x.ServerStore.NodeTag).Except(redirects))}");
+                    await Task.Delay(1000);
+                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(2), $"sp.Elapsed < TimeSpan.FromMinutes(1), redirects count : {redirects.Count}, leaderNodeTag: {cluster.Leader.ServerStore.NodeTag}, missing: {string.Join(", ", cluster.Nodes.Select(x => x.ServerStore.NodeTag).Except(redirects))}, offline: {string.Join(", ", toggledNodes)}");
                 }
 
                 Assert.Equal(clusterSize, redirects.Count);
@@ -277,10 +285,10 @@ namespace RachisTests
             cluster.Nodes[index] = node;
 
             await Task.Delay(5000);
+            _toggled = true;
             node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
             cluster.Nodes[index] = node;
 
-            _toggled = true;
             await WaitForRehab(databaseName, index, cluster);
             _toggled = false;
         }
@@ -295,61 +303,66 @@ namespace RachisTests
                     continue;
                 }
 
-                try
-                {
-                    var ids = new List<string>();
-                    using (var session = store.OpenSession(new SessionOptions
-                    {
-                        TransactionMode = TransactionMode.ClusterWide
-                    }))
-                    {
-                        for (var k = 0; k < DocsBatchSize; k++)
-                        {
-                            User entity = new User
-                            {
-                                Name = "ClusteredJohnny" + k
-                            };
-                            session.Store(entity);
-                            ids.Add(session.Advanced.GetDocumentId(entity));
-                        }
-                        session.SaveChanges();
-                    }
+                await ContinuouslyGenerateDocsInternal(DocsBatchSize, store);
+            }
+        }
 
-                    using (var session = store.OpenSession())
+        internal static async Task ContinuouslyGenerateDocsInternal(int DocsBatchSize, DocumentStore store)
+        {
+            try
+            {
+                var ids = new List<string>();
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    for (var k = 0; k < DocsBatchSize; k++)
                     {
-                        for (var k = 0; k < DocsBatchSize; k++)
+                        User entity = new User
                         {
-                            session.Store(new User
-                            {
-                                Name = "Johnny" + k
-                            });
-                        }
-                        session.SaveChanges();
+                            Name = "ClusteredJohnny" + k
+                        };
+                        session.Store(entity);
+                        ids.Add(session.Advanced.GetDocumentId(entity));
                     }
+                    session.SaveChanges();
+                }
 
-                    using (var session = store.OpenSession())
+                using (var session = store.OpenSession())
+                {
+                    for (var k = 0; k < DocsBatchSize; k++)
                     {
-                        for (var k = 0; k < DocsBatchSize; k++)
+                        session.Store(new User
                         {
-                            var user = session.Load<User>(ids[k]);
-                            user.Age++;
-                        }
-                        session.SaveChanges();
+                            Name = "Johnny" + k
+                        });
                     }
-                    await Task.Delay(16);
+                    session.SaveChanges();
                 }
-                catch (AllTopologyNodesDownException)
+
+                using (var session = store.OpenSession())
                 {
+                    for (var k = 0; k < DocsBatchSize; k++)
+                    {
+                        var user = session.Load<User>(ids[k]);
+                        user.Age++;
+                    }
+                    session.SaveChanges();
                 }
-                catch (DatabaseDisabledException)
-                {
-                }
-                catch (DatabaseDoesNotExistException)
-                {
-                }
-                catch (RavenException)
-                {
-                }
+                await Task.Delay(16);
+            }
+            catch (AllTopologyNodesDownException)
+            {
+            }
+            catch (DatabaseDisabledException)
+            {
+            }
+            catch (DatabaseDoesNotExistException)
+            {
+            }
+            catch (RavenException)
+            {
             }
         }
 
