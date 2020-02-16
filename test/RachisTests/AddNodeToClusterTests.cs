@@ -113,11 +113,13 @@ namespace RachisTests
                 using (var store = GetDocumentStore(new Options
                 {
                     Server = leader,
-                    ReplicationFactor = 2
+                    ReplicationFactor = 2,
+                    DeleteTimeout = timeout
                 }))
                 {
                     if (withManyCompareExchange)
                         await AddManyCompareExchange(store, cts.Token);
+
                     var followerAmbassador = leader.ServerStore.Engine.CurrentLeader.CurrentPeers[follower.ServerStore.NodeTag];
                     await leader.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag, cts.Token);
                     var removed = await WaitForValueAsync(() =>
@@ -137,7 +139,6 @@ namespace RachisTests
                     var result = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0), token: cts.Token);
                     await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl, follower.ServerStore.NodeTag, asWatcher: true, token: cts.Token);
                     await follower.ServerStore.Cluster.WaitForIndexNotification(result.Index, timeout);
-                  
                 }
             }
         }
