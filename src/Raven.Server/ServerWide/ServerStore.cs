@@ -181,12 +181,12 @@ namespace Raven.Server.ServerWide
             GlobalBackupConfiguration = new GlobalBackupConfiguration(Configuration.Backup.MaxNumberOfConcurrentBackups ?? int.MaxValue);
         }
 
-        public void UpdateMaxConcurrentBackups(int licensedCores)
+        public void UpdateMaxConcurrentBackups(int utilizedCores)
         {
             if (_skipChangingMaxConcurrentBackups)
                 return;
 
-            var maxNumberOfConcurrentBackups = Math.Max(licensedCores / 2, 1);
+            var maxNumberOfConcurrentBackups = Math.Max(utilizedCores / 2, 1);
             if (maxNumberOfConcurrentBackups == GlobalBackupConfiguration.MaxNumberOfConcurrentBackups)
                 return;
 
