@@ -1076,6 +1076,8 @@ namespace Raven.Server.Commercial
                 return;
             }
 
+            _serverStore.ConcurrentBackupsCounter.SetMaxNumberOfConcurrentBackups(cores);
+
             try
             {
                 var currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());

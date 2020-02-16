@@ -124,7 +124,7 @@ namespace Raven.Server.ServerWide
 
         public int MaxNumberOfConcurrentBackups { get; private set; }
 
-        public SemaphoreSlim ConcurrentBackupsSemaphore { get; private set; }
+        public ConcurrentBackupsCounter ConcurrentBackupsCounter { get; private set; }
 
         public Operations Operations { get; }
 
@@ -730,7 +730,7 @@ namespace Raven.Server.ServerWide
                 MaxNumberOfConcurrentBackups = Math.Max(1, utilizedCores / 2);
             }
 
-            ConcurrentBackupsSemaphore = new SemaphoreSlim(MaxNumberOfConcurrentBackups);
+            ConcurrentBackupsCounter = new ConcurrentBackupsCounter(MaxNumberOfConcurrentBackups);
 
             ConfigureAuditLog();
 
