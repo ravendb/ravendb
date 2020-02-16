@@ -64,7 +64,7 @@ namespace SlowTests.Issues
             for (int i = 0; i < 3; i++)
             {
                 using var s = store.OpenAsyncSession();
-                // collection query
+                // non-collection query
                 var docs = await s.Advanced.AsyncRawQuery<object>(
                         @"from @all_docs where Active = true include counters('requests2')")
                     .ToListAsync();
