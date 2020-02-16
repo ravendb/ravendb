@@ -453,13 +453,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     };
                 }
 
-                var globalBackupConfiguration = _serverStore.GlobalBackupConfiguration;
-                if (globalBackupConfiguration.ConcurrentBackupsSemaphore.Wait(0) == false)
+                if (_serverStore.ConcurrentBackupsSemaphore.Wait(0) == false)
                 {
                     throw new BackupDelayException(
                         $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
                         $"The task exceeds the maximum number of concurrent backup tasks configured. " +
-                        $"Current value of Backup.MaxNumberOfConcurrentBackups is: {globalBackupConfiguration.MaxNumberOfConcurrentBackups:#,#;;0}")
+                        $"Current value of Backup.MaxNumberOfConcurrentBackups is: {_serverStore.MaxNumberOfConcurrentBackups:#,#;;0}")
                     {
                         DelayPeriod = TimeSpan.FromMinutes(1)
                     };
@@ -504,7 +503,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         null,
                         backupTaskName,
                         Operations.Operations.OperationType.DatabaseBackup,
-                        taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, globalBackupConfiguration, onProgress),
+                        taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, onProgress),
                         id: operationId,
                         token: backupTask.TaskCancelToken);
 
@@ -516,7 +515,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 catch (Exception e)
                 {
                     // releasing the semaphore because we failed to start the backup task
-                    globalBackupConfiguration.ConcurrentBackupsSemaphore.Release();
+                    _serverStore.ConcurrentBackupsSemaphore.Release();
 
                     var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
                     if (_logger.IsOperationsEnabled)
@@ -535,14 +534,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, GlobalBackupConfiguration globalBackupConfiguration, Action<IOperationProgress> onProgress)
+        private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, Action<IOperationProgress> onProgress)
         {
             var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, globalBackupConfiguration, onProgress, tcs), null, $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'");
+            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, onProgress, tcs), null, $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'");
             return tcs.Task;
         }
 
-        private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, GlobalBackupConfiguration globalBackupConfiguration, Action<IOperationProgress> onProgress, TaskCompletionSource<IOperationResult> tcs)
+        private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, Action<IOperationProgress> onProgress, TaskCompletionSource<IOperationResult> tcs)
         {
             try
             {
@@ -569,7 +568,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 try
                 {
-                    globalBackupConfiguration.ConcurrentBackupsSemaphore.Release();
+                    _serverStore.ConcurrentBackupsSemaphore.Release();
 
                     periodicBackup.RunningTask = null;
                     periodicBackup.RunningBackupTaskId = null;
