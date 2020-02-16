@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -10,7 +9,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -274,8 +272,6 @@ namespace Raven.Server.Documents.TimeSeries
             public DateTime From;
             public DateTime To;
         }
-
-        
 
         private string InsertDeletedRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null)
         {
@@ -546,7 +542,6 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-
         public Reader GetReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to)
         {
             return new Reader(context, documentId, name, from, to);
@@ -577,7 +572,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _from = EnsureMillisecondsPrecision(from);
                 _to = EnsureMillisecondsPrecision(to);
             }
-
+        
             internal bool Init()
             {
                 using (DocumentIdWorker.GetSliceFromId(_context, _documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
@@ -608,6 +603,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 public DateTime Start, End;
                 public StatefulTimestampValueSpan Summary;
+                public string ChangeVector;
                 private Reader _reader;
 
                 public SegmentResult(Reader reader)
@@ -683,7 +679,6 @@ namespace Raven.Server.Documents.TimeSeries
                 var segmentResult = new SegmentResult(this);
                 InitializeSegment(out var baselineMilliseconds, out _currentSegment);
 
-
                 while (true)
                 {
                     var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
@@ -696,6 +691,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     segmentResult.End = _currentSegment.GetLastTimestamp(baseline);
                     segmentResult.Start = baseline;
+                    segmentResult.ChangeVector = GetCurrentSegmentChangeVector();
 
                     if (segmentResult.Start >= _from &&
                         segmentResult.End <= _to &&
@@ -707,7 +703,7 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                     else
                     {
-                        yield return (YieldSegment(baseline), default);
+                        yield return (YieldSegment(baseline), segmentResult);
                     }
 
                     if (NextSegment(out baselineMilliseconds) == false)
@@ -826,6 +822,11 @@ namespace Raven.Server.Documents.TimeSeries
                 var segmentReadOnlyBuffer = _tvr.Read((int)TimeSeriesTable.Segment, out int size);
                 readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
             }
+
+            private string GetCurrentSegmentChangeVector()
+            {
+                return DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, ref _tvr);
+            }
         }
 
         public bool TryAppendEntireSegment(DocumentsOperationContext context, TimeSeriesReplicationItem item, DateTime baseline)
@@ -932,7 +933,6 @@ namespace Raven.Server.Documents.TimeSeries
                 return last >= baseline;
             }
         }
-
 
         private static DateTime? BaselineOfNextSegment(TimeSeriesSegmentHolder segmentHolder, DateTime myDate)
         {
