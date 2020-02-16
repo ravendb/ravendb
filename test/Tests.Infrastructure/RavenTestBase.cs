@@ -294,7 +294,7 @@ namespace FastTests
 
                             if (Servers.Contains(serverToUse) && result != null)
                             {
-                                var timeout = TimeSpan.FromSeconds(Debugger.IsAttached ? 5 : 1);
+                                var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 5 : 1);
                                 AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
                             }
                         }
@@ -914,6 +914,7 @@ namespace FastTests
             private X509Certificate2 _adminCertificate;
             private bool _createDatabase;
             private bool _deleteDatabaseOnDispose;
+            private TimeSpan? _deleteTimeout;
             private RavenServer _server;
             private int _replicationFactor;
             private bool _ignoreDisabledDatabase;
@@ -1016,6 +1017,16 @@ namespace FastTests
                 {
                     AssertNotFrozen();
                     _deleteDatabaseOnDispose = value;
+                }
+            }
+
+            public TimeSpan? DeleteTimeout
+            {
+                get => _deleteTimeout;
+                set
+                {
+                    AssertNotFrozen();
+                    _deleteTimeout = value;
                 }
             }
 
