@@ -74,6 +74,7 @@ class editDocument extends viewModelBase {
     
     changeVector: KnockoutComputed<changeVectorItem[]>;
     changeVectorHtml: KnockoutComputed<string>;
+    changeVectorFormatted: KnockoutComputed<string>;
     
     lastModifiedAsAgo: KnockoutComputed<string>;    
     latestRevisionUrl: KnockoutComputed<string>;
@@ -151,7 +152,7 @@ class editDocument extends viewModelBase {
         this.initializeObservables();
         this.initValidation();
         
-        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision");
+        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision", "copyChangeVectorToClipboard");
     }
 
     canActivate(args: any) {
@@ -206,14 +207,8 @@ class editDocument extends viewModelBase {
         this.connectedDocuments.compositionComplete();
 
         this.focusOnEditor();
-       
-        this.initTooltips();
     }
     
-    private initTooltips() {
-        $('#right-options-panel [data-toggle="tooltip"]').tooltip();
-    }
-
     detached() {
         super.detached();
         this.connectedDocuments.dispose();
@@ -402,14 +397,13 @@ class editDocument extends viewModelBase {
 
             return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
         });
-        
+
+        this.changeVectorFormatted = ko.pureComputed(() => {
+            return this.changeVector().map(vectorItem => vectorItem.fullFormat).join('<br/>');
+        });
+
         this.changeVectorHtml = ko.pureComputed(() => {
-            let vectorText = "<h4>Change Vector</h4>";
-            if (this.changeVector().length) {
-                vectorText += this.changeVector().map(vectorItem => vectorItem.fullFormat).join('<br/>');
-            }
-            
-            return vectorText;
+            return `<div><strong>Change Vector</strong></div>${this.changeVectorFormatted()}`;
         });
 
         this.isConflictDocument = ko.computed(() => {
@@ -434,7 +428,7 @@ class editDocument extends viewModelBase {
                 return `Computed Size: ${this.computedDocumentSize()} KB`;
             }
             
-            return `<h4>Document Size on Disk</h4> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()}`;            
+            return `<div><strong>Document Size on Disk</strong></div> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()}`;
         });
         
         this.metadata.subscribe((meta: documentMetadata) => {
@@ -580,6 +574,10 @@ class editDocument extends viewModelBase {
 
     copyDocumentIdToClipboard() {
         copyToClipboard.copy(this.editedDocId(), "Document ID has been copied to clipboard");
+    }
+
+    copyChangeVectorToClipboard() {
+        copyToClipboard.copy(_.replace(this.changeVectorFormatted(), new RegExp("<br/> ", "g"), "\n"), "Change Vector has been copied to clipboard");
     }
 
     toggleNewlineMode() {
@@ -822,7 +820,6 @@ class editDocument extends viewModelBase {
         this.isCreatingNewDocument(false);
         this.collectionForNewDocument(null);
 
-        this.initTooltips();
         this.getDocumentPhysicalSize(metadata['@id']);
            
         if (!this.connectedDocuments.isRevisionsActive()) {
@@ -993,7 +990,6 @@ class editDocument extends viewModelBase {
                 this.loadDocument(docId)
                     .done(() => {
                         this.connectedDocuments.gridController().reset(true);
-                        this.initTooltips();
                     });
 
                 this.displayDocumentChange(false);
