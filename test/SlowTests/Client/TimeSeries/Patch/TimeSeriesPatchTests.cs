@@ -11,6 +11,8 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
@@ -105,7 +107,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                 using (var session = store.OpenAsyncSession())
                 {
                     var val = (await session.TimeSeriesFor(documentId)
-                        .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
                         .Single();
                     Assert.Equal(values, val.Values);
                     Assert.Equal(tag, val.Tag);
@@ -149,7 +151,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                 using (var session = store.OpenAsyncSession())
                 {
                     var val = (await session.TimeSeriesFor(documentId)
-                        .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
                         .Single();
                     Assert.Equal(values, val.Values);
                     Assert.Equal(tag, val.Tag);
@@ -199,7 +201,7 @@ for(i = 0; i < args.toAppend.length; i++){
                 using (var session = store.OpenAsyncSession())
                 {
                     var timeSeriesEntries = (await session.TimeSeriesFor(documentId)
-                        .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
                         .ToArray();
                     
                     Assert.Equal(toAppend.Length, timeSeriesEntries.Length);
@@ -267,7 +269,7 @@ for(i = 0; i < args.toAppend.length; i++){
                 using (var session = store.OpenAsyncSession())
                 {
                     var entries = (await session.TimeSeriesFor(documentId)
-                        .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
                         .ToList();
 
                     Assert.Equal(values.Length - 1 - (toIndex - fromIndex), entries.Count);
@@ -355,25 +357,26 @@ for(i = 0; i < args.toAppend.length; i++){
         }
         
         [Fact]
-        public async Task PatchSet_GetRangeOfTimestamp()
+        public async Task PatchTimestamp_IntegrationTest()
         {
             string[] tags = {"tag/1", "tag/2", "tag/3", "tag/4"};
             const string timeseries = "Heartrate";
-            const int timeSeriesAmount = 128;
+            const int timeSeriesPointsAmount = 128;
+            const int docAmount = 8_192;
             
             using (var store = GetDocumentStore())
             {
                 await using (var bulkInsert = store.BulkInsert())
                 {
-                    for (int i = 0; i < 8_192; i++)
+                    for (int i = 0; i < docAmount; i++)
                     {
-                        await bulkInsert.StoreAsync(new TimeSeriesResultHolder());
+                        await bulkInsert.StoreAsync(new TimeSeriesResultHolder(), $"TimeSeriesResultHolders/{i}");
                     }
                 }
 
                 var baseTime = new DateTime(2020, 2, 12);
                 var randomValues = new Random(2020);
-                var toAppend = Enumerable.Range(0, timeSeriesAmount)
+                var toAppend = Enumerable.Range(0, timeSeriesPointsAmount)
                     .Select(i =>
                     {
                         return new TimeSeriesEntry
@@ -401,10 +404,10 @@ update
         appendTs(this, $timeseries, $toAppend[i].Timestamp, $toAppend[i].Tag, $toAppend[i].Values);
     }
 }"}));
-                appendOperation.WaitForCompletion();
+                await appendOperation.WaitForCompletionAsync();
 
-                var deleteFrom = toAppend[timeSeriesAmount * 1/3].Timestamp;
-                var deleteTo = toAppend[timeSeriesAmount * 3/4].Timestamp;
+                var deleteFrom = toAppend[timeSeriesPointsAmount * 1/3].Timestamp;
+                var deleteTo = toAppend[timeSeriesPointsAmount * 3/4].Timestamp;
                 var deleteOperation = store
                     .Operations
                     .Send(new PatchByQueryOperation(new IndexQuery
@@ -421,10 +424,10 @@ update
 {
   deleteRangeTs(this, $timeseries, $from, $to);
 }"}));
-                deleteOperation.WaitForCompletion();
+                await deleteOperation.WaitForCompletionAsync();
 
-                var getFrom = toAppend[timeSeriesAmount * 1/5].Timestamp;
-                var getTo = toAppend[timeSeriesAmount * 4/5].Timestamp;
+                var getFrom = toAppend[timeSeriesPointsAmount * 1/5].Timestamp;
+                var getTo = toAppend[timeSeriesPointsAmount * 4/5].Timestamp;
                 var getOperation = store
                     .Operations
                     .Send(new PatchByQueryOperation(new IndexQuery
@@ -441,7 +444,7 @@ update
 {
   this.Result = getRangeTs(this, $timeseries, $from, $to);
 }"}));
-                getOperation.WaitForCompletion();
+                await getOperation.WaitForCompletionAsync();
                 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -479,6 +482,7 @@ update
         private class TimeSeriesResultHolder
         {
             public TimeSeriesEntry[] Result { set; get; }
+            public string Id { get; set; }
         }
     }
 }
