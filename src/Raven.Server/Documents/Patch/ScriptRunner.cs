@@ -1130,7 +1130,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     var value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, key).Value;
                     if (value == null)
-                        return null;
+                        return JsValue.Null;
 
                     var jsValue = JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, value.Clone(_jsonCtx));
                     return jsValue.AsObject().Get("Object");
