@@ -41,6 +41,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
@@ -123,7 +124,9 @@ namespace Raven.Server.ServerWide
 
         public Operations Operations { get; }
 
-        public SemaphoreSlim ConcurrentBackupsSemaphore { get; }
+        public GlobalBackupConfiguration GlobalBackupConfiguration { get; private set; }
+
+        private readonly bool _skipChangingMaxConcurrentBackups;
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
@@ -174,8 +177,20 @@ namespace Raven.Server.ServerWide
                            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
                            uri.Port != 0;
 
-            var maxConcurrentBackupsTasks = Configuration.Backup.MaxNumberOfConcurrentBackups ?? int.MaxValue;
-            ConcurrentBackupsSemaphore = new SemaphoreSlim(maxConcurrentBackupsTasks);
+            _skipChangingMaxConcurrentBackups = Configuration.Backup.MaxNumberOfConcurrentBackups != null;
+            GlobalBackupConfiguration = new GlobalBackupConfiguration(Configuration.Backup.MaxNumberOfConcurrentBackups ?? int.MaxValue);
+        }
+
+        public void UpdateMaxConcurrentBackups(int licensedCores)
+        {
+            if (_skipChangingMaxConcurrentBackups)
+                return;
+
+            var maxNumberOfConcurrentBackups = Math.Max(licensedCores / 2, 1);
+            if (maxNumberOfConcurrentBackups == GlobalBackupConfiguration.MaxNumberOfConcurrentBackups)
+                return;
+
+            GlobalBackupConfiguration = new GlobalBackupConfiguration(maxNumberOfConcurrentBackups);
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
