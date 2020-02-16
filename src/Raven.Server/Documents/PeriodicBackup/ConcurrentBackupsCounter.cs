@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.Util;
+using Raven.Server.Commercial;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -7,11 +8,26 @@ namespace Raven.Server.Documents.PeriodicBackup
     {
         private int _numberOfCoresToUse;
         private int _maxConcurrentBackups;
+        private readonly bool _skipModifications;
 
-        public ConcurrentBackupsCounter(int numberOfCoresToUse)
+        public ConcurrentBackupsCounter(int? maxNumberOfConcurrentBackupsConfiguration, LicenseManager licenseManager)
         {
+            int numberOfCoresToUse;
+            var skipModifications = false;
+            if (maxNumberOfConcurrentBackupsConfiguration != null)
+            {
+                numberOfCoresToUse = maxNumberOfConcurrentBackupsConfiguration.Value;
+                skipModifications = true;
+            }
+            else
+            {
+                licenseManager.GetCoresLimitForNode(out var utilizedCores);
+                numberOfCoresToUse = GetNumberOfCoresToUse(utilizedCores);
+            }
+
             _numberOfCoresToUse = numberOfCoresToUse;
             _maxConcurrentBackups = numberOfCoresToUse;
+            _skipModifications = skipModifications;
         }
 
         public IDisposable StartBackup(string backupName)
@@ -41,14 +57,23 @@ namespace Raven.Server.Documents.PeriodicBackup
             });
         }
 
-        public void SetMaxNumberOfConcurrentBackups(int newMaxConcurrentBackups)
+        public void SetMaxNumberOfConcurrentBackups(int utilizedCores)
         {
+            if (_skipModifications)
+                return;
+
             lock (this)
             {
+                var newMaxConcurrentBackups = GetNumberOfCoresToUse(utilizedCores);
                 var diff = newMaxConcurrentBackups - _maxConcurrentBackups;
                 _maxConcurrentBackups = newMaxConcurrentBackups;
                 _numberOfCoresToUse += diff;
             }
+        }
+
+        public int GetNumberOfCoresToUse(int utilizedCores)
+        {
+            return Math.Max(1, utilizedCores / 2);
         }
     }
 }
