@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
@@ -234,31 +235,39 @@ namespace FastTests
                             CheckIfDatabaseExists(serverToUse, name);
                         }
 
-                        DatabasePutResult result;
-
-                        if (options.AdminCertificate != null)
+                        long raftCommand;
+                        try
                         {
-                            using (var adminStore = new DocumentStore
+                            if (options.AdminCertificate != null)
                             {
-                                Urls = UseFiddler(serverToUse.WebUrl),
-                                Database = name,
-                                Certificate = options.AdminCertificate
-                            }.Initialize())
+                                using (var adminStore = new DocumentStore
+                                {
+                                    Urls = UseFiddler(serverToUse.WebUrl),
+                                    Database = name,
+                                    Certificate = options.AdminCertificate
+                                }.Initialize())
+                                {
+                                    raftCommand = adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor)).RaftCommandIndex;
+                                }
+                            }
+                            else
                             {
-                                result = adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
+                                raftCommand = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor)).RaftCommandIndex;
                             }
                         }
-                        else
+                        catch (ConcurrencyException)
                         {
-                            result = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
+                            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(name));
+                            Assert.Equal(options.ReplicationFactor, record.Topology.ReplicationFactor);
+                            raftCommand = record.Etag;
                         }
 
-                        Assert.True(result.RaftCommandIndex > 0); //sanity check
+                        Assert.True(raftCommand > 0); //sanity check             
 
                         if (Servers.Contains(serverToUse))
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
+                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(raftCommand, timeout));
 
                             // skip 'wait for requests' on DocumentDatabase dispose
                             Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name));
@@ -285,7 +294,7 @@ namespace FastTests
 
                             if (Servers.Contains(serverToUse) && result != null)
                             {
-                                var timeout = TimeSpan.FromSeconds(Debugger.IsAttached ? 5 : 1);
+                                var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 5 : 1);
                                 AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
                             }
                         }
@@ -905,6 +914,7 @@ namespace FastTests
             private X509Certificate2 _adminCertificate;
             private bool _createDatabase;
             private bool _deleteDatabaseOnDispose;
+            private TimeSpan? _deleteTimeout;
             private RavenServer _server;
             private int _replicationFactor;
             private bool _ignoreDisabledDatabase;
@@ -1007,6 +1017,16 @@ namespace FastTests
                 {
                     AssertNotFrozen();
                     _deleteDatabaseOnDispose = value;
+                }
+            }
+
+            public TimeSpan? DeleteTimeout
+            {
+                get => _deleteTimeout;
+                set
+                {
+                    AssertNotFrozen();
+                    _deleteTimeout = value;
                 }
             }
 
