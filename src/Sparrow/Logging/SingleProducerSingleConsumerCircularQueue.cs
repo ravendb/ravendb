@@ -16,6 +16,9 @@ namespace Sparrow.Logging
 
         public override string ToString()
         {
+            if (Data == null)
+                return null;
+
             return Encodings.Utf8.GetString(Data.ToArray());
         }
     }

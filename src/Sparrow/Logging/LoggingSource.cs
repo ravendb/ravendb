@@ -526,6 +526,7 @@ namespace Sparrow.Logging
 
             WriteEntryToWriter(state.Writer, ref entry);
             item.Data = state.ForwardingStream.Destination;
+            Debug.Assert(item.Data != null);
 
             _activePoolMessageEntries[currentProcessNumber].Enqueue(item, timeout: 128);
 
@@ -646,7 +647,7 @@ namespace Sparrow.Logging
                                         foundEntry = true;
 
                                         sizeWritten += ActualWriteToLogTargets(item, currentFile);
-
+                                        Debug.Assert(item.Data != null);
                                         _freePooledMessageEntries[index].Enqueue(item);
                                     }
                                 }
@@ -821,6 +822,8 @@ namespace Sparrow.Logging
         private int ActualWriteToLogTargets(WebSocketMessageEntry item, Stream file)
         {
             item.Data.TryGetBuffer(out var bytes);
+            Debug.Assert(bytes.Array != null);
+
             file.Write(bytes.Array, bytes.Offset, bytes.Count);
             _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
 
