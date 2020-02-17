@@ -30,12 +30,14 @@ namespace Sparrow.Json
             }
             _idleTimer = new Timer(IdleTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
+            _maxContextSizeToKeepInBytes = long.MaxValue;
 
         }
 
         protected JsonContextPoolBase(Size? maxContextSizeToKeepInMb) : this()
         {
-            _maxContextSizeToKeepInBytes = maxContextSizeToKeepInMb?.GetValue(SizeUnit.Bytes) ?? long.MaxValue;
+            if (maxContextSizeToKeepInMb != null)
+                _maxContextSizeToKeepInBytes = maxContextSizeToKeepInMb.Value.GetValue(SizeUnit.Bytes);
         }
 
 
