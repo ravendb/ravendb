@@ -991,8 +991,6 @@ namespace Raven.Server.Documents.Indexes
                     return; // can be null if we disposed immediately
                 try
                 {
-                    _contextPool.SetMostWorkInGoingToHappenOnThisThread();
-
                     DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
                     storageEnvironment.OnLogsApplied += HandleLogsApplied;
 

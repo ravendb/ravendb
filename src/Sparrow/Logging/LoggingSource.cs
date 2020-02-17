@@ -500,8 +500,8 @@ namespace Sparrow.Logging
                 state = _localState.Value = GenerateThreadWriterState();
             }
 
-            int currentProcessNumber = CurrentProcessorIdHelper.GetCurrentProcessorId();
-            var pool = _freePooledMessageEntries[currentProcessNumber% _freePooledMessageEntries.Length];
+            int currentProcessNumber = CurrentProcessorIdHelper.GetCurrentProcessorId() % _freePooledMessageEntries.Length;
+            var pool = _freePooledMessageEntries[currentProcessNumber];
 
             if (pool.Dequeue(out var item))
             {
@@ -527,7 +527,7 @@ namespace Sparrow.Logging
             WriteEntryToWriter(state.Writer, ref entry);
             item.Data = state.ForwardingStream.Destination;
 
-            _activePoolMessageEntries[currentProcessNumber%_activePoolMessageEntries.Length].Enqueue(item, timeout: 128);
+            _activePoolMessageEntries[currentProcessNumber].Enqueue(item, timeout: 128);
 
             _hasEntries.Set();
         }
