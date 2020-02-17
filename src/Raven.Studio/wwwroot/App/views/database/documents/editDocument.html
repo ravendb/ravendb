@@ -159,7 +159,7 @@
         </div>
     </div>
     <div id="right-options-panel" class="flex-window">
-        <div class="panel document-properties flex-window-head" id="document-properties-area">
+        <div class="panel document-properties flex-window-head">
             <div class="panel-body">
                 <h3 class="margin-none">Properties</h3>
                 <hr class="small" />
@@ -167,14 +167,16 @@
                     <div data-bind="visible: !$root.isCreatingNewDocument()">
                         <dt>Change Vector:</dt>
                         <dd>
-                            <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true" data-bind="tooltipText: $root.changeVectorHtml()" id="changeVector">
-                                <span data-bind="foreach: $root.changeVector">
-                                    <span class="badge badge-default" data-bind="text: shortFormat"></span>
-                                </span>
-                            </span>
-                            <a class="margin-left margin-left-sm" href="#" id="copy-change-vector" title="Copy change vector" data-bind="click: $root.copyChangeVectorToClipboard">
-                                <i class="icon-copy"></i>
-                            </a>
+                            <div class="flex-horizontal">
+                                <div data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true" data-bind="tooltipText: $root.changeVectorHtml()">
+                                    <span data-bind="foreach: $root.changeVector">
+                                        <span class="badge badge-default" data-bind="text: shortFormat"></span>
+                                    </span>                                
+                                </div>
+                                <div>
+                                    <a href="#" id="copy-change-vector" title="Copy change vector" data-bind="click: $root.copyChangeVectorToClipboard"><i class="icon-copy"></i></a>
+                                </div>
+                            </div>
                         </dd>
                         <dt>Modified:</dt>
                         <dd>

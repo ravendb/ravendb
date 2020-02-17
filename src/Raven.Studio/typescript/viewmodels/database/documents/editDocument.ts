@@ -577,7 +577,7 @@ class editDocument extends viewModelBase {
     }
 
     copyChangeVectorToClipboard() {
-        copyToClipboard.copy(_.replace(this.changeVectorFormatted(), new RegExp("<br/> ", "g"), "\n"), "Change Vector has been copied to clipboard");
+        copyToClipboard.copy(this.changeVector().map(vectorItem => vectorItem.fullFormat).join(" "), "Change Vector has been copied to clipboard");
     }
 
     toggleNewlineMode() {
