@@ -31,6 +31,8 @@ namespace Raven.Server.Utils
 
         private static readonly StringSegment ValuesPropertyName = new StringSegment("$values");
 
+        private static readonly StringSegment ValuePropertyName = new StringSegment("$value");
+
         private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
 
         private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorForMapReduceOutputCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
@@ -437,17 +439,21 @@ namespace Raven.Server.Utils
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool TryConvertToBlittableArray(BlittableJsonReaderObject value, out BlittableJsonReaderArray array)
+        public static object TryConvertBlittableJsonReaderObject(BlittableJsonReaderObject blittable)
         {
-            array = null;
-
-            if (value.TryGet(TypePropertyName, out string type) == false)
-                return false;
+            if (blittable.TryGet(TypePropertyName, out string type) == false)
+                return blittable;
 
             if (type == null)
-                return false;
+                return blittable;
 
-            return value.TryGet(ValuesPropertyName, out array);
+            if (blittable.TryGet(ValuesPropertyName, out BlittableJsonReaderArray array))
+                return array;
+
+            if (blittable.TryGet(ValuePropertyName, out object value))
+                return value;
+
+            return blittable;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -491,12 +497,7 @@ namespace Raven.Server.Utils
                 return ConvertLazyStringValue(lazyString);
 
             if (value is BlittableJsonReaderObject bjo)
-            {
-                if (TryConvertToBlittableArray(bjo, out var bjra))
-                    return bjra;
-
-                return bjo;
-            }
+                return TryConvertBlittableJsonReaderObject(bjo);
 
             return value;
         }
