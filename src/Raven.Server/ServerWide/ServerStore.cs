@@ -1046,10 +1046,12 @@ namespace Raven.Server.ServerWide
                     break;
                 case nameof(PutLicenseCommand):
                     LicenseManager.ReloadLicense();
+                    ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     break;
                 case nameof(PutLicenseLimitsCommand):
                 case nameof(UpdateLicenseLimitsCommand):
                     LicenseManager.ReloadLicenseLimits();
+                    ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
                 case nameof(PutServerWideBackupConfigurationCommand):

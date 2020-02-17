@@ -6,26 +6,28 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class ConcurrentBackupsCounter
     {
-        private int _numberOfCoresToUse;
+        private readonly LicenseManager _licenseManager;
+        private int _concurrentBackups;
         private int _maxConcurrentBackups;
         private readonly bool _skipModifications;
 
         public ConcurrentBackupsCounter(int? maxNumberOfConcurrentBackupsConfiguration, LicenseManager licenseManager)
         {
+            _licenseManager = licenseManager;
+
             int numberOfCoresToUse;
-            var skipModifications = false;
-            if (maxNumberOfConcurrentBackupsConfiguration != null)
+            var skipModifications = maxNumberOfConcurrentBackupsConfiguration != null;
+            if (skipModifications)
             {
                 numberOfCoresToUse = maxNumberOfConcurrentBackupsConfiguration.Value;
-                skipModifications = true;
             }
             else
             {
-                licenseManager.GetCoresLimitForNode(out var utilizedCores);
-                numberOfCoresToUse = GetNumberOfCoresToUse(utilizedCores);
+                var utilizedCores = _licenseManager.GetCoresLimitForNode();
+                numberOfCoresToUse = GetNumberOfCoresToUseForBackup(utilizedCores);
             }
 
-            _numberOfCoresToUse = numberOfCoresToUse;
+            _concurrentBackups = numberOfCoresToUse;
             _maxConcurrentBackups = numberOfCoresToUse;
             _skipModifications = skipModifications;
         }
@@ -34,7 +36,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             lock (this)
             {
-                if (_numberOfCoresToUse <= 0)
+                if (_concurrentBackups <= 0)
                 {
                     throw new BackupDelayException(
                         $"Failed to start Backup Task: '{backupName}'. " +
@@ -45,33 +47,35 @@ namespace Raven.Server.Documents.PeriodicBackup
                     };
                 }
 
-                _numberOfCoresToUse--;
+                _concurrentBackups--;
             }
 
             return new DisposableAction(() =>
             {
                 lock (this)
                 {
-                    _numberOfCoresToUse++;
+                    _concurrentBackups++;
                 }
             });
         }
 
-        public void SetMaxNumberOfConcurrentBackups(int utilizedCores)
+        public void ModifyMaxConcurrentBackups()
         {
             if (_skipModifications)
                 return;
 
+            var utilizedCores = _licenseManager.GetCoresLimitForNode();
+            var newMaxConcurrentBackups = GetNumberOfCoresToUseForBackup(utilizedCores);
+
             lock (this)
             {
-                var newMaxConcurrentBackups = GetNumberOfCoresToUse(utilizedCores);
                 var diff = newMaxConcurrentBackups - _maxConcurrentBackups;
                 _maxConcurrentBackups = newMaxConcurrentBackups;
-                _numberOfCoresToUse += diff;
+                _concurrentBackups += diff;
             }
         }
 
-        public int GetNumberOfCoresToUse(int utilizedCores)
+        public int GetNumberOfCoresToUseForBackup(int utilizedCores)
         {
             return Math.Max(1, utilizedCores / 2);
         }

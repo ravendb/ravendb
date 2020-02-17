@@ -237,20 +237,12 @@ namespace Raven.Server.Commercial
             {
                 using (var process = Process.GetCurrentProcess())
                 {
-                    if (GetCoresLimitForNode(out var utilizedCores))
-                    {
-                        SetAffinity(process, utilizedCores, addPerformanceHint);
+                    var utilizedCores = GetCoresLimitForNode();
+                    var clusterSize = GetClusterSize();
+                    var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, utilizedCores * _licenseStatus.Ratio);
 
-                        var clusterSize = GetClusterSize();
-                        var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, utilizedCores * _licenseStatus.Ratio);
-                        SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
-                    }
-                    else
-                    {
-                        // set the default values
-                        SetAffinity(process, _licenseStatus.MaxCores, addPerformanceHint);
-                        SetMaxWorkingSet(process, _licenseStatus.MaxMemory);
-                    }
+                    SetAffinity(process, utilizedCores, addPerformanceHint);
+                    SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
                 }
             }
             catch (Exception e)
@@ -259,19 +251,16 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public bool GetCoresLimitForNode(out int utilizedCores)
+        public int GetCoresLimitForNode()
         {
             var licenseLimits = _serverStore.LoadLicenseLimits();
             if (licenseLimits?.NodeLicenseDetails != null &&
                 licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
             {
-                utilizedCores = Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
-                return true;
-                
+                return Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
             }
 
-            utilizedCores = _licenseStatus.MaxCores;
-            return false;
+            return Math.Min(ProcessorInfo.ProcessorCount, _licenseStatus.MaxCores);
         }
 
         private int GetClusterSize()
@@ -1068,15 +1057,7 @@ namespace Raven.Server.Commercial
         private void SetAffinity(Process process, int cores, bool addPerformanceHint)
         {
             if (cores > ProcessorInfo.ProcessorCount)
-            {
-                // the number of assigned cores is larger than we have on this machine
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot set affinity to {cores} core(s), " +
-                                $"when the number of cores on this machine is: {ProcessorInfo.ProcessorCount}");
-                return;
-            }
-
-            _serverStore.ConcurrentBackupsCounter.SetMaxNumberOfConcurrentBackups(cores);
+                cores = ProcessorInfo.ProcessorCount;
 
             try
             {
