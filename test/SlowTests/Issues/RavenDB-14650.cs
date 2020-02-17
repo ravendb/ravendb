@@ -20,21 +20,10 @@ namespace SlowTests.Issues
         {
         }
 
-        private class ArrayClass
-        {
-            public List<int> Array { get; set; }
-        }
-
         [Fact]
-        public void CanCompileIndex1()
+        public void CanGetArrayWithType()
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = s => s.Conventions.CustomizeJsonSerializer = serializer =>
-                {
-                    serializer.TypeNameHandling = TypeNameHandling.All;
-                }
-            }))
+            using (var store = GetDocumentStore())
             {
                 var list = new List<int> { 1, 2, 3, 4, 5 };
                 var requestExecuter = store.GetRequestExecutor();
@@ -61,7 +50,6 @@ select {
 select doc.Array";
                 AssertQuery(projection);
 
-                WaitForUserToContinueTheTest(store);
                 void AssertQuery(string query)
                 {
                     using (var session = store.OpenSession())
@@ -75,6 +63,60 @@ select doc.Array";
                     }
                 }
             }
+        }
+
+        [Fact]
+        public void CanGetByteArrayWithType()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var requestExecuter = store.GetRequestExecutor();
+                using (requestExecuter.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var reader = context.ReadObject(new DynamicJsonValue
+                    {
+                        ["ByteArray"] = new DynamicJsonValue
+                        {
+                            ["$type"] = "System.Byte[], mscorlib",
+                            ["$value"] = "AQIDBAU="
+                        }
+                    }, "users/1");
+                    requestExecuter.Execute(new PutDocumentCommand("users/1", null, reader), context);
+                }
+
+                var javascriptProjection = @"from @all_docs as doc
+select {
+     ByteArray: doc.ByteArray
+}";
+                AssertQuery(javascriptProjection);
+
+                var projection = @"from @all_docs as doc
+select doc.ByteArray";
+                AssertQuery(projection);
+
+                void AssertQuery(string query)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var result = session.Advanced.RawQuery<ByteArrayClass>(query).ToList();
+                        Assert.Equal(1, result.Count);
+
+                        var array = result[0].ByteArray;
+                        Assert.NotNull(array);
+                        Assert.True(array.SequenceEqual(new List<byte> { 1, 2, 3, 4, 5 }));
+                    }
+                }
+            }
+        }
+
+        private class ArrayClass
+        {
+            public List<int> Array { get; set; }
+        }
+
+        private class ByteArrayClass
+        {
+            public Byte[] ByteArray { get; set; }
         }
     }
 }

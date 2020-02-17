@@ -268,7 +268,6 @@ namespace Raven.Server.Documents.Patch
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
                         return GetJSValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
                     case BlittableJsonToken.String:
-
                         return value.ToString();
                     case BlittableJsonToken.CompressedString:
                         return value.ToString();
@@ -277,15 +276,22 @@ namespace Raven.Server.Documents.Patch
                         _parent.MarkChanged();
                         BlittableJsonReaderObject blittable = (BlittableJsonReaderObject)value;
 
-                        if (TypeConverter.TryConvertToBlittableArray(blittable, out var blittableArray))
+                        var obj = TypeConverter.TryConvertBlittableJsonReaderObject(blittable);
+                        switch (obj)
                         {
-                            return GetArrayInstanceFromBlittableArray(owner.Engine, blittableArray, owner);
+                            case BlittableJsonReaderArray blittableArray:
+                                return GetArrayInstanceFromBlittableArray(owner.Engine, blittableArray, owner);
+                            case LazyStringValue asLazyStringValue:
+                                return asLazyStringValue.ToString();
+                            case LazyCompressedStringValue asLazyCompressedStringValue:
+                                return asLazyCompressedStringValue.ToString();
+                            default:
+                                blittable.NoCache = true;
+                                return new BlittableObjectInstance(owner.Engine,
+                                    owner,
+                                    blittable, null, null, null);
                         }
 
-                        blittable.NoCache = true;
-                        return new BlittableObjectInstance(owner.Engine,
-                            owner,
-                            blittable, null, null, null);
                     case BlittableJsonToken.StartArray:
                         Changed = true;
                         _parent.MarkChanged();
