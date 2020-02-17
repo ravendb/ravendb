@@ -99,6 +99,7 @@ namespace Sparrow.Json
 
             // no choice, got to create it
             context = CreateContext();
+            context.PoolGeneration = _generation;
             return new ReturnRequestContext
             {
                 Parent = this,
@@ -265,6 +266,8 @@ namespace Sparrow.Json
         {
             if (!LowMemoryFlag.Raise())
                 return;
+
+            Interlocked.Increment(ref _generation);
 
             while (_globalQueue.TryDequeue(out var result))
             {
