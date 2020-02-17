@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
@@ -17,7 +18,7 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/replication/conflicts?docId={_id}";
+            url = $"{node.Url}/databases/{node.Database}/replication/conflicts?docId={Uri.EscapeDataString(_id)}";
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Get

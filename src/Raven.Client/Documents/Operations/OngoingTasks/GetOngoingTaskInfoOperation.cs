@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = _taskName != null ?
-                    $"{node.Url}/databases/{node.Database}/task?taskName={_taskName}&type={_type}" :
+                    $"{node.Url}/databases/{node.Database}/task?taskName={Uri.EscapeDataString(_taskName)}&type={_type}" :
                     $"{node.Url}/databases/{node.Database}/task?key={_taskId}&type={_type}";
 
                 var request = new HttpRequestMessage

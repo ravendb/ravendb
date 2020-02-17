@@ -323,7 +323,7 @@ namespace FastTests
                     _url = url;
 
                     if (typeof(TResult) == typeof(BlittableJsonReaderArray))
-                        throw new NotSupportedException("Use object insetad");
+                        throw new NotSupportedException("Use object instead");
                 }
 
                 public override bool IsReadRequest => true;

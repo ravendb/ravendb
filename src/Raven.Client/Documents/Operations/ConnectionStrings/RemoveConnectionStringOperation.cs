@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/connection-strings?connectionString={_connectionString.Name}&type={_connectionString.Type}";
+                url = $"{node.Url}/databases/{node.Database}/admin/connection-strings?connectionString={Uri.EscapeDataString(_connectionString.Name)}&type={_connectionString.Type}";
 
                 var request = new HttpRequestMessage
                     {

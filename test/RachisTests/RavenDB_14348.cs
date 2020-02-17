@@ -18,7 +18,10 @@ namespace RachisTests
             {
                 var task = Task.Run(async () =>
                 {
-                    await SubscriptionFailoverWithWaitingChains.ContinuouslyGenerateDocs(10, store);
+                    while (false == store.WasDisposed)
+                    {
+                        await SubscriptionFailoverWithWaitingChains.ContinuouslyGenerateDocsInternal(10, store);
+                    }
                 });
 
                 await Task.Delay(5555);
