@@ -165,6 +165,9 @@ namespace Sparrow.Json
                     for (var index = 0; index < current.Length; index++)
                     {
                         var context = current[index];
+                        if(context == null)
+                            continue;
+
                         if (currentTime - context.InPoolSince > idleTime)
                             continue;
 
