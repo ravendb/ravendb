@@ -41,6 +41,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
@@ -121,9 +122,9 @@ namespace Raven.Server.ServerWide
 
         public long LastClientConfigurationIndex { get; private set; } = -2;
 
-        public Operations Operations { get; }
+        public ConcurrentBackupsCounter ConcurrentBackupsCounter { get; private set; }
 
-        public SemaphoreSlim ConcurrentBackupsSemaphore { get; }
+        public Operations Operations { get; }
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
@@ -173,9 +174,6 @@ namespace Raven.Server.ServerWide
             HasFixedPort = Configuration.Core.ServerUrls == null ||
                            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
                            uri.Port != 0;
-
-            var maxConcurrentBackupsTasks = Configuration.Backup.MaxNumberOfConcurrentBackups ?? int.MaxValue;
-            ConcurrentBackupsSemaphore = new SemaphoreSlim(maxConcurrentBackupsTasks);
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
@@ -720,6 +718,8 @@ namespace Raven.Server.ServerWide
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);
 
+            ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup.MaxNumberOfConcurrentBackups, LicenseManager);
+
             ConfigureAuditLog();
 
             Initialized = true;
@@ -1046,10 +1046,12 @@ namespace Raven.Server.ServerWide
                     break;
                 case nameof(PutLicenseCommand):
                     LicenseManager.ReloadLicense();
+                    ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     break;
                 case nameof(PutLicenseLimitsCommand):
                 case nameof(UpdateLicenseLimitsCommand):
                     LicenseManager.ReloadLicenseLimits();
+                    ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
                 case nameof(PutServerWideBackupConfigurationCommand):

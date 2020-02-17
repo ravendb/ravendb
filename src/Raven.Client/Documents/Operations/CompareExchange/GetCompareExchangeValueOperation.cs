@@ -42,8 +42,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 var pathBuilder = new StringBuilder(node.Url);
                 pathBuilder.Append("/databases/")
                     .Append(node.Database)
-                    .Append("/cmpxchg?")
-                    .Append("&key=")
+                    .Append("/cmpxchg?key=")
                     .Append(Uri.EscapeDataString(_key));
 
                 url = pathBuilder.ToString();

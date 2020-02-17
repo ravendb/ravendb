@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -14,6 +15,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -80,6 +82,8 @@ namespace RachisTests
             }
         }
 
+        private bool _toggled;
+
         [Theory(Skip = "Uprobable, intermediate state")]
         [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: true)]
         public async Task SkippedSubscriptionsShouldFailoverAndReturnToOriginalNodes(int subscriptionsChainSize, int clusterSize, int dBGroupSize, bool shouldMaintainElectionTimeout)
@@ -125,20 +129,15 @@ namespace RachisTests
                 });
 
                 var dbNodesCountToToggle = Math.Max(Math.Min(dBGroupSize - 1, dBGroupSize / 2 + 1), 1);
-                foreach (var node in store.GetRequestExecutor().TopologyNodes.Take(dbNodesCountToToggle))
+                var nodesToToggle = store.GetRequestExecutor().TopologyNodes.Select(x => x.ClusterTag).Take(dbNodesCountToToggle);
+
+                foreach (var node in nodesToToggle)
                 {
-                    var i = 0;
-
-                    for (; i < cluster.Nodes.Count; i++)
-                    {
-                        if (cluster.Nodes[i].ServerStore.NodeTag == node.ClusterTag)
-                            break;
-                    }
-
-                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, i, shouldTrapRevivedNodesIntoCandidate);
+                    var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == node);
+                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, nodeIndex, shouldTrapRevivedNodesIntoCandidate);
                 }
 
-                Assert.All(cdeArray.GetArray(), cde => Assert.Equal(cde.CurrentCount, SubscriptionsCount));
+                Assert.All(cdeArray.GetArray(), cde => Assert.Equal(SubscriptionsCount, cde.CurrentCount));
 
                 foreach (var cde in cdeArray.GetArray())
                 {
@@ -154,17 +153,18 @@ namespace RachisTests
             }
         }
 
-        [Theory]
-        [InlineData(5)]
-        public void MakeSureAllNodesAreRoundRobined(int clusterSize)
+        [Fact]
+        public async Task MakeSureAllNodesAreRoundRobined()
         {
+            const int clusterSize = 5;
             var cluster = AsyncHelpers.RunSync(() => CreateRaftCluster(clusterSize, shouldRunInMemory: false));
 
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = clusterSize,
-                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin
+                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin,
+                DeleteDatabaseOnDispose = false
             }))
             {
                 using (var session = store.OpenSession())
@@ -175,7 +175,7 @@ namespace RachisTests
                 var databaseName = store.Database;
 
                 var subsId = store.Subscriptions.Create<User>();
-                var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
+                using var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
                 }
@@ -191,37 +191,33 @@ namespace RachisTests
 
                 var sp = Stopwatch.StartNew();
 
-                foreach (var node in store.GetRequestExecutor().TopologyNodes)
+                List<string> toggledNodes = new List<string>();
+                var toggleCount = Math.Round(clusterSize * 0.51);
+                for (int i = 0; i < toggleCount; i++)
                 {
-                    try
+                    string responsibleNode = null;
+                    await ActionWithLeader(async l =>
                     {
-                        var i = 0;
-
-                        for (; i < cluster.Nodes.Count; i++)
+                        var documentDatabase = await l.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                        using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
                         {
-                            if (cluster.Nodes[i].ServerStore.NodeTag == node.ClusterTag)
-                                break;
+                            responsibleNode = documentDatabase.SubscriptionStorage.GetResponsibleNode(context, subsId);
                         }
-                        AsyncHelpers.RunSync(() => ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, i, true));
-                    }
-                    catch (Exception)
-                    {
-                        // noop, we might hit a leader here
-                    }
-                }
+                    });
+                    Assert.NotNull(responsibleNode);
+                    toggledNodes.Add(responsibleNode);
+                    var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == responsibleNode);
+                    var node = cluster.Nodes[nodeIndex];
 
+                    var res = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+                    Assert.Equal(responsibleNode, res.NodeTag);
+                    await Task.Delay(5000);
+                }
                 while (clusterSize != redirects.Count)
                 {
-                    var leaderNode = cluster.Nodes.FirstOrDefault(x => x.ServerStore.IsLeader());
-                    if (leaderNode != null)
-                    {
-                        var currentLeader = leaderNode.ServerStore.Engine.CurrentLeader;
-                        if (currentLeader != null)
-                            currentLeader.StepDown();
-                    }
-
-                    Thread.Sleep(16);
-                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(5), "sp.Elapsed < TimeSpan.FromMinutes(5)");
+                    await Task.Delay(1000);
+                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(2), $"sp.Elapsed < TimeSpan.FromMinutes(1), redirects count : {redirects.Count}, leaderNodeTag: {cluster.Leader.ServerStore.NodeTag}, missing: {string.Join(", ", cluster.Nodes.Select(x => x.ServerStore.NodeTag).Except(redirects))}, offline: {string.Join(", ", toggledNodes)}");
                 }
 
                 Assert.Equal(clusterSize, redirects.Count);
@@ -289,71 +285,84 @@ namespace RachisTests
             cluster.Nodes[index] = node;
 
             await Task.Delay(5000);
+            _toggled = true;
             node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
             cluster.Nodes[index] = node;
 
-            await WaitForRehab(databaseName, cluster);
+            await WaitForRehab(databaseName, index, cluster);
+            _toggled = false;
         }
 
-        internal static async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store)
+        private async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store)
         {
             while (false == store.WasDisposed)
             {
-                try
+                if (_toggled)
                 {
-                    var ids = new List<string>();
-                    using (var session = store.OpenSession(new SessionOptions
-                    {
-                        TransactionMode = TransactionMode.ClusterWide
-                    }))
-                    {
-                        for (var k = 0; k < DocsBatchSize; k++)
-                        {
-                            User entity = new User
-                            {
-                                Name = "ClusteredJohnny" + k
-                            };
-                            session.Store(entity);
-                            ids.Add(session.Advanced.GetDocumentId(entity));
-                        }
-                        session.SaveChanges();
-                    }
+                    await Task.Delay(200);
+                    continue;
+                }
 
-                    using (var session = store.OpenSession())
-                    {
-                        for (var k = 0; k < DocsBatchSize; k++)
-                        {
-                            session.Store(new User
-                            {
-                                Name = "Johnny" + k
-                            });
-                        }
-                        session.SaveChanges();
-                    }
+                await ContinuouslyGenerateDocsInternal(DocsBatchSize, store);
+            }
+        }
 
-                    using (var session = store.OpenSession())
+        internal static async Task ContinuouslyGenerateDocsInternal(int DocsBatchSize, DocumentStore store)
+        {
+            try
+            {
+                var ids = new List<string>();
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    for (var k = 0; k < DocsBatchSize; k++)
                     {
-                        for (var k = 0; k < DocsBatchSize; k++)
+                        User entity = new User
                         {
-                            var user = session.Load<User>(ids[k]);
-                            user.Age++;
-                        }
-                        session.SaveChanges();
+                            Name = "ClusteredJohnny" + k
+                        };
+                        session.Store(entity);
+                        ids.Add(session.Advanced.GetDocumentId(entity));
                     }
-                    await Task.Delay(16);
+                    session.SaveChanges();
                 }
-                catch (AllTopologyNodesDownException)
+
+                using (var session = store.OpenSession())
                 {
+                    for (var k = 0; k < DocsBatchSize; k++)
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Johnny" + k
+                        });
+                    }
+                    session.SaveChanges();
                 }
-                catch (DatabaseDisabledException)
+
+                using (var session = store.OpenSession())
                 {
+                    for (var k = 0; k < DocsBatchSize; k++)
+                    {
+                        var user = session.Load<User>(ids[k]);
+                        user.Age++;
+                    }
+                    session.SaveChanges();
                 }
-                catch (DatabaseDoesNotExistException)
-                {
-                }
-                catch (RavenException)
-                {
-                }
+                await Task.Delay(16);
+            }
+            catch (AllTopologyNodesDownException)
+            {
+            }
+            catch (DatabaseDisabledException)
+            {
+            }
+            catch (DatabaseDoesNotExistException)
+            {
+            }
+            catch (RavenException)
+            {
             }
         }
 
@@ -378,13 +387,15 @@ namespace RachisTests
             mainTI.Unregister(mainSubscribersCDE.WaitHandle);
         }
 
-        private static async Task WaitForRehab(string dbName, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
+        private async Task WaitForRehab(string dbName, int index, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
         {
+            var toggled = cluster.Nodes[index].ServerStore.NodeTag;
+            List<Exception> errors = new List<Exception>();
             for (var i = 0; i < cluster.Nodes.Count; i++)
             {
                 var curNode = cluster.Nodes[i];
-                var rehabCount = 0;
                 var attempts = 20;
+                List<string> rehabNodes;
                 do
                 {
                     using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -392,19 +403,59 @@ namespace RachisTests
                     {
                         try
                         {
-                            rehabCount = curNode.ServerStore.Cluster.ReadDatabaseTopology(context, dbName).Rehabs.Count;
+                            rehabNodes = curNode.ServerStore.Cluster.ReadDatabaseTopology(context, dbName).Rehabs;
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
-                            await Task.Delay(1000);
-                            rehabCount = 1;
-                            continue;
+                            errors.Add(e);
+                            rehabNodes = new List<string>{"error"};
                         }
-                        await Task.Delay(1000);
                     }
+                    await Task.Delay(1000);
                 }
-                while (--attempts > 0 && rehabCount > 0);
-                Assert.True(attempts >= 0 && rehabCount == 0, "waited for rehab for too long");
+                while (--attempts > 0 && rehabNodes.Count > 0);
+
+                if ((attempts >= 0 && rehabNodes.Count == 0) == false)
+                {
+                    var sb = new StringBuilder();
+                    (ClusterObserverLogEntry[] List, long Iteration) logs;
+                    logs.List = null;
+                    await ActionWithLeader((l) =>
+                    {
+                        logs = l.ServerStore.Observer.ReadDecisionsForDatabase();
+                        return Task.CompletedTask;
+                    });
+
+                    sb.AppendLine("Cluster Observer Log Entries:\n-----------------------");
+                    foreach (var log in logs.List)
+                    {
+                        sb.AppendLine(
+                            $"{nameof(log.Date)}: {log.Date}\n{nameof(log.Database)}: {log.Database}\n{nameof(log.Iteration)}: {log.Iteration}\n{nameof(log.Message)}: {log.Message}\n-----------------------");
+                    }
+
+                    List<string> currentRehabNodes;
+                    string currentException = null;
+                    using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        try
+                        {
+                            currentRehabNodes = curNode.ServerStore.Cluster.ReadDatabaseTopology(context, dbName).Rehabs;
+                        }
+                        catch (Exception e)
+                        {
+                            currentException = e.ToString();
+                            currentRehabNodes = new List<string> { "another error" };
+                        }
+                    }
+
+                    sb.AppendLine($"\nLast attempt:\n rehabsCount: {currentRehabNodes.Count}, rehabNodes: {string.Join(", ", currentRehabNodes)}, exception: {currentException}");
+
+                    sb.AppendLine($"\nwaited for rehab for too long, current node: {cluster.Nodes[i].ServerStore.NodeTag}, toggled node: {toggled}, " +
+                                  $"rehabsCount: {rehabNodes.Count}, rehabNodes: {string.Join(", ", rehabNodes)}, " +
+                                  $"attempts: {attempts}, errors: {string.Join("\n", errors)}");
+                    Assert.True(attempts >= 0 && rehabNodes.Count == 0, sb.ToString());
+                }
             }
         }
 

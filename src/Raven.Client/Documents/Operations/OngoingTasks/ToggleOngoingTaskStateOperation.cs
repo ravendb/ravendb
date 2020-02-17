@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 url = $"{node.Url}/databases/{node.Database}/admin/tasks/state?key={_taskId}&type={_type}&disable={_disable}";
 
                 if (_taskName != null)
-                    url += $"&taskName={_taskName}";
+                    url += $"&taskName={Uri.EscapeDataString(_taskName)}";
 
                 var request = new HttpRequestMessage
                 {

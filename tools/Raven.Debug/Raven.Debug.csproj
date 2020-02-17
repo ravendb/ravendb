@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="2.5.0" />
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="2.5.1" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.61701" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime-ravendb" Version="1.0.8" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.49" />
