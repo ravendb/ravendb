@@ -11,8 +11,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.TimeSeries;
-using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
@@ -155,6 +153,50 @@ namespace SlowTests.Client.TimeSeries.Patch
                         .Single();
                     Assert.Equal(values, val.Values);
                     Assert.Equal(tag, val.Tag);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                }
+            }
+        }
+        
+        [Theory]
+        [InlineData(@"appendTs(id(this), args.timeseries, new Date(args.timestamp), null, args.values);")]
+        [InlineData(@"appendTs(id(this), args.timeseries, new Date(args.timestamp), args.values);")]
+        public async Task CanAppendTimeSeriesByPatch_WithoutTag(string script)
+        {
+            double[] values = {59d};
+            const string timeseries = "Heartrate";
+            const string documentId = "users/ayende";
+            
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new { Name = "Oren" }, documentId);
+                    await session.SaveChangesAsync();
+                    
+                    session.Advanced.Defer(new PatchCommandData(documentId, null,
+                        new PatchRequest
+                        {
+                            Script = script,
+                            Values =
+                            {
+                                { "timeseries", timeseries },
+                                { "timestamp", baseline.AddMinutes(1) },
+                                { "values", values }
+                            }
+                        }, null));
+                    await session.SaveChangesAsync();
+                }
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    var val = (await session.TimeSeriesFor(documentId)
+                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                        .Single();
+                    Assert.Equal(values, val.Values);
+                    Assert.Null(val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
                 }
             }
@@ -359,7 +401,7 @@ for(i = 0; i < args.toAppend.length; i++){
         [Fact]
         public async Task PatchTimestamp_IntegrationTest()
         {
-            string[] tags = {"tag/1", "tag/2", "tag/3", "tag/4"};
+            string[] tags = {"tag/1", "tag/2", "tag/3", "tag/4", null};
             const string timeseries = "Heartrate";
             const int timeSeriesPointsAmount = 128;
             const int docAmount = 8_192;

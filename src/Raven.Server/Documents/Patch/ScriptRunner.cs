@@ -293,22 +293,34 @@ namespace Raven.Server.Documents.Patch
             private JsValue AppendTimeSeries(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext("appendTs");
+                const string signature4Args = "appendTs(doc, timeseries, timestamp, values)";
+                const string signature5Args = "appendTs(doc, timeseries, timestamp, tag, values)";
                 
-                const string signature = "appendTs(doc, timeseries, timestamp, tag, values)";
-                const int requiredArgs = 5;
-                
-                if (args.Length != requiredArgs)
-                    throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
+                string signature;
+                LazyStringValue lsTag = null;
+                switch (args.Length)
+                {
+                    case 4: signature = signature4Args;
+                        break;
+                    case 5: signature = signature5Args;
+                        if (args[3] != JsValue.Null)
+                        {
+                            var tag = GetStringArg(args[3], signature, "tag");
+                            lsTag = _jsonCtx.GetLazyString(tag);
+                        }
+                        break;
+                    default: throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature4Args} or {signature5Args}");
+                }
                 
                 var (id, doc) = GetIdAndDocFromArg(args[0], signature);
 
                 string timeseries = GetStringArg(args[1], signature, "timeseries");
                 var timestamp = GetDateArg(args[2], signature, "timestamp");
-                var tag = GetStringArg(args[3], signature, "tag");
-                
-                if(args[4].IsArray() == false)
-                    throw new ArgumentException($"{signature}: The values should be an array but got {args[4].GetType().Name}");
-                var jsValues = args[4].AsArray();
+
+                var valuesArg = args.Last();
+                if(valuesArg.IsArray() == false)
+                    throw new ArgumentException($"{signature}: The values should be an array but got {valuesArg.Type.GetType().Name}");
+                var jsValues = valuesArg.AsArray();
                 var values = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
                 try
                 {
@@ -317,7 +329,7 @@ namespace Raven.Server.Documents.Patch
                     var toAppend = new TimeSeriesStorage.Reader.SingleResult
                     {
                         Values = new Memory<double>(values, 0, (int)jsValues.Length),
-                        Tag = _jsonCtx.GetLazyString(tag),
+                        Tag = lsTag,
                         Timestamp = timestamp,
                         Status = TimeSeriesValuesSegment.Live
                     };
