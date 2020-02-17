@@ -41,8 +41,8 @@ namespace Sparrow.Logging
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private readonly LightWeightThreadLocal<LocalThreadWriterState> _localState;
 
-        private readonly SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry>[] _freePooledMessageEntries;
-        private readonly SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry>[] _activePoolMessageEntries;
+        private readonly BlockingCollection<LogMessageEntry>[] _freePooledMessageEntries;
+        private readonly BlockingCollection<LogMessageEntry>[] _activePoolMessageEntries;
 
         private Thread _loggingThread;
         private Thread _compressLoggingThread;
@@ -155,18 +155,18 @@ namespace Sparrow.Logging
             _path = path;
             _name = name;
             _localState = new LightWeightThreadLocal<LocalThreadWriterState>(GenerateThreadWriterState);
-            _freePooledMessageEntries = new SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry>[Environment.ProcessorCount];
-            _activePoolMessageEntries = new SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry>[Environment.ProcessorCount];
+            _freePooledMessageEntries = new BlockingCollection<LogMessageEntry>[Environment.ProcessorCount];
+            _activePoolMessageEntries = new BlockingCollection<LogMessageEntry>[Environment.ProcessorCount];
             for (int i = 0; i < _freePooledMessageEntries.Length; i++)
             {
-                _freePooledMessageEntries[i] = new SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry>(1024);
+                _freePooledMessageEntries[i] = new BlockingCollection<LogMessageEntry>(1024);
             }
             for (int i = 0; i < _activePoolMessageEntries.Length; i++)
             {
-                _activePoolMessageEntries[i] = new SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry>(1024);
+                _activePoolMessageEntries[i] = new BlockingCollection<LogMessageEntry>(1024);
             }
 
-            
+
             SetupLogMode(logMode, path, retentionTime, retentionSize, compress);
         }
 
@@ -503,7 +503,7 @@ namespace Sparrow.Logging
             int currentProcessNumber = CurrentProcessorIdHelper.GetCurrentProcessorId() % _freePooledMessageEntries.Length;
             var pool = _freePooledMessageEntries[currentProcessNumber];
 
-            if (pool.Dequeue(out var item))
+            if (pool.TryTake(out var item))
             {
                 item.Data.SetLength(0);
                 item.WebSocketsList.Clear();
@@ -512,7 +512,7 @@ namespace Sparrow.Logging
             }
             else
             {
-                item = new WebSocketMessageEntry {Task = tcs};
+                item = new LogMessageEntry { Task = tcs };
                 state.ForwardingStream.Destination = new MemoryStream();
             }
 
@@ -528,7 +528,7 @@ namespace Sparrow.Logging
             item.Data = state.ForwardingStream.Destination;
             Debug.Assert(item.Data != null);
 
-            _activePoolMessageEntries[currentProcessNumber].Enqueue(item, timeout: 128);
+            _activePoolMessageEntries[currentProcessNumber].TryAdd(item, 128);
 
             _hasEntries.Set();
         }
@@ -641,14 +641,14 @@ namespace Sparrow.Logging
                                     var messages = _activePoolMessageEntries[index];
                                     for (var limit = 0; limit < 16; limit++)
                                     {
-                                        if (messages.Dequeue(out WebSocketMessageEntry item) == false)
+                                        if (messages.TryTake(out LogMessageEntry item) == false)
                                             break;
 
                                         foundEntry = true;
 
                                         sizeWritten += ActualWriteToLogTargets(item, currentFile);
                                         Debug.Assert(item.Data != null);
-                                        _freePooledMessageEntries[index].Enqueue(item);
+                                        _freePooledMessageEntries[index].TryAdd(item, 128);
                                     }
                                 }
                             }
@@ -691,11 +691,11 @@ namespace Sparrow.Logging
                 IsInfoEnabled = false;
                 IsOperationsEnabled = false;
 
-                foreach (var message in _activePoolMessageEntries)
+                foreach (var queue in _activePoolMessageEntries)
                 {
-                    while (message.Dequeue(out _))
+                    while (queue.TryTake(out _))
                     {
-                        
+                        // clear
                     }
                 }
 
@@ -759,7 +759,7 @@ namespace Sparrow.Logging
                     for (var i = 0; i < logFiles.Length - 1; i++)
                     {
                         var logFile = logFiles[i];
-                        if(Array.BinarySearch(logGzFiles, logFile) > 0)
+                        if (Array.BinarySearch(logGzFiles, logFile) > 0)
                             continue;
 
                         try
@@ -819,7 +819,7 @@ namespace Sparrow.Logging
             _pipeSink = null;
         }
 
-        private int ActualWriteToLogTargets(WebSocketMessageEntry item, Stream file)
+        private int ActualWriteToLogTargets(LogMessageEntry item, Stream file)
         {
             item.Data.TryGetBuffer(out var bytes);
             Debug.Assert(bytes.Array != null);
@@ -863,7 +863,7 @@ namespace Sparrow.Logging
 
         private Task[] _tasks = new Task[0];
 
-        private void SendToWebSockets(WebSocketMessageEntry item, ArraySegment<byte> bytes)
+        private void SendToWebSockets(LogMessageEntry item, ArraySegment<byte> bytes)
         {
             if (_tasks.Length != item.WebSocketsList.Count)
                 Array.Resize(ref _tasks, item.WebSocketsList.Count);
