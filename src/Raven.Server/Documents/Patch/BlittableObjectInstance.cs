@@ -11,6 +11,7 @@ using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 
@@ -275,6 +276,12 @@ namespace Raven.Server.Documents.Patch
                         Changed = true;
                         _parent.MarkChanged();
                         BlittableJsonReaderObject blittable = (BlittableJsonReaderObject)value;
+
+                        if (TypeConverter.TryConvertToBlittableArray(blittable, out var blittableArray))
+                        {
+                            return GetArrayInstanceFromBlittableArray(owner.Engine, blittableArray, owner);
+                        }
+
                         blittable.NoCache = true;
                         return new BlittableObjectInstance(owner.Engine,
                             owner,

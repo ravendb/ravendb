@@ -1,0 +1,80 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using FastTests;
+using Newtonsoft.Json;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace SlowTests.Issues
+{
+    public class RavenDB_14650 : RavenTestBase
+    {
+        public RavenDB_14650(ITestOutputHelper output) : base(output)
+        {
+        }
+
+        private class ArrayClass
+        {
+            public List<int> Array { get; set; }
+        }
+
+        [Fact]
+        public void CanCompileIndex1()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.CustomizeJsonSerializer = serializer =>
+                {
+                    serializer.TypeNameHandling = TypeNameHandling.All;
+                }
+            }))
+            {
+                var list = new List<int> { 1, 2, 3, 4, 5 };
+                var requestExecuter = store.GetRequestExecutor();
+                using (requestExecuter.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var reader = context.ReadObject(new DynamicJsonValue
+                    {
+                        ["Array"] = new DynamicJsonValue
+                        {
+                            ["$type"] = "System.Collections.Generic.List`1[[System.Int32, mscorlib]], mscorlib",
+                            ["$values"] = new DynamicJsonArray(list.Select(x => (object)x))
+                        }
+                    }, "users/1");
+                    requestExecuter.Execute(new PutDocumentCommand("users/1", null, reader), context);
+                }
+
+                var javascriptProjection = @"from @all_docs as doc
+select {
+     Array: doc.Array
+}";
+                AssertQuery(javascriptProjection);
+
+                var projection = @"from @all_docs as doc
+select doc.Array";
+                AssertQuery(projection);
+
+                WaitForUserToContinueTheTest(store);
+                void AssertQuery(string query)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var result = session.Advanced.RawQuery<ArrayClass>(query).ToList();
+                        Assert.Equal(1, result.Count);
+
+                        var array = result[0].Array;
+                        Assert.NotNull(array);
+                        Assert.True(array.SequenceEqual(list));
+                    }
+                }
+            }
+        }
+    }
+}
