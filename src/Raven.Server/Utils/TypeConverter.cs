@@ -31,8 +31,6 @@ namespace Raven.Server.Utils
 
         private static readonly StringSegment ValuesPropertyName = new StringSegment("$values");
 
-        private static readonly string TypeList = typeof(List<>).FullName;
-
         private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
 
         private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorForMapReduceOutputCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
@@ -439,21 +437,17 @@ namespace Raven.Server.Utils
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static object ConvertBlittableJsonReaderObject(BlittableJsonReaderObject value)
+        public static bool TryConvertToBlittableArray(BlittableJsonReaderObject value, out BlittableJsonReaderArray array)
         {
+            array = null;
+
             if (value.TryGet(TypePropertyName, out string type) == false)
-                return value;
+                return false;
 
             if (type == null)
-                return value;
+                return false;
 
-            if (type.StartsWith(TypeList) == false)
-                return value;
-
-            if (value.TryGet(ValuesPropertyName, out BlittableJsonReaderArray values))
-                return values;
-
-            throw new NotSupportedException($"Detected list type '{type}' but could not extract '{values}'.");
+            return value.TryGet(ValuesPropertyName, out array);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -497,7 +491,12 @@ namespace Raven.Server.Utils
                 return ConvertLazyStringValue(lazyString);
 
             if (value is BlittableJsonReaderObject bjo)
-                return ConvertBlittableJsonReaderObject(bjo);
+            {
+                if (TryConvertToBlittableArray(bjo, out var bjra))
+                    return bjra;
+
+                return bjo;
+            }
 
             return value;
         }
