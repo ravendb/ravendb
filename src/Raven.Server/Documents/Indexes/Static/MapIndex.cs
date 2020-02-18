@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
             };
 
-            if (_compiled.HasCompareExchange)
+            if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
                 workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             if (_referencedCollections.Count > 0)
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (_compiled.HasCompareExchange)
+            if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
                 _handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
 
             if (_referencedCollections.Count > 0)
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
         internal override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
-            if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
+            if (isStale && (stalenessReasons == null || _referencedCollections.Count == 0 || _compiled.CollectionsWithCompareExchangeReferences.Count == 0))
                 return isStale;
 
             return StaticIndexHelper.IsStaleDueToReferences(this, databaseContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticMapIndex = (MapIndex)index;
             var staticIndex = staticMapIndex._compiled;
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.HasCompareExchange);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var staticIndex = (StaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.HasCompareExchange);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0);
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);
             return instance;
         }

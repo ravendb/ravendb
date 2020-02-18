@@ -73,7 +73,6 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var fields = new HashSet<string>();
             HasDynamicFields = false;
-            HasCompareExchange = false;
             foreach (var (key, val) in collectionFunctions)
             {
                 var collections = new Dictionary<string, List<IndexingFunc>> 

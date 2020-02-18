@@ -29,13 +29,21 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
+                    session.Store(new Company { Name = "CF", ExternalId = "companies/cf" });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
                     session.Store(new Company { Name = "HR", ExternalId = "companies/hr" });
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue<Address>("companies/hr", new Address { City = "Hadera" });
 
                     session.SaveChanges();
                 }
 
-                Thread.Sleep(1000000);
                 WaitForIndexing(store);
             }
         }

@@ -2355,6 +2355,24 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public long GetLastCompareExchangeTombstoneIndexForDatabase(TransactionOperationContext context, string databaseName)
+        {
+            CompareExchangeCommandBase.GetDbPrefixAndLastSlices(context.Allocator, databaseName, out var prefix, out var last);
+
+            using (prefix.Scope)
+            using (last.Scope)
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
+
+                var tvh = table.SeekOneBackwardFrom(CompareExchangeTombstoneSchema.Indexes[CompareExchangeTombstoneIndex], prefix.Slice, last.Slice);
+
+                if (tvh == null)
+                    return 0;
+
+                return ReadCompareExchangeOrTombstoneIndex(tvh.Reader);
+            }
+        }
+
         public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesByKey(TransactionOperationContext context,
             string dbName, long fromIndex = 0, long take = long.MaxValue)
         {

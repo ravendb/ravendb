@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var staticIndex = staticMapIndex._compiled;
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
-                staticIndex.GroupByFields, staticIndex.HasDynamicFields, staticIndex.HasCompareExchange);
+                staticIndex.GroupByFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             where TStaticIndexBase : AbstractStaticIndexBase
         {
             staticIndex = (TStaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
-            return new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields, staticIndex.HasCompareExchange);
+            return new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0);
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
