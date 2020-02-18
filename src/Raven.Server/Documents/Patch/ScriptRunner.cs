@@ -26,6 +26,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Extensions;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -815,7 +816,7 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 1 || args[0].IsString() == false)
                     throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
 
-                return CmpXchangeInternal(CompareExchangeCommandBase.GetActualKey(_database.Name, args[0].AsString()));
+                return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString()));
             }
 
             private JsValue LoadDocument(JsValue self, JsValue[] args)

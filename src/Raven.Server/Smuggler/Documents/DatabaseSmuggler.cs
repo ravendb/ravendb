@@ -717,13 +717,13 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        actions.WriteKeyValue(kvp.key, kvp.value);
-                        result.CompareExchange.LastEtag = kvp.index;
+                        actions.WriteKeyValue(kvp.Key.Key, kvp.Value);
+                        result.CompareExchange.LastEtag = kvp.Index;
                     }
                     catch (Exception e)
                     {
                         result.CompareExchange.ErroredCount++;
-                        result.AddError($"Could not write compare exchange '{kvp.key}->{kvp.value}': {e.Message}");
+                        result.AddError($"Could not write compare exchange '{kvp.Key.Key}->{kvp.Value}': {e.Message}");
                     }
                 }
             }
@@ -903,7 +903,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        actions.WriteTombstoneKey(key);
+                        actions.WriteTombstoneKey(key.Key);
                     }
                     catch (Exception e)
                     {

@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var source = Source;
                 var id = GetSourceId(source);
 
-                if (TryGetKeySlice(keyLazy, keyString, out var keySlice) == false)
+                if (TryGetCompareExchangeKeySlice(keyLazy, keyString, out var keySlice) == false)
                     return DynamicNullObject.Null;
 
                 Slice.From(_documentsContext.Allocator, id, out var idSlice);
@@ -132,8 +132,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 references.Add(keySlice);
 
-                var actualKeyAsString = CompareExchangeCommandBase.GetActualKey(_documentsStorage.DocumentDatabase.Name, keySlice.ToString()); // TODO [ppekrol] optimize this
-                var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, actualKeyAsString);
+                var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, keySlice);
 
                 if (value.Value == null || value.Value.TryGetMember("Object", out object result) == false)
                     return DynamicNullObject.Null;
@@ -182,6 +181,31 @@ namespace Raven.Server.Documents.Indexes.Static
             // making sure that we normalize the case of the key so we'll be able to find
             // it in case insensitive manner
             _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
+
+            return true;
+        }
+
+        private bool TryGetCompareExchangeKeySlice(LazyStringValue keyLazy, string keyString, out Slice keySlice)
+        {
+            keySlice = default;
+            if (keyLazy != null)
+            {
+                if (keyLazy.Length == 0)
+                    return false;
+
+                var key = CompareExchangeKey.GetStorageKey(_documentsStorage.DocumentDatabase.Name, keyLazy);
+
+                Slice.From(_documentsContext.Allocator, key, out keySlice);
+            }
+            else
+            {
+                if (keyString.Length == 0)
+                    return false;
+
+                var key = CompareExchangeKey.GetStorageKey(_documentsStorage.DocumentDatabase.Name, keyString);
+
+                Slice.From(_documentsContext.Allocator, key, out keySlice);
+            }
 
             return true;
         }

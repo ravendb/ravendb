@@ -13,8 +13,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -391,14 +389,14 @@ namespace Raven.Server.Smuggler.Documents
             return _database.ServerStore.Cluster.GetIdentitiesFromPrefix(_serverContext, _database.Name, _startRaftIndex, long.MaxValue);
         }
 
-        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
+        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues()
         {
             Debug.Assert(_serverContext != null);
 
             return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, _database.Name, _startRaftIndex, long.MaxValue);
         }
 
-        public IEnumerable<string> GetCompareExchangeTombstones()
+        public IEnumerable<CompareExchangeKey> GetCompareExchangeTombstones()
         {
             Debug.Assert(_serverContext != null);
 
