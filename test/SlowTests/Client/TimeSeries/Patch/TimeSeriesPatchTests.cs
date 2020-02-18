@@ -27,10 +27,11 @@ namespace SlowTests.Client.TimeSeries.Patch
         {
             private readonly List<object[]> _data = new List<object[]>
             {
+                new object[] {"watches/fitbit", "Heartrate", new double[] {11d}, true},
                 new object[] {"watches/fitbit", "Heartrate", new double[] {}},
                 new object[] {"watches/fitbit", "Heartrate", new []{"some text"}},
                 new object[] {"watches/fitbit", "Heartrate", new object()},
-                new object[] {2, "Heartrate", new [] { 1d }},
+                new object[] {2,  "Heartrate", new [] { 1d }},
                 new object[] {"watches/fitbit", 2, new [] { 1d }},
             };
 
@@ -41,7 +42,7 @@ namespace SlowTests.Client.TimeSeries.Patch
         
         [Theory]
         [ClassData(typeof(CannotAppendTimeSeriesWithNoValueByPatchCases))]
-        public async Task CannotAppendTimeSeriesWithNoValueByPatch(object tag, object timeseries, object values)
+        public async Task CannotAppendTimeSeriesWithWrongArguments(object tag, object timeseries, object values, bool shouldPass = false)
         {
             const string documentId = "users/ayende";
 
@@ -63,8 +64,12 @@ namespace SlowTests.Client.TimeSeries.Patch
                             { "values", values }
                         }
                     }, null));
-                
-                await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+
+                var testTask = shouldPass
+                    ? session.SaveChangesAsync()
+                    : Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+
+                await testTask;
             }
         }
 
