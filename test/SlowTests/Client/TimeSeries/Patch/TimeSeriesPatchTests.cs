@@ -69,10 +69,11 @@ namespace SlowTests.Client.TimeSeries.Patch
         }
 
         [Theory]
+        [InlineData( 59d )]
         [InlineData(new []{ 59d })]
         [InlineData(new []{ 59d, 11d, 30d })]
         [InlineData(new []{ -13d, 60d, 0 })]
-        public async Task CanAppendTimeSeriesByPatch(double[] values)
+        public async Task CanAppendTimeSeriesByPatch(object values)
         {
             const string tag = "watches/fitbit";
             const string timeseries = "Heartrate";
@@ -107,9 +108,14 @@ namespace SlowTests.Client.TimeSeries.Patch
                     var val = (await session.TimeSeriesFor(documentId)
                             .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
                         .Single();
-                    Assert.Equal(values, val.Values);
+                    
                     Assert.Equal(tag, val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+
+                    var actual = values is double
+                        ? val.Value
+                        : (object)val.Values;
+                    Assert.Equal(values, actual);
                 }
             }
         }

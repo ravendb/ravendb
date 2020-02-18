@@ -317,18 +317,32 @@ namespace Raven.Server.Documents.Patch
                 string timeseries = GetStringArg(args[1], signature, "timeseries");
                 var timestamp = GetDateArg(args[2], signature, "timestamp");
 
-                var valuesArg = args.Last();
-                if(valuesArg.IsArray() == false)
-                    throw new ArgumentException($"{signature}: The values should be an array but got {valuesArg.Type.GetType().Name}");
-                var jsValues = valuesArg.AsArray();
-                var values = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
+                double[] valuesBuffer = null;
                 try
                 {
-                    FillDoubleArrayFromJsArray(values, jsValues, signature);
+                    var valuesArg = args.Last();
+                    Memory<double> values;
+                    if (valuesArg.IsArray())
+                    {
+                        var jsValues = valuesArg.AsArray();
+                        valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
+                        FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
+                        values = new Memory<double>(valuesBuffer, 0, (int)jsValues.Length);
+                    }
+                    else if (valuesArg.IsNumber())
+                    {
+                        valuesBuffer = ArrayPool<double>.Shared.Rent(1);
+                        valuesBuffer[0] = valuesArg.AsNumber();
+                        values = new Memory<double>(valuesBuffer, 0, 1);
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"{signature}: The values should be an array but got {valuesArg.Type.GetType().Name}");
+                    }
 
                     var toAppend = new TimeSeriesStorage.Reader.SingleResult
                     {
-                        Values = new Memory<double>(values, 0, (int)jsValues.Length),
+                        Values = values,
                         Tag = lsTag,
                         Timestamp = timestamp,
                         Status = TimeSeriesValuesSegment.Live
@@ -343,7 +357,8 @@ namespace Raven.Server.Documents.Patch
                 }
                 finally                
                 {
-                    ArrayPool<double>.Shared.Return(values);
+                    if(valuesBuffer != null)
+                        ArrayPool<double>.Shared.Return(valuesBuffer);
                 }
                 
                 return Undefined.Instance;
