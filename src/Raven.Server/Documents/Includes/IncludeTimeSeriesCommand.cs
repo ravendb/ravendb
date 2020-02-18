@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Includes
 {
@@ -59,12 +61,19 @@ namespace Raven.Server.Documents.Includes
             return rangeResults;
         }
 
-        private TimeSeriesRangeResult GetTimeSeries(string docId, string name, DateTime from, DateTime to)
+        private unsafe TimeSeriesRangeResult GetTimeSeries(string docId, string name, DateTime from, DateTime to)
         {
             var values = new List<TimeSeriesEntry>();
             var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_context, docId, name, from, to);
-            var hc = new HashCode();
 
+            // init hash 
+            var size = Sodium.crypto_generichash_bytes();
+            Debug.Assert((int)size == 32);
+            var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();
+            var state = stackalloc byte[cryptoGenerichashStatebytes];
+            if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
+                ComputeHttpEtags.ThrowFailToInitHash();
+            
             foreach (var (individualValues, segmentResult) in reader.SegmentsOrValues())
             {
                 var enumerable = individualValues ?? segmentResult.Values;
@@ -79,7 +88,7 @@ namespace Raven.Server.Documents.Includes
                     });
                 }
 
-                hc.Add(segmentResult?.ChangeVector ?? string.Empty);
+                ComputeHttpEtags.HashChangeVector(state, segmentResult?.ChangeVector);
             }
 
             return new TimeSeriesRangeResult
@@ -88,7 +97,7 @@ namespace Raven.Server.Documents.Includes
                 From = from,
                 To = to,
                 Entries = values.ToArray(),
-                HashCode = hc.ToHashCode()
+                Hash = ComputeHttpEtags.FinalizeHash(size, state)
             };
 
         }

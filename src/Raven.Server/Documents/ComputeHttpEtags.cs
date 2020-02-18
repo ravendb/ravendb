@@ -11,7 +11,10 @@ namespace Raven.Server.Documents
 {
     public static class ComputeHttpEtags
     {
-        public static unsafe string ComputeEtagForDocuments(List<Document> documents, List<Document>? includes, IncludeCountersCommand? includeCounters,
+        public static unsafe string ComputeEtagForDocuments(
+            List<Document> documents, 
+            List<Document>? includes, 
+            IncludeCountersCommand? includeCounters,
             IncludeTimeSeriesCommand? includeTimeSeries)
         {
             // This method is efficient because we aren't materializing any values
@@ -67,28 +70,12 @@ namespace Raven.Server.Documents
                     foreach (var rangeResult in tsIncludes.Value)
                     {
                         HashNumber(state, rangeResult.Entries.Length);
-                        HashNumber(state, rangeResult.HashCode);
+                        HashChangeVector(state, rangeResult.Hash);
                     }
                 }
             }
 
-            byte* final = stackalloc byte[(int)size];
-            if (Sodium.crypto_generichash_final(state, final, size) != 0)
-                ThrowFailedToFinalizeHash();
-
-            var str = new string(' ', 49);
-            fixed (char* p = str)
-            {
-                p[0] = 'H';
-                p[1] = 'a';
-                p[2] = 's';
-                p[3] = 'h';
-                p[4] = '-';
-                var len = Base64.ConvertToBase64Array(p + 5, final, 0, 32);
-                Debug.Assert(len == 44);
-            }
-
-            return str;
+            return FinalizeHash(size, state);
         }
 
         public static unsafe string ComputeEtagForRevisions(List<Document> revisions)
@@ -111,26 +98,10 @@ namespace Raven.Server.Documents
                 HashChangeVector(state, doc?.ChangeVector);
             }
 
-            byte* final = stackalloc byte[(int)size];
-            if (Sodium.crypto_generichash_final(state, final, size) != 0)
-                ThrowFailedToFinalizeHash();
-
-            var str = new string(' ', 49);
-            fixed (char* p = str)
-            {
-                p[0] = 'H';
-                p[1] = 'a';
-                p[2] = 's';
-                p[3] = 'h';
-                p[4] = '-';
-                var len = Base64.ConvertToBase64Array(p + 5, final, 0, 32);
-                Debug.Assert(len == 44);
-            }
-
-            return str;
+            return FinalizeHash(size, state);
         }
 
-        private static unsafe void HashChangeVector(byte* state, string? changeVector)
+        internal static unsafe void HashChangeVector(byte* state, string? changeVector)
         {
             if (changeVector == null)
             {
@@ -156,12 +127,33 @@ namespace Raven.Server.Documents
                 ThrowFailedToUpdateHash();
         }
 
+        internal static unsafe string FinalizeHash(UIntPtr size, byte* state)
+        {
+            byte* final = stackalloc byte[(int)size];
+            if (Sodium.crypto_generichash_final(state, final, size) != 0)
+                ThrowFailedToFinalizeHash();
+
+            var str = new string(' ', 49);
+            fixed (char* p = str)
+            {
+                p[0] = 'H';
+                p[1] = 'a';
+                p[2] = 's';
+                p[3] = 'h';
+                p[4] = '-';
+                var len = Base64.ConvertToBase64Array(p + 5, final, 0, 32);
+                Debug.Assert(len == 44);
+            }
+
+            return str;
+        }
+
         private static void ThrowFailedToFinalizeHash()
         {
             throw new InvalidOperationException("Failed to finalize generic hash");
         }
 
-        private static void ThrowFailToInitHash()
+        internal static void ThrowFailToInitHash()
         {
             throw new InvalidOperationException("Failed to initiate generic hash");
         }

@@ -9,6 +9,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public DateTime From, To;
         public TimeSeriesEntry[] Entries;
         public bool FullRange;
-        internal int HashCode;
+        internal string Hash;
     }
 }
