@@ -26,9 +26,14 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected override IEnumerable<Reference> GetTombstoneReferences(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
-            yield break;
+            return _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(serverContext, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize)
+                .Select(x =>
+                {
+                    _reference.Key = x.Key.StorageKey;
+                    _reference.Etag = x.Index;
 
-            //_documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(serverContext, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize);
+                    return _reference;
+                });
         }
 
         private static Dictionary<string, HashSet<CollectionName>> CreateReferencedCollections(Index index)

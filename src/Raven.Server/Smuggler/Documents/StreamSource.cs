@@ -406,7 +406,7 @@ namespace Raven.Server.Smuggler.Documents
             return InternalGetCompareExchangeValues();
         }
 
-        public IEnumerable<CompareExchangeKey> GetCompareExchangeTombstones()
+        public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstones()
         {
             return InternalGetCompareExchangeTombstones();
         }
@@ -586,7 +586,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<CompareExchangeKey> InternalGetCompareExchangeTombstones()
+        private IEnumerable<(CompareExchangeKey Key, long Index)> InternalGetCompareExchangeTombstones()
         {
             foreach (var reader in ReadArray())
             {
@@ -600,7 +600,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    yield return new CompareExchangeKey(key);
+                    yield return (new CompareExchangeKey(key), 0);
                 }
             }
         }
