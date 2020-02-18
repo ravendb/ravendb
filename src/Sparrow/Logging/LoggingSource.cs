@@ -41,8 +41,8 @@ namespace Sparrow.Logging
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private readonly LightWeightThreadLocal<LocalThreadWriterState> _localState;
 
-        private readonly BlockingCollection<LogMessageEntry>[] _freePooledMessageEntries;
-        private readonly BlockingCollection<LogMessageEntry>[] _activePoolMessageEntries;
+        private readonly LimitedConcurrentSet<LogMessageEntry>[] _freePooledMessageEntries;
+        private readonly LimitedConcurrentSet<LogMessageEntry>[] _activePoolMessageEntries;
 
         private Thread _loggingThread;
         private Thread _compressLoggingThread;
@@ -155,15 +155,15 @@ namespace Sparrow.Logging
             _path = path;
             _name = name;
             _localState = new LightWeightThreadLocal<LocalThreadWriterState>(GenerateThreadWriterState);
-            _freePooledMessageEntries = new BlockingCollection<LogMessageEntry>[Environment.ProcessorCount];
-            _activePoolMessageEntries = new BlockingCollection<LogMessageEntry>[Environment.ProcessorCount];
+            _freePooledMessageEntries = new LimitedConcurrentSet<LogMessageEntry>[Environment.ProcessorCount];
+            _activePoolMessageEntries = new LimitedConcurrentSet<LogMessageEntry>[Environment.ProcessorCount];
             for (int i = 0; i < _freePooledMessageEntries.Length; i++)
             {
-                _freePooledMessageEntries[i] = new BlockingCollection<LogMessageEntry>(1024);
+                _freePooledMessageEntries[i] = new LimitedConcurrentSet<LogMessageEntry>(1000);
             }
             for (int i = 0; i < _activePoolMessageEntries.Length; i++)
             {
-                _activePoolMessageEntries[i] = new BlockingCollection<LogMessageEntry>(1024);
+                _activePoolMessageEntries[i] = new LimitedConcurrentSet<LogMessageEntry>(1000);
             }
 
 
@@ -503,7 +503,7 @@ namespace Sparrow.Logging
             int currentProcessNumber = CurrentProcessorIdHelper.GetCurrentProcessorId() % _freePooledMessageEntries.Length;
             var pool = _freePooledMessageEntries[currentProcessNumber];
 
-            if (pool.TryTake(out var item))
+            if (pool.TryDequeue(out var item))
             {
                 item.Data.SetLength(0);
                 item.WebSocketsList.Clear();
@@ -528,7 +528,7 @@ namespace Sparrow.Logging
             item.Data = state.ForwardingStream.Destination;
             Debug.Assert(item.Data != null);
 
-            _activePoolMessageEntries[currentProcessNumber].TryAdd(item, 128);
+            _activePoolMessageEntries[currentProcessNumber].Enqueue(item, 128);
 
             _hasEntries.Set();
         }
@@ -641,14 +641,14 @@ namespace Sparrow.Logging
                                     var messages = _activePoolMessageEntries[index];
                                     for (var limit = 0; limit < 16; limit++)
                                     {
-                                        if (messages.TryTake(out LogMessageEntry item) == false)
+                                        if (messages.TryDequeue(out LogMessageEntry item) == false)
                                             break;
 
                                         foundEntry = true;
 
                                         sizeWritten += ActualWriteToLogTargets(item, currentFile);
                                         Debug.Assert(item.Data != null);
-                                        _freePooledMessageEntries[index].TryAdd(item, 128);
+                                        _freePooledMessageEntries[index].Enqueue(item, 128);
                                     }
                                 }
                             }
@@ -693,10 +693,7 @@ namespace Sparrow.Logging
 
                 foreach (var queue in _activePoolMessageEntries)
                 {
-                    while (queue.TryTake(out _))
-                    {
-                        // clear
-                    }
+                    queue.Clear();
                 }
 
                 Thread.Sleep(timeout);
