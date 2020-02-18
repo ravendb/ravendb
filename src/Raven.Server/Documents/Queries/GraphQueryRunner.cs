@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Queries
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
-            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: false))
+            using (var context = QueryOperationContext.WithDocumentsOnly(documentsContext))
             {
                 var res = new DocumentQueryResult
                 {
