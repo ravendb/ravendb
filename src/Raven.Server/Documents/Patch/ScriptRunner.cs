@@ -237,14 +237,14 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(JsValue firstArgs, string signature)
+            private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(JsValue docArg, string signature)
             {
-                if (firstArgs.IsObject() && firstArgs.AsObject() is BlittableObjectInstance doc)
+                if (docArg.IsObject() && docArg.AsObject() is BlittableObjectInstance doc)
                     return (doc.DocumentId, doc.Blittable);
 
-                if (firstArgs.IsString())
+                if (docArg.IsString())
                 {
-                    var id = firstArgs.AsString();
+                    var id = docArg.AsString();
                     var document = _database.DocumentsStorage.Get(_docsCtx, id);
                     if (document == null)
                         throw new DocumentDoesNotExistException(id, "Cannot operate on a missing document.");
@@ -252,27 +252,29 @@ namespace Raven.Server.Documents.Patch
                     return (id, document.Data);
                 }
 
-                throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+                throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(docArg)}");
             }
+
+            private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
             
-            private string GetIdFromArg(JsValue firstArgs, string signature)
+            private string GetIdFromArg(JsValue docArg, string signature)
             {
-                if (firstArgs.IsObject() && firstArgs.AsObject() is BlittableObjectInstance doc)
+                if (docArg.IsObject() && docArg.AsObject() is BlittableObjectInstance doc)
                     return doc.DocumentId;
 
-                if (firstArgs.IsString())
+                if (docArg.IsString())
                 {
-                    var id = firstArgs.AsString();
+                    var id = docArg.AsString();
                     return id;
                 }
 
-                throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+                throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(docArg)}");
             }
             
             private static string GetStringArg(JsValue jsArg, string signature, string argName)
             {
                 if (jsArg.IsString() == false)
-                    throw new ArgumentException($"{signature}: The {argName} argument should be a string, but got {jsArg.GetType().Name}");
+                    throw new ArgumentException($"{signature}: The {argName} argument should be a string, but got {GetTypes(jsArg)}");
                 return jsArg.AsString();
             }
             
@@ -284,7 +286,7 @@ namespace Raven.Server.Documents.Patch
                     if (key == "length")
                         continue;
                     if (value.Value.IsNumber() == false)
-                        throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {value.Value.GetType().Name} key({key}) value({value})");
+                        throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {GetTypes(value.Value)} key({key}) value({value})");
                     array[i] = value.Value.AsNumber();
                     ++i;
                 }
@@ -337,7 +339,7 @@ namespace Raven.Server.Documents.Patch
                     }
                     else
                     {
-                        throw new ArgumentException($"{signature}: The values should be an array but got {valuesArg.Type.GetType().Name}");
+                        throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
                     }
 
                     var toAppend = new TimeSeriesStorage.Reader.SingleResult
@@ -1243,7 +1245,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 
                 void ThrowInvalidDateArgument() =>
-                    throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string");
+                    throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
             }
 
             private static unsafe JsValue ToStringWithFormat(JsValue self, JsValue[] args)
