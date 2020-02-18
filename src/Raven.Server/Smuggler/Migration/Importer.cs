@@ -82,6 +82,12 @@ namespace Raven.Server.Smuggler.Migration
                         smugglerResult.Counters = new SmugglerProgressBase.CountsWithLastEtag();
                     }
 
+                    if ((_buildVersion >= 40000 && _buildVersion < 50000) || (_buildVersion >= 40 && _buildVersion < 50))
+                    {
+                        // prevent NRE, time series were added in 5.0
+                        smugglerResult.TimeSeries = new SmugglerProgressBase.CountsWithLastEtag();
+                    }
+
                     var importInfo = new ImportInfo
                     {
                         LastEtag = smugglerResult.GetLastEtag() + 1,
