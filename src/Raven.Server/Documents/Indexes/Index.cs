@@ -2350,7 +2350,7 @@ namespace Raven.Server.Documents.Indexes
                         queryContext.AssertOpenedTransactions();
 
                         if (calculateStaleness)
-                            stats.IsStale = IsStale(queryContext);
+                            stats.IsStale = IsStale(queryContext, context);
 
                         if (calculateLag)
                         {
