@@ -27,8 +27,10 @@ namespace Voron.Data.Tables
         public static readonly Slice StatsSlice;
         public static readonly Slice SchemasSlice;
         public static readonly Slice PkSlice;
+        public static readonly Slice DictionariesSlice;
 
         private SchemaIndexDef _primaryKey;
+        private bool _compressed;
 
         private readonly Dictionary<Slice, SchemaIndexDef> _indexes =
             new Dictionary<Slice, SchemaIndexDef>(SliceComparer.Instance);
@@ -51,6 +53,7 @@ namespace Voron.Data.Tables
                 Slice.From(ctx, "Stats", ByteStringType.Immutable, out StatsSlice);
                 Slice.From(ctx, "Schemas", ByteStringType.Immutable, out SchemasSlice);
                 Slice.From(ctx, "PK", ByteStringType.Immutable, out PkSlice);
+                Slice.From(ctx, "Dictionaries", ByteStringType.Immutable, out DictionariesSlice);
             }
         }
 
@@ -321,6 +324,14 @@ namespace Voron.Data.Tables
             }
         }
 
+        public TableSchema CompressValues()
+        {
+            _compressed = true;
+            return this;
+        }
+
+        public bool Compressed => _compressed;
+
         public TableSchema DefineIndex(SchemaIndexDef index)
         {
             if (!index.Name.HasValue || SliceComparer.Equals(Slices.Empty, index.Name))
@@ -366,7 +377,7 @@ namespace Voron.Data.Tables
             Slice.From(tx.Allocator, name, ByteStringType.Immutable, out nameSlice);
             Create(tx, nameSlice, sizeInPages);
         }
-
+        
         /// <summary>
         /// A table is stored inside a tree, and has the following keys in it
         /// 
@@ -397,16 +408,25 @@ namespace Voron.Data.Tables
             if (tableTree.State.NumberOfEntries > 0)
                 return; // this was already created
 
+            var nullHash = stackalloc byte [32];
+
+            if (_compressed)
+            {
+                if(Sodium.crypto_generichash(nullHash, (UIntPtr)32, null, 0, name.Content.Ptr, (UIntPtr)name.Size) != 0)
+                    throw new InvalidOperationException($"Unable to compute hash for buffer when creating null hash");
+            }
+            
             // Create raw data. This is where we will actually store the documents
-            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name, TableType, sizeInPages))
+            using (Slice.External(tx.LowLevelTransaction.Allocator, nullHash, 32, out var nullHashSlice))
+            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name, nullHashSlice, TableType, sizeInPages))
             {
                 long val = rawDataActiveSection.PageNumber;
-                Slice pageNumber;
                 using (
-                    Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out pageNumber))
+                    Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out Slice pageNumber))
                 {
                     tableTree.Add(ActiveSectionSlice, pageNumber);
                 }
+
 
                 byte* ptr;
                 using (tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats), out ptr))
@@ -422,6 +442,24 @@ namespace Voron.Data.Tables
                     tx.LowLevelTransaction.RootObjects);
                 globalPageAllocator.Create();
 
+                if (_compressed)
+                {
+                    using (var dictionariesTree = Tree.Create(tx.LowLevelTransaction, tx, DictionariesSlice, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                    {
+                        using var __ = dictionariesTree.DirectAdd(nullHashSlice, sizeof(CompressionDictionaryInfo), out var dest);
+                                                
+                        *(CompressionDictionaryInfo*)dest = new CompressionDictionaryInfo
+                        {
+                            ExpectedCompressionRatio = 0// force next section to train on us
+                        };
+                        
+                        using (tableTree.DirectAdd(DictionariesSlice, sizeof(TreeRootHeader), out ptr))
+                        {
+                            dictionariesTree.State.CopyTo((TreeRootHeader*)ptr);
+                        }
+                    }
+                }
+                
                 if (_primaryKey != null)
                 {
                     if (_primaryKey.IsGlobal == false)
@@ -477,10 +515,18 @@ namespace Voron.Data.Tables
             }
         }
 
+        [Flags]
+        private enum TableSchemaSerializationFlag : byte
+        {
+            None = 0,
+            HasPrimaryKey = 1,
+            IsCompressed = 2
+        }
+
         /// <summary>
         /// Serializes structure into a byte array:
         /// 
-        ///  1. Whether the schema has a primary key
+        ///  1. flags - Whether the schema has a primary key
         ///  2. The primary key (if present)
         ///  3. Number of composite indexes
         ///  4. Values of the composite indexes
@@ -492,11 +538,16 @@ namespace Voron.Data.Tables
         {
             // Create list of serialized substructures
             var structure = new List<byte[]>();
-            bool hasPrimaryKey = _primaryKey != null;
+            var flags = TableSchemaSerializationFlag.None;
+            if (_primaryKey != null)
+                flags |= TableSchemaSerializationFlag.HasPrimaryKey;
 
-            structure.Add(BitConverter.GetBytes(hasPrimaryKey));
+            if(_compressed)
+                flags|= TableSchemaSerializationFlag.IsCompressed;
 
-            if (hasPrimaryKey)
+            structure.Add(new []{ (byte)flags });
+
+            if (_primaryKey != null)
                 structure.Add(_primaryKey.Serialize());
 
             structure.Add(BitConverter.GetBytes(_indexes.Count));
@@ -539,16 +590,18 @@ namespace Voron.Data.Tables
             // Since there might not be a primary key, we have a moving index to deserialize the schema
             int currentIndex = 0;
 
-            int currentSize;
-            byte* currentPtr = input.Read(currentIndex++, out currentSize);
+            byte* currentPtr = input.Read(currentIndex++, out var currentSize);
 
-            bool hasPrimaryKey = Convert.ToBoolean(*currentPtr);
+            TableSchemaSerializationFlag flags = (TableSchemaSerializationFlag)(*currentPtr);
+            bool hasPrimaryKey = flags.HasFlag(TableSchemaSerializationFlag.HasPrimaryKey);
             if (hasPrimaryKey)
             {
                 currentPtr = input.Read(currentIndex++, out currentSize);
                 var pk = SchemaIndexDef.ReadFrom(context, currentPtr, currentSize);
                 schema.DefineKey(pk);
             }
+
+            schema._compressed = flags.HasFlag(TableSchemaSerializationFlag.IsCompressed);
 
             // Read common schema indexes
             currentPtr = input.Read(currentIndex++, out currentSize);

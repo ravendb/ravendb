@@ -413,8 +413,7 @@ namespace Voron.Impl.Journal
                 // read log snapshots from the back to get the most recent version of a page
                 for (var i = tx.JournalSnapshots.Count - 1; i >= 0; i--)
                 {
-                    PagePosition value;
-                    if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
+                    if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out PagePosition value))
                     {
                         var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPage, scratchPagerStates[value.ScratchNumber]);
 

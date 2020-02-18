@@ -281,14 +281,14 @@ namespace FastTests.Voron.RawData
             var bytes = Encoding.UTF8.GetBytes(value);
             fixed (byte* p = bytes)
             {
-                Assert.True(section.TryWrite(id, p, bytes.Length));
+                Assert.True(section.TryWrite(id, p, bytes.Length, false));
             }
         }
 
         private static void AssertValueMatches(ActiveRawDataSmallSection section, long id, string expected)
         {
             int size;
-            var p = section.DirectRead(id, out size);
+            var p = section.DirectRead(id, out size, out var compressed);
             var buffer = new byte[size];
             fixed (byte* bp = buffer)
             {

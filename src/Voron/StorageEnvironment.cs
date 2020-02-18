@@ -1,5 +1,6 @@
 ﻿using Sparrow;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -44,6 +45,8 @@ namespace Voron
             public StorageEnvironment Owner;
         }
 
+        public Table.CompressionDictionariesHolder CompressionDictionariesHolder = new Table.CompressionDictionariesHolder();
+        
         internal IndirectReference SelfReference = new IndirectReference();
 
         public void SuggestSyncDataFile()
@@ -477,7 +480,8 @@ namespace Voron
                     _headerAccessor,
                     _scratchBufferPool,
                     _decompressionBuffers,
-                    _options.OwnsPagers ? _options : null
+                    _options.OwnsPagers ? _options : null,
+                    CompressionDictionariesHolder,
                 }.Concat(_tempPagesPool))
                 {
                     try

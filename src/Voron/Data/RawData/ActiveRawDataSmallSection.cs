@@ -27,6 +27,24 @@ namespace Voron.Data.RawData
         {
         }
 
+
+        public ByteStringContext.ExternalScope CurrentCompressionDictionaryHash(out Slice hash) => 
+            Slice.External(_tx.Allocator, (byte*)_sectionHeader + PageHeader.SizeOf, 32, out hash);
+
+        public byte MinCompressionRatio => _sectionHeader->MinCompressionRatio;
+
+        public ByteStringContext.ExternalScope CompressionDictionaryHashFor(long id,out Slice hash)
+        {
+            long sectionPageNumber = GetSectionPageNumber(id);
+            var page = _tx.GetPage(sectionPageNumber);
+            if ((page.Flags & PageFlags.RawData) != PageFlags.RawData)
+                ThrowInvalidPage(sectionPageNumber);
+
+            byte* dataPointer = page.DataPointer;
+
+            return Slice.External(_tx.Allocator, dataPointer, 32, out hash);
+        }
+
         /// <summary>
         ///     Try allocating some space in the section, defrag if needed (including moving other valid entries)
         ///     Once a section returned false for try allocation, it should be retired as an actively allocating
@@ -174,7 +192,7 @@ namespace Voron.Data.RawData
 
                     var newSize = (RawDataEntrySizes*)(((byte*)pageHeader) + pageHeader->NextAllocation);
                     newSize->AllocatedSize = oldSize->AllocatedSize;
-                    newSize->UsedSize = oldSize->UsedSize;
+                    newSize->UsedSize_Buffer = oldSize->UsedSize_Buffer;
                     pageHeader->NextAllocation += (ushort)sizeof(RawDataEntrySizes);
                     pageHeader->NumberOfEntries++;
                     Memory.Copy(((byte*)pageHeader) + pageHeader->NextAllocation, tmp.TempPagePointer + pos + sizeof(RawDataEntrySizes),
@@ -192,10 +210,10 @@ namespace Voron.Data.RawData
         {
             Slice ownerSlice;
             Slice.From(tx.Allocator, owner, ByteStringType.Immutable, out ownerSlice);
-            return Create(tx, ownerSlice, tableType, sizeInPages);
+            return Create(tx, ownerSlice, default, tableType, sizeInPages);
         }
 
-        public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, Slice owner, byte tableType, ushort? sizeInPages)
+        public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, Slice owner, Slice dictionaryHash, byte tableType, ushort? sizeInPages)
         {
             var dbPagesInSmallSection = GetNumberOfPagesInSmallSection(tx);
             var numberOfPagesInSmallSection = Math.Min(sizeInPages ?? dbPagesInSmallSection, dbPagesInSmallSection);
@@ -214,8 +232,14 @@ namespace Voron.Data.RawData
             sectionHeader->LastUsedPage = 0;
             sectionHeader->SectionOwnerHash = Hashing.XXHash64.Calculate(owner.Content.Ptr, (ulong)owner.Content.Length);
             sectionHeader->TableType = tableType;
+
+            if (dictionaryHash.HasValue)
+            {
+                Debug.Assert(dictionaryHash.Size  == 0 || dictionaryHash.Size == ReservedHeaderSpace - PageHeader.SizeOf);
+                dictionaryHash.CopyTo(sectionStart.DataPointer);
+            }
             
-            var availablespace = (ushort*)((byte*)sectionHeader + ReservedHeaderSpace);
+            var availableSpace = (ushort*)((byte*)sectionHeader + ReservedHeaderSpace);
 
             for (ushort i = 0; i < numberOfPagesInSmallSection; i++)
             {
@@ -228,7 +252,7 @@ namespace Voron.Data.RawData
                 pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);
                 pageHeader->SectionOwnerHash = sectionHeader->SectionOwnerHash;
                 pageHeader->TableType = tableType;
-                availablespace[i] = (ushort)(Constants.Storage.PageSize - sizeof(RawDataSmallPageHeader));
+                availableSpace[i] = (ushort)(Constants.Storage.PageSize - sizeof(RawDataSmallPageHeader));
             }
 
             return new ActiveRawDataSmallSection(tx, sectionStart.PageNumber);
@@ -272,7 +296,7 @@ namespace Voron.Data.RawData
             var posInPage = (int)(id % Constants.Storage.PageSize);
             var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
 
-            // same section, obbviously owned
+            // same section, obviously owned
             if (pageNumberInSection > _sectionHeader->PageNumber &&
                 pageNumberInSection <= _sectionHeader->PageNumber + _sectionHeader->NumberOfPages)
                 return true;
@@ -284,5 +308,34 @@ namespace Voron.Data.RawData
             return idSectionHeader->SectionOwnerHash == _sectionHeader->SectionOwnerHash;
         }
 
+        public void SetCompressionRate(byte compressionRatio)
+        {
+            if (_sectionHeader->MinCompressionRatio >= compressionRatio)
+                return;
+            
+            Page modifyPage = _tx.ModifyPage(_sectionHeader->PageNumber);
+            _sectionHeader = (RawDataSmallSectionPageHeader*)modifyPage.Pointer;
+            _sectionHeader->MinCompressionRatio =  compressionRatio;
+        }
+        
+        public void SetCompressionRate(long id, byte compressionRatio)
+        {
+            if (IsOwned(id))
+            {
+                SetCompressionRate(compressionRatio);
+                return;
+            }
+
+            var sectionPageNumber = GetSectionPageNumber(id);
+            var sectionHeader = (RawDataSmallSectionPageHeader*)PageHeaderFor(sectionPageNumber);
+            
+            
+            if (sectionHeader->MinCompressionRatio >= compressionRatio)
+                return;
+            
+            Page modifyPage = _tx.ModifyPage(sectionHeader->PageNumber);
+            sectionHeader = (RawDataSmallSectionPageHeader*)modifyPage.Pointer;
+            sectionHeader->MinCompressionRatio =  compressionRatio;
+        }
     }
 }
