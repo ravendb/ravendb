@@ -121,6 +121,12 @@ class patchList {
 
 class patch extends viewModelBase {
 
+    staleIndexBehvior = ko.observable("patchStale"); 
+    staleTimeout = ko.observable<number>(60); // one minute
+
+    maxOperationsPerSecond = ko.observable<number>();
+    defineMaxOperationsPerSecond = ko.observable<boolean>(false);    
+    
     static readonly recentKeyword = 'Recent Patch';
 
     static readonly $body = $("body");
@@ -354,7 +360,7 @@ class patch extends viewModelBase {
         })
             .done(result => {
                 if (result.can) {
-                    new patchCommand(this.patchDocument().query(), this.activeDatabase())
+                    new patchCommand(this.patchDocument().query(), this.activeDatabase(), this.toDto())
                         .execute()
                         .done((operation: operationIdDto) => {
                             notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), operation.OperationId);
@@ -363,6 +369,15 @@ class patch extends viewModelBase {
                         });
                 }
             });
+    }
+
+    private toDto() : Raven.Client.Documents.Queries.QueryOperationOptions {
+        return {
+            AllowStale: this.staleIndexBehvior() === "patchStale",
+            StaleTimeout: this.staleIndexBehvior() === "timeoutDefined" ? generalUtils.formatAsTimeSpan(this.staleTimeout() * 1000) : undefined,
+            MaxOpsPerSecond: this.maxOperationsPerSecond(),
+            RetrieveDetails: false
+        }
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {
