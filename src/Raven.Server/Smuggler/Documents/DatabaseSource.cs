@@ -396,7 +396,7 @@ namespace Raven.Server.Smuggler.Documents
             return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, _database.Name, _startRaftIndex, long.MaxValue);
         }
 
-        public IEnumerable<CompareExchangeKey> GetCompareExchangeTombstones()
+        public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstones()
         {
             Debug.Assert(_serverContext != null);
 

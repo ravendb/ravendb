@@ -27,13 +27,13 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<IndexDefinitionAndType> GetIndexes();
         IEnumerable<(string Prefix, long Value, long Index)> GetIdentities();
         IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues();
+        IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstones();
         IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions);
         IEnumerable<CounterDetail> GetLegacyCounterValues();
         IEnumerable<SubscriptionState> GetSubscriptions();
         IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport);
 
         long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
-        IEnumerable<CompareExchangeKey> GetCompareExchangeTombstones();
     }
 
     public class IndexDefinitionAndType

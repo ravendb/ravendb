@@ -2355,7 +2355,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<CompareExchangeKey> GetCompareExchangeTombstonesByKey(TransactionOperationContext context,
+        public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesByKey(TransactionOperationContext context,
             string dbName, long fromIndex = 0, long take = long.MaxValue)
         {
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
@@ -2369,7 +2369,10 @@ namespace Raven.Server.ServerWide
                         if (take-- <= 0)
                             yield break;
 
-                        yield return ReadCompareExchangeKey(context, tvr.Result.Reader, dbName);
+                        var key = ReadCompareExchangeKey(context, tvr.Result.Reader, dbName);
+                        var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
+
+                        yield return (key, index);
                     }
                 }
             }
