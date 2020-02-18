@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "Map";
 
-        public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext,
+        public bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
@@ -63,15 +63,14 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastCollectionEtag = -1L;
                     while (keepRunning)
                     {
-                        using (serverContext != null ? serverContext.OpenReadTransaction() : null)
-                        using (databaseContext.OpenReadTransaction())
+                        using (queryContext.OpenReadTransaction())
                         {
                             sw.Restart();
 
                             if (lastCollectionEtag == -1)
-                                lastCollectionEtag = _index.GetLastItemEtagInCollection(databaseContext, collection);
+                                lastCollectionEtag = _index.GetLastItemEtagInCollection(queryContext, collection);
 
-                            var items = GetItemsEnumerator(databaseContext, collection, lastEtag, pageSize);
+                            var items = GetItemsEnumerator(queryContext, collection, lastEtag, pageSize);
 
                             using (var itemEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                             {
@@ -125,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    if (CanContinueBatch(databaseContext, serverContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                    if (CanContinueBatch(queryContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -137,7 +136,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         break;
                                     }
 
-                                    if (MaybeRenewTransaction(databaseContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
+                                    if (MaybeRenewTransaction(queryContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
                                         break;
                                 }
                             }
@@ -171,13 +170,13 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         public static bool MaybeRenewTransaction(
-            DocumentsOperationContext databaseContext, Stopwatch sw,
+            QueryOperationContext queryContext, Stopwatch sw,
             IndexingConfiguration configuration,
             ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
         {
             if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
             {
-                if (databaseContext.ShouldRenewTransactionsToAllowFlushing())
+                if (queryContext.Documents.ShouldRenewTransactionsToAllowFlushing())
                     return true;
 
                 // if we haven't had writes in the meantime, there is no point
@@ -190,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext serverContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, IndexWriteOperation indexWriter, long currentEtag, long maxEtag, long count)
+        public bool CanContinueBatch(QueryOperationContext queryContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, IndexWriteOperation indexWriter, long currentEtag, long maxEtag, long count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
@@ -213,12 +212,12 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (_index.ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, serverContext, indexingContext, indexWriter, count) == false)
+            if (_index.CanContinueBatch(stats, queryContext, indexingContext, indexWriter, count) == false)
                 return false;
 
             return true;
         }
 
-        protected abstract IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, long pageSize);
+        protected abstract IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize);
     }
 }

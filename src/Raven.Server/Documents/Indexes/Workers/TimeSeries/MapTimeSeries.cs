@@ -18,20 +18,20 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             _timeSeriesStorage = timeSeriesStorage;
         }
 
-        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, long pageSize)
+        protected override IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
         {
-            foreach (var timeSeries in GetTimeSeriesEnumerator(databaseContext, collection, lastEtag, pageSize))
+            foreach (var timeSeries in GetTimeSeriesEnumerator(queryContext, collection, lastEtag, pageSize))
             {
                 yield return new TimeSeriesIndexItem(timeSeries.Key, timeSeries.Key, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
             }
         }
 
-        private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, long pageSize)
+        private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                return _timeSeriesStorage.GetTimeSeriesFrom(databaseContext, lastEtag + 1, pageSize);
+                return _timeSeriesStorage.GetTimeSeriesFrom(queryContext.Documents, lastEtag + 1, pageSize);
 
-            return _timeSeriesStorage.GetTimeSeriesFrom(databaseContext, collection, lastEtag + 1, pageSize);
+            return _timeSeriesStorage.GetTimeSeriesFrom(queryContext.Documents, collection, lastEtag + 1, pageSize);
         }
     }
 }

@@ -379,9 +379,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return PutMapResults(indexItem.LowerId, indexItem.Id, wrapper, indexContext, stats);
         }
 
-        internal override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
+        internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
-            var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
+            var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
 
             if (isStale == false && OutputReduceToCollection?.HasDocumentsToDelete(indexContext) == true)
             {
@@ -395,7 +395,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
                 return isStale;
 
-            return StaticIndexHelper.IsStaleDueToReferences(this, databaseContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
+            return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
         }
 
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
@@ -409,11 +409,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return (staticEntries, dynamicEntries);
         }
 
-        protected override unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext,
+        protected override unsafe long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             QueryMetadata query, bool isStale)
         {
             if (_referencedCollections.Count == 0)
-                return base.CalculateIndexEtag(documentsContext, indexContext, query, isStale);
+                return base.CalculateIndexEtag(queryContext, indexContext, query, isStale);
 
             var minLength = MinimumSizeForCalculateIndexEtagLength(query);
             var length = minLength +
@@ -421,13 +421,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             var indexEtagBytes = stackalloc byte[length];
 
-            CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
+            CalculateIndexEtagInternal(indexEtagBytes, isStale, State, queryContext, indexContext);
 
-            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(documentsContext, query, length, indexEtagBytes);
+            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(queryContext, query, length, indexEtagBytes);
 
             var writePos = indexEtagBytes + minLength;
 
-            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
+            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, queryContext, indexContext);
         }
 
         public bool IsSideBySide()

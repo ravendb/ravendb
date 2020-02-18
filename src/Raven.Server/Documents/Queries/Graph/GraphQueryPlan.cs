@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries.Graph
     {
         public IGraphQueryStep RootQueryStep;
         private readonly IndexQueryServerSide _query;
-        private readonly DocumentsOperationContext _context;
+        private readonly QueryOperationContext _context;
         private readonly long? _resultEtag;
         private readonly OperationCancelToken _token;
         private readonly DocumentDatabase _database;
@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private readonly DynamicQueryRunner _dynamicQueryRunner;
 
-        public GraphQueryPlan(IndexQueryServerSide query, DocumentsOperationContext context, long? resultEtag,
+        public GraphQueryPlan(IndexQueryServerSide query, QueryOperationContext context, long? resultEtag,
             OperationCancelToken token, DocumentDatabase database)
         {
             _database = database;
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.Queries.Graph
             // TODO: we can tell at this point if it is a collection query or not,
             // TODO: in the future, we want to build a diffrent step for collection queries in the future.        
             var queryMetadata = new QueryMetadata(query.withQuery, _query.QueryParameters, 0);
-            var qqs = new QueryQueryStep(_database.QueryRunner, alias, query.withQuery, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token)
+            var qqs = new QueryQueryStep(_database.QueryRunner, alias, query.withQuery, queryMetadata, _query.QueryParameters, _context.Documents, _resultEtag, this, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
@@ -263,11 +263,12 @@ namespace Raven.Server.Documents.Queries.Graph
             var queryStepsGatherer = new QueryQueryStepGatherer();
             queryStepsGatherer.Visit(RootQueryStep);
 
-            if (_context.Transaction == null || _context.Transaction.Disposed)
+            if (_context.AreTransactionsOpened() == false)
                 _context.OpenReadTransaction();
+
             try
             {
-                var etag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
+                var etag = DocumentsStorage.ReadLastEtag(_context.Documents.Transaction.InnerTransaction);
                 var queryDuration = Stopwatch.StartNew();
                 var indexes = new List<Index>();
                 var indexWaiters = new Dictionary<Index, (IndexQueryServerSide, AsyncWaitForIndexing)>();
@@ -293,16 +294,16 @@ namespace Raven.Server.Documents.Queries.Graph
             finally
             {
                 //The rest of the code assumes that a Tx is not opened
-                _context.Transaction.Dispose();
+                _context.CloseTransaction();
             }
         }
 
         public async Task<bool> WaitForNonStaleResults()
         {
-            if (_context.Transaction == null || _context.Transaction.Disposed)
+            if (_context.AreTransactionsOpened() == false)
                 _context.OpenReadTransaction();
 
-            var etag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
+            var etag = DocumentsStorage.ReadLastEtag(_context.Documents.Transaction.InnerTransaction);
             var queryDuration = Stopwatch.StartNew();
             var indexNamesGatherer = new GraphQueryIndexNamesGatherer();
             indexNamesGatherer.Visit(RootQueryStep);
@@ -346,7 +347,7 @@ namespace Raven.Server.Documents.Queries.Graph
             while (true)
             {
                 //If we found a stale index we already disposed of the old transaction
-                if (_context.Transaction == null || _context.Transaction.Disposed)
+                if (_context.AreTransactionsOpened() == false)
                     _context.OpenReadTransaction();
 
                 //see https://issues.hibernatingrhinos.com/issue/RavenDB-5576

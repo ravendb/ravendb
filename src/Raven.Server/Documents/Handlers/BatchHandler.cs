@@ -329,6 +329,8 @@ namespace Raven.Server.Documents.Handlers
 
             var sp = Stopwatch.StartNew();
 
+            bool needsServerContext = false;
+
             // we take the awaiter _before_ the indexing transaction happens, 
             // so if there are any changes, it will already happen to it, and we'll 
             // query the index again. This is important because of: 
@@ -343,9 +345,11 @@ namespace Raven.Server.Documents.Handlers
                 };
 
                 indexesToWait.Add(indexToWait);
+
+                needsServerContext |= index.Definition.HasCompareExchange;
             }
 
-            using (contextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var context = QueryOperationContext.Allocate(database, needsServerContext))
             {
                 while (true)
                 {

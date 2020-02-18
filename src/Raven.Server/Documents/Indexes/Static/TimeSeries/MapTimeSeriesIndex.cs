@@ -103,9 +103,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             writer.DeleteBySourceDocument(tombstone.LowerId, stats);
         }
 
-        protected override IndexItem GetItemByEtag(DocumentsOperationContext databaseContext, long etag)
+        protected override IndexItem GetItemByEtag(QueryOperationContext queryContext, long etag)
         {
-            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeries(databaseContext, etag);
+            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeries(queryContext.Documents, etag);
             if (timeSeries == null)
                 return default;
 
@@ -122,13 +122,13 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _isSideBySide = null;
         }
 
-        internal override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
+        internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
-            var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
+            var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
             if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
                 return isStale;
 
-            return StaticIndexHelper.IsStaleDueToReferences(this, databaseContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
+            return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
         }
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
@@ -136,11 +136,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return _compiled.ReferencedCollections;
         }
 
-        protected override unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext,
+        protected override unsafe long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             QueryMetadata query, bool isStale)
         {
             if (_referencedCollections.Count == 0)
-                return base.CalculateIndexEtag(documentsContext, indexContext, query, isStale);
+                return base.CalculateIndexEtag(queryContext, indexContext, query, isStale);
 
             var minLength = MinimumSizeForCalculateIndexEtagLength(query);
             var length = minLength +
@@ -148,20 +148,20 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             var indexEtagBytes = stackalloc byte[length];
 
-            CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
-            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(documentsContext, query, length, indexEtagBytes);
+            CalculateIndexEtagInternal(indexEtagBytes, isStale, State, queryContext, indexContext);
+            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(queryContext, query, length, indexEtagBytes);
 
             var writePos = indexEtagBytes + minLength;
 
-            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
+            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, queryContext, indexContext);
         }
 
-        public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        public override long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(databaseContext);
+                return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(queryContext.Documents);
 
-            return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(databaseContext, collection);
+            return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(queryContext.Documents, collection);
         }
 
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()

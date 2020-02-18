@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Config.Categories;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
@@ -12,9 +11,9 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
         }
 
-        protected override IEnumerable<Reference> GetItemReferences(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, CollectionName referencedCollection, long lastEtag, long pageSize)
+        protected override IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
-            return _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeFromPrefix(serverContext, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize)
+            return _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeFromPrefix(queryContext.Server, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize)
                 .Select(x =>
                 {
                     _reference.Key = x.Key.StorageKey;
@@ -24,9 +23,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                 });
         }
 
-        protected override IEnumerable<Reference> GetTombstoneReferences(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, CollectionName referencedCollection, long lastEtag, long pageSize)
+        protected override IEnumerable<Reference> GetTombstoneReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
-            return _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(serverContext, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize)
+            return _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(queryContext.Server, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize)
                 .Select(x =>
                 {
                     _reference.Key = x.Key.StorageKey;

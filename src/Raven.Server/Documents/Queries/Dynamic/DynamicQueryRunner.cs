@@ -37,8 +37,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = await MatchIndex(query, true, customStalenessWaitTimeout: TimeSpan.FromSeconds(60), token.Token);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token, true))
+            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
             {
-                await index.StreamQuery(response, writer, query, documentsContext, token);
+                await index.StreamQuery(response, writer, query, context, token);
             }
         }
 
@@ -56,12 +57,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
             {
-                return await index.Query(query, documentsContext, token);
+                return await index.Query(query, context, token);
             }
         }
 
-        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
             var index = await MatchIndex(query, false, null, token.Token);
 
@@ -76,6 +78,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
             {
                 return await index.IndexEntries(query, context, token);
             }
@@ -87,21 +90,23 @@ namespace Raven.Server.Documents.Queries.Dynamic
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }
 
-        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext documentsContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var index = await MatchIndex(query, true, null, token.Token);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
             {
                 return await ExecuteDelete(query, index, options, context, onProgress, token);
             }
         }
 
-        public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext documentsContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var index = await MatchIndex(query, true, null, token.Token);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
             {
                 return await ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
             }
@@ -112,8 +117,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = await MatchIndex(query, true, null, token.Token);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
             {
-                return await ExecuteSuggestion(query, index, documentsContext, existingResultEtag, token);
+                return await ExecuteSuggestion(query, index, context, existingResultEtag, token);
             }
         }
 

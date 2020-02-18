@@ -19,6 +19,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -81,27 +82,36 @@ namespace Raven.Server.Documents.Queries
         public async Task<GraphDebugInfo> GetAnalyzedQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
            OperationCancelToken token)
         {
-            var qr = await GetQueryResults(query, documentsContext, null, token);
-            var result = new GraphDebugInfo(Database, documentsContext);
-            qr.QueryPlan.Analyze(qr.Matches, result);
-            return result;
+            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: false))
+            {
+                var qr = await GetQueryResults(query, context, null, token);
+                var result = new GraphDebugInfo(Database, documentsContext);
+                qr.QueryPlan.Analyze(qr.Matches, result);
+                return result;
+            }
         }
 
-        public async Task WriteDetailedQueryResult(IndexQueryServerSide indexQuery, DocumentsOperationContext ctx, BlittableJsonTextWriter writer, OperationCancelToken token)
+        public async Task WriteDetailedQueryResult(IndexQueryServerSide indexQuery, DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, OperationCancelToken token)
         {
-            var qr = await GetQueryResults(indexQuery, ctx, null, token, true);
-            var reporter = new GraphQueryDetailedReporter(writer, ctx);
-            reporter.Visit(qr.QueryPlan.RootQueryStep);
+            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: false))
+            {
+                var qr = await GetQueryResults(indexQuery, context, null, token, true);
+                var reporter = new GraphQueryDetailedReporter(writer, documentsContext);
+                reporter.Visit(qr.QueryPlan.RootQueryStep);
+            }
         }
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
-            var res = new DocumentQueryResult
+            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: false))
             {
-                IndexName = "@graph"
-            };
-            return await ExecuteQuery(res, query, documentsContext, existingResultEtag, token);
+                var res = new DocumentQueryResult
+                {
+                    IndexName = "@graph"
+                };
+                return await ExecuteQuery(res, query, context, existingResultEtag, token);
+            }
         }
 
         public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
@@ -110,7 +120,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotImplementedException();
         }
 
-        private async Task<TResult> ExecuteQuery<TResult>(TResult final, IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide<Document>
+        private async Task<TResult> ExecuteQuery<TResult>(TResult final, IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide<Document>
         {
             try
             {
@@ -120,7 +130,7 @@ namespace Raven.Server.Documents.Queries
                 using (QueryRunner.MarkQueryAsRunning(Constants.Documents.Indexing.DummyGraphIndexName, query, token))
                 using (var timingScope = new QueryTimingsScope())
                 {
-                    var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
+                    var qr = await GetQueryResults(query, queryContext, existingResultEtag, token);
                     if (qr.NotModified)
                     {
                         final.NotModified = true;
@@ -132,13 +142,13 @@ namespace Raven.Server.Documents.Queries
                     IncludeDocumentsCommand idc = null;
                     if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                     {
-                        HandleResultsWithoutSelect(documentsContext, qr.Matches, final);
+                        HandleResultsWithoutSelect(queryContext.Documents, qr.Matches, final);
                     }
                     else if (q.Select != null)
                     {
                         //TODO : investigate fields to fetch
                         var fieldsToFetch = new FieldsToFetch(query, null);
-                        idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes, fieldsToFetch.IsProjection);
+                        idc = new IncludeDocumentsCommand(Database.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
 
                         var resultRetriever = new GraphQueryResultRetriever(
                             q.GraphQuery,
@@ -146,7 +156,7 @@ namespace Raven.Server.Documents.Queries
                             query,
                             timingScope,
                             Database.DocumentsStorage,
-                            documentsContext,
+                            queryContext.Documents,
                             fieldsToFetch,
                             idc);
 
@@ -160,7 +170,7 @@ namespace Raven.Server.Documents.Queries
                             if (match.Empty)
                                 continue;
 
-                            var result = resultRetriever.ProjectFromMatch(match, documentsContext);
+                            var result = resultRetriever.ProjectFromMatch(match, queryContext.Documents);
                             // ReSharper disable once PossibleNullReferenceException
                             if (q.IsDistinct && alreadySeenProjections.Add(result.DataHash) == false)
                                 continue;
@@ -170,7 +180,7 @@ namespace Raven.Server.Documents.Queries
                     }
 
                     if (idc == null)
-                        idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes, isProjection: false);
+                        idc = new IncludeDocumentsCommand(Database.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, isProjection: false);
 
                     if (query.Metadata.Includes?.Length > 0)
                     {
@@ -218,10 +228,10 @@ namespace Raven.Server.Documents.Queries
         }
 
 
-        private async Task<(List<Match> Matches, GraphQueryPlan QueryPlan, bool NotModified)> GetQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token, bool collectIntermediateResults = false)
+        private async Task<(List<Match> Matches, GraphQueryPlan QueryPlan, bool NotModified)> GetQueryResults(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token, bool collectIntermediateResults = false)
         {
             var q = query.Metadata.Query;
-            var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database)
+            var qp = new GraphQueryPlan(query, queryContext, existingResultEtag, token, Database)
             {
                 CollectIntermediateResults = collectIntermediateResults
             };
@@ -239,10 +249,10 @@ namespace Raven.Server.Documents.Queries
 
             //for the case where we don't wait for non stale results we will override IsStale in the QueryQueryStep steps
 
-            if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
-                documentsContext.OpenReadTransaction();
+            if (queryContext.AreTransactionsOpened() == false)
+                queryContext.OpenReadTransaction();
 
-            qp.ResultEtag = DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
+            qp.ResultEtag = DocumentsStorage.ReadLastEtag(queryContext.Documents.Transaction.InnerTransaction);
             if (existingResultEtag.HasValue)
             {
                 if (qp.ResultEtag == existingResultEtag)
@@ -264,7 +274,7 @@ namespace Raven.Server.Documents.Queries
                     var resultAsJson = new DynamicJsonValue();
                     matchResults[i].PopulateVertices(resultAsJson);
 
-                    using (var result = documentsContext.ReadObject(resultAsJson, "graph/result"))
+                    using (var result = queryContext.Documents.ReadObject(resultAsJson, "graph/result"))
                     {
                         if (filter.IsMatchedBy(result, query.QueryParameters) == false)
                             matchResults[i] = default;
@@ -313,12 +323,15 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, token)
+            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: false))
             {
-                IndexName = Constants.Documents.Indexing.DummyGraphIndexName
-            };
-            result = await ExecuteQuery(result, query, documentsContext, null, token);
-            result.Flush();
+                var result = new StreamDocumentQueryResult(response, writer, token)
+                {
+                    IndexName = Constants.Documents.Indexing.DummyGraphIndexName
+                };
+                result = await ExecuteQuery(result, query, context, null, token);
+                result.Flush();
+            }
         }
 
         public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)

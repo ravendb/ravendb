@@ -252,9 +252,9 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
 
-                    using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (var context = QueryOperationContext.Allocate(dbInstance, needsServerContext: true))
                     {
-                        FillDocumentsInfo(prevDatabaseReport, dbInstance, report, context, documentsStorage);
+                        FillDocumentsInfo(prevDatabaseReport, dbInstance, report, context.Documents, documentsStorage);
                         FillClusterTransactionInfo(report, dbInstance);
 
                         if (indexStorage != null)
@@ -294,7 +294,7 @@ namespace Raven.Server.ServerWide.Maintenance
             report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
         }
 
-        private static void FillIndexInfo(Index index, DocumentsOperationContext context, DateTime now, DatabaseStatusReport report)
+        private static void FillIndexInfo(Index index, QueryOperationContext context, DateTime now, DatabaseStatusReport report)
         {
             var stats = index.GetIndexStats(context);
             var lastQueried = GetLastQueryInfo(index, now);

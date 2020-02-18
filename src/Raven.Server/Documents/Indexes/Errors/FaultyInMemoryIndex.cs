@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             };
         }
 
-        public override IndexProgress GetProgress(DocumentsOperationContext documentsContext, bool? isStale = null)
+        public override IndexProgress GetProgress(QueryOperationContext queryContext, bool? isStale = null)
         {
             return new IndexProgress
             {
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             };
         }
 
-        public override IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
+        public override IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, QueryOperationContext queryContext = null)
         {
             return new IndexStats()
             {
@@ -154,22 +154,22 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer, IndexQueryServerSide query, QueryOperationContext queryContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override Task<DocumentQueryResult> Query(IndexQueryServerSide query, QueryOperationContext queryContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override Task<FacetedQueryResult> FacetedQuery(FacetQuery query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override Task<FacetedQueryResult> FacetedQuery(FacetQuery query, QueryOperationContext queryContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override TermsQueryResultServerSide GetTerms(string field, string fromValue, long pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override TermsQueryResultServerSide GetTerms(string field, string fromValue, long pageSize, QueryOperationContext queryContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }

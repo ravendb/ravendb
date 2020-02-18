@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
@@ -13,8 +13,8 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/footer/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task FooterStats()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
+            using (var writer = new BlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var indexes = Database.IndexStore.GetIndexes().ToList();
@@ -22,9 +22,8 @@ namespace Raven.Server.Web.Studio
                 writer.WriteStartObject();
 
                 writer.WritePropertyName(nameof(FooterStatistics.CountOfDocuments));
-                writer.WriteInteger(Database.DocumentsStorage.GetNumberOfDocuments(context));
+                writer.WriteInteger(Database.DocumentsStorage.GetNumberOfDocuments(context.Documents));
                 writer.WriteComma();
-
 
                 writer.WritePropertyName(nameof(FooterStatistics.CountOfIndexes));
                 writer.WriteInteger(indexes.Count);
@@ -39,7 +38,6 @@ namespace Raven.Server.Web.Studio
 
                 writer.WriteEndObject();
             }
-
 
             return Task.CompletedTask;
         }

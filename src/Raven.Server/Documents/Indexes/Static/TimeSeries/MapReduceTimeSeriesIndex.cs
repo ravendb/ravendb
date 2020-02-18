@@ -68,17 +68,17 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return PutMapResults(indexItem.LowerSourceDocumentId, indexItem.SourceDocumentId, wrapper, indexContext, stats);
         }
 
-        public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        public override long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(databaseContext);
+                return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(queryContext.Documents);
 
-            return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(databaseContext, collection);
+            return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(queryContext.Documents, collection);
         }
 
-        protected override IndexItem GetItemByEtag(DocumentsOperationContext databaseContext, long etag)
+        protected override IndexItem GetItemByEtag(QueryOperationContext queryContext, long etag)
         {
-            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeries(databaseContext, etag);
+            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeries(queryContext.Documents, etag);
             if (timeSeries == null)
                 return default;
 

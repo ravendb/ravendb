@@ -9,10 +9,10 @@ namespace Raven.Server.Documents.Indexes.Workers
     {
         string Name { get; }
 
-        bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext,
+        bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
                      Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token);
 
-        bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext serverContext, TransactionOperationContext indexingContext,
+        bool CanContinueBatch(QueryOperationContext queryContext, TransactionOperationContext indexingContext,
             IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count);
     }
 }

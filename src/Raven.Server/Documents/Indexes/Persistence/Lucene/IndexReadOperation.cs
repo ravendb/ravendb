@@ -766,12 +766,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<BlittableJsonReaderObject> IndexEntries(DocumentsOperationContext context, IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
+            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var sort = GetSort(query, _index, getSpatialField, documentsContext);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
