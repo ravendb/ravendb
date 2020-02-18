@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ETL;
@@ -448,7 +449,7 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                await SetupReplicationAsync(store1, store2);
+                var results = await SetupReplicationAsync(store1, store2);
                 Assert.True(WaitForDocument(store2, id));
 
                 using (var session = store1.OpenSession())
@@ -464,8 +465,6 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
                 Assert.True(WaitForDocument(store2, id));
-
-                var lastUpdate = LastRaftIndexForCommand(Server, nameof(UpdateExternalReplicationStateCommand));
 
                 using (var session = store1.OpenSession())
                 {
@@ -486,7 +485,13 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(2, storage2.DocumentsStorage.GetNumberOfTombstones(ctx));
                 }
                 
-                Assert.True(await WaitForValueAsync(() => LastRaftIndexForCommand(Server, nameof(UpdateExternalReplicationStateCommand)) > lastUpdate, true));
+                var val = await WaitForValueAsync(() =>
+                {
+                    var state = ReplicationLoader.GetExternalReplicationState(Server.ServerStore, store1.Database, results[0].TaskId);
+                    return state.LastSentEtag;
+                }, 7);
+
+                Assert.Equal(7, val);
 
                 await storage1.TombstoneCleaner.ExecuteCleanup();
                 await storage2.TombstoneCleaner.ExecuteCleanup();

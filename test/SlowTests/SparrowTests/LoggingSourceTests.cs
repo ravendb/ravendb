@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -133,16 +134,29 @@ namespace SlowTests.SparrowTests
                 Thread.Sleep(10);
             }
 
-            loggingSource.EndLogging();
+            var sw = Stopwatch.StartNew();
+            while (true)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                
+                var afterEndFiles = Directory.GetFiles(path);
+                AssertNoFileMissing(afterEndFiles);
+                var size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
+                const int threshold = 2 * fileSize;
 
-            var afterEndFiles = Directory.GetFiles(path);
-            AssertNoFileMissing(afterEndFiles);
-            var size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
-            var threshold = 2 * fileSize;
-            Assert.True(Math.Abs(size - retentionSize) < threshold,
-                $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
-                Environment.NewLine +
-                JustFileNamesAsString(afterEndFiles));
+                if (Math.Abs(size - retentionSize) <= threshold)
+                    break;
+                    
+                if(sw.Elapsed < TimeSpan.FromSeconds(10))
+                    continue;
+                
+                Assert.True(false,
+                    $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
+                    Environment.NewLine +
+                    JustFileNamesAsString(afterEndFiles));
+            }
+            
+            loggingSource.EndLogging();
         }
 
         [Theory]
