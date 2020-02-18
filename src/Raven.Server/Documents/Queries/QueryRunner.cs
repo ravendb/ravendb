@@ -171,21 +171,23 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token, out Index index)
+        public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token, out Index index)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
-
                 try
                 {
                     index = GetIndex(indexName);
 
-                    var etag = index.GetIndexEtag(null);
-                    if (etag == existingResultEtag)
-                        return TermsQueryResultServerSide.NotModifiedResult;
+                    using (var context = QueryOperationContext.ForIndex(documentsContext, index))
+                    {
+                        var etag = index.GetIndexEtag(null);
+                        if (etag == existingResultEtag)
+                            return TermsQueryResultServerSide.NotModifiedResult;
 
-                    return index.GetTerms(field, fromValue, pageSize, context, token);
+                        return index.GetTerms(field, fromValue, pageSize, context, token);
+                    }
                 }
                 catch (ObjectDisposedException e)
                 {

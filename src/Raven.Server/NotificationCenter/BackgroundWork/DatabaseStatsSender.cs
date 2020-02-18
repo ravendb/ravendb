@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -31,13 +32,14 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             Stats current;
             DateTime? lastIndexingErrorTime = null;
 
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            var indexes = _database.IndexStore.GetIndexes().ToList();
+            var needsServerContext = indexes.Any(x => x.Definition.HasCompareExchange);
+            var staleIndexes = 0;
+            var countOfIndexingErrors = 0L;
+
+            using (var context = QueryOperationContext.Allocate(_database, needsServerContext))
             using (context.OpenReadTransaction())
             {
-                var indexes = _database.IndexStore.GetIndexes().ToList();
-                var staleIndexes = 0;
-                var countOfIndexingErrors = 0L;
-
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (var index in indexes)
                 {
@@ -62,16 +64,16 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
                 current = new Stats
                 {
-                    CountOfConflicts = _database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
-                    CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
+                    CountOfConflicts = _database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context.Documents),
+                    CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context.Documents),
                     CountOfIndexes = indexes.Count,
                     CountOfStaleIndexes = staleIndexes,
                     CountOfIndexingErrors = countOfIndexingErrors,
-                    LastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
-                    GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context)
+                    LastEtag = DocumentsStorage.ReadLastEtag(context.Documents.Transaction.InnerTransaction),
+                    GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context.Documents)
                 };
-                current.Collections = _database.DocumentsStorage.GetCollections(context)
-                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentChangeVector(context, x.Name)));
+                current.Collections = _database.DocumentsStorage.GetCollections(context.Documents)
+                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentChangeVector(context.Documents, x.Name)));
             }
 
             if (_latest != null && _latest.Equals(current))
@@ -81,14 +83,14 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             _notificationCenter.Add(DatabaseStatsChanged.Create(
                 _database.Name,
-                current.CountOfConflicts, 
-                current.CountOfDocuments, 
+                current.CountOfConflicts,
+                current.CountOfDocuments,
                 current.CountOfIndexes,
-                current.CountOfStaleIndexes, 
-                current.GlobalChangeVector, 
-                current.LastEtag, 
-                current.CountOfIndexingErrors, 
-                lastIndexingErrorTime, 
+                current.CountOfStaleIndexes,
+                current.GlobalChangeVector,
+                current.LastEtag,
+                current.CountOfIndexingErrors,
+                lastIndexingErrorTime,
                 modifiedCollections));
 
             _latest = current;
@@ -144,8 +146,10 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             public bool Equals(Stats other)
             {
-                if (ReferenceEquals(null, other)) return false;
-                if (ReferenceEquals(this, other)) return true;
+                if (ReferenceEquals(null, other))
+                    return false;
+                if (ReferenceEquals(this, other))
+                    return true;
                 return CountOfConflicts == other.CountOfConflicts &&
                        CountOfDocuments == other.CountOfDocuments &&
                        CountOfIndexes == other.CountOfIndexes &&
@@ -158,8 +162,10 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
 
                 var stats = obj as Stats;
                 if (stats == null)

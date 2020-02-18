@@ -18,9 +18,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Workers
             _mapReduceIndex = mapReduceIndex;
         }
 
-        public override bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
+        public override bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            var moreWorkFound = base.Execute(databaseContext, serverContext, indexContext, writeOperation, stats, token);
+            var moreWorkFound = base.Execute(queryContext, indexContext, writeOperation, stats, token);
 
             if (_mapReduceIndex.OutputReduceToCollection?.HasDocumentsToDelete(indexContext) == true)
             {

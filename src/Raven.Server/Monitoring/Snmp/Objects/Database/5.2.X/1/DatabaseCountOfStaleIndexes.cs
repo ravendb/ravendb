@@ -1,6 +1,7 @@
 using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
@@ -14,7 +15,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         protected override Gauge32 GetData(DocumentDatabase database)
         {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var context = QueryOperationContext.Allocate(database, needsServerContext: true))
             using (context.OpenReadTransaction())
             {
                 var count = database

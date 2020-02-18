@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries
         protected async Task<SuggestionQueryResult> ExecuteSuggestion(
             IndexQueryServerSide query,
             Index index,
-            DocumentsOperationContext documentsContext,
+            QueryOperationContext queryContext,
             long? existingResultEtag,
             OperationCancelToken token)
         {
@@ -91,12 +91,12 @@ namespace Raven.Server.Documents.Queries
                     return SuggestionQueryResult.NotModifiedResult;
             }
 
-            return await index.SuggestionQuery(query, documentsContext, token);
+            return await index.SuggestionQuery(query, queryContext, token);
         }
 
-        protected Task<IOperationResult> ExecuteDelete(IndexQueryServerSide query, Index index, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+        protected Task<IOperationResult> ExecuteDelete(IndexQueryServerSide query, Index index, QueryOperationOptions options, QueryOperationContext queryContext, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(query, index, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(query, index, options, queryContext, onProgress, (key, retrieveDetails) =>
             {
                 var command = new DeleteDocumentCommand(key, null, Database);
 
@@ -109,12 +109,12 @@ namespace Raven.Server.Documents.Queries
         }
 
         protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index index, QueryOperationOptions options, PatchRequest patch,
-            BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+            BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(query, index, options, context, onProgress,
+            return ExecuteOperation(query, index, options, queryContext, onProgress,
                 (key, retrieveDetails) =>
                 {
-                    var command = new PatchDocumentCommand(context, key,
+                    var command = new PatchDocumentCommand(queryContext.Documents, key,
                         expectedChangeVector: null,
                         skipPatchIfChangeVectorMismatch: false,
                         patch: (patch, patchArgs),
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Queries
             IndexQueryServerSide query,
             Index index,
             QueryOperationOptions options,
-            DocumentsOperationContext context,
+            QueryOperationContext queryContext,
             Action<DeterminateProgress> onProgress,
             Func<string, bool, BulkOperationCommand<T>> createCommandForId,
             OperationCancelToken token)
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Queries
             Queue<string> resultIds;
             try
             {
-                var results = await index.Query(query, context, token).ConfigureAwait(false);
+                var results = await index.Query(query, queryContext, token).ConfigureAwait(false);
                 if (options.AllowStale == false && results.IsStale)
                     throw new InvalidOperationException("Cannot perform bulk operation. Query is stale.");
 
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Queries
             }
             finally // make sure to close tx if DocumentConflictException is thrown
             {
-                context.CloseTransaction();
+                queryContext.CloseTransaction();
             }
 
             var progress = new DeterminateProgress

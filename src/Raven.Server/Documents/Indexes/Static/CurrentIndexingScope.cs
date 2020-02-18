@@ -20,8 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private IndexingStatsScope _loadDocumentStats;
         private JavaScriptUtils _javaScriptUtils;
         private readonly DocumentsStorage _documentsStorage;
-        private readonly DocumentsOperationContext _documentsContext;
-        private readonly TransactionOperationContext _serverContext;
+        private readonly QueryOperationContext _queryContext;
 
         public readonly UnmanagedBuffersPoolWithLowMemoryHandling UnmanagedBuffersPool;
 
@@ -55,11 +54,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public LuceneDocumentConverter CreateFieldConverter;
 
-        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, TransactionOperationContext serverContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
+        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, QueryOperationContext queryContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
         {
             _documentsStorage = documentsStorage;
-            _documentsContext = documentsContext;
-            _serverContext = serverContext;
+            _queryContext = queryContext;
             Index = index;
             UnmanagedBuffersPool = _unmanagedBuffersPool;
             IndexDefinition = indexDefinition;
@@ -96,13 +94,13 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (TryGetKeySlice(keyLazy, keyString, out var keySlice) == false)
                     return DynamicNullObject.Null;
 
-                Slice.From(_documentsContext.Allocator, id, out var idSlice);
+                Slice.From(_queryContext.Documents.Allocator, id, out var idSlice);
                 var references = GetReferencesForItem(idSlice);
 
                 references.Add(keySlice);
 
                 // when there is conflict, we need to apply same behavior as if the document would not exist
-                var document = _documentsStorage.Get(_documentsContext, keySlice, throwOnConflict: false);
+                var document = _documentsStorage.Get(_queryContext.Documents, keySlice, throwOnConflict: false);
 
                 if (document == null)
                 {
@@ -127,12 +125,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (TryGetCompareExchangeKeySlice(keyLazy, keyString, out var keySlice) == false)
                     return DynamicNullObject.Null;
 
-                Slice.From(_documentsContext.Allocator, id, out var idSlice);
+                Slice.From(_queryContext.Documents.Allocator, id, out var idSlice);
                 var references = GetCompareExchangeReferencesForItem(idSlice);
 
                 references.Add(keySlice);
 
-                var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, keySlice);
+                var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(_queryContext.Server, keySlice);
 
                 if (value.Value == null || value.Value.TryGetMember("Object", out object result) == false)
                     return DynamicNullObject.Null;
@@ -166,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 // we intentionally don't dispose of the scope here, this is being tracked by the references
                 // and will be disposed there.
-                Slice.External(_documentsContext.Allocator, keyLazy, out keySlice);
+                Slice.External(_queryContext.Documents.Allocator, keyLazy, out keySlice);
             }
             else
             {
@@ -175,12 +173,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 // we intentionally don't dispose of the scope here, this is being tracked by the references
                 // and will be disposed there.
-                Slice.From(_documentsContext.Allocator, keyString, out keySlice);
+                Slice.From(_queryContext.Documents.Allocator, keyString, out keySlice);
             }
 
             // making sure that we normalize the case of the key so we'll be able to find
             // it in case insensitive manner
-            _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
+            _queryContext.Documents.Allocator.ToLowerCase(ref keySlice.Content);
 
             return true;
         }
@@ -195,7 +193,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var key = CompareExchangeKey.GetStorageKey(_documentsStorage.DocumentDatabase.Name, keyLazy);
 
-                Slice.From(_documentsContext.Allocator, key, out keySlice);
+                Slice.From(_queryContext.Server.Allocator, key, out keySlice);
             }
             else
             {
@@ -204,7 +202,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var key = CompareExchangeKey.GetStorageKey(_documentsStorage.DocumentDatabase.Name, keyString);
 
-                Slice.From(_documentsContext.Allocator, key, out keySlice);
+                Slice.From(_queryContext.Server.Allocator, key, out keySlice);
             }
 
             return true;

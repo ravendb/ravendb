@@ -5,7 +5,6 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
-using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
@@ -36,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "Cleanup";
 
-        public virtual bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext,
+        public virtual bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             const long pageSize = long.MaxValue;
@@ -68,16 +67,16 @@ namespace Raven.Server.Documents.Indexes.Workers
                     {
                         var batchCount = 0L;
 
-                        using (databaseContext.OpenReadTransaction())
+                        using (queryContext.OpenReadTransaction())
                         {
                             sw.Restart();
 
                             if (lastCollectionEtag == -1)
-                                lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
+                                lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(queryContext, collection);
 
                             var tombstones = collection == Constants.Documents.Collections.AllDocumentsCollection
-                                ? _documentsStorage.GetTombstonesFrom(databaseContext, lastEtag + 1, 0, pageSize)
-                                : _documentsStorage.GetTombstonesFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
+                                ? _documentsStorage.GetTombstonesFrom(queryContext.Documents, lastEtag + 1, 0, pageSize)
+                                : _documentsStorage.GetTombstonesFrom(queryContext.Documents, collection, lastEtag + 1, 0, pageSize);
 
                             foreach (var tombstone in tombstones)
                             {
@@ -99,13 +98,13 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
-                                if (CanContinueBatch(databaseContext, serverContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
+                                if (CanContinueBatch(queryContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
                                 {
                                     keepRunning = false;
                                     break;
                                 }
 
-                                if (MapDocuments.MaybeRenewTransaction(databaseContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
+                                if (MapDocuments.MaybeRenewTransaction(queryContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
                                     break;
                             }
 
@@ -137,8 +136,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         public bool CanContinueBatch(
-            DocumentsOperationContext documentsContext,
-            TransactionOperationContext serverContext,
+            QueryOperationContext queryContext,
             TransactionOperationContext indexingContext,
             IndexingStatsScope stats,
             IndexWriteOperation indexWriteOperation,
@@ -152,7 +150,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, serverContext, indexingContext, indexWriteOperation, count) == false)
+            if (_index.CanContinueBatch(stats, queryContext, indexingContext, indexWriteOperation, count) == false)
                 return false;
 
             return true;

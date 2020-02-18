@@ -13,43 +13,43 @@ namespace Raven.Server.Documents.Indexes
     public static class StaticIndexHelper
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStaleDueToReferences(MapIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        public static bool IsStaleDueToReferences(MapIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
-            return IsStaleDueToReferences(index, index._compiled, databaseContext, serverContext, indexContext, referenceCutoff, stalenessReasons);
+            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStaleDueToReferences(MapTimeSeriesIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        public static bool IsStaleDueToReferences(MapTimeSeriesIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
-            return IsStaleDueToReferences(index, index._compiled, databaseContext, serverContext, indexContext, referenceCutoff, stalenessReasons);
+            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStaleDueToReferences(MapReduceIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        public static bool IsStaleDueToReferences(MapReduceIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
-            return IsStaleDueToReferences(index, index._compiled, databaseContext, serverContext, indexContext, referenceCutoff, stalenessReasons);
+            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long CalculateIndexEtag(MapIndex index, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        public static unsafe long CalculateIndexEtag(MapIndex index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
-            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, documentsContext, indexContext);
+            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long CalculateIndexEtag(MapTimeSeriesIndex index, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        public static unsafe long CalculateIndexEtag(MapTimeSeriesIndex index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
-            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, documentsContext, indexContext);
+            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long CalculateIndexEtag(MapReduceIndex index, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        public static unsafe long CalculateIndexEtag(MapReduceIndex index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
-            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, documentsContext, indexContext);
+            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
             foreach (var collection in index.Collections)
             {
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         foreach (var referencedCollection in referencedCollections)
                         {
-                            var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
+                            var lastDocEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(queryContext.Documents, referencedCollection.Name);
                             var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
 
                             if (referenceCutoff == null)
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Indexes
                                     if (stalenessReasons == null)
                                         return true;
 
-                                    var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
+                                    var lastDoc = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetByEtag(queryContext.Documents, lastDocEtag);
 
                                     stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. " +
                                                          $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Indexes
                                                          $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
                                 }
 
-                                var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
+                                var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(queryContext.Documents, referencedCollection.Name);
                                 var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
 
                                 if (lastTombstoneEtag > lastProcessedTombstoneEtag)
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Indexes
                                     if (stalenessReasons == null)
                                         return true;
 
-                                    var lastTombstone = databaseContext.DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(databaseContext, lastTombstoneEtag);
+                                    var lastTombstone = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(queryContext.Documents, lastTombstoneEtag);
 
                                     stalenessReasons.Add($"There are still some tombstone references to process from collection '{referencedCollection.Name}'. " +
                                                          $"The last tombstone etag in that collection is '{lastTombstoneEtag:#,#;;0}' " +
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes
                                     if (stalenessReasons == null)
                                         return true;
 
-                                    var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
+                                    var lastDoc = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetByEtag(queryContext.Documents, lastDocEtag);
 
                                     stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. " +
                                                          $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes
                                 }
 
                                 var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
-                                var hasTombstones = databaseContext.DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(databaseContext, referencedCollection.Name,
+                                var hasTombstones = queryContext.Documents.DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(queryContext.Documents, referencedCollection.Name,
                                     lastProcessedTombstoneEtag,
                                     referenceCutoff.Value);
 
@@ -147,9 +147,9 @@ namespace Raven.Server.Documents.Indexes
                     // but this was checked earlier by the base index class
                     if (lastIndexedEtag > 0)
                     {
-                        var lastCompareExchangeEtag = databaseContext.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(serverContext, databaseContext.DocumentDatabase.Name);
+                        var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
                         var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection: null);
-                        
+
                         if (lastCompareExchangeEtag > lastProcessedReferenceEtag)
                         {
                             if (stalenessReasons == null)
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Indexes
                             // TODO [ppekrol] staleness reasons
                         }
 
-                        var lastTombstoneEtag = databaseContext.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(serverContext, databaseContext.DocumentDatabase.Name);
+                        var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
                         var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: null);
 
                         if (lastTombstoneEtag > lastProcessedTombstoneEtag)
@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe long CalculateIndexEtag(Index index, AbstractStaticIndexBase compiled, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        private static unsafe long CalculateIndexEtag(Index index, AbstractStaticIndexBase compiled, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
             foreach (var collection in index.Collections)
             {
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Indexes
 
                 foreach (var referencedCollection in referencedCollections)
                 {
-                    var lastDocEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection.Name);
+                    var lastDocEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(queryContext.Documents, referencedCollection.Name);
                     var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
 
                     var lastTombstoneEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, referencedCollection.Name);
@@ -245,17 +245,17 @@ namespace Raven.Server.Documents.Indexes
             if (isSideBySide == false)
                 return false;
 
-            using (index.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext databaseContext))
+            using (var context = QueryOperationContext.ForIndex(index))
             using (index._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {
                 using (indexContext.OpenReadTransaction())
-                using (databaseContext.OpenReadTransaction())
+                using (context.OpenReadTransaction())
                 {
                     indexContext.IgnoreStalenessDueToReduceOutputsToDelete = true;
 
                     try
                     {
-                        var canReplace = index.IsStale(databaseContext, indexContext) == false;
+                        var canReplace = index.IsStale(context, indexContext) == false;
                         if (canReplace)
                             isSideBySide = null;
 
