@@ -45,8 +45,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }, database))
                 {
                     DocumentQueryResult queryResult;
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var queryContext = QueryOperationContext.ShortTermSingleUse(database))
                     {
+                        var context = queryContext.Documents;
+
                         using (var tx = context.OpenWriteTransaction())
                         {
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
@@ -89,14 +91,13 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Assert.Equal(0, batchStats.ReduceErrors);
 
                         queryResult =
-                            await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
+                            await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), queryContext, OperationCancelToken.None);
 
                         Assert.Equal(1, queryResult.Results.Count);
 
                     }
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
-
                         queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Location = 'Poland'"), context, OperationCancelToken.None);
 
                         var results = queryResult.Results;

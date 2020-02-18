@@ -39,8 +39,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }, database))
                 {
                     DocumentQueryResult queryResult;
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var queryContext = QueryOperationContext.ShortTermSingleUse(database))
                     {
+                        var context = queryContext.Documents;
+
                         using (var tx = context.OpenWriteTransaction())
                         {
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
@@ -79,13 +81,13 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Assert.Equal(0, batchStats.MapErrors);
 
                         queryResult =
-                            await index.Query(new IndexQueryServerSide($"FROM '{index.Name}'"), context, OperationCancelToken.None);
+                            await index.Query(new IndexQueryServerSide($"FROM '{index.Name}'"), queryContext, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
                     }
 
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
                         queryResult = await index.Query(new IndexQueryServerSide($"FROM '{index.Name}' WHERE Name = 'John'"), context, OperationCancelToken.None);
 
@@ -269,8 +271,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Maps = { "from doc in docs select new { doc.Name }" },
                 }, database))
                 {
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var queryContext = QueryOperationContext.ShortTermSingleUse(database))
                     {
+                        var context = queryContext.Documents;
+
                         using (var tx = context.OpenWriteTransaction())
                         {
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
@@ -302,7 +306,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context);
+                            var isStale = index.IsStale(queryContext);
                             Assert.True(isStale);
                         }
 
@@ -316,7 +320,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context);
+                            var isStale = index.IsStale(queryContext);
                             Assert.False(isStale);
                         }
 
@@ -329,7 +333,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context);
+                            var isStale = index.IsStale(queryContext);
                             Assert.True(isStale);
                         }
 
@@ -339,7 +343,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context);
+                            var isStale = index.IsStale(queryContext);
                             Assert.False(isStale);
                         }
                     }
@@ -358,8 +362,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Maps = { "from doc in docs.Users select new { doc.Name }" },
                 }, database))
                 {
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var queryContext = QueryOperationContext.ShortTermSingleUse(database))
                     {
+                        var context = queryContext.Documents;
+
                         using (var tx = context.OpenWriteTransaction())
                         {
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
@@ -404,7 +410,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         IndexProgress progress;
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(context);
+                            progress = index.GetProgress(queryContext);
                         }
 
                         Assert.Equal(0, progress.Collections["Users"].LastProcessedDocumentEtag);
@@ -420,7 +426,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(context);
+                            progress = index.GetProgress(queryContext);
                         }
 
                         Assert.Equal(2, progress.Collections["Users"].LastProcessedDocumentEtag);
@@ -463,7 +469,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(context);
+                            progress = index.GetProgress(queryContext);
                         }
 
                         Assert.Equal(2, progress.Collections["Users"].LastProcessedDocumentEtag);
@@ -479,7 +485,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(context);
+                            progress = index.GetProgress(queryContext);
                         }
 
                         Assert.Equal(5, progress.Collections["Users"].LastProcessedDocumentEtag);
@@ -517,8 +523,10 @@ namespace FastTests.Server.Documents.Indexing.Static
 
             using (var database = CreateDocumentDatabase())
             using (var index = MapIndex.CreateNew(indexDefinition, database))
-            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            using (var queryContext = QueryOperationContext.ShortTermSingleUse(database))
             {
+                var context = queryContext.Documents;
+
                 Assert.Equal(mapBatchSize, index.Configuration.MapBatchSize);
 
                 using (var tx = context.OpenWriteTransaction())
@@ -613,7 +621,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(numberOfDocs, stats.MapReferenceAttempts);
 
                 using (context.OpenReadTransaction())
-                    Assert.False(index.IsStale(context));
+                    Assert.False(index.IsStale(queryContext));
             }
         }
     }

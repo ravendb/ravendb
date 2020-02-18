@@ -43,8 +43,10 @@ select new
 }",
                 }, database))
                 {
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var queryContext = QueryOperationContext.ShortTermSingleUse(database))
                     {
+                        var context = queryContext.Documents;
+
                         var bytes = new byte[4096];
                         new Random(2).NextBytes(bytes);
 
@@ -80,7 +82,7 @@ select new
                         Assert.Equal(numberOfDocs, firstRunStats.MapSuccesses);
                         Assert.Equal(0, firstRunStats.MapErrors);
 
-                        var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
+                        var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), queryContext, OperationCancelToken.None);
 
                         Assert.False(queryResult.IsStale);
 

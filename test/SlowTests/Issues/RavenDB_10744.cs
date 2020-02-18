@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
@@ -147,7 +148,7 @@ namespace SlowTests.Issues
                     
                     Assert.Equal(1, errorCount);
 
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(db))
                     {
                         using (context.OpenReadTransaction())
                         {

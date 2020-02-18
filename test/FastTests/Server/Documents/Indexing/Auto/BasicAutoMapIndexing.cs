@@ -1003,11 +1003,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var index1 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Companies", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }), Guid.NewGuid().ToString());
                 var index2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Age", Storage = FieldStorage.No } }), Guid.NewGuid().ToString());
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var context = QueryOperationContext.ShortTermSingleUse(database))
                 {
                     await index1.Query(new IndexQueryServerSide("FROM Companies"), context, OperationCancelToken.None); // last querying time
                 }
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var context = QueryOperationContext.ShortTermSingleUse(database))
                 {
                     await index2.Query(new IndexQueryServerSide("FROM Users"), context, OperationCancelToken.None); // last querying time
                 }
@@ -1070,7 +1070,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 database.Time.UtcDateTime = () => DateTime.UtcNow.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var context = QueryOperationContext.ShortTermSingleUse(database))
                 {
                     await index1.Query(new IndexQueryServerSide("FROM Companies"), context, OperationCancelToken.None); // last querying time
                 }

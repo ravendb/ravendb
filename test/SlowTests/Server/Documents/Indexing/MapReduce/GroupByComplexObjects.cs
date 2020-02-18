@@ -49,9 +49,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 }, database))
                 {
                     DocumentQueryResult queryResult;
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
-                        Put_docs(context, database);
+                        Put_docs(context.Documents, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                         Assert.Equal(2, queryResult.Results.Count);
 
                     }
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
                         queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Location = 'Poland'"), context, OperationCancelToken.None);
 
@@ -106,9 +106,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 }, database))
                 {
                     DocumentQueryResult queryResult;
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
-                        Put_docs(context, database);
+                        Put_docs(context.Documents, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -120,7 +120,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                         Assert.Equal(2, queryResult.Results.Count);
 
                     }
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
                         queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Hobbies = 'music'"), context, OperationCancelToken.None);
 
@@ -176,9 +176,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 }, database))
                 {
                     DocumentQueryResult queryResult;
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
-                        Put_docs(context, database);
+                        Put_docs(context.Documents, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -194,7 +194,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     }
 
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
 
                         queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Location = 'Poland'"), context, OperationCancelToken.None);
@@ -246,9 +246,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 }, database))
                 {
                     DocumentQueryResult queryResult;
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
-                        Put_docs(context, database);
+                        Put_docs(context.Documents, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -263,7 +263,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                         Assert.Equal(2, queryResult.Results.Count);
 
                     }
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
 
                         queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Hobbies IN ('music')"), context, OperationCancelToken.None);

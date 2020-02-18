@@ -100,7 +100,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                             try
                             {
                                 var stats = new IndexingStatsScope(new IndexingRunStats());
-                                reducer.Execute(null, null, indexContext,
+                                reducer.Execute(null, indexContext,
                                     writeOperation,
                                     stats, CancellationToken.None);
 
