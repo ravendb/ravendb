@@ -244,6 +244,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PatchRequest));
             scripter.AddType(typeof(PatchResult));
             scripter.AddType(typeof(PatchDebugActions));
+            scripter.AddType(typeof(QueryOperationOptions));
 
             scripter.AddType(typeof(Raven.Client.ServerWide.Operations.DatabasesInfo));
 

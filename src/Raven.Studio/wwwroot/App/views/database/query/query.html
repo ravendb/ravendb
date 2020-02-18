@@ -260,9 +260,9 @@
             <div class="control-label">Cache enabled</div>
         </div>
         <div class="col-xs-5">
-            <div class="toggle">
+            <div class="toggle flex-row">
                 <input type="checkbox" class="styled" data-bind="checked: cacheEnabled">
-                <label></label>
+                <label class="flex-end"></label>
             </div>
         </div>
     </div>
@@ -271,9 +271,9 @@
             <div class="control-label">Show stored index fields only</div>
         </div>
         <div class="col-xs-5">
-            <div class="toggle">
+            <div class="toggle flex-row">
                 <input type="checkbox" class="styled" data-bind="checked: criteria().showFields, disable: isCollectionQuery() || isGraphQuery()">
-                <label></label>
+                <label class="flex-end"></label>
             </div>
         </div>
     </div>
@@ -283,9 +283,9 @@
             <div class="control-label" data-bind="visible: isMapReduceIndex">Show the raw index entries instead of index results</div>
         </div>
         <div class="col-xs-5">
-            <div class="toggle">
+            <div class="toggle flex-row">
                 <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery() || isGraphQuery()">
-                <label></label>
+                <label class="flex-end"></label>
             </div>
         </div>
     </div>

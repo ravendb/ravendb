@@ -207,7 +207,7 @@ class patchTester extends viewModelBase {
 
                 const query = this.query();
 
-                new patchCommand(query, this.db(), { test: true, documentId: this.documentId() })
+                new patchCommand(query, this.db(), null, { test: true, documentId: this.documentId() })
                     .execute()
                     .done((result: any) => {
                         const modifiedDocument = new document(result.ModifiedDocument).toDto(true);

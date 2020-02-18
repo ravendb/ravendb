@@ -9,8 +9,12 @@ interface patchCommandOptions {
 
 class patchCommand extends commandBase {
 
-    constructor(private queryStr: string, private db: database, private options: patchCommandOptions = null) {
-        super();
+    constructor(private queryStr: string, 
+                private db: database, 
+                private queryOptions?: Raven.Client.Documents.Queries.QueryOperationOptions, 
+                private options: patchCommandOptions = null) {
+        super();       
+                
         this.options = this.options || {
             test: false,
             documentId: null
@@ -18,8 +22,12 @@ class patchCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
+
         const args = {
-            allowStale: true,
+            allowStale: this.queryOptions.AllowStale,
+            staleTimeout: this.queryOptions.StaleTimeout,
+            maxOpsPerSec: this.queryOptions.MaxOpsPerSecond,
+            details : this.queryOptions.RetrieveDetails,
             id: this.options.test ? this.options.documentId : undefined
         };
 
@@ -45,7 +53,6 @@ class patchCommand extends commandBase {
                 this.reportError(`Failed to ${this.options.test ? 'test' : 'schedule' } patch`, response.responseText, response.statusText);
             });
     }
-
 }
 
 export = patchCommand; 
