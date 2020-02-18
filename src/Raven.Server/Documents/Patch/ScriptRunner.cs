@@ -29,6 +29,7 @@ using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Spatial4n.Core.Distance;
@@ -415,23 +416,27 @@ namespace Raven.Server.Documents.Patch
 
                 var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeseries, from, to);
 
-                var entries = new DynamicJsonArray();
+                var entries = new List<JsValue>();
                 foreach (var singleResult in reader.AllValues())
                 {
-                    var values = new DynamicJsonArray();
-                    foreach (var value in singleResult.Values.Span)
+                    Span<double> valuesSpan = singleResult.Values.Span;
+                    var v = new JsValue[valuesSpan.Length];
+                    for (int i = 0; i < valuesSpan.Length; i++)
                     {
-                        values.Add(value);
+                        v[i] = valuesSpan[i];
                     }
-                    entries.Add(new DynamicJsonValue
-                    {
-                        [nameof(TimeSeriesEntry.Timestamp)] = singleResult.Timestamp,
-                        [nameof(TimeSeriesEntry.Tag)] = singleResult.Tag,
-                        [nameof(TimeSeriesEntry.Values)] = values,
-                    });
+                    var jsValues = new ArrayInstance(ScriptEngine);
+                    jsValues.FastAddProperty("length", 0, true, false, false);
+                    ScriptEngine.Array.PrototypeObject.Push(jsValues, v);
+                    
+                    var entry = new ObjectInstance(ScriptEngine);
+                    entry.Set(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat());
+                    entry.Set(nameof(TimeSeriesEntry.Tag), singleResult.Tag?.ToString());
+                    entry.Set(nameof(TimeSeriesEntry.Values), jsValues);
+                    
+                    entries.Add(entry);
                 }
-                var bResult = _jsonCtx.ReadObject(new DynamicJsonValue{["Entries"] = entries}, "");
-                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, bResult["Entries"]);
+                return ScriptEngine.Array.Construct(entries.ToArray());;
             }
             
             private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName]string caller = null)
