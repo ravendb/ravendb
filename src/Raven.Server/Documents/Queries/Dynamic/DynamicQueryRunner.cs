@@ -274,6 +274,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 case DynamicQueryMatchType.Complete:
                 case DynamicQueryMatchType.CompleteButIdle:
                     index = _indexStore.GetIndex(matchResult.IndexName);
+                    if (index == null)
+                    {
+                        // the auto index was deleted
+                        break;
+                    }
+
                     return true;
                 case DynamicQueryMatchType.Partial:
                     // At this point, we found an index that has some fields we need and
@@ -283,13 +289,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     // We can then use our new index instead
 
                     var currentIndex = _indexStore.GetIndex(matchResult.IndexName);
+                    if (currentIndex != null)
+                    {
+                        if (map.SupersededIndexes == null)
+                            map.SupersededIndexes = new List<Index>();
 
-                    if (map.SupersededIndexes == null)
-                        map.SupersededIndexes = new List<Index>();
+                        map.SupersededIndexes.Add(currentIndex);
 
-                    map.SupersededIndexes.Add(currentIndex);
-
-                    map.ExtendMappingBasedOn((AutoIndexDefinitionBase)currentIndex.Definition);
+                        map.ExtendMappingBasedOn((AutoIndexDefinitionBase)currentIndex.Definition);
+                    }
 
                     break;
             }
