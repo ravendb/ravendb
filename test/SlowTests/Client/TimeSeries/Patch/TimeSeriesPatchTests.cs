@@ -334,17 +334,30 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
         
-        [Theory]
-        [InlineData(4, 7)]
-        [InlineData(0, 3)]
-        [InlineData(0, 9)]
-        [InlineData(5, 9)]
-        [InlineData(0, 0)]
-        [InlineData(2, 2)]
-        [InlineData(9, 9)]
-        public async Task Patch_GetRangeOfTimestamp(int fromIndex, int toIndex)
+        class GetRangeOfTimestampByPatchCases : IEnumerable<object[]>
         {
-            const string tag = "watches/fitbit";
+            private readonly int[][] _startEndIndexes = {new[] {4, 7}, new[] {0, 3}, new[] {0, 9}, new[] {5, 9}, new[] {0, 0}, new[] {2, 2}, new[] {9, 9},};
+            readonly string[] _tags = {"Heartrate", null};
+
+            public IEnumerator<object[]> GetEnumerator()
+            {
+                foreach (string tag in _tags)
+                {
+                    foreach (int[] startEndIndex in _startEndIndexes)
+                    {
+                        yield return new object[] {tag, startEndIndex[0], startEndIndex[1]};
+                    }
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+        
+        
+        [Theory]
+        [ClassData(typeof(GetRangeOfTimestampByPatchCases))]
+        public async Task Patch_GetRangeOfTimestamp(string tag, int fromIndex, int toIndex)
+        {
             const string timeseries = "Heartrate";
             const string documentId = "users/1";
             var values = new[] {59.3d, 59.2d, 70.5555d, 72.53399393d, 71.543434d, 70.938457d, 72.53399393d, 60.1d, 59.9d, 0d};
