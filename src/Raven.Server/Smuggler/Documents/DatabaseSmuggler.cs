@@ -903,7 +903,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        actions.WriteTombstoneKey(key.Key);
+                        actions.WriteTombstoneKey(key.Key.Key);
                     }
                     catch (Exception e)
                     {

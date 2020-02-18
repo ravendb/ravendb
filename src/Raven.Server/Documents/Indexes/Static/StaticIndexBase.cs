@@ -128,9 +128,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>();
 
-        public bool HasDynamicFields { get; set; }
+        public readonly HashSet<string> CollectionsWithCompareExchangeReferences = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public bool HasCompareExchange { get; set; }
+        public bool HasDynamicFields { get; set; }
 
         public bool HasBoostedFields { get; set; }
 
@@ -141,6 +141,14 @@ namespace Raven.Server.Documents.Indexes.Static
         public string[] OutputFields;
 
         public CompiledIndexField[] GroupByFields;
+
+        public void AddCompareExchangeReferenceToCollection(string collection)
+        {
+            if (collection is null)
+                throw new ArgumentNullException(nameof(collection));
+
+            CollectionsWithCompareExchangeReferences.Add(collection);
+        }
 
         public void AddReferencedCollection(string collection, string referencedCollection)
         {

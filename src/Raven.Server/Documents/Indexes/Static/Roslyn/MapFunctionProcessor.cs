@@ -9,6 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
     {
         public readonly CSharpSyntaxRewriter CollectionRetriever;
         private readonly ReferencedCollectionsRetriever _refCollectionsRetriever;
+        private readonly CompareExchangeReferenceDetectorRewriter _compareExchangeReferenceDetector;
         private readonly SelectManyRewriter _selectManyRewriter;
 
         public MapFunctionProcessor(CSharpSyntaxRewriter collectionRetriever, SelectManyRewriter selectManyRewriter)
@@ -16,9 +17,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             _selectManyRewriter = selectManyRewriter;
             CollectionRetriever = collectionRetriever;
             _refCollectionsRetriever = new ReferencedCollectionsRetriever();
+            _compareExchangeReferenceDetector = new CompareExchangeReferenceDetectorRewriter();
         }
 
         public HashSet<string> ReferencedCollections => _refCollectionsRetriever.ReferencedCollections;
+
+        public bool HasLoadCompareExchangeValue => _compareExchangeReferenceDetector.HasLoadCompareExchangeValue;
 
         public override SyntaxNode Visit(SyntaxNode node)
         {
@@ -26,6 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             {
                 CollectionRetriever,
                 _refCollectionsRetriever,
+                _compareExchangeReferenceDetector,
                 _selectManyRewriter,
                 SelectManyRewriter.SelectMethodOnProperties,
                 new ThrowOnInvalidMethodCalls(),

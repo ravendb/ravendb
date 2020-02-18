@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client;
-using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
@@ -16,21 +13,21 @@ namespace Raven.Server.Documents.Indexes
     public static class StaticIndexHelper
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStaleDueToReferences(MapIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        public static bool IsStaleDueToReferences(MapIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
-            return IsStaleDueToReferences(index, index._compiled, databaseContext, indexContext, referenceCutoff, stalenessReasons);
+            return IsStaleDueToReferences(index, index._compiled, databaseContext, serverContext, indexContext, referenceCutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStaleDueToReferences(MapTimeSeriesIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        public static bool IsStaleDueToReferences(MapTimeSeriesIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
-            return IsStaleDueToReferences(index, index._compiled, databaseContext, indexContext, referenceCutoff, stalenessReasons);
+            return IsStaleDueToReferences(index, index._compiled, databaseContext, serverContext, indexContext, referenceCutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStaleDueToReferences(MapReduceIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        public static bool IsStaleDueToReferences(MapReduceIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
-            return IsStaleDueToReferences(index, index._compiled, databaseContext, indexContext, referenceCutoff, stalenessReasons);
+            return IsStaleDueToReferences(index, index._compiled, databaseContext, serverContext, indexContext, referenceCutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -52,85 +49,124 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, DocumentsOperationContext databaseContext, TransactionOperationContext serverContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
             foreach (var collection in index.Collections)
             {
-                if (compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
-                    continue;
+                long lastIndexedEtag = -1;
 
-                var lastIndexedEtag = index._indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                // we haven't handled references for that collection yet
-                // in theory we could check what is the last etag for that collection in documents store
-                // but this was checked earlier by the base index class
-                if (lastIndexedEtag == 0)
-                    continue;
-
-                foreach (var referencedCollection in referencedCollections)
+                if (compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections))
                 {
-                    var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
-                    var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
-                    var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+                    lastIndexedEtag = index._indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
-                    if (referenceCutoff == null)
+                    // we haven't handled references for that collection yet
+                    // in theory we could check what is the last etag for that collection in documents store
+                    // but this was checked earlier by the base index class
+                    if (lastIndexedEtag > 0)
                     {
-                        if (lastDocEtag > lastProcessedReferenceEtag)
+                        foreach (var referencedCollection in referencedCollections)
+                        {
+                            var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
+                            var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+
+                            if (referenceCutoff == null)
+                            {
+                                if (lastDocEtag > lastProcessedReferenceEtag)
+                                {
+                                    if (stalenessReasons == null)
+                                        return true;
+
+                                    var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
+
+                                    stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. " +
+                                                         $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
+                                                         $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
+                                                         $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
+                                                         $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
+                                }
+
+                                var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
+                                var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+
+                                if (lastTombstoneEtag > lastProcessedTombstoneEtag)
+                                {
+                                    if (stalenessReasons == null)
+                                        return true;
+
+                                    var lastTombstone = databaseContext.DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(databaseContext, lastTombstoneEtag);
+
+                                    stalenessReasons.Add($"There are still some tombstone references to process from collection '{referencedCollection.Name}'. " +
+                                                         $"The last tombstone etag in that collection is '{lastTombstoneEtag:#,#;;0}' " +
+                                                         $"({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', " +
+                                                         $"{Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), " +
+                                                         $"but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.");
+                                }
+                            }
+                            else
+                            {
+                                var minDocEtag = Math.Min(referenceCutoff.Value, lastDocEtag);
+                                if (minDocEtag > lastProcessedReferenceEtag)
+                                {
+                                    if (stalenessReasons == null)
+                                        return true;
+
+                                    var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
+
+                                    stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. " +
+                                                         $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
+                                                         $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
+                                                         $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
+                                                         $"with cutoff set to '{referenceCutoff.Value}', " +
+                                                         $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
+                                }
+
+                                var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+                                var hasTombstones = databaseContext.DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(databaseContext, referencedCollection.Name,
+                                    lastProcessedTombstoneEtag,
+                                    referenceCutoff.Value);
+
+                                if (hasTombstones)
+                                {
+                                    if (stalenessReasons == null)
+                                        return true;
+
+                                    stalenessReasons.Add($"There are still tombstones to process from collection '{referencedCollection.Name}' with etag range '{lastProcessedTombstoneEtag} - {referenceCutoff.Value}'.");
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (compiled.CollectionsWithCompareExchangeReferences.Contains(collection))
+                {
+                    if (lastIndexedEtag == -1)
+                        lastIndexedEtag = index._indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+
+                    // we haven't handled references for that collection yet
+                    // in theory we could check what is the last etag for that collection in documents store
+                    // but this was checked earlier by the base index class
+                    if (lastIndexedEtag > 0)
+                    {
+                        var lastCompareExchangeEtag = databaseContext.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(serverContext, databaseContext.DocumentDatabase.Name);
+                        var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection: null);
+                        
+                        if (lastCompareExchangeEtag > lastProcessedReferenceEtag)
                         {
                             if (stalenessReasons == null)
                                 return true;
 
-                            var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
-
-                            stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. " +
-                                                 $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
-                                                 $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
-                                                 $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
-                                                 $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
+                            // TODO [ppekrol] staleness reasons
                         }
 
-                        var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
+                        var lastTombstoneEtag = databaseContext.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(serverContext, databaseContext.DocumentDatabase.Name);
+                        var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: null);
 
                         if (lastTombstoneEtag > lastProcessedTombstoneEtag)
                         {
                             if (stalenessReasons == null)
                                 return true;
 
-                            var lastTombstone = databaseContext.DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(databaseContext, lastTombstoneEtag);
-
-                            stalenessReasons.Add($"There are still some tombstone references to process from collection '{referencedCollection.Name}'. " +
-                                                 $"The last tombstone etag in that collection is '{lastTombstoneEtag:#,#;;0}' " +
-                                                 $"({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', " +
-                                                 $"{Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), " +
-                                                 $"but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.");
-                        }
-                    }
-                    else
-                    {
-                        var minDocEtag = Math.Min(referenceCutoff.Value, lastDocEtag);
-                        if (minDocEtag > lastProcessedReferenceEtag)
-                        {
-                            if (stalenessReasons == null)
-                                return true;
-
-                            var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
-
-                            stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. " +
-                                                 $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
-                                                 $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
-                                                 $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
-                                                 $"with cutoff set to '{referenceCutoff.Value}', " +
-                                                 $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
-                        }
-
-                        var hasTombstones = databaseContext.DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(databaseContext, referencedCollection.Name,
-                            lastProcessedTombstoneEtag,
-                            referenceCutoff.Value);
-                        if (hasTombstones)
-                        {
-                            if (stalenessReasons == null)
-                                return true;
-
-                            stalenessReasons.Add($"There are still tombstones to process from collection '{referencedCollection.Name}' with etag range '{lastProcessedTombstoneEtag} - {referenceCutoff.Value}'.");
+                            // TODO [ppekrol] staleness reasons
                         }
                     }
                 }
