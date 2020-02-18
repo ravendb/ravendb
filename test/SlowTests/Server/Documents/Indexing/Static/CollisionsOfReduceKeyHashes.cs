@@ -133,7 +133,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
 
                     var stats = new IndexingStatsScope(new IndexingRunStats());
-                    reducer.Execute(null, null, indexContext,
+                    reducer.Execute(null, indexContext,
                         writeOperation,
                         stats, CancellationToken.None);
 
@@ -149,7 +149,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                using (var termSingleUse = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var termSingleUse = QueryOperationContext.ShortTermSingleUse(database))
                 {
                     var queryResult = await
                         index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"),
@@ -198,7 +198,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     {
 
                         var stats = new IndexingStatsScope(new IndexingRunStats());
-                        reducer.Execute(null, null, indexContext,
+                        reducer.Execute(null, indexContext,
                             writeOperation,
                             stats, CancellationToken.None);
 
@@ -220,7 +220,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                using (var shortTermSingleUse = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var shortTermSingleUse = QueryOperationContext.ShortTermSingleUse(database))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"),
                                 shortTermSingleUse,
@@ -261,7 +261,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     try
                     {
                         var stats = new IndexingStatsScope(new IndexingRunStats());
-                        reducer.Execute(null, null, indexContext,
+                        reducer.Execute(null, indexContext,
                             writeOperation,
                             stats, CancellationToken.None);
 
@@ -281,7 +281,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     }
                 }
 
-                using (var documentsOperationContext = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var documentsOperationContext = QueryOperationContext.ShortTermSingleUse(database))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide("FROM Users ORDER BY Location"),
                          documentsOperationContext,

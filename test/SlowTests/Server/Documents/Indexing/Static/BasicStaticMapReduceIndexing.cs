@@ -47,8 +47,10 @@ select new
                 }, database))
                 {
                     DocumentQueryResult queryResult;
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var queryContext = QueryOperationContext.ShortTermSingleUse(database))
                     {
+                        var context = queryContext.Documents;
+
                         using (var tx = context.OpenWriteTransaction())
                         {
                             using (var doc = CreateDocument(context, "orders/1", new DynamicJsonValue
@@ -104,12 +106,12 @@ select new
 
                         }
 
-                        queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), queryContext, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
                     }
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(database))
                     {
                         queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Product = 'Milk'"), context, OperationCancelToken.None);
 

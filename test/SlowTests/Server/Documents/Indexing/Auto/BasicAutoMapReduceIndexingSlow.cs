@@ -59,7 +59,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}'"), context, OperationCancelToken.None);
 
@@ -77,7 +77,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                     Assert.Equal(41L, result["Age"]);
                 }
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count BETWEEN 2 AND 10"), context,
                         OperationCancelToken.None);
@@ -85,9 +85,8 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                     Assert.Equal(1, queryResult.Results.Count);
                 }
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
-
                     var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count >= 10"), context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);

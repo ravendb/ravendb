@@ -36,7 +36,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}'"), context, OperationCancelToken.None);
 
@@ -52,14 +52,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(2L, count);
                 }
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count BETWEEN 2 AND 10"), context,
                         OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
                 }
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count >= 10"), context, OperationCancelToken.None);
 
@@ -91,7 +91,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(batchStats.ReduceAttempts, batchStats.ReduceSuccesses);
                 Assert.Equal(0, batchStats.ReduceErrors);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'")
                     {
@@ -129,7 +129,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // index 10 users
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
@@ -154,7 +154,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // one document deleted
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
@@ -171,7 +171,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // document added again
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
@@ -199,7 +199,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // all documents removed
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
@@ -213,7 +213,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // documents added back
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
@@ -360,7 +360,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE ShipTo.Country = 'Poland'"), context, OperationCancelToken.None);
 
@@ -458,7 +458,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
@@ -494,7 +494,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
@@ -533,7 +533,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
@@ -569,7 +569,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide("FROM Users ORDER BY Location"), context, OperationCancelToken.None);
 
@@ -616,7 +616,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                using (var context = QueryOperationContext.ShortTermSingleUse(db))
                 {
                     var results = (await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None)).Results;
 
@@ -626,7 +626,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 }
                 for (int i = 0; i < 6; i++)
                 {
-                    using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                    using (var context = QueryOperationContext.ShortTermSingleUse(db))
                     {
                         var employeeNumber = i % 2 + 1;
                         var companyNumber = i % 3 + 1;

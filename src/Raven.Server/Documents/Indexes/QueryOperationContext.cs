@@ -14,6 +14,14 @@ namespace Raven.Server.Documents.Indexes
         private IDisposable _releaseDocuments;
         private IDisposable _releaseServer;
 
+        /// <summary>
+        /// For testing purposes only
+        /// </summary>
+        private QueryOperationContext(DocumentsOperationContext documentsContext)
+        {
+            _releaseDocuments = Documents = documentsContext;
+        }
+
         private QueryOperationContext(DocumentsOperationContext documentsContext, Index index)
         {
             if (documentsContext is null)
@@ -117,6 +125,16 @@ namespace Raven.Server.Documents.Indexes
         public static QueryOperationContext Allocate(DocumentDatabase database, bool needsServerContext = false)
         {
             return new QueryOperationContext(database, needsServerContext);
+        }
+
+        /// <summary>
+        /// For testing purposes only
+        /// </summary>
+        public static QueryOperationContext ShortTermSingleUse(DocumentDatabase database)
+        {
+            var documentsContext = DocumentsOperationContext.ShortTermSingleUse(database);
+
+            return new QueryOperationContext(documentsContext);
         }
 
         private struct DisposeTransactions : IDisposable
