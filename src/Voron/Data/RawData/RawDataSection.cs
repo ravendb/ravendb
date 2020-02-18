@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Sparrow;
 using Voron.Exceptions;
 using Voron.Global;
@@ -24,7 +25,33 @@ namespace Voron.Data.RawData
         public struct RawDataEntrySizes
         {
             public short AllocatedSize;
-            public short UsedSize;
+            public short UsedSize_Buffer;
+
+            public const short CompressedFlagMask = unchecked((short)(1 << 15));
+            public const short ValueOnlyMask = ~CompressedFlagMask;
+
+            public void Freed()
+            {
+                UsedSize_Buffer = -1;
+            }
+
+            public bool IsCompressed
+            {
+                get => (UsedSize_Buffer & CompressedFlagMask) != 0;
+                set
+                {
+                    if (value)
+                        UsedSize_Buffer |= CompressedFlagMask;
+                    else
+                        UsedSize_Buffer &= ~CompressedFlagMask;
+                }
+            }
+
+            public short UsedSize
+            {
+                get => (short)(UsedSize_Buffer & ValueOnlyMask);
+                set => UsedSize_Buffer = (short)(UsedSize_Buffer & ValueOnlyMask);
+            }
         }
 
         public RawDataSection(LowLevelTransaction tx, long pageNumber)
@@ -75,11 +102,17 @@ namespace Voron.Data.RawData
                 return actualSection.GetAllIdsInSectionContaining(id);
             }
 
+            return GetAllIdsInSection();
+        }
+
+        public List<long> GetAllIdsInSection()
+        {
             var ids = new List<long>(_sectionHeader->NumberOfEntries);
             for (int i = 0; i < _sectionHeader->NumberOfPages && ids.Count < _sectionHeader->NumberOfEntries; i++)
             {
                 FillAllIdsInPage(_sectionHeader->PageNumber + i, ids);
             }
+
             return ids;
         }
 
@@ -144,16 +177,15 @@ namespace Voron.Data.RawData
                     pageNumberInSection <= _sectionHeader->PageNumber + _sectionHeader->NumberOfPages);
         }
 
-        public bool TryWrite(long id, byte* data, int size)
+        public bool TryWrite(long id, byte* data, int size, bool compressed)
         {
-            byte* writePos;
-            if (!TryWriteDirect(id, size, out writePos))
+            if (!TryWriteDirect(id, size, compressed, out var writePos))
                 return false;
             Memory.Copy(writePos, data, size);
             return true;
         }
 
-        public bool TryWriteDirect(long id, int size, out byte* writePos)
+        public bool TryWriteDirect(long id, int size, bool compressed, out byte* writePos)
         {
             if (_tx.Flags == TransactionFlags.Read)
                 ThrowReadOnlyTransaction(id);
@@ -185,21 +217,24 @@ namespace Voron.Data.RawData
             pageHeader = ModifyPage(pageHeader);
             writePos = ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
             // note that we have to do this calc again, pageHeader might have changed
-            ((RawDataEntrySizes*)((byte*)pageHeader + posInPage))->UsedSize = (short)size;
+            var entry = ((RawDataEntrySizes*)((byte*)pageHeader + posInPage));
+            entry->UsedSize_Buffer = (short)size;
+            entry->IsCompressed = compressed;
 
             return true;
         }
 
-        public byte* DirectRead(long id, out int size)
+        public byte* DirectRead(long id, out int size, out bool compressed)
         {
-            return DirectRead(_tx, id, out size);
+            return DirectRead(_tx, id, out size, out compressed);
         }
 
-        public static byte* DirectRead(LowLevelTransaction tx, long id, out int size)
+        public static byte* DirectRead(LowLevelTransaction tx, long id, out int size, out bool compressed)
         {
             RawDataEntrySizes* sizes = GetRawDataEntrySizeFor(tx, id);
 
             size = sizes->UsedSize;
+            compressed = sizes->IsCompressed;
             return (byte*)sizes + sizeof(RawDataEntrySizes);
         }
 
@@ -300,7 +335,7 @@ namespace Voron.Data.RawData
             if (sizes->UsedSize < 0)
                 VoronUnrecoverableErrorException.Raise(_tx, $"Asked to free a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
-            sizes->UsedSize = -1;
+            sizes->Freed();
             Memory.Set((byte*)pageHeader + posInPage + sizeof(RawDataEntrySizes), 0, sizes->AllocatedSize);
             pageHeader->NumberOfEntries--;
 
@@ -358,7 +393,7 @@ namespace Voron.Data.RawData
             throw new InvalidOperationException($"Attempted to modify page {id} in a read only transaction");
         }
 
-        private static void ThrowInvalidPage(long id)
+        protected static void ThrowInvalidPage(long id)
         {
             throw new InvalidOperationException($"Page {id} is not a raw data section page");
         }
