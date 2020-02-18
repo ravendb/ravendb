@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Thread.Sleep(100000);
+                Thread.Sleep(1000000);
                 WaitForIndexing(store);
             }
         }

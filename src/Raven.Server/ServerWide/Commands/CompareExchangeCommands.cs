@@ -20,16 +20,12 @@ namespace Raven.Server.ServerWide.Commands
         private string _actualKey;
         public bool FromBackup;
 
-        protected string ActualKey => _actualKey ?? (_actualKey = GetActualKey(Database, Key));
+        protected string ActualKey => _actualKey ?? (_actualKey = CompareExchangeKey.GetStorageKey(Database, Key));
 
         public long Index;
+
         [JsonDeserializationIgnore]
         public JsonOperationContext ContextToWriteResult;
-
-        public static string GetActualKey(string database, string key)
-        {
-            return (database + "/" + key).ToLowerInvariant();
-        }
 
         protected CompareExchangeCommandBase() { }
 

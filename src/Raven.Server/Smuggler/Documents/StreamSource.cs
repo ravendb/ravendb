@@ -401,12 +401,12 @@ namespace Raven.Server.Smuggler.Documents
             return databaseRecord;
         }
 
-        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
+        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues()
         {
             return InternalGetCompareExchangeValues();
         }
 
-        public IEnumerable<string> GetCompareExchangeTombstones()
+        public IEnumerable<CompareExchangeKey> GetCompareExchangeTombstones()
         {
             return InternalGetCompareExchangeTombstones();
         }
@@ -552,7 +552,7 @@ namespace Raven.Server.Smuggler.Documents
             parser.SetBuffer(value.Buffer, value.Size);
         }
 
-        private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCompareExchangeValues()
+        private IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValues()
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))
@@ -578,7 +578,7 @@ namespace Raven.Server.Smuggler.Documents
                         parser.Read();
                         builder.Read();
                         builder.FinalizeDocument();
-                        yield return (key, 0, builder.CreateReader());
+                        yield return (new CompareExchangeKey(key), 0, builder.CreateReader());
 
                         builder.Renew("import/cmpxchg", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                     }
@@ -586,7 +586,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<string> InternalGetCompareExchangeTombstones()
+        private IEnumerable<CompareExchangeKey> InternalGetCompareExchangeTombstones()
         {
             foreach (var reader in ReadArray())
             {
@@ -600,7 +600,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    yield return key;
+                    yield return new CompareExchangeKey(key);
                 }
             }
         }

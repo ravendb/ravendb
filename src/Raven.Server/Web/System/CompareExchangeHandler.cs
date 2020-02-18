@@ -41,7 +41,7 @@ namespace Raven.Server.Web.System
             var pageSize = GetPageSize();
 
             var startsWithKey = GetStringQueryString("startsWith", false);
-            var items = ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, Database.Name, CompareExchangeCommandBase.GetActualKey(Database.Name, startsWithKey), start, pageSize);
+            var items = ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, Database.Name, CompareExchangeKey.GetStorageKey(Database.Name, startsWithKey), start, pageSize);
 
             var numberOfResults = 0;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -81,7 +81,7 @@ namespace Raven.Server.Web.System
             var items = new List<(string Key, long Index, BlittableJsonReaderObject Value)>(keys.Count);
             foreach (var key in keys)
             {
-                var item = ServerStore.Cluster.GetCompareExchangeValue(context, CompareExchangeCommandBase.GetActualKey(Database.Name, key));
+                var item = ServerStore.Cluster.GetCompareExchangeValue(context, CompareExchangeKey.GetStorageKey(Database.Name, key));
                 if (item.Value == null && keys.Count == 1)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

@@ -28,6 +28,7 @@ using Version = Lucene.Net.Util.Version;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide.Commands;
 using Sparrow;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -437,7 +438,7 @@ namespace Raven.Server.Documents.Queries
                     if (v.Type != ValueTokenType.String)
                         throw new InvalidQueryException("Expected value of type string, but got: " + v.Type, query.QueryText, parameters);
 
-                    var prefix = CompareExchangeCommandBase.GetActualKey(documentsContext.DocumentDatabase.Name, v.Value.ToString());
+                    var prefix = CompareExchangeKey.GetStorageKey(documentsContext.DocumentDatabase.Name, v.Value.ToString());
                     object value = null;
                     server.Cluster.GetCompareExchangeValue(serverContext, prefix).Value?.TryGetMember("Object", out value);
 

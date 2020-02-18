@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeFromPrefix(serverContext, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize)
                 .Select(x =>
                 {
-                    _reference.Key = serverContext.GetLazyString(x.Key);
+                    _reference.Key = x.Key.StorageKey;
                     _reference.Etag = x.Index;
 
                     return _reference;

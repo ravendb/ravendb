@@ -357,14 +357,14 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<(string Prefix, long Value, long Index)>();
         }
 
-        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
+        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues()
         {
-            return Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
+            return Enumerable.Empty<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)>();
         }
 
-        public IEnumerable<string> GetCompareExchangeTombstones()
+        public IEnumerable<CompareExchangeKey> GetCompareExchangeTombstones()
         {
-            return Enumerable.Empty<string>();
+            return Enumerable.Empty<CompareExchangeKey>();
         }
 
         public IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions)
