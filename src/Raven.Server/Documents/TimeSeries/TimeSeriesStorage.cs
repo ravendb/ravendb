@@ -573,13 +573,6 @@ namespace Raven.Server.Documents.TimeSeries
 
                 _from = EnsureMillisecondsPrecision(from);
                 _to = EnsureMillisecondsPrecision(to);
-
-                if (_offset.HasValue)
-                {
-                    _from = _from.Add(_offset.Value);
-                    _to = _to.Add(_offset.Value);
-                }
-
             }
         
             internal bool Init()

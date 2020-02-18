@@ -53,6 +53,12 @@ namespace Raven.Server.Documents.Queries.Results
             var min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
             var max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
 
+            if (timeSeriesFunction.Offset.HasValue)
+            {
+                min = min.Add(timeSeriesFunction.Offset.Value);
+                max = max.Add(timeSeriesFunction.Offset.Value);
+            }
+
             long count = 0;
             var array = new DynamicJsonArray();
             var reader = tss.GetReader(_context, documentId, source, min, max, timeSeriesFunction.Offset);
@@ -105,8 +111,8 @@ namespace Raven.Server.Documents.Queries.Results
                     array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
                 }
 
-                start = rangeSpec.GetRangeStart(ts, hasOffset: timeSeriesFunction.Offset.HasValue);
-                next = rangeSpec.GetNextRangeStart(start, hasOffset: timeSeriesFunction.Offset.HasValue);
+                start = rangeSpec.GetRangeStart(ts);
+                next = rangeSpec.GetNextRangeStart(start);
 
                 for (int i = 0; i < aggStates.Length; i++)
                 {
