@@ -462,9 +462,9 @@ namespace FastTests
                 }
             }
 
-            private bool _runInMemory = true;
+            private bool? _runInMemory = null;
 
-            public bool RunInMemory
+            public bool? RunInMemory
             {
                 get => _runInMemory;
                 set
@@ -577,7 +577,11 @@ namespace FastTests
                 configuration.Licensing.EulaAccepted = true;
 
                 if (hasRunInMemory == false)
-                    configuration.Core.RunInMemory = options.RunInMemory;
+                {
+                    configuration.Core.RunInMemory = options.RunInMemory == null || options.RunInMemory.Value;
+                }
+                else if (options.RunInMemory != null)
+                    ThrowOnDuplicateConfiguration(nameof(ServerCreationOptions.RunInMemory));
 
                 if (hasServerUrls == false)
                     configuration.Core.ServerUrls = new[] { "http://127.0.0.1:0" };
@@ -598,7 +602,7 @@ namespace FastTests
                     configuration.Core.DataDirectory = configuration.Core.DataDirectory.Combine(dataDirectory);
                 }
                 else if (options.DataDirectory != null)
-                    throw new InvalidOperationException($"You cannot set DataDirectory in both, {nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.CustomSettings)} and {nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.DataDirectory)}");
+                    ThrowOnDuplicateConfiguration(nameof(ServerCreationOptions.DataDirectory));
 
                 if (hasFeaturesAvailability == false)
                     configuration.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
@@ -626,6 +630,11 @@ namespace FastTests
 
                 return server;
             }
+        }
+
+        private void ThrowOnDuplicateConfiguration(string config)
+        {
+            throw new InvalidOperationException($"You cannot set {config} in both, {nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.CustomSettings)} and {nameof(ServerCreationOptions)}.{config}");
         }
 
         protected static string UseFiddlerUrl(string url)
