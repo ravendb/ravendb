@@ -31,6 +31,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private bool? _isSideBySide;
 
         protected HandleReferences _handleReferences;
+        private HandleCompareExchangeReferences _handleCompareExchangeReferences;
 
         protected readonly Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper>();
 
@@ -333,8 +334,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
 
-            //if (_compiled.HasCompareExchange)
-            //    workers.Add(_handleReferences = new HandleCompareExchangeReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+            if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
+                workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
@@ -347,7 +348,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (_referencedCollections.Count > 0)
+            if (_handleCompareExchangeReferences != null)
+                _handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+
+            if (_handleReferences != null)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
 
             base.HandleDelete(tombstone, collection, writer, indexContext, stats);
@@ -392,7 +396,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 }
             }
 
-            if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
+            if (isStale && (stalenessReasons == null || (_handleReferences == null && _handleCompareExchangeReferences == null)))
                 return isStale;
 
             return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
@@ -412,12 +416,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         protected override unsafe long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             QueryMetadata query, bool isStale)
         {
-            if (_referencedCollections.Count == 0)
+            if (_handleReferences == null && _handleCompareExchangeReferences == null)
                 return base.CalculateIndexEtag(queryContext, indexContext, query, isStale);
 
             var minLength = MinimumSizeForCalculateIndexEtagLength(query);
-            var length = minLength +
-                         sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+            var length = minLength;
+
+            if (_handleReferences != null)
+                length += sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+
+            if (_handleCompareExchangeReferences != null)
+                length += sizeof(long) * 4 * (Collections.Count * 1); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             var indexEtagBytes = stackalloc byte[length];
 

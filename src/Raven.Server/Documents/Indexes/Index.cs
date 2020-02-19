@@ -2897,6 +2897,7 @@ namespace Raven.Server.Documents.Indexes
             AssertIndexState();
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+            using (queryContext.OpenReadTransaction())
             using (var tx = indexContext.OpenReadTransaction())
             {
                 var result = new TermsQueryResultServerSide
