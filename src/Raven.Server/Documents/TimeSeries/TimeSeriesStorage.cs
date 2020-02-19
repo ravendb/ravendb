@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             // return slice of: doc/name/
 
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentIdSlice))
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentIdSlice, SpecialChars.RecordSeparator))
             using (DocumentIdWorker.GetLower(context.Allocator, name, out var timeSeriesNameSlice))
             using (context.Allocator.Allocate(documentIdSlice.Size + timeSeriesNameSlice.Size + 1 /* separator */,
                 out ByteString timeSeriesKeyBuffer))
