@@ -148,25 +148,25 @@ namespace Raven.Server.Documents.Indexes
                     if (lastIndexedEtag > 0)
                     {
                         var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
-                        var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection: null);
+                        var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
 
                         if (lastCompareExchangeEtag > lastProcessedReferenceEtag)
                         {
                             if (stalenessReasons == null)
                                 return true;
 
-                            // TODO [ppekrol] staleness reasons
+                            stalenessReasons.Add($"There are still some compare exchange references to process for collection '{collection}'. The last compare exchange etag is '{lastCompareExchangeEtag:#,#;;0}' but last processed compare exchange etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
                         }
 
                         var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
-                        var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: null);
+                        var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
 
                         if (lastTombstoneEtag > lastProcessedTombstoneEtag)
                         {
                             if (stalenessReasons == null)
                                 return true;
 
-                            // TODO [ppekrol] staleness reasons
+                            stalenessReasons.Add($"There are still some compare exchange tombstone references to process for collection '{collection}'. The last compare exchange tombstone etag is '{lastTombstoneEtag:#,#;;0}' but last processed compare exchange tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.");
                         }
                     }
                 }

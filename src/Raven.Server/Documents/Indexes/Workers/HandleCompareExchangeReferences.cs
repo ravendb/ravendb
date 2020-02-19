@@ -6,9 +6,17 @@ namespace Raven.Server.Documents.Indexes.Workers
 {
     public class HandleCompareExchangeReferences : HandleDocumentReferences
     {
-        public HandleCompareExchangeReferences(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
-            : base(index, CreateReferencedCollections(index), documentsStorage, indexStorage, indexStorage.ReferencesForCompareExchange, configuration)
+        private readonly HashSet<string> _collectionsWithCompareExchangeReferences;
+
+        private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>
         {
+            IndexStorage.CompareExchangeReferences.CompareExchange
+        };
+
+        public HandleCompareExchangeReferences(Index index, HashSet<string> collectionsWithCompareExchangeReferences, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
+            : base(index, null, documentsStorage, indexStorage, indexStorage.ReferencesForCompareExchange, configuration)
+        {
+            _collectionsWithCompareExchangeReferences = collectionsWithCompareExchangeReferences;
         }
 
         protected override IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
@@ -35,18 +43,16 @@ namespace Raven.Server.Documents.Indexes.Workers
                 });
         }
 
-        private static Dictionary<string, HashSet<CollectionName>> CreateReferencedCollections(Index index)
+        protected override bool TryGetReferencedCollectionsFor(string collection, out HashSet<CollectionName> referencedCollections)
         {
-            var referencedCollections = new Dictionary<string, HashSet<CollectionName>>();
-            foreach (var collection in index.Collections)
+            if (_collectionsWithCompareExchangeReferences.Contains(collection))
             {
-                if (referencedCollections.TryGetValue(collection, out HashSet<CollectionName> set) == false)
-                    referencedCollections[collection] = set = new HashSet<CollectionName>();
-
-                set.Add(new CollectionName("CompareExchange"));
+                referencedCollections = _referencedCollections;
+                return true;
             }
 
-            return referencedCollections;
+            referencedCollections = null;
+            return false;
         }
     }
 }

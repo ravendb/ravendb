@@ -6,7 +6,9 @@ using System.Threading;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,9 +25,16 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                new Index_With_CompareExchange().Execute(store);
+                var index = new Index_With_CompareExchange();
+                var indexName = index.IndexName;
+                index.Execute(store);
 
                 WaitForIndexing(store);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
 
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -34,7 +43,40 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Contains("There are still some documents to process from collection", staleness.StalenessReasons[0]);
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
                 WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue<Address>("companies/cf", new Address { City = "Torun" });
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[0]);
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -44,7 +86,18 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(2, staleness.StalenessReasons.Count);
+                Assert.Contains("There are still some documents to process from collection", staleness.StalenessReasons[0]);
+                Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[1]);
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
                 WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
             }
         }
 
