@@ -124,9 +124,9 @@ namespace Raven.Server.Documents.TimeSeries
         private void UpdateTotalCountStats(DocumentsOperationContext context, string docId, string name, long count)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree(TimeSeriesStats);
-            using (GetTimeSeriesFullName(context, docId, name, out var slice))
+            using (var slicer = new TimeSeriesSlicer(context, docId, name, default))
             {
-                tree.Increment(slice, count);
+                tree.Increment(slicer.TimeSeriesPrefixSlice, count);
             }
         }
 
@@ -134,9 +134,10 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var tree = context.Transaction.InnerTransaction.CreateTree(TimeSeriesStats);
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
-            
-            using (GetTimeSeriesFullName(context, docId, name, out var slice))
+
+            using (var slicer = new TimeSeriesSlicer(context, docId, name, default))
             {
+                var slice = slicer.TimeSeriesPrefixSlice;
                 var count = tree.Read(slice).Reader.ReadLittleEndianInt64();
                 var start = DateTime.MinValue;
                 var end = DateTime.MaxValue;
@@ -175,27 +176,6 @@ namespace Raven.Server.Documents.TimeSeries
             var timeSlice = span.Slice(span.Length - sizeof(long), sizeof(long));
             var baseline = Bits.SwapBytes(MemoryMarshal.Read<long>(timeSlice));
             return new DateTime(baseline * 10_000);
-        }
-
-        private ByteStringContext<ByteStringMemoryCache>.ExternalScope GetTimeSeriesFullName(DocumentsOperationContext context, string docId, string name, out Slice keySlice)
-        {
-            // return slice of: doc/name/
-
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentIdSlice, SpecialChars.RecordSeparator))
-            using (DocumentIdWorker.GetLower(context.Allocator, name, out var timeSeriesNameSlice))
-            using (context.Allocator.Allocate(documentIdSlice.Size + timeSeriesNameSlice.Size + 1 /* separator */,
-                out ByteString timeSeriesKeyBuffer))
-            {
-                documentIdSlice.CopyTo(timeSeriesKeyBuffer.Ptr);
-                var pos = documentIdSlice.Size;
-                timeSeriesKeyBuffer.Ptr[pos++] = SpecialChars.RecordSeparator;
-
-                timeSeriesNameSlice.CopyTo(timeSeriesKeyBuffer.Ptr + pos);
-                pos += timeSeriesNameSlice.Size;
-                timeSeriesKeyBuffer.Ptr[pos++] = SpecialChars.RecordSeparator;
-
-                return Slice.External(context.Allocator, timeSeriesKeyBuffer.Ptr, pos, out keySlice);
-            }
         }
 
         public long PurgeSegmentsAndDeletedRanges(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
