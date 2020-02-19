@@ -26,7 +26,7 @@ namespace Sparrow.Json
             _perCoreContexts = new T[Environment.ProcessorCount][];
             for (int i = 0; i < _perCoreContexts.Length; i++)
             {
-                _perCoreContexts[i] = new T[2];
+                _perCoreContexts[i] = new T[64];
             }
             _idleTimer = new Timer(IdleTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
@@ -216,15 +216,6 @@ namespace Sparrow.Json
                 if (core[i] != null)
                     continue;
                 if (Interlocked.CompareExchange(ref core[i], context, null) == null)
-                    return;
-            }
-
-            if (core.Length < 64)
-            {
-                var newCore = new T[core.Length * 2];
-                Array.Copy(core, 0, newCore, 0, core.Length);
-                newCore[core.Length] = context;
-                if (Interlocked.CompareExchange(ref _perCoreContexts[currentProcessorId], newCore, core) == core)
                     return;
             }
 
