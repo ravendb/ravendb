@@ -274,33 +274,39 @@
 </script>
 
 <script type="text/html" id="settings-template">
-    <div class="padding">
-        <div class="panel padding padding-xs">
-            <div class="btn-group btn-group-toggle" data-toggle="buttons">
-                <h4>Patching behavior for stale indexes:</h4>
-                <div class="radio">
-                    <input id="allowPatchingStaleIndex" type="radio" data-bind="checked: staleIndexBehvior" name="staleBehavior" value="patchStale">
-                    <label for="allowPatchingStaleIndex">Patch immediately</label>
+    <div class="padding padding-xs">
+        <div class="margin-left margin-left-lg">
+            <strong><h4>Patching behavior for stale indexes:</h4></strong>
+            <div class="radio">
+                <input id="allowPatchingStaleIndex" type="radio" data-bind="checked: staleIndexBehavior" name="staleBehavior" value="patchStale">
+                <label for="allowPatchingStaleIndex">Patch immediately</label>
+            </div>
+            <div class="radio margin-bottom margin-bottom-sm">
+                <input id="timeToWaitForNonStale" type="radio" data-bind="checked: staleIndexBehavior" name="staleBehavior" value="timeoutDefined">
+                <label for="timeToWaitForNonStale">Define timeout to wait for index to become non-stale</label>
+                <div class="margin-left margin-left-lg" data-bind="collapse: staleIndexBehavior() === 'timeoutDefined'">
+                    <input type="text" class="form-control" data-bind="durationPicker: staleTimeout, durationPickerOptions: { showDays: false, showSeconds: true }" />
                 </div>
-                <div class="radio margin-bottom margin-bottom-sm">
-                    <input id="timeToWaitForNonStale" type="radio" data-bind="checked: staleIndexBehvior" name="staleBehavior" value="timeoutDefined">
-                    <label for="timeToWaitForNonStale">Define timeout to wait for index to become non-stale</label>
-                    <div class="margin-radio" data-bind="collapse: staleIndexBehvior() === 'timeoutDefined'">
-                        <input type="text" class="form-control" data-bind="durationPicker: staleTimeout, durationPickerOptions: { showDays: false, showSeconds: true }" />
-                    </div>
-                    <div class="margin-radio">
-                        <span data-bind="visible: staleIndexBehvior() === 'timeoutDefined'">(An exception is thrown when timeout has passed)</span>
-                    </div>
+                <div class="margin-left margin-left-lg margin-top margin-top-sm" data-bind="visible: staleIndexBehavior() === 'timeoutDefined'">
+                    <small><i class="icon-warning"></i>  An exception is thrown when timeout has passed</small>
                 </div>
             </div>
         </div>
-        <div class="panel padding padding-xs">
-            <div class="toggle toggle-primary margin-left margin-left-sm margin-top margin-top-sm">
+    </div>
+    <hr class="margin-left margin-left-lg margin-right margin-right-lg">
+    <div class="padding padding-xs">
+        <div class="margin-left margin-left-lg">
+            <div class="toggle toggle-primary">
                 <input id="maxOperations" class="styled" type="checkbox" data-bind="checked: defineMaxOperationsPerSecond">
-                <label for="maxOperations">Define max number of operations per second </label>
+                <label for="maxOperations">Limit number of operations</label>
             </div>
-            <div class="margin-toggle margin-bottom margin-right" data-bind="collapse: defineMaxOperationsPerSecond">
-                <input type="number" min="1" class="form-control" data-bind="numericInput: maxOperationsPerSecond" />
+            <div class="margin-left margin-right margin-right-lg" data-bind="collapse: defineMaxOperationsPerSecond">
+                <div class="margin-left margin-left-lg margin-right margin-bottom">
+                    <div class="input-group">
+                        <input id="operationsPerSecond" type="number" min="1" class="form-control input-border" data-bind="numericInput: maxOperationsPerSecond" placeholder="Max operations"/>
+                        <div class="input-group-addon input-border">per second</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
