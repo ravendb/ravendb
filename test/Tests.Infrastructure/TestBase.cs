@@ -291,12 +291,7 @@ namespace FastTests
 
                 if (_doNotReuseServer)
                 {
-                    bool runInMemory = true;
-
-                    if (_customServerSettings != null && _customServerSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.RunInMemory)))
-                        runInMemory = bool.Parse(_customServerSettings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)]);
-
-                    UseNewLocalServer(runInMemory: runInMemory);
+                    UseNewLocalServer();
                     _doNotReuseServer = false;
 
                     return _localServer;
@@ -418,7 +413,7 @@ namespace FastTests
             }
         }
 
-        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool runInMemory = true, string customConfigPath = null, [CallerMemberName]string caller = null)
+        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool? runInMemory = null, string customConfigPath = null, [CallerMemberName]string caller = null)
         {
             if (_localServer != _globalServer && _globalServer != null)
                 _localServer?.Dispose();
@@ -542,6 +537,7 @@ namespace FastTests
         }
 
         private static readonly ConcurrentDictionary<RavenServer, string> LeakedServers = new ConcurrentDictionary<RavenServer, string>();
+
         protected virtual RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
         {
             if (options == null)
@@ -577,9 +573,7 @@ namespace FastTests
                 configuration.Licensing.EulaAccepted = true;
 
                 if (hasRunInMemory == false)
-                {
-                    configuration.Core.RunInMemory = options.RunInMemory == null || options.RunInMemory.Value;
-                }
+                    configuration.Core.RunInMemory = options.RunInMemory ?? true;
                 else if (options.RunInMemory != null)
                     ThrowOnDuplicateConfiguration(nameof(ServerCreationOptions.RunInMemory));
 
@@ -726,7 +720,7 @@ namespace FastTests
                     server.Dispose();
                 });
             }
-            
+
             ServersForDisposal = null;
 
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
