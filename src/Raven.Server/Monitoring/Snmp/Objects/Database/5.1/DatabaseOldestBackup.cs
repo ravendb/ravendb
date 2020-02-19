@@ -1,7 +1,5 @@
 using System;
-using System.Linq;
 using Lextm.SharpSnmpLib;
-using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
@@ -59,26 +57,31 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                 if (periodicBackupTaskIds == null || periodicBackupTaskIds.Count == 0)
                     return null; // no backup
 
+                var lastBackup = DateTime.MinValue;
+
                 foreach (var periodicBackupTaskId in periodicBackupTaskIds)
                 {
                     var status = PeriodicBackupRunner.GetBackupStatusFromCluster(serverStore, context, databaseName, periodicBackupTaskId);
                     if (status == null)
-                        return DateTime.MinValue; // we have a backup task but no backup was ever done?
+                        continue; // we have a backup task but no backup was ever done
 
-                    if (status.LastFullBackup == null)
-                        return DateTime.MinValue; // we never did a full backup
-
-                    if (status.LastIncrementalBackup != null)
-                    {
-                        return status.LastFullBackup > status.LastIncrementalBackup
-                            ? status.LastFullBackup
-                            : status.LastIncrementalBackup;
-                    }
-
-                    return status.LastFullBackup;
+                    var currentLatestBackup = LastBackupDate(status.LastFullBackup, status.LastIncrementalBackup);
+                    if (currentLatestBackup > lastBackup)
+                        lastBackup = currentLatestBackup;
                 }
 
-                return null;
+                return lastBackup;
+
+                static DateTime LastBackupDate(DateTime? fullBackup, DateTime? incrementalBackup)
+                {
+                    if (fullBackup == null)
+                        return DateTime.MinValue; // we never did a full backup
+
+                    if (incrementalBackup == null)
+                        return fullBackup.Value; // no incremental backup
+
+                    return incrementalBackup > fullBackup ? incrementalBackup.Value : fullBackup.Value;
+                }
             }
         }
     }
