@@ -736,6 +736,8 @@ namespace Raven.Server.Rachis
 
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += 
+                () => CurrentState = rachisState; //  we need this to happened while we still under the write lock
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
@@ -752,8 +754,6 @@ namespace Raven.Server.Rachis
                             Log.Info("Before state change invocation function failed.", e);
                         }
                     }
-
-                    CurrentState = rachisState;
 
                     try
                     {
