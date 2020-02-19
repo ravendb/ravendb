@@ -508,10 +508,10 @@ namespace Raven.Server.Web.System
             ClusterTopology clusterTopology)
         {
             var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(taskId);
-            var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus);
+            var responsibleNodeTag = Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
+            var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
             var onGoingBackup = Database.PeriodicBackupRunner.OnGoingBackup(taskId);
             var backupDestinations = backupConfiguration.GetDestinations();
-            var tag = Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
 
             return new OngoingTaskBackup
             {
@@ -526,13 +526,13 @@ namespace Raven.Server.Web.System
                 NextBackup = nextBackup,
                 TaskConnectionStatus = backupConfiguration.Disabled
                     ? OngoingTaskConnectionStatus.NotActive
-                    : tag == ServerStore.NodeTag
+                    : responsibleNodeTag == ServerStore.NodeTag
                         ? OngoingTaskConnectionStatus.Active
                         : OngoingTaskConnectionStatus.NotOnThisNode,
                 ResponsibleNode = new NodeId
                 {
-                    NodeTag = tag,
-                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                    NodeTag = responsibleNodeTag,
+                    NodeUrl = clusterTopology.GetUrlFromTag(responsibleNodeTag)
                 },
                 BackupDestinations = backupDestinations,
                 RetentionPolicy = backupConfiguration.RetentionPolicy,

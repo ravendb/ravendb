@@ -111,6 +111,8 @@ namespace SlowTests.Cluster
         public async Task NextIdentityForOperationShouldBroadcast()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "15";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "15";
 
             var database = GetDatabaseName();
             var numberOfNodes = 3;
