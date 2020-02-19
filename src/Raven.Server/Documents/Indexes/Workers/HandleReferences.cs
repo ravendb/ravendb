@@ -48,22 +48,37 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
     }
 
-    public abstract class HandleReferences : IIndexingWork
+    public abstract class HandleReferences : HandleReferencesBase
+    {
+        private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollections;
+
+        protected HandleReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexStorage.ReferencesBase referencesStorage, IndexingConfiguration configuration)
+            : base(index, documentsStorage, indexStorage, referencesStorage, configuration)
+        {
+            _referencedCollections = referencedCollections;
+        }
+
+        protected override bool TryGetReferencedCollectionsFor(string collection, out HashSet<CollectionName> referencedCollections)
+        {
+            return _referencedCollections.TryGetValue(collection, out referencedCollections);
+        }
+    }
+
+    public abstract class HandleReferencesBase : IIndexingWork
     {
         private readonly Logger _logger;
 
         private readonly Index _index;
-        private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollections;
+
         protected readonly DocumentsStorage _documentsStorage;
         private readonly IndexingConfiguration _configuration;
         protected readonly IndexStorage _indexStorage;
         protected readonly IndexStorage.ReferencesBase _referencesStorage;
         protected readonly Reference _reference = new Reference();
 
-        public HandleReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexStorage.ReferencesBase referencesStorage, IndexingConfiguration configuration)
+        protected HandleReferencesBase(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexStorage.ReferencesBase referencesStorage, IndexingConfiguration configuration)
         {
             _index = index;
-            _referencedCollections = referencedCollections;
             _documentsStorage = documentsStorage;
             _configuration = configuration;
             _indexStorage = indexStorage;
@@ -109,6 +124,8 @@ namespace Raven.Server.Documents.Indexes.Workers
             return true;
         }
 
+        protected abstract bool TryGetReferencedCollectionsFor(string collection, out HashSet<CollectionName> referencedCollections);
+
         private unsafe bool HandleItems(ActionType actionType, QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
@@ -116,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             foreach (var collection in _index.Collections)
             {
-                if (_referencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
+                if (TryGetReferencedCollectionsFor(collection, out var referencedCollections) == false)
                     continue;
 
                 if (lastIndexedEtagsByCollection == null)

@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
 
             if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
-                workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
         internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
-            if (isStale && (stalenessReasons == null || _referencedCollections.Count == 0 || _compiled.CollectionsWithCompareExchangeReferences.Count == 0))
+            if (isStale && (stalenessReasons == null || (_handleReferences == null && _handleCompareExchangeReferences == null)))
                 return isStale;
 
             return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, stalenessReasons) || isStale;

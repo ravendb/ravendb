@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.Indexes
 
         public class DocumentReferences : ReferencesBase
         {
-            public DocumentReferences() 
+            public DocumentReferences()
                 : base(IndexSchema.References, Constants.DocumentReferencePrefix, Constants.DocumentReferenceTombstonePrefix, Constants.DocumentReferenceCollectionPrefix)
             {
             }
@@ -314,6 +314,8 @@ namespace Raven.Server.Documents.Indexes
 
         public class CompareExchangeReferences : ReferencesBase
         {
+            public static CollectionName CompareExchange = new CollectionName(nameof(CompareExchange));
+
             public CompareExchangeReferences()
                 : base(IndexSchema.ReferencesForCompareExchange, Constants.CompareExchangeReferencePrefix, Constants.CompareExchangeReferenceTombstonePrefix, Constants.CompareExchangeReferenceCollectionPrefix)
             {
