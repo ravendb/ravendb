@@ -2,12 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
@@ -383,7 +381,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             var minLength = MinimumSizeForCalculateIndexEtagLength(query);
             var length = minLength +
-                         sizeof(long) * 2 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags and last processed reference collection etags
+                         sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             var indexEtagBytes = stackalloc byte[length];
 
@@ -432,7 +430,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         indexContext.IgnoreStalenessDueToReduceOutputsToDelete = false;
                     }
                 }
-
             }
         }
 
