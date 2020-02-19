@@ -3,17 +3,17 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 interface patchCommandOptions {
-    test: boolean;
+    test?: boolean;
     documentId?: string;
+    allowStale?: boolean;
+    staleTimeout?: string;
+    maxOpsPerSecond?: number;
 }
 
 class patchCommand extends commandBase {
 
-    constructor(private queryStr: string, 
-                private db: database, 
-                private queryOptions?: Raven.Client.Documents.Queries.QueryOperationOptions, 
-                private options: patchCommandOptions = null) {
-        super();       
+    constructor(private queryStr: string, private db: database, private options: patchCommandOptions = null) {
+        super();
                 
         this.options = this.options || {
             test: false,
@@ -24,10 +24,9 @@ class patchCommand extends commandBase {
     execute(): JQueryPromise<operationIdDto> {
 
         const args = {
-            allowStale: this.queryOptions.AllowStale,
-            staleTimeout: this.queryOptions.StaleTimeout,
-            maxOpsPerSec: this.queryOptions.MaxOpsPerSecond,
-            details : this.queryOptions.RetrieveDetails,
+            allowStale: this.options.allowStale,
+            staleTimeout: this.options.staleTimeout,
+            maxOpsPerSec: this.options.maxOpsPerSecond,
             id: this.options.test ? this.options.documentId : undefined
         };
 
