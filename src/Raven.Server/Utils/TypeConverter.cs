@@ -32,7 +32,7 @@ namespace Raven.Server.Utils
 
         private static readonly StringSegment ValuesPropertyName = new StringSegment("$values");
 
-        private static readonly string TypeList = typeof(List<>).FullName;
+        private static readonly StringSegment ValuePropertyName = new StringSegment("$value");
 
         private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
 
@@ -443,21 +443,21 @@ namespace Raven.Server.Utils
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static object ConvertBlittableJsonReaderObject(BlittableJsonReaderObject value)
+        public static object TryConvertBlittableJsonReaderObject(BlittableJsonReaderObject blittable)
         {
-            if (value.TryGet(TypePropertyName, out string type) == false)
-                return value;
+            if (blittable.TryGet(TypePropertyName, out string type) == false)
+                return blittable;
 
             if (type == null)
+                return blittable;
+
+            if (blittable.TryGet(ValuesPropertyName, out BlittableJsonReaderArray array))
+                return array;
+
+            if (blittable.TryGet(ValuePropertyName, out object value))
                 return value;
 
-            if (type.StartsWith(TypeList) == false)
-                return value;
-
-            if (value.TryGet(ValuesPropertyName, out BlittableJsonReaderArray values))
-                return values;
-
-            throw new NotSupportedException($"Detected list type '{type}' but could not extract '{values}'.");
+            return blittable;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -501,7 +501,7 @@ namespace Raven.Server.Utils
                 return ConvertLazyStringValue(lazyString);
 
             if (value is BlittableJsonReaderObject bjo)
-                return ConvertBlittableJsonReaderObject(bjo);
+                return TryConvertBlittableJsonReaderObject(bjo);
 
             return value;
         }

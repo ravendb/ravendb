@@ -262,7 +262,6 @@ namespace Raven.Server.Documents.Patch
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
                         return GetJsValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
                     case BlittableJsonToken.String:
-
                         return value.ToString();
                     case BlittableJsonToken.CompressedString:
                         return value.ToString();
@@ -270,10 +269,23 @@ namespace Raven.Server.Documents.Patch
                         Changed = true;
                         _parent.MarkChanged();
                         BlittableJsonReaderObject blittable = (BlittableJsonReaderObject)value;
-                        blittable.NoCache = true;
-                        return new BlittableObjectInstance(owner.Engine,
-                            owner,
-                            blittable, null, null, null);
+
+                        var obj = Raven.Server.Utils.TypeConverter.TryConvertBlittableJsonReaderObject(blittable);
+                        switch (obj)
+                        {
+                            case BlittableJsonReaderArray blittableArray:
+                                return GetArrayInstanceFromBlittableArray(owner.Engine, blittableArray, owner);
+                            case LazyStringValue asLazyStringValue:
+                                return asLazyStringValue.ToString();
+                            case LazyCompressedStringValue asLazyCompressedStringValue:
+                                return asLazyCompressedStringValue.ToString();
+                            default:
+                                blittable.NoCache = true;
+                                return new BlittableObjectInstance(owner.Engine,
+                                    owner,
+                                    blittable, null, null, null);
+                        }
+
                     case BlittableJsonToken.StartArray:
                         Changed = true;
                         _parent.MarkChanged();
@@ -287,7 +299,7 @@ namespace Raven.Server.Documents.Patch
             public static JsValue GetJsValueForLazyNumber(Engine engine, LazyNumberValue value)
             {
                 // First, try and see if the number is withing double boundaries.
-                // We use double's tryParse and it actually may round the number, 
+                // We use double's tryParse and it actually may round the number,
                 // But that are Jint's limitations
                 if (value.TryParseDouble(out double doubleVal))
                 {
@@ -297,7 +309,6 @@ namespace Raven.Server.Documents.Patch
                 // If number is not in double boundaries, we return the LazyNumberValue
                 return new ObjectWrapper(engine, value);
             }
-
         }
 
         public BlittableObjectInstance(Engine engine,
