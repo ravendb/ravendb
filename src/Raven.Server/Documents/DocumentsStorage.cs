@@ -1163,16 +1163,16 @@ namespace Raven.Server.Documents
             {
                 Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, document.Data);
                 DocumentPutAction.AssertMetadataWasFiltered(document.Data);
-                AssertMetadataKey(document.Data, document.Flags, DocumentFlags.HasAttachments, Constants.Documents.Metadata.Attachments);
-                AssertMetadataKey(document.Data, document.Flags, DocumentFlags.HasCounters, Constants.Documents.Metadata.Counters);
-                AssertMetadataKey(document.Data, document.Flags, DocumentFlags.HasTimeSeries, Constants.Documents.Metadata.TimeSeries);
+                AssertMetadataKey(document.Id, document.Data, document.Flags, DocumentFlags.HasAttachments, Constants.Documents.Metadata.Attachments);
+                AssertMetadataKey(document.Id, document.Data, document.Flags, DocumentFlags.HasCounters, Constants.Documents.Metadata.Counters);
+                AssertMetadataKey(document.Id, document.Data, document.Flags, DocumentFlags.HasTimeSeries, Constants.Documents.Metadata.TimeSeries);
             }
 #endif
             return document;
         }
 
         [Conditional("DEBUG")]
-        public static void AssertMetadataKey(BlittableJsonReaderObject document, DocumentFlags flags, DocumentFlags assertionFlag, string assertionKey)
+        public void AssertMetadataKey(string id, BlittableJsonReaderObject document, DocumentFlags flags, DocumentFlags assertionFlag, string assertionKey)
         {
             if (document == null)
                 return;
@@ -1182,7 +1182,7 @@ namespace Raven.Server.Documents
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                     metadata.TryGet(assertionKey, out BlittableJsonReaderArray _) == false)
                 {
-                    Debug.Assert(false, $"Found {DocumentFlags.HasAttachments} flag but {assertionKey} is missing from metadata.");
+                    Debug.Assert(false, $"Found {DocumentFlags.HasAttachments} flag but {assertionKey} is missing from metadata in document {id} (database: {DocumentDatabase.Name}).");
                 }
             }
             else
@@ -1190,7 +1190,7 @@ namespace Raven.Server.Documents
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                     metadata.TryGet(assertionKey, out BlittableJsonReaderArray values))
                 {
-                    Debug.Assert(false, $"Found {assertionKey}({values.Length}) in metadata but {flags} flag is missing.");
+                    Debug.Assert(false, $"Found {assertionKey}({values.Length}) in metadata but {flags} flag is missing in document {id} (database: {DocumentDatabase.Name}).");
                 }
             }
         }
