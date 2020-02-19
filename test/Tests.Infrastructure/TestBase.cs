@@ -291,12 +291,7 @@ namespace FastTests
 
                 if (_doNotReuseServer)
                 {
-                    bool runInMemory = true;
-
-                    if (_customServerSettings != null && _customServerSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.RunInMemory)))
-                        runInMemory = bool.Parse(_customServerSettings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)]);
-
-                    UseNewLocalServer(runInMemory: runInMemory);
+                    UseNewLocalServer();
                     _doNotReuseServer = false;
 
                     return _localServer;
@@ -418,7 +413,7 @@ namespace FastTests
             }
         }
 
-        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool runInMemory = true, string customConfigPath = null, [CallerMemberName]string caller = null)
+        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool? runInMemory = null, string customConfigPath = null, [CallerMemberName]string caller = null)
         {
             if (_localServer != _globalServer && _globalServer != null)
                 _localServer?.Dispose();
@@ -462,9 +457,9 @@ namespace FastTests
                 }
             }
 
-            private bool _runInMemory = true;
+            private bool? _runInMemory = null;
 
-            public bool RunInMemory
+            public bool? RunInMemory
             {
                 get => _runInMemory;
                 set
@@ -542,6 +537,7 @@ namespace FastTests
         }
 
         private static readonly ConcurrentDictionary<RavenServer, string> LeakedServers = new ConcurrentDictionary<RavenServer, string>();
+
         protected virtual RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
         {
             if (options == null)
@@ -567,14 +563,19 @@ namespace FastTests
                 var hasServerUrls = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrls));
                 var hasDataDirectory = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.DataDirectory));
                 var hasFeaturesAvailability = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability));
+                var hasRunInMemory = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
 
                 configuration.Initialize();
 
                 configuration.Logs.Mode = LogMode.None;
                 configuration.Server.Name = ServerName;
-                configuration.Core.RunInMemory = options.RunInMemory;
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;
+
+                if (hasRunInMemory == false)
+                    configuration.Core.RunInMemory = options.RunInMemory ?? true;
+                else if (options.RunInMemory != null)
+                    ThrowOnDuplicateConfiguration(nameof(ServerCreationOptions.RunInMemory));
 
                 if (hasServerUrls == false)
                     configuration.Core.ServerUrls = new[] { "http://127.0.0.1:0" };
@@ -595,7 +596,7 @@ namespace FastTests
                     configuration.Core.DataDirectory = configuration.Core.DataDirectory.Combine(dataDirectory);
                 }
                 else if (options.DataDirectory != null)
-                    throw new InvalidOperationException($"You cannot set DataDirectory in both, {nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.CustomSettings)} and {nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.DataDirectory)}");
+                    ThrowOnDuplicateConfiguration(nameof(ServerCreationOptions.DataDirectory));
 
                 if (hasFeaturesAvailability == false)
                     configuration.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
@@ -623,6 +624,11 @@ namespace FastTests
 
                 return server;
             }
+        }
+
+        private void ThrowOnDuplicateConfiguration(string config)
+        {
+            throw new InvalidOperationException($"You cannot set {config} in both, {nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.CustomSettings)} and {nameof(ServerCreationOptions)}.{config}");
         }
 
         protected static string UseFiddlerUrl(string url)
@@ -714,7 +720,7 @@ namespace FastTests
                     server.Dispose();
                 });
             }
-            
+
             ServersForDisposal = null;
 
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);

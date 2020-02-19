@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus)
         {
-            var nextBackup = GetNextBackupDetails(configuration, backupStatus);
+            var nextBackup = GetNextBackupDetails(configuration, backupStatus, _serverStore.NodeTag);
             if (nextBackup == null)
                 return null;
 
@@ -92,10 +92,11 @@ namespace Raven.Server.Documents.PeriodicBackup
         public NextBackup GetNextBackupDetails(
             DatabaseRecord databaseRecord,
             PeriodicBackupConfiguration configuration,
-            PeriodicBackupStatus backupStatus)
+            PeriodicBackupStatus backupStatus,
+            string responsibleNodeTag)
         {
             var taskStatus = GetTaskStatus(databaseRecord.Topology, configuration, skipErrorLog: true);
-            return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
+            return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, responsibleNodeTag, skipErrorLog: true);
         }
 
         private DateTime? GetNextWakeupTimeLocal(long lastEtag, PeriodicBackupConfiguration configuration, PeriodicBackupStatus backupStatus)
@@ -126,6 +127,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private NextBackup GetNextBackupDetails(
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus,
+            string responsibleNodeTag,
             bool skipErrorLog = false)
         {
             var nowUtc = SystemTime.UtcNow;
@@ -156,7 +158,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             Debug.Assert(configuration.TaskId != 0);
 
-            var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup);
+            var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup, responsibleNodeTag);
             var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
             var nowLocalTime = SystemTime.UtcNow.ToLocalTime();
             var timeSpan = nextBackupTimeLocal - nowLocalTime;
@@ -194,10 +196,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private bool IsFullBackup(PeriodicBackupStatus backupStatus,
             PeriodicBackupConfiguration configuration,
-            DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
+            DateTime? nextFullBackup, DateTime? nextIncrementalBackup, string responsibleNodeTag)
         {
             if (backupStatus.LastFullBackup == null ||
-                backupStatus.NodeTag != _serverStore.NodeTag ||
+                backupStatus.NodeTag != responsibleNodeTag ||
                 backupStatus.BackupType != configuration.BackupType ||
                 backupStatus.LastEtag == null)
             {
@@ -920,7 +922,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (backupStatus.LastIncrementalBackup != null)
                     allBackupTicks.Add(backupStatus.LastIncrementalBackup.Value.Ticks);
 
-                var nextBackup = GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
+                var nextBackup = GetNextBackupDetails(configuration, backupStatus, _serverStore.NodeTag, skipErrorLog: true);
                 if (nextBackup != null)
                 {
                     allNextBackupTimeSpanSeconds.Add(nextBackup.TimeSpan.TotalSeconds);

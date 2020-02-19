@@ -54,7 +54,6 @@ namespace SlowTests.Issues
 
             var serverAfterRestart = GetNewServer(new ServerCreationOptions
             {
-                RunInMemory = false,
                 DeletePrevious = false,
                 DataDirectory = result.DataDirectory,
                 CustomSettings = customSettings

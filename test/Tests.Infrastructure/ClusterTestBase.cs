@@ -388,6 +388,13 @@ namespace Tests.Infrastructure
             return await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, customSettings, customSettingsList, watcherCluster);
         }
 
+        protected Dictionary<string, string> DefaultClusterSettings = new Dictionary<string, string>
+        {
+            [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+            [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
+            [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+        };
+
         protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(
             int numberOfNodes,
             bool shouldRunInMemory = true,
@@ -415,12 +422,9 @@ namespace Tests.Infrastructure
             {
                 if (customSettingsList == null)
                 {
-                    customSettings = customSettings ?? new Dictionary<string, string>()
+                    customSettings = customSettings ?? new Dictionary<string, string>(DefaultClusterSettings)
                     {
-                        [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
-                        [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                         [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
-                        [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
                     };
                 }
                 else

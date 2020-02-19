@@ -550,7 +550,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record, record.PeriodicBackups.First(), new PeriodicBackupStatus
                 {
                     LastFullBackupInternal = now.AddDays(-360)
-                });
+                }, Server.ServerStore.NodeTag);
 
                 Assert.Equal(backup.TaskId, nextBackupDetails.TaskId);
                 Assert.Equal(TimeSpan.Zero, nextBackupDetails.TimeSpan);

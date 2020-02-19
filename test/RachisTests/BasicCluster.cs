@@ -18,7 +18,31 @@ namespace RachisTests
         public BasicCluster(ITestOutputHelper output) : base(output)
         {
         }
-        
+
+        [Fact]
+        public async Task PreventConcurrentBootstrap()
+        {
+            var a = SetupServer();
+            var tasks = new List<Task>();
+            for (int i = 0; i < 20; i++)
+            {
+                tasks.Add(Task.Run(() => a.Bootstrap(a.Url, "A")));
+            }
+
+            await Task.WhenAll(tasks);
+            foreach (var task in tasks)
+            {
+                await task;
+            }
+
+            using (a.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var actual = a.GetLastEntryIndex(context);
+                Assert.Equal(1, actual);
+            }
+        }
+
         [Fact]
         public async Task ClusterWithFiveNodesAndMultipleElections()
         {

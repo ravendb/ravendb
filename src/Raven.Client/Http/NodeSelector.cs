@@ -86,10 +86,10 @@ namespace Raven.Client.Http
         public (int Index, ServerNode Node) GetPreferredNode()
         {
             var state = _state;
-            return GetPrefferedNodeInternal(state);
+            return GetPreferredNodeInternal(state);
         }
 
-        private static (int Index, ServerNode Node) GetPrefferedNodeInternal(NodeSelectorState state)
+        private static (int Index, ServerNode Node) GetPreferredNodeInternal(NodeSelectorState state)
         {
             var stateFailures = state.Failures;
             var serverNodes = state.Nodes;
@@ -108,7 +108,7 @@ namespace Raven.Client.Http
         internal (int Index, ServerNode Node, long TopologyEtag) GetPreferredNodeWithTopology()
         {
             var state = _state;
-            var preferredNode = GetPrefferedNodeInternal(state);
+            var preferredNode = GetPreferredNodeInternal(state);
             return (preferredNode.Index, preferredNode.Node, state.Topology?.Etag??-2);
             
         }
