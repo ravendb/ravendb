@@ -567,14 +567,17 @@ namespace FastTests
                 var hasServerUrls = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrls));
                 var hasDataDirectory = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.DataDirectory));
                 var hasFeaturesAvailability = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability));
+                var hasRunInMemory = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
 
                 configuration.Initialize();
 
                 configuration.Logs.Mode = LogMode.None;
                 configuration.Server.Name = ServerName;
-                configuration.Core.RunInMemory = options.RunInMemory;
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;
+
+                if (hasRunInMemory == false)
+                    configuration.Core.RunInMemory = options.RunInMemory;
 
                 if (hasServerUrls == false)
                     configuration.Core.ServerUrls = new[] { "http://127.0.0.1:0" };
