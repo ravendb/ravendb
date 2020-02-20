@@ -911,7 +911,8 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal("Aviv", userRevisions[1].Name);
                 }
 
-                await Task.Delay(revisionsAgeLimit);
+                var database = await GetDatabase(store.Database);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.Add(revisionsAgeLimit);
 
                 using (var session = store.OpenAsyncSession())
                 {

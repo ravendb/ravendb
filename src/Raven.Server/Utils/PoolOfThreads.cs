@@ -193,7 +193,6 @@ namespace Raven.Server.Utils
                 {
                     Interlocked.Increment(ref _parent.TotalNumberOfThreads);
                     InitializeProcessThreads();
-                    JsonContextPoolWorkStealing.AvoidForCurrentThread = true;
 
                     LongRunningWork.CurrentPooledThread = this;
 

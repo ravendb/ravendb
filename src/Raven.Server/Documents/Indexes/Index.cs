@@ -1078,8 +1078,6 @@ namespace Raven.Server.Documents.Indexes
                     return; // can be null if we disposed immediately
                 try
                 {
-                    _contextPool.SetMostWorkInGoingToHappenOnThisThread();
-
                     if (storageEnvironment != null)
                         storageEnvironment.OnLogsApplied += HandleLogsApplied;
 

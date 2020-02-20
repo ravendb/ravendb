@@ -121,6 +121,12 @@ class patchList {
 
 class patch extends viewModelBase {
 
+    staleIndexBehavior = ko.observable("patchStale"); 
+    staleTimeout = ko.observable<number>(60);
+
+    maxOperationsPerSecond = ko.observable<number>();
+    defineMaxOperationsPerSecond = ko.observable<boolean>(false);    
+    
     static readonly recentKeyword = 'Recent Patch';
 
     static readonly $body = $("body");
@@ -354,7 +360,11 @@ class patch extends viewModelBase {
         })
             .done(result => {
                 if (result.can) {
-                    new patchCommand(this.patchDocument().query(), this.activeDatabase())
+                    new patchCommand(this.patchDocument().query(), this.activeDatabase(), {
+                        allowStale: this.staleIndexBehavior() === "patchStale",
+                        staleTimeout: this.staleIndexBehavior() === "timeoutDefined" ? generalUtils.formatAsTimeSpan(this.staleTimeout() * 1000) : undefined,
+                        maxOpsPerSecond: this.maxOperationsPerSecond()
+                    })
                         .execute()
                         .done((operation: operationIdDto) => {
                             notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), operation.OperationId);
