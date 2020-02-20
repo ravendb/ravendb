@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Replication
 
         private static long ParseEtag(string changeVector, int start, int end)
         {
-            int etag = changeVector[start] - '0';
+            long etag = changeVector[start] - '0';
 
             for (int i = start + 1; i <= end; i++)
             {
@@ -202,6 +202,7 @@ namespace Raven.Server.Documents.Replication
                         if (changeVector[current] == '-')
                         {
                             var etag = ParseEtag(changeVector, start, current - 1);
+
                             if (current + 23 > changeVector.Length)
                                 ThrowInvalidEndOfString("DbId", changeVector);
                             bool found = false;
