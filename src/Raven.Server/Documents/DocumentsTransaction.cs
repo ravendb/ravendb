@@ -120,6 +120,14 @@ namespace Raven.Server.Documents
             }
         }
 
+        protected override bool ShouldRaiseNotifications()
+        {
+            return base.ShouldRaiseNotifications()
+                || _documentNotifications != null
+                || _counterNotifications != null
+                || _timeSeriesNotifications != null;
+        }
+
         public bool TryGetFromCache(string collectionName, out CollectionName name)
         {
             if (_collectionCache != null)
