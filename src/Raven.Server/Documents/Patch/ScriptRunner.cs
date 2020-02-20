@@ -213,9 +213,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
 
                 //TimeSeries
-                ScriptEngine.SetValue("appendTs", new ClrFunctionInstance(ScriptEngine, "appendTs", AppendTimeSeries));
-                ScriptEngine.SetValue("deleteRangeTs", new ClrFunctionInstance(ScriptEngine, "deleteRangeTs", DeleteRangeTimeSeries));
-                ScriptEngine.SetValue("getRangeTs", new ClrFunctionInstance(ScriptEngine, "getRangeTs", GetRangeTimeSeries));
+                ScriptEngine.SetValue("appendTimeSeries", new ClrFunctionInstance(ScriptEngine, "appendTimeSeries", AppendTimeSeries));
+                ScriptEngine.SetValue("deleteTimeSeries", new ClrFunctionInstance(ScriptEngine, "deleteTimeSeries", DeleteRangeTimeSeries));
+                ScriptEngine.SetValue("getRangeTimeSeries", new ClrFunctionInstance(ScriptEngine, "getRangeTimeSeries", GetRangeTimeSeries));
 
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
@@ -295,9 +295,9 @@ namespace Raven.Server.Documents.Patch
             
             private JsValue AppendTimeSeries(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext("appendTs");
-                const string signature4Args = "appendTs(doc, timeseries, timestamp, values)";
-                const string signature5Args = "appendTs(doc, timeseries, timestamp, tag, values)";
+                AssertValidDatabaseContext("appendTimeSeries");
+                const string signature4Args = "appendTimeSeries(doc, timeseries, timestamp, values)";
+                const string signature5Args = "appendTimeSeries(doc, timeseries, timestamp, tag, values)";
                 
                 string signature;
                 LazyStringValue lsTag = null;
@@ -369,9 +369,9 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue DeleteRangeTimeSeries(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext("deleteRangeTs");
+                AssertValidDatabaseContext("deleteTimeSeries");
                 
-                const string signature = "deleteRangeTs(doc, timeseries, from, to)";
+                const string signature = "deleteTimeSeries(doc, timeseries, from, to)";
                 const int requiredArgs = 4;
                 
                 if (args.Length != requiredArgs)
@@ -399,9 +399,9 @@ namespace Raven.Server.Documents.Patch
             
             private JsValue GetRangeTimeSeries(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext("getRangeTs");
+                AssertValidDatabaseContext("getRangeTimeSeries");
                 
-                const string signature = "getRangeTs(doc, timeseries, from, to)";
+                const string signature = "getRangeTimeSeries(doc, timeseries, from, to)";
                 const int requiredArgs = 4;
                 
                 if (args.Length != requiredArgs)

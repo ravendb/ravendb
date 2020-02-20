@@ -55,7 +55,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                 session.Advanced.Defer(new PatchCommandData(documentId, null,
                     new PatchRequest
                     {
-                        Script = @"appendTs(this, args.timeseries, args.timestamp, args.tag, args.values);",
+                        Script = @"appendTimeSeries(this, args.timeseries, args.timestamp, args.tag, args.values);",
                         Values =
                         {
                             { "timeseries", timeseries },
@@ -96,7 +96,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"appendTs(this, args.timeseries, args.timestamp, args.tag, args.values);",
+                            Script = @"appendTimeSeries(this, args.timeseries, args.timestamp, args.tag, args.values);",
                             Values =
                             {
                                 { "timeseries", timeseries },
@@ -145,7 +145,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"appendTs(id(this), args.timeseries, new Date(args.timestamp), args.tag, args.values);",
+                            Script = @"appendTimeSeries(id(this), args.timeseries, new Date(args.timestamp), args.tag, args.values);",
                             Values =
                             {
                                 { "timeseries", timeseries },
@@ -170,8 +170,8 @@ namespace SlowTests.Client.TimeSeries.Patch
         }
         
         [Theory]
-        [InlineData(@"appendTs(id(this), args.timeseries, new Date(args.timestamp), null, args.values);")]
-        [InlineData(@"appendTs(id(this), args.timeseries, new Date(args.timestamp), args.values);")]
+        [InlineData(@"appendTimeSeries(id(this), args.timeseries, new Date(args.timestamp), null, args.values);")]
+        [InlineData(@"appendTimeSeries(id(this), args.timeseries, new Date(args.timestamp), args.values);")]
         public async Task CanAppendTimeSeriesByPatch_WithoutTag(string script)
         {
             double[] values = {59d};
@@ -239,7 +239,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                             Script = @"
 var i = 0;
 for(i = 0; i < args.toAppend.length; i++){
-    appendTs(id(this), args.timeseries, new Date(args.toAppend[i].Item1), args.toAppend[i].Item2 args.toAppend[i].Item3);
+    appendTimeSeries(id(this), args.timeseries, new Date(args.toAppend[i].Item1), args.toAppend[i].Item2 args.toAppend[i].Item3);
 }",
                             Values =
                             {
@@ -308,7 +308,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"deleteRangeTs(this, args.timeseries, args.from, args.to);",
+                            Script = @"deleteTimeSeries(this, args.timeseries, args.from, args.to);",
                             Values =
                             {
                                 { "timeseries", timeseries },
@@ -392,7 +392,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"this.Result = getRangeTs(this, args.timeseries, args.from, args.to);",
+                            Script = @"this.Result = getRangeTimeSeries(this, args.timeseries, args.from, args.to);",
                             Values =
                             {
                                 { "timeseries", timeseries },
@@ -467,7 +467,7 @@ from TimeSeriesResultHolders as c
 update
 {
     for(var i = 0; i < $toAppend.length; i++){
-        appendTs(this, $timeseries, $toAppend[i].Timestamp, $toAppend[i].Tag, $toAppend[i].Values);
+        appendTimeSeries(this, $timeseries, $toAppend[i].Timestamp, $toAppend[i].Tag, $toAppend[i].Values);
     }
 }"}));
                 await appendOperation.WaitForCompletionAsync();
@@ -488,7 +488,7 @@ update
 from TimeSeriesResultHolders as c
 update
 {
-  deleteRangeTs(this, $timeseries, $from, $to);
+  deleteTimeSeries(this, $timeseries, $from, $to);
 }"}));
                 await deleteOperation.WaitForCompletionAsync();
 
@@ -508,7 +508,7 @@ update
 from TimeSeriesResultHolders as c
 update
 {
-  this.Result = getRangeTs(this, $timeseries, $from, $to);
+  this.Result = getRangeTimeSeries(this, $timeseries, $from, $to);
 }"}));
                 await getOperation.WaitForCompletionAsync();
                 
