@@ -203,14 +203,6 @@
                                     <button class="btn btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
                                     <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
                                 </div>
-                                <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_DocumentsTombstones" type="checkbox" data-bind="checked: includeDocumentsTombstones" />
-                                    <label for="migrate_DocumentsTombstones" class="margin-right margin-right-sm">Include Documents Tombstones</label>
-                                </div>
-                                <div class="toggle" data-bind="visible: isV42orAbove">
-                                    <input id="migrate_CmpXchTombstones" type="checkbox" data-bind="checked: includeCompareExchangeTombstones" />
-                                    <label for="migrate_CmpXchTombstones" class="margin-right margin-right-sm">Include Compare Exchange Tombstones</label>
-                                </div>
                             </div>
                         </div>
                         <div data-bind="validationElement: importDefinitionHasIncludes">
