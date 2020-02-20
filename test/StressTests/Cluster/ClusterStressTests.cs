@@ -123,7 +123,7 @@ namespace StressTests.Cluster
 
                 foreach (var n in cluster.Nodes.Where(x => x.ServerStore.Engine.CurrentTerm >= maxTerm))
                 {
-                    using (n.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (n.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
                         var currentLog = n.ServerStore.Engine.GetLastEntryIndex(ctx);

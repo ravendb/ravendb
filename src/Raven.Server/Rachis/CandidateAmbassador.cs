@@ -141,7 +141,7 @@ namespace Raven.Server.Rachis
                         _connection?.Dispose();
                         _connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream, disconnect);
 
-                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {
                             ClusterTopology topology;
                             long lastLogIndex;
@@ -406,7 +406,7 @@ namespace Raven.Server.Rachis
 
         public static void SendElectionResult(RachisConsensus engine, RemoteConnection connection, long currentElectionTerm, ElectionResult result)
         {
-            using (engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 if (engine.Log.IsInfoEnabled)
                 {

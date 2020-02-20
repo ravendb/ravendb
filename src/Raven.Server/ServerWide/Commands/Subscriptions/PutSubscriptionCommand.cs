@@ -42,7 +42,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             throw new NotImplementedException();
         }
 
-        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
+        public override unsafe void Execute(ClusterOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
             long i = 1;
             var originalName = SubscriptionName;
@@ -112,7 +112,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
         }
 
-        public long FindFreeId(TransactionOperationContext context, long subscriptionId)
+        public long FindFreeId(ClusterOperationContext context, long subscriptionId)
         {
             if (SubscriptionId.HasValue)
                 return SubscriptionId.Value;

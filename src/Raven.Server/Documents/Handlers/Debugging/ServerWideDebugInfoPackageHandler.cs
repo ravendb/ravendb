@@ -310,12 +310,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, string prefix = null)
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-            using (transactionOperationContext.OpenReadTransaction())
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                foreach (var databaseName in ServerStore.Cluster.GetDatabaseNames(transactionOperationContext))
+                foreach (var databaseName in ServerStore.Cluster.GetDatabaseNames(context))
                 {
-                    using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(transactionOperationContext, databaseName))
+                    using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                     {
                         if (rawRecord == null ||
                             rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false ||

@@ -1,9 +1,11 @@
 ﻿using System;
+using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public interface ITransactionContextPool : IMemoryContextPool
+    public interface ITransactionContextPool<TOperationContext> : IMemoryContextPool
+        where TOperationContext : JsonOperationContext
     {
-        IDisposable AllocateOperationContext(out TransactionOperationContext context);
+        IDisposable AllocateOperationContext(out TOperationContext context);
     }
 }

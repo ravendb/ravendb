@@ -91,7 +91,7 @@ namespace RachisTests
             DisconnectBiDirectionalFromNode(firstLeader);
 
 
-            using (firstLeader.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (firstLeader.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
                 var cmd = new TestCommand
@@ -289,8 +289,8 @@ namespace RachisTests
 
             Assert.Equal(GetLastAppendedIndex(firstLeader), GetLastAppendedIndex(follower));
 
-            using (firstLeader.ContextPool.AllocateOperationContext(out TransactionOperationContext leaderContext))
-            using (follower.ContextPool.AllocateOperationContext(out TransactionOperationContext followerContext))
+            using (firstLeader.ContextPool.AllocateOperationContext(out ClusterOperationContext leaderContext))
+            using (follower.ContextPool.AllocateOperationContext(out ClusterOperationContext followerContext))
             using (leaderContext.OpenReadTransaction())
             using (followerContext.OpenReadTransaction())
             {
@@ -302,7 +302,7 @@ namespace RachisTests
 
         private long GetLastCommittedIndex(RachisConsensus<CountingStateMachine> rachis)
         {
-            using (rachis.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (rachis.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 return rachis.GetLastCommitIndex(context);
@@ -311,7 +311,7 @@ namespace RachisTests
 
         private long GetLastAppendedIndex(RachisConsensus<CountingStateMachine> rachis)
         {
-            using (rachis.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (rachis.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 return rachis.GetLastEntryIndex(context);

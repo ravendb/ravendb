@@ -4,23 +4,19 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.Threading;
 using Sparrow;
 using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public class TransactionContextPool : JsonContextPoolBase<TransactionOperationContext> ,ITransactionContextPool
+    public class TransactionContextPool : JsonContextPoolBase<TransactionOperationContext>, ITransactionContextPool<TransactionOperationContext>
     {
         private StorageEnvironment _storageEnvironment;
-        private readonly ClusterChanges _clusterChanges;
 
-        public TransactionContextPool(StorageEnvironment storageEnvironment, ClusterChanges clusterChanges = null, Size? maxContextSizeToKeepInMb = null) : base(maxContextSizeToKeepInMb)
+        public TransactionContextPool(StorageEnvironment storageEnvironment, Size? maxContextSizeToKeepInMb = null) : base(maxContextSizeToKeepInMb)
         {
             _storageEnvironment = storageEnvironment;
-            _clusterChanges = clusterChanges;
         }
 
         protected override TransactionOperationContext CreateContext()
@@ -32,10 +28,10 @@ namespace Raven.Server.ServerWide.Context
             }
             else
             {
-                initialSize = 32*1024;
-                }
+                initialSize = 32 * 1024;
+            }
 
-            return new TransactionOperationContext(_storageEnvironment, initialSize, 16*1024, LowMemoryFlag, _clusterChanges);
+            return new TransactionOperationContext(_storageEnvironment, initialSize, 16 * 1024, LowMemoryFlag);
         }
 
         public override void Dispose()

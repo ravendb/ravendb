@@ -451,7 +451,8 @@ namespace Raven.Server.ServerWide
             return _lastClusterTopologyIndex != topologyEtag;
         }
 
-        public ClusterTopology GetClusterTopology(TransactionOperationContext context)
+        public ClusterTopology GetClusterTopology<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
         {
             return _engine.GetTopology(context);
         }
@@ -689,7 +690,7 @@ namespace Raven.Server.ServerWide
                 BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount.Value;
 
             var clusterChanges = new ClusterChanges();
-            ContextPool = new TransactionContextPool(_env, clusterChanges, Configuration.Memory.MaxContextSizeToKeep);
+            ContextPool = new TransactionContextPool(_env, Configuration.Memory.MaxContextSizeToKeep);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
@@ -727,7 +728,7 @@ namespace Raven.Server.ServerWide
             InitializationCompleted.Set();
         }
 
-        private void BeforeAppendToRaftLog(TransactionOperationContext ctx, CommandBase cmd)
+        private void BeforeAppendToRaftLog(ClusterOperationContext ctx, CommandBase cmd)
         {
             switch (cmd)
             {

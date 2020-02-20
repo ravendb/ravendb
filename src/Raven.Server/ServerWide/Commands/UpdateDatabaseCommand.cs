@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Commands
             return djv;
         }
 
-        public virtual void Initialize(ServerStore serverStore, TransactionOperationContext context)
+        public virtual void Initialize(ServerStore serverStore, ClusterOperationContext context)
         {
         }
 

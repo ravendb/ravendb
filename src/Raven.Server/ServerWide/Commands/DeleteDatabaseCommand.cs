@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands
             ErrorOnDatabaseDoesNotExists = false;
         }
 
-        public override void Initialize(ServerStore serverStore, TransactionOperationContext context)
+        public override void Initialize(ServerStore serverStore, ClusterOperationContext context)
         {
             ClusterNodes = serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
         }

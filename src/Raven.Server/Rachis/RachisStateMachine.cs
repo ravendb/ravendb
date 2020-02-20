@@ -14,13 +14,13 @@ namespace Raven.Server.Rachis
 {
     public abstract class RachisStateMachine : IDisposable
     {
-        protected TransactionContextPool ContextPoolForReadOnlyOperations;
+        protected ClusterContextPool ContextPoolForReadOnlyOperations;
         protected RachisConsensus _parent;
         public RachisVersionValidation Validator;
 
         public ClusterChanges Changes { get; private set; }
 
-        public virtual void Initialize(RachisConsensus parent, TransactionOperationContext context, ClusterChanges changes)
+        public virtual void Initialize(RachisConsensus parent, ClusterOperationContext context, ClusterChanges changes)
         {
             _parent = parent;
             ContextPoolForReadOnlyOperations = _parent.ContextPool;
@@ -29,7 +29,7 @@ namespace Raven.Server.Rachis
             Validator = InitializeValidator();
         }
 
-        public long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, ServerStore serverStore, Stopwatch duration)
+        public long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, ServerStore serverStore, Stopwatch duration)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -64,9 +64,9 @@ namespace Raven.Server.Rachis
             return lastAppliedIndex;
         }
 
-        protected abstract void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore);
+        protected abstract void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore);
 
-        public virtual void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
+        public virtual void EnsureNodeRemovalOnDeletion(ClusterOperationContext context, long term, string nodeTag)
         {
 
         }

@@ -41,8 +41,8 @@ namespace RachisTests
                 var condition = await
                     r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex)
                         .WaitAsync(5000);
-                TransactionOperationContext context;
-                using (r.ContextPool.AllocateOperationContext(out context))
+
+                using (r.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var commitIndex = r.GetLastCommitIndex(context);
@@ -64,7 +64,7 @@ namespace RachisTests
                 mre.Set();
                 try
                 {
-                    using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenWriteTransaction())
                     {
 
@@ -77,7 +77,7 @@ namespace RachisTests
                 }
             });
 
-            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 mre.WaitOne();

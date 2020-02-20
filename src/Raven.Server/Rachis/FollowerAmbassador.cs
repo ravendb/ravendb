@@ -179,16 +179,16 @@ namespace Raven.Server.Rachis
                                     _engine.Log.Info($"FollowerAmbassador for {_tag}: Creating new connection to {_tag}");
                                 }
 
-                                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                                using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                                 {
                                     _engine.RemoveAndDispose(_leader, _connection);
 
                                     var connectTask = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate);
-                                    
-                                    if (WaitForConnection(connectTask) == false) 
+
+                                    if (WaitForConnection(connectTask) == false)
                                         return;
 
-                                    var connection = connectTask.Result; 
+                                    var connection = connectTask.Result;
 
                                     var stream = connection.Stream;
                                     var disconnect = connection.Disconnect;
@@ -256,7 +256,7 @@ namespace Raven.Server.Rachis
                             entries.Clear();
                             _engine.ValidateTerm(_term);
 
-                            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             {
                                 AppendEntries appendEntries;
                                 using (context.OpenReadTransaction())
@@ -276,7 +276,7 @@ namespace Raven.Server.Rachis
                                             if (totalSize > Constants.Size.Megabyte)
                                                 break;
                                         }
-                                      
+
                                         appendEntries = new AppendEntries
                                         {
                                             ForceElections = ForceElectionsNow,
@@ -375,7 +375,7 @@ namespace Raven.Server.Rachis
                             // TODO: Dismiss notification
 
                             var task = _leader.WaitForNewEntries();
-                            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             using (context.OpenReadTransaction())
                             {
                                 if (_engine.GetLastEntryIndex(context) != _followerMatchIndex)
@@ -407,7 +407,7 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        NotifyOnException(ref connectionBroken,$"The connection with node {_tag} was suddenly broken.", e);
+                        NotifyOnException(ref connectionBroken, $"The connection with node {_tag} was suddenly broken.", e);
 
                         if (e is TopologyMismatchException)
                         {
@@ -528,11 +528,11 @@ namespace Raven.Server.Rachis
 
         private void SendSnapshot(Stream stream)
         {
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var earliestIndexEntry = _engine.GetFirstEntryIndex(context);
-               
+
                 if (_followerMatchIndex >= earliestIndexEntry ||
                     _followerMatchIndex == earliestIndexEntry - 1) // In case the first entry is the next entry to send
                 {
@@ -594,7 +594,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private unsafe void WriteSnapshotToFile(TransactionOperationContext context, Stream dest)
+        private unsafe void WriteSnapshotToFile(ClusterOperationContext context, Stream dest)
         {
             var dueTime = (int)(_engine.ElectionTimeout.TotalMilliseconds / 3);
             var timer = new Timer(_ => UpdateLastMatchFromFollower(_followerMatchIndex), null, dueTime, dueTime);
@@ -604,7 +604,7 @@ namespace Raven.Server.Rachis
             try
             {
                 var copier = new UnmanagedMemoryToStream(dest);
-                
+
                 using (var binaryWriter = new BinaryWriter(dest, Encoding.UTF8, leaveOpen: true))
                 {
                     var txr = context.Transaction.InnerTransaction;
@@ -731,8 +731,8 @@ namespace Raven.Server.Rachis
             }
         }
 
-        internal static unsafe BlittableJsonReaderObject BuildRachisEntryToSend(TransactionOperationContext context,
-            Table.TableValueHolder value)
+        internal static unsafe BlittableJsonReaderObject BuildRachisEntryToSend<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder value)
+            where TTransaction : RavenTransaction
         {
             BlittableJsonReaderObject entry;
             using (var writer =
@@ -778,7 +778,7 @@ namespace Raven.Server.Rachis
         private long InitialNegotiationWithFollower()
         {
             Interlocked.Exchange(ref _followerMatchIndex, 0);
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 LogLengthNegotiation lln;
                 using (context.OpenReadTransaction())
@@ -892,7 +892,7 @@ namespace Raven.Server.Rachis
             return version;
         }
 
-        private void SendHello(TransactionOperationContext context, ClusterTopology clusterTopology)
+        private void SendHello(ClusterOperationContext context, ClusterTopology clusterTopology)
         {
             UpdateLastSend("Hello");
             if (_engine.Log.IsInfoEnabled)

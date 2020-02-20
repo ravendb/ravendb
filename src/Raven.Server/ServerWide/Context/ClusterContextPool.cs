@@ -1,0 +1,42 @@
+﻿using Sparrow;
+using Sparrow.Json;
+using Voron;
+using System;
+
+namespace Raven.Server.ServerWide.Context
+{
+    public class ClusterContextPool : JsonContextPoolBase<ClusterOperationContext>, ITransactionContextPool<ClusterOperationContext>
+    {
+        private ClusterChanges _changes;
+        private StorageEnvironment _storageEnvironment;
+
+        public ClusterContextPool(ClusterChanges changes, StorageEnvironment storageEnvironment, Size? maxContextSizeToKeepInMb = null)
+            : base(maxContextSizeToKeepInMb)
+        {
+            _changes = changes ?? throw new ArgumentNullException(nameof(changes));
+            _storageEnvironment = storageEnvironment ?? throw new ArgumentNullException(nameof(storageEnvironment));
+        }
+
+        protected override ClusterOperationContext CreateContext()
+        {
+            int initialSize;
+            if (_storageEnvironment.Options.RunningOn32Bits)
+            {
+                initialSize = 4096;
+            }
+            else
+            {
+                initialSize = 32 * 1024;
+            }
+
+            return new ClusterOperationContext(_changes, _storageEnvironment, initialSize, 16 * 1024, LowMemoryFlag);
+        }
+
+        public override void Dispose()
+        {
+            _storageEnvironment = null;
+            _changes = null;
+            base.Dispose();
+        }
+    }
+}

@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             throw new NotImplementedException();
         }
 
-        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
+        public override unsafe void Execute(ClusterOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
             result = null;
             var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
