@@ -688,7 +688,8 @@ namespace Raven.Server.ServerWide
             if (Configuration.Queries.MaxClauseCount != null)
                 BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount.Value;
 
-            ContextPool = new TransactionContextPool(_env, Configuration.Memory.MaxContextSizeToKeep);
+            var clusterChanges = new ClusterChanges();
+            ContextPool = new TransactionContextPool(_env, clusterChanges, Configuration.Memory.MaxContextSizeToKeep);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
@@ -713,7 +714,7 @@ namespace Raven.Server.ServerWide
             _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
 
             var myUrl = GetNodeHttpServerUrl();
-            _engine.Initialize(_env, Configuration, myUrl, out _lastClusterTopologyIndex);
+            _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex);
 
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);
@@ -794,9 +795,9 @@ namespace Raven.Server.ServerWide
 
         public void TriggerDatabases()
         {
-            _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
-            _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
-            _engine.StateMachine.ValueChanged += OnValueChanged;
+            _engine.StateMachine.Changes.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
+            _engine.StateMachine.Changes.DatabaseChanged += OnDatabaseChanged;
+            _engine.StateMachine.Changes.ValueChanged += OnValueChanged;
 
             _engine.TopologyChanged += (_, __) => NotifyAboutClusterTopologyAndConnectivityChanges();
             _engine.StateChanged += OnStateChanged;

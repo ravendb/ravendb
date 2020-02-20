@@ -210,54 +210,6 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        public delegate Task DatabaseChangedDelegate(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType);
-        public delegate Task ValueChangedDelegate(long index, string type);
-
-        private DatabaseChangedDelegate[] _onDatabaseChanged = Array.Empty<DatabaseChangedDelegate>();
-        private ValueChangedDelegate[] _onValueChanged = Array.Empty<ValueChangedDelegate>();
-
-        public event DatabaseChangedDelegate DatabaseChanged
-        {
-            add
-            {
-                _onDatabaseChanged = _onDatabaseChanged.Concat(new[] { value }).ToArray();
-            }
-            remove
-            {
-                _onDatabaseChanged = _onDatabaseChanged.Where(x => x != value).ToArray();
-            }
-        }
-
-        public event ValueChangedDelegate ValueChanged
-        {
-            add
-            {
-                _onValueChanged = _onValueChanged.Concat(new[] { value }).ToArray();
-            }
-            remove
-            {
-                _onValueChanged = _onValueChanged.Where(x => x != value).ToArray();
-            }
-        }
-
-        private async Task OnDatabaseChanges(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType)
-        {
-            var changes = _onDatabaseChanged;
-            foreach (var act in changes)
-            {
-                await act(databaseName, index, type, changeType);
-            }
-        }
-
-        private async Task OnValueChanges(long index, string type)
-        {
-            var changes = _onValueChanged;
-            foreach (var act in changes)
-            {
-                await act(index, type);
-            }
-        }
-
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
@@ -539,7 +491,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     actionsByDatabase[database].Add(() =>
-                        OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged));
+                        Changes.OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged));
                 }
 
                 foreach (var action in actionsByDatabase)
@@ -997,7 +949,7 @@ namespace Raven.Server.ServerWide
                             if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
-                                tasks.Add(() => OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
+                                tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
                                     DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
 
                                 continue;
@@ -1021,7 +973,7 @@ namespace Raven.Server.ServerWide
                         UpdateValue(index, items, lowerKey, key, updated);
                     }
 
-                    tasks.Add(() => OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                    tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
                 }
 
                 ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), tasks);
@@ -1752,7 +1704,7 @@ namespace Raven.Server.ServerWide
 
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
                 {
-                    ExecuteAsyncTask(index, () => OnValueChanges(index, type));
+                    ExecuteAsyncTask(index, () => Changes.OnValueChanges(index, type));
                 };
             };
         }
@@ -1766,7 +1718,7 @@ namespace Raven.Server.ServerWide
 
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
                 {
-                    ExecuteAsyncTask(index, () => OnDatabaseChanges(databaseName, index, type, change));
+                    ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change));
                 };
             };
         }
@@ -1971,9 +1923,10 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
-        public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
+        public override void Initialize(RachisConsensus parent, TransactionOperationContext context, ClusterChanges changes)
         {
-            base.Initialize(parent, context);
+            base.Initialize(parent, context, changes);
+
             _rachisLogIndexNotifications.Log = _parent.Log;
 
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
@@ -2129,7 +2082,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
 
-                tasks.Add(() => OnDatabaseChanges(record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
             }
 
             ExecuteManyOnDispose(context, index, type, tasks);
@@ -3097,7 +3050,7 @@ namespace Raven.Server.ServerWide
 
         private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long index, Table items, TransactionOperationContext context)
         {
-            var tasks = new List<Func<Task>> { () => OnValueChanges(index, type) };
+            var tasks = new List<Func<Task>> { () => Changes.OnValueChanges(index, type) };
 
             foreach (var update in toUpdate)
             {
@@ -3107,7 +3060,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, update.DatabaseRecord);
                 }
 
-                tasks.Add(() => OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                tasks.Add(() => Changes.OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
             }
 
             ExecuteManyOnDispose(context, index, type, tasks);
@@ -3143,13 +3096,13 @@ namespace Raven.Server.ServerWide
                         {
                             var t = Task.Run(async () =>
                             {
-                                await OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                                await Changes.OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                             }, token);
                         }
 
                         var t2 = Task.Run(async () =>
                         {
-                            await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                            await Changes.OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
                         }, token);
                     }
                 };

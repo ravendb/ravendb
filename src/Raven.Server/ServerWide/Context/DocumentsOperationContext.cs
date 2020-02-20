@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Context
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
         {
             base.Reset(forceResetLongLivedAllocator);
-            
+
             // make sure that we don't remember an old value here from a previous
             // tx. This can be an issue if we resort to context stealing from 
             // other threads, so we are going the safe route and ensuring that 
@@ -53,8 +53,7 @@ namespace Raven.Server.ServerWide.Context
         {
             var clonedTransaction = new DocumentsTransaction(this,
                 _documentDatabase.DocumentsStorage.Environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator),
-                _documentDatabase.Changes
-            );
+                _documentDatabase.Changes);
 
             previous.Dispose();
 
@@ -63,14 +62,18 @@ namespace Raven.Server.ServerWide.Context
 
         protected override DocumentsTransaction CreateReadTransaction()
         {
-            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator), _documentDatabase.Changes);
+            return new DocumentsTransaction(this,
+                _documentDatabase.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator),
+                _documentDatabase.Changes);
         }
 
         protected override DocumentsTransaction CreateWriteTransaction(TimeSpan? timeout = null)
         {
-            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator, timeout), _documentDatabase.Changes);
+            var tx = new DocumentsTransaction(this,
+                _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator, timeout),
+                _documentDatabase.Changes);
 
-            CurrentTxMarker = (short) tx.InnerTransaction.LowLevelTransaction.Id;
+            CurrentTxMarker = (short)tx.InnerTransaction.LowLevelTransaction.Id;
 
             var options = _documentDatabase.DocumentsStorage.Environment.Options;
 
@@ -80,7 +83,7 @@ namespace Raven.Server.ServerWide.Context
                 options.TransactionsMode = TransactionsMode.Safe;
             }
 
-            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = 
+            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction =
                 options.TransactionsMode == TransactionsMode.Lazy;
             // IsLazyTransaction can be overriden later by a specific feature like bulk insert
 
@@ -98,7 +101,7 @@ namespace Raven.Server.ServerWide.Context
             // resources (scratch space, mostly) back to the system, let us continue with the current one.
 
             return Transaction?.InnerTransaction.LowLevelTransaction.Id !=
-                   _documentDatabase.DocumentsStorage.Environment.CurrentReadTransactionId ;
+                   _documentDatabase.DocumentsStorage.Environment.CurrentReadTransactionId;
 
         }
     }

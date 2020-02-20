@@ -60,10 +60,10 @@ namespace Raven.Server.Rachis
             _serverStore.NotificationCenter.Add(notification, updateExisting: false);
         }
 
-        protected override void InitializeState(TransactionOperationContext context)
+        protected override void InitializeState(TransactionOperationContext context, ClusterChanges changes)
         {
             StateMachine = new TStateMachine();
-            StateMachine.Initialize(this, context);
+            StateMachine.Initialize(this, context, changes);
         }
 
         public override void Dispose()
@@ -378,7 +378,7 @@ namespace Raven.Server.Rachis
             Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
-        public unsafe void Initialize(StorageEnvironment env, RavenConfiguration configuration, string myUrl, out long clusterTopologyEtag)
+        public unsafe void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, out long clusterTopologyEtag)
         {
             try
             {
@@ -392,7 +392,7 @@ namespace Raven.Server.Rachis
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
-                ContextPool = new TransactionContextPool(_persistentState, configuration.Memory.MaxContextSizeToKeep);
+                ContextPool = new TransactionContextPool(_persistentState, clusterChanges: changes, configuration.Memory.MaxContextSizeToKeep);
 
                 ClusterTopology topology;
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -422,7 +422,7 @@ namespace Raven.Server.Rachis
                     _clusterId = topology.TopologyId;
                     SetClusterBase(_clusterId);
 
-                    InitializeState(context);
+                    InitializeState(context, changes);
 
                     LogHistory.Initialize(tx, configuration, Log);
 
@@ -507,7 +507,7 @@ namespace Raven.Server.Rachis
             };
         }
 
-        protected abstract void InitializeState(TransactionOperationContext context);
+        protected abstract void InitializeState(TransactionOperationContext context, ClusterChanges changes);
 
         public async Task WaitForState(RachisState rachisState, CancellationToken token)
         {

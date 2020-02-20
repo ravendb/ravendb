@@ -18,10 +18,14 @@ namespace Raven.Server.Rachis
         protected RachisConsensus _parent;
         public RachisVersionValidation Validator;
 
-        public virtual void Initialize(RachisConsensus parent, TransactionOperationContext context)
+        public ClusterChanges Changes { get; private set; }
+
+        public virtual void Initialize(RachisConsensus parent, TransactionOperationContext context, ClusterChanges changes)
         {
             _parent = parent;
             ContextPoolForReadOnlyOperations = _parent.ContextPool;
+            Changes = changes;
+
             Validator = InitializeValidator();
         }
 
