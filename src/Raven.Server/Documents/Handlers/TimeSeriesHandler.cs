@@ -14,7 +14,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
-using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
@@ -374,7 +373,6 @@ namespace Raven.Server.Documents.Handlers
                 if (operation.Appends.Count == 1)
                 {
                     _singleValue = operation.Appends[0];
-                    AssertNoNanValue(_singleValue);
                     return;
                 }
 
@@ -382,8 +380,6 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var item in operation.Appends)
                 {
-                    AssertNoNanValue(item);
-
                     if (_appendDictionary.TryGetValue(item.Name, out var sorted) == false)
                     {
                         sorted = new SortedList<long, TimeSeriesOperation.AppendOperation>();
@@ -391,16 +387,6 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     sorted[item.Timestamp.Ticks] = item;
-                }
-            }
-
-            private static void AssertNoNanValue(TimeSeriesOperation.AppendOperation appendOperation)
-            {
-                foreach (var val in appendOperation.Values)
-                {
-                    if (double.IsNaN(val))
-                        throw new InvalidOperationException("Failed to append TimeSeries entry. TimeSeries entries cannot have 'double.NaN' as one of their values. " +
-                                                            $"Failed on Timestamp : '{appendOperation.Timestamp.GetDefaultRavenFormat()}', Values : [{string.Join(',', appendOperation.Values)}]. ");
                 }
             }
 
