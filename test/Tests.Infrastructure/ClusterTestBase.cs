@@ -397,7 +397,7 @@ namespace Tests.Infrastructure
 
         protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(
             int numberOfNodes,
-            bool shouldRunInMemory = true,
+            bool? shouldRunInMemory = null,
             int? leaderIndex = null,
             bool useSsl = false,
             IDictionary<string, string> customSettings = null,
@@ -499,7 +499,7 @@ namespace Tests.Infrastructure
             return (clusterNodes, leader);
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool? shouldRunInMemory = null, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null)
         {
             return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList)).Leader;
         }
