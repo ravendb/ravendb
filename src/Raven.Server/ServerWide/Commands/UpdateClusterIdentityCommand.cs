@@ -38,7 +38,7 @@ namespace Raven.Server.ServerWide.Commands
             throw new NotSupportedException();
         }
 
-        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
+        public override unsafe void Execute(ClusterOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
             var resultDict = new Dictionary<string, long>();
             var identitiesItems = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.IdentitiesSchema, ClusterStateMachine.Identities);

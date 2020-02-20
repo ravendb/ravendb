@@ -138,7 +138,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public List<string> ExecuteCompareExchangeCommands(TransactionOperationContext context, long index, Table items)
+        public List<string> ExecuteCompareExchangeCommands(ClusterOperationContext context, long index, Table items)
         {
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;
@@ -189,7 +189,7 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
         
-        public unsafe void SaveCommandsBatch(TransactionOperationContext context, long index)
+        public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)
         {
             if (HasDocumentsInTransaction == false)
                 return;
@@ -224,7 +224,7 @@ namespace Raven.Server.ServerWide.Commands
             RaftIndex,
         }
 
-        public static SingleClusterDatabaseCommand ReadFirstClusterTransaction(TransactionOperationContext context, string database)
+        public static SingleClusterDatabaseCommand ReadFirstClusterTransaction(ClusterOperationContext context, string database)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(context, database, out var prefixSlice))
@@ -238,7 +238,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public const byte Separator = 30;
 
-        public static unsafe ByteStringContext.InternalScope GetPrefix(TransactionOperationContext context, string database, out Slice prefixSlice, long? index = null)
+        public static unsafe ByteStringContext.InternalScope GetPrefix<TTransaction>(TransactionOperationContext<TTransaction> context, string database, out Slice prefixSlice, long? index = null)
+            where TTransaction : RavenTransaction
         {
             var maxSize = database.GetUtf8MaxSize() + sizeof(byte);
             if (index.HasValue)
@@ -300,7 +301,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public static SingleClusterDatabaseCommand ReadSingleCommand(TransactionOperationContext context, string database, long? fromCount)
+        public static SingleClusterDatabaseCommand ReadSingleCommand(ClusterOperationContext context, string database, long? fromCount)
         {
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
@@ -325,7 +326,8 @@ namespace Raven.Server.ServerWide.Commands
         }
 
 
-        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch(TransactionOperationContext context, string database, long? fromCount, long take = 128)
+        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long? fromCount, long take = 128)
+            where TTransaction : RavenTransaction
         {
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
@@ -350,7 +352,8 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        private static unsafe SingleClusterDatabaseCommand ReadCommand(TransactionOperationContext context, TableValueReader reader)
+        private static unsafe SingleClusterDatabaseCommand ReadCommand<TTransaction>(TransactionOperationContext<TTransaction> context, TableValueReader reader)
+            where TTransaction : RavenTransaction
         {
             var ptr = reader.Read((int)TransactionCommandsColumn.Commands, out var size);
             if (ptr == null)

@@ -18,7 +18,7 @@ namespace Raven.Server.ServerWide.Commands
         protected abstract BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context,
             BlittableJsonReaderObject existingValue);
 
-        public virtual unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
+        public virtual unsafe void Execute(ClusterOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
             BlittableJsonReaderObject itemBlittable = null;
             var itemKey = GetItemId();

@@ -27,7 +27,7 @@ namespace Raven.Server.Documents
         private Dictionary<string, CollectionName> _collectionCache;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
-            : base(transaction, clusterChanges: null)
+            : base(transaction)
         {
             _context = context;
             _changes = changes;

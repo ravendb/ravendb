@@ -212,7 +212,7 @@ namespace Raven.Server.ServerWide
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
-        protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+        protected override void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet("Type", out string type) == false)
             {
@@ -453,7 +453,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ExecutePutSubscriptionBatch(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, string type)
+        private void ExecutePutSubscriptionBatch(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string type)
         {
             if (cmd.TryGet(nameof(PutSubscriptionBatchCommand.Commands), out BlittableJsonReaderArray subscriptionCommands) == false)
             {
@@ -510,7 +510,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void SetIndexForBackup(TransactionOperationContext toc, BlittableJsonReaderObject bjro, long index, string type)
+        private void SetIndexForBackup(ClusterOperationContext context, BlittableJsonReaderObject bjro, long index, string type)
         {
             if (index < 0)
                 return;
@@ -520,12 +520,12 @@ namespace Raven.Server.ServerWide
                 throw new RachisApplyException($"Command {type} must contain a DatabaseName property. Index {index}");
 
             var dbKey = $"db/{databaseName}";
-            var items = toc.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-            using (Slice.From(toc.Allocator, dbKey, out Slice key))
-            using (Slice.From(toc.Allocator, dbKey.ToLowerInvariant(), out Slice keyLowered))
+            using (Slice.From(context.Allocator, dbKey, out Slice key))
+            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice keyLowered))
             {
-                var databaseRecordJson = ReadInternal(toc, out _, keyLowered);
+                var databaseRecordJson = ReadInternal(context, out _, keyLowered);
                 if (databaseRecordJson == null)
                     return;
 
@@ -533,7 +533,7 @@ namespace Raven.Server.ServerWide
 
                 using (var old = databaseRecordJson)
                 {
-                    databaseRecordJson = toc.ReadObject(databaseRecordJson, dbKey);
+                    databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
                 }
 
                 UpdateValue(index, items, keyLowered, key, databaseRecordJson);
@@ -552,7 +552,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ExecuteCompareExchangeBatch(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, string commandType)
+        private void ExecuteCompareExchangeBatch(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string commandType)
         {
             CompareExchangeCommandBase compareExchange = null;
             Exception exception = null;
@@ -619,7 +619,7 @@ namespace Raven.Server.ServerWide
                    e is AuthorizationException;
         }
 
-        private void ClusterStateCleanUp(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private void ClusterStateCleanUp(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             Exception exception = null;
             CleanUpClusterStateCommand cleanCommand = null;
@@ -663,7 +663,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<string> ExecuteClusterTransaction(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private List<string> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
@@ -700,7 +700,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void UpdateDatabaseRecordId(TransactionOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
+        private void UpdateDatabaseRecordId(ClusterOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
         {
             var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
 
@@ -732,7 +732,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ConfirmReceiptServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        private void ConfirmReceiptServerCertificate(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             if (_parent.Log.IsOperationsEnabled)
                 _parent.Log.Operations($"Received {nameof(ConfirmReceiptServerCertificateCommand)}, index = {index}.");
@@ -790,7 +790,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void InstallUpdatedServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        private void InstallUpdatedServerCertificate(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             if (_parent.Log.IsOperationsEnabled)
                 _parent.Log.Operations($"Received {nameof(InstallUpdatedServerCertificateCommand)}.");
@@ -849,7 +849,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ConfirmServerCertificateReplaced(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        private void ConfirmServerCertificateReplaced(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             if (_parent.Log.IsOperationsEnabled)
                 _parent.Log.Operations($"Received {nameof(ConfirmServerCertificateReplacedCommand)}, index = {index}.");
@@ -925,7 +925,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void RemoveNodeFromCluster(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+        private void RemoveNodeFromCluster(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             RemoveNodeFromClusterCommand removedCmd = null;
             Exception exception = null;
@@ -989,7 +989,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ExecuteManyOnDispose(TransactionOperationContext context, long index, string type, List<Func<Task>> tasks)
+        private void ExecuteManyOnDispose(ClusterOperationContext context, long index, string type, List<Func<Task>> tasks)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
@@ -1079,7 +1079,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        private void SetValueForTypedDatabaseCommand(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, out object result)
+        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, out object result)
         {
             result = null;
             UpdateValueForDatabaseCommand updateCommand = null;
@@ -1114,7 +1114,7 @@ namespace Raven.Server.ServerWide
             await _rachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? _parent.OperationTimeout);
         }
 
-        private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+        private unsafe void RemoveNodeFromDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             Exception exception = null;
             RemoveNodeFromDatabaseCommand remove = null;
@@ -1171,7 +1171,7 @@ namespace Raven.Server.ServerWide
 
         }
 
-        private static void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName, ServerStore serverStore)
+        private static void DeleteDatabaseRecord(ClusterOperationContext context, long index, Table items, Slice lowerKey, string databaseName, ServerStore serverStore)
         {
             // delete database record
             items.DeleteByKey(lowerKey);
@@ -1189,7 +1189,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string databaseName, ServerStore serverStore)
+        private static void CleanupDatabaseRelatedValues(ClusterOperationContext context, Table items, string databaseName, ServerStore serverStore)
         {
             var dbValuesPrefix = Helpers.ClusterStateMachineValuesPrefix(databaseName).ToLowerInvariant();
             using (Slice.From(context.Allocator, dbValuesPrefix, out var loweredKey))
@@ -1236,7 +1236,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe List<string> AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
@@ -1379,7 +1379,7 @@ namespace Raven.Server.ServerWide
         private static void SetDatabaseValues(
             Dictionary<string, BlittableJsonReaderObject> databaseValues,
             string databaseName,
-            TransactionOperationContext context,
+            ClusterOperationContext context,
             long index,
             Table items)
         {
@@ -1404,7 +1404,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void DeleteValue(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        private void DeleteValue(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             Exception exception = null;
             DeleteValueCommand delCmd = null;
@@ -1428,7 +1428,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void DeleteCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        private void DeleteCertificate(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             try
             {
@@ -1442,7 +1442,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void DeleteMultipleCertificates(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        private void DeleteMultipleCertificates(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             try
             {
@@ -1459,7 +1459,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void DeleteItem(TransactionOperationContext context, string name)
+        public void DeleteItem<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
+            where TTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             using (Slice.From(context.Allocator, name.ToLowerInvariant(), out Slice keyNameLowered))
@@ -1468,7 +1469,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void DeleteCertificate(TransactionOperationContext context, string thumbprint)
+        public void DeleteCertificate<TTransaction>(TransactionOperationContext<TTransaction> context, string thumbprint)
+            where TTransaction : RavenTransaction
         {
             var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
             using (Slice.From(context.Allocator, thumbprint.ToLowerInvariant(), out var thumbprintSlice))
@@ -1477,7 +1479,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void DeleteMultipleValues(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void DeleteMultipleValues(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             Exception exception = null;
             DeleteMultipleValuesCommand delCmd = null;
@@ -1509,7 +1511,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe T UpdateValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, bool skipNotifyValueChanged = false)
+        private unsafe T UpdateValue<T>(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, bool skipNotifyValueChanged = false)
         {
             UpdateValueCommand<T> command = null;
             Exception exception = null;
@@ -1594,7 +1596,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private T PutValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        private T PutValue<T>(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             Exception exception = null;
             PutValueCommand<T> command = null;
@@ -1626,7 +1628,7 @@ namespace Raven.Server.ServerWide
                 NotifyValueChanged(context, type, index);
             }
         }
-        private void PutValueDirectly(TransactionOperationContext context, string key, BlittableJsonReaderObject value, long index)
+        private void PutValueDirectly(ClusterOperationContext context, string key, BlittableJsonReaderObject value, long index)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             using (Slice.From(context.Allocator, key, out Slice keySlice))
@@ -1636,7 +1638,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void PutCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        private void PutCertificate(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             try
             {
@@ -1661,7 +1663,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void DiscardLeftoverCertsWithSamePinningHash(TransactionOperationContext context, string hash, string type, long index)
+        private void DiscardLeftoverCertsWithSamePinningHash(ClusterOperationContext context, string hash, string type, long index)
         {
             var certsWithSameHash = GetCertificatesByPinningHashSortedByExpiration(context, hash);
 
@@ -1685,7 +1687,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
+        public override void EnsureNodeRemovalOnDeletion(ClusterOperationContext context, long term, string nodeTag)
         {
             var djv = new RemoveNodeFromClusterCommand(RaftIdGenerator.NewId())
             {
@@ -1695,7 +1697,7 @@ namespace Raven.Server.ServerWide
             _parent.InsertToLeaderLog(context, term, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
         }
 
-        private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
+        private void NotifyValueChanged(ClusterOperationContext context, string type, long index)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
@@ -1709,7 +1711,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private void NotifyDatabaseAboutChanged(TransactionOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
+        private void NotifyDatabaseAboutChanged(ClusterOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
@@ -1744,7 +1746,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+        private void UpdateDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet(DatabaseName, out string databaseName) == false || string.IsNullOrEmpty(databaseName))
                 throw new RachisApplyException("Update database command must contain a DatabaseName property");
@@ -1923,7 +1925,7 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
-        public override void Initialize(RachisConsensus parent, TransactionOperationContext context, ClusterChanges changes)
+        public override void Initialize(RachisConsensus parent, ClusterOperationContext context, ClusterChanges changes)
         {
             base.Initialize(parent, context, changes);
 
@@ -1941,7 +1943,7 @@ namespace Raven.Server.ServerWide
             _parent.SwitchToSingleLeaderAction = SwitchToSingleLeader;
         }
 
-        private void SwitchToSingleLeader(TransactionOperationContext context)
+        private void SwitchToSingleLeader(ClusterOperationContext context)
         {
             // when switching to a single node cluster we need to clear all of the irrelevant databases
             var clusterTopology = _parent.GetTopology(context);
@@ -1955,7 +1957,7 @@ namespace Raven.Server.ServerWide
             UpdateLicenseOnSwitchingToSingleLeader(context);
         }
 
-        private void UpdateLicenseOnSwitchingToSingleLeader(TransactionOperationContext context)
+        private void UpdateLicenseOnSwitchingToSingleLeader(ClusterOperationContext context)
         {
             var licenseLimitsBlittable = Read(context, ServerStore.LicenseLimitsStorageKey, out long index);
             if (licenseLimitsBlittable == null)
@@ -1982,7 +1984,7 @@ namespace Raven.Server.ServerWide
             PutValueDirectly(context, ServerStore.LicenseLimitsStorageKey, value, index);
         }
 
-        private void ShrinkClusterTopology(TransactionOperationContext context, ClusterTopology clusterTopology, string newTag, long index)
+        private void ShrinkClusterTopology(ClusterOperationContext context, ClusterTopology clusterTopology, string newTag, long index)
         {
             _parent.UpdateNodeTag(context, newTag);
 
@@ -2001,7 +2003,7 @@ namespace Raven.Server.ServerWide
             _parent.SetTopology(context, topology);
         }
 
-        private void SqueezeDatabasesToSingleNodeCluster(TransactionOperationContext context, string oldTag, string newTag)
+        private void SqueezeDatabasesToSingleNodeCluster(ClusterOperationContext context, string oldTag, string newTag)
         {
             var toDelete = new List<string>();
             var toShrink = new List<DatabaseRecord>();
@@ -2097,7 +2099,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void DeleteLocalState(TransactionOperationContext context, string thumbprint)
+        public void DeleteLocalState<TTransaction>(TransactionOperationContext<TTransaction> context, string thumbprint)
+            where TTransaction : RavenTransaction
         {
             var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             localState.Delete(thumbprint);
@@ -2112,7 +2115,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public unsafe BlittableJsonReaderObject GetLocalStateByThumbprint(TransactionOperationContext context, string thumbprint)
+        public unsafe BlittableJsonReaderObject GetLocalStateByThumbprint<TTransaction>(TransactionOperationContext<TTransaction> context, string thumbprint)
+            where TTransaction : RavenTransaction
         {
             var localState = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
             var read = localState.Read(thumbprint);
@@ -2141,7 +2145,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster(TransactionOperationContext context, long start, long take)
+        public IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster<TTransaction>(TransactionOperationContext<TTransaction> context, long start, long take)
+            where TTransaction : RavenTransaction
         {
             var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
@@ -2154,7 +2159,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<string> GetCertificateThumbprintsFromCluster(TransactionOperationContext context)
+        public IEnumerable<string> GetCertificateThumbprintsFromCluster<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
         {
             var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
@@ -2164,7 +2170,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith(TransactionOperationContext context, string prefix, long start, long take)
+        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith<TTransaction>(TransactionOperationContext<TTransaction> context, string prefix, long start, long take)
+            where TTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2181,7 +2188,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public BlittableJsonReaderObject GetItem(TransactionOperationContext context, string key)
+        public BlittableJsonReaderObject GetItem<TTransaction>(TransactionOperationContext<TTransaction> context, string key)
+            where TTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2194,7 +2202,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void ExecuteCompareExchange(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
+        public void ExecuteCompareExchange(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
         {
             Exception exception = null;
             CompareExchangeCommandBase compareExchange = null;
@@ -2218,7 +2226,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void OnTransactionDispose(TransactionOperationContext context, long index)
+        private void OnTransactionDispose(ClusterOperationContext context, long index)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
@@ -2349,7 +2357,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ClearCompareExchangeTombstones(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out bool result)
+        private void ClearCompareExchangeTombstones(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out bool result)
         {
             string databaseName = null;
 
@@ -2373,7 +2381,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static bool DeleteCompareExchangeTombstonesUpToPrefix(TransactionOperationContext context, string dbName, long upToIndex, long take = long.MaxValue)
+        private static bool DeleteCompareExchangeTombstonesUpToPrefix(ClusterOperationContext context, string dbName, long upToIndex, long take = long.MaxValue)
         {
             using (Slice.From(context.Allocator, dbName, out var dbNameSlice))
             {
@@ -2432,7 +2440,8 @@ namespace Raven.Server.ServerWide
             return results;
         }
 
-        public List<string> GetDatabaseNames(TransactionOperationContext context, long take = long.MaxValue)
+        public List<string> GetDatabaseNames<TTransaction>(TransactionOperationContext<TTransaction> context, long take = long.MaxValue)
+            where TTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2453,7 +2462,8 @@ namespace Raven.Server.ServerWide
             return names;
         }
 
-        public List<DatabaseRecord> GetAllDatabases(TransactionOperationContext context, long take = long.MaxValue)
+        public List<DatabaseRecord> GetAllDatabases<TTransaction>(TransactionOperationContext<TTransaction> context, long take = long.MaxValue)
+            where TTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2483,7 +2493,8 @@ namespace Raven.Server.ServerWide
             return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
         }
 
-        private static unsafe (string, BlittableJsonReaderObject) GetCurrentItem(TransactionOperationContext context, Table.TableValueHolder result)
+        private static unsafe (string, BlittableJsonReaderObject) GetCurrentItem<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder result)
+            where TTransaction : RavenTransaction
         {
             var ptr = result.Reader.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
@@ -2493,7 +2504,8 @@ namespace Raven.Server.ServerWide
             return (key, doc);
         }
 
-        public BlittableJsonReaderObject GetCertificateByThumbprint(TransactionOperationContext context, string thumbprint)
+        public BlittableJsonReaderObject GetCertificateByThumbprint<TTransaction>(TransactionOperationContext<TTransaction> context, string thumbprint)
+            where TTransaction : RavenTransaction
         {
             var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
@@ -2506,7 +2518,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate(TransactionOperationContext context, Table.TableValueHolder result)
+        private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder result)
+            where TTransaction : RavenTransaction
         {
             var ptr = result.Reader.Read((int)CertificatesTable.Data, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
@@ -2516,19 +2529,21 @@ namespace Raven.Server.ServerWide
             return (key, doc);
         }
 
-        private static CertificateDefinition GetCertificateDefinition(TransactionOperationContext context, Table.TableValueHolder result)
+        private static CertificateDefinition GetCertificateDefinition<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder result)
+            where TTransaction : RavenTransaction
         {
             return JsonDeserializationServer.CertificateDefinition(GetCertificate(context, result).Cert);
         }
 
-        public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(TransactionOperationContext context, string hash)
+        public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(ClusterOperationContext context, string hash)
         {
             var list = GetCertificatesByPinningHash(context, hash).ToList();
             list.Sort((x, y) => DateTime.Compare(y.NotAfter, x.NotAfter));
             return list;
         }
 
-        public IEnumerable<CertificateDefinition> GetCertificatesByPinningHash(TransactionOperationContext context, string hash)
+        public IEnumerable<CertificateDefinition> GetCertificatesByPinningHash<TTransaction>(TransactionOperationContext<TTransaction> context, string hash)
+            where TTransaction : RavenTransaction
         {
             var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
@@ -2544,12 +2559,14 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)
+        public DatabaseRecord ReadDatabase<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
+            where TTransaction : RavenTransaction
         {
             return ReadDatabase(context, name, out long _);
         }
 
-        public RawDatabaseRecord ReadRawDatabaseRecord(TransactionOperationContext context, string name, out long etag)
+        public RawDatabaseRecord ReadRawDatabaseRecord<TTransaction>(TransactionOperationContext<TTransaction> context, string name, out long etag)
+            where TTransaction : RavenTransaction
         {
             var rawRecord = ReadRawDatabase(context, name, out etag);
             if (rawRecord == null)
@@ -2558,12 +2575,14 @@ namespace Raven.Server.ServerWide
             return new RawDatabaseRecord(rawRecord);
         }
 
-        public RawDatabaseRecord ReadRawDatabaseRecord(TransactionOperationContext context, string name)
+        public RawDatabaseRecord ReadRawDatabaseRecord<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
+            where TTransaction : RavenTransaction
         {
             return ReadRawDatabaseRecord(context, name, out _);
         }
 
-        public bool DatabaseExists(TransactionOperationContext context, string name)
+        public bool DatabaseExists<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
+            where TTransaction : RavenTransaction
         {
             var dbKey = "db/" + name.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -2572,8 +2591,8 @@ namespace Raven.Server.ServerWide
                 return items.VerifyKeyExists(key);
         }
 
-        public DatabaseRecord ReadDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
-            where T : RavenTransaction
+        public DatabaseRecord ReadDatabase<TTransaction>(TransactionOperationContext<TTransaction> context, string name, out long etag)
+            where TTransaction : RavenTransaction
         {
             var doc = ReadRawDatabase(context, name, out etag);
             if (doc == null)
@@ -2786,8 +2805,8 @@ namespace Raven.Server.ServerWide
             return doc;
         }
 
-        public static IEnumerable<(Slice Key, BlittableJsonReaderObject Value)> ReadValuesStartingWith(
-            TransactionOperationContext context, string startsWithKey)
+        public static IEnumerable<(Slice Key, BlittableJsonReaderObject Value)> ReadValuesStartingWith<TTransaction>(TransactionOperationContext<TTransaction> context, string startsWithKey)
+            where TTransaction : RavenTransaction
         {
             var startsWithKeyLower = startsWithKey.ToLowerInvariant();
             using (Slice.From(context.Allocator, startsWithKeyLower, out Slice startsWithSlice))
@@ -2805,8 +2824,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc,
-            out long etag)
+        private static unsafe int GetDataAndEtagTupleFromReader<TTransaction>(TransactionOperationContext<TTransaction> context, TableValueReader reader, out BlittableJsonReaderObject doc, out long etag)
+            where TTransaction : RavenTransaction
         {
             var ptr = reader.Read(2, out int size);
             doc = new BlittableJsonReaderObject(ptr, size, context);
@@ -2921,7 +2940,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
+        private void UpdateDatabasesWithNewServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
         {
             if (serverWideBackupConfiguration == null)
                 throw new RachisInvalidOperationException($"Server-wide backup configuration is null for commmand type: {type}");
@@ -2985,7 +3004,7 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
 
-        private void DeleteServerWideBackupConfigurationFromAllDatabases(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        private void DeleteServerWideBackupConfigurationFromAllDatabases(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             if (cmd.TryGet(nameof(DeleteServerWideBackupConfigurationCommand.Value), out string backupNameToDelete) == false)
                 throw new RachisInvalidOperationException($"Cannot find backup name to delete for command: {type}");
@@ -3048,7 +3067,7 @@ namespace Raven.Server.ServerWide
                    backupNameToFind.Equals(backupName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long index, Table items, TransactionOperationContext context)
+        private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long index, Table items, ClusterOperationContext context)
         {
             var tasks = new List<Func<Task>> { () => Changes.OnValueChanges(index, type) };
 
@@ -3070,7 +3089,7 @@ namespace Raven.Server.ServerWide
 
         public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore, CancellationToken token)
         {
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_parent.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 // lets read all the certificate keys from the cluster, and delete the matching ones from the local state

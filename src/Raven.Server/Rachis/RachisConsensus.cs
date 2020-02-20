@@ -60,7 +60,7 @@ namespace Raven.Server.Rachis
             _serverStore.NotificationCenter.Add(notification, updateExisting: false);
         }
 
-        protected override void InitializeState(TransactionOperationContext context, ClusterChanges changes)
+        protected override void InitializeState(ClusterOperationContext context, ClusterChanges changes)
         {
             StateMachine = new TStateMachine();
             StateMachine.Initialize(this, context, changes);
@@ -73,12 +73,12 @@ namespace Raven.Server.Rachis
             base.Dispose();
         }
 
-        public override long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration)
+        public override long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration)
         {
             return StateMachine.Apply(context, uptoInclusive, leader, _serverStore, duration);
         }
 
-        public void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
+        public void EnsureNodeRemovalOnDeletion(ClusterOperationContext context, long term, string nodeTag)
         {
             StateMachine.EnsureNodeRemovalOnDeletion(context, term, nodeTag);
         }
@@ -111,7 +111,8 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe List<BlittableJsonReaderObject> GetLogEntries(long first, TransactionOperationContext context, int max)
+        public unsafe List<BlittableJsonReaderObject> GetLogEntries<TTransaction>(long first, TransactionOperationContext<TTransaction> context, int max)
+            where TTransaction : RavenTransaction
         {
             var entries = new List<BlittableJsonReaderObject>();
             var reveredNextIndex = Bits.SwapBytes(first);
@@ -265,14 +266,14 @@ namespace Raven.Server.Rachis
 
         public event EventHandler LeaderElected;
 
-        public Action<TransactionOperationContext> SwitchToSingleLeaderAction;
+        public Action<ClusterOperationContext> SwitchToSingleLeaderAction;
 
-        public Action<TransactionOperationContext, CommandBase> BeforeAppendToRaftLog;
+        public Action<ClusterOperationContext, CommandBase> BeforeAppendToRaftLog;
 
         private string _tag;
         private string _clusterId;
 
-        public TransactionContextPool ContextPool { get; private set; }
+        public ClusterContextPool ContextPool { get; private set; }
         private StorageEnvironment _persistentState;
         internal Logger Log;
 
@@ -392,10 +393,10 @@ namespace Raven.Server.Rachis
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
-                ContextPool = new TransactionContextPool(_persistentState, clusterChanges: changes, configuration.Memory.MaxContextSizeToKeep);
+                ContextPool = new ClusterContextPool(changes, _persistentState, configuration.Memory.MaxContextSizeToKeep);
 
                 ClusterTopology topology;
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
                     _tag = ReadNodeTag(context);
@@ -452,7 +453,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private unsafe long ReadTerm(TransactionOperationContext context)
+        private unsafe long ReadTerm(ClusterOperationContext context)
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
 
@@ -468,7 +469,7 @@ namespace Raven.Server.Rachis
             return read.Reader.ReadLittleEndianInt64();
         }
 
-        public string ReadNodeTag(TransactionOperationContext context)
+        public string ReadNodeTag(ClusterOperationContext context)
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
 
@@ -476,7 +477,7 @@ namespace Raven.Server.Rachis
             return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
         }
 
-        public string ReadPreviousNodeTag(TransactionOperationContext context)
+        public string ReadPreviousNodeTag(ClusterOperationContext context)
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
 
@@ -484,7 +485,7 @@ namespace Raven.Server.Rachis
             return readResult?.Reader.ToStringValue();
         }
 
-        private void SwitchToSingleLeader(TransactionOperationContext context)
+        private void SwitchToSingleLeader(ClusterOperationContext context)
         {
             var electionTerm = CurrentTerm + 1;
             CastVoteInTerm(context, electionTerm, Tag, "Switching to single leader");
@@ -507,7 +508,7 @@ namespace Raven.Server.Rachis
             };
         }
 
-        protected abstract void InitializeState(TransactionOperationContext context, ClusterChanges changes);
+        protected abstract void InitializeState(ClusterOperationContext context, ClusterChanges changes);
 
         public async Task WaitForState(RachisState rachisState, CancellationToken token)
         {
@@ -563,7 +564,7 @@ namespace Raven.Server.Rachis
             {
                 var task = _topologyChanged.Task;
                 var tag = nodeTag ?? _tag;
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var clusterTopology = GetTopology(context);
@@ -604,7 +605,7 @@ namespace Raven.Server.Rachis
 
         public void SetNewState(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
                 SetNewStateInTx(context, rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose);
@@ -673,7 +674,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        internal void SetNewStateInTx(TransactionOperationContext context,
+        internal void SetNewStateInTx(ClusterOperationContext context,
             RachisState rachisState,
             IDisposable parent,
             long expectedTerm,
@@ -736,7 +737,7 @@ namespace Raven.Server.Rachis
 
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += 
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented +=
                 () => CurrentState = rachisState; //  we need this to happened while we still under the write lock
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
@@ -838,7 +839,7 @@ namespace Raven.Server.Rachis
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction()) // using write tx just for the lock here
             {
                 if (_disposables.Count == 0 || ReferenceEquals(_disposables[0], parentState) == false)
@@ -853,7 +854,7 @@ namespace Raven.Server.Rachis
             if (disposable == null)
                 return;
 
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction()) // using write tx just for the lock here
             using (disposable)
             {
@@ -901,7 +902,7 @@ namespace Raven.Server.Rachis
             try
             {
                 Timeout.DisableTimeout();
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (var ctx = context.OpenWriteTransaction())
                 {
                     var clusterTopology = GetTopology(context);
@@ -963,7 +964,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void DeleteTopology(TransactionOperationContext context)
+        public void DeleteTopology(ClusterOperationContext context)
         {
             var topology = GetTopology(context);
             var newTopology = new ClusterTopology(
@@ -977,7 +978,8 @@ namespace Raven.Server.Rachis
             SetTopology(context, newTopology);
         }
 
-        public unsafe ClusterTopology GetTopology(TransactionOperationContext context)
+        public unsafe ClusterTopology GetTopology<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
         {
             Debug.Assert(context.Transaction != null);
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
@@ -998,7 +1000,7 @@ namespace Raven.Server.Rachis
             return JsonDeserializationRachis<ClusterTopology>.Deserialize(json);
         }
 
-        public unsafe BlittableJsonReaderObject GetTopologyRaw(TransactionOperationContext context)
+        public unsafe BlittableJsonReaderObject GetTopologyRaw(ClusterOperationContext context)
         {
             Debug.Assert(context.Transaction != null);
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
@@ -1013,7 +1015,7 @@ namespace Raven.Server.Rachis
             return topologyBlittable;
         }
 
-        public BlittableJsonReaderObject SetTopology(TransactionOperationContext context, ClusterTopology topology)
+        public BlittableJsonReaderObject SetTopology(ClusterOperationContext context, ClusterTopology topology)
         {
             Debug.Assert(context.Transaction != null);
             var topologyJson = SetTopology(this, context, topology);
@@ -1021,7 +1023,8 @@ namespace Raven.Server.Rachis
             SetClusterBase(_clusterId);
             return topologyJson;
         }
-        public static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, TransactionOperationContext context,
+
+        public static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, ClusterOperationContext context,
             ClusterTopology clusterTopology)
         {
             var topologyJson = context.ReadObject(clusterTopology.ToJson(), "topology");
@@ -1052,7 +1055,7 @@ namespace Raven.Server.Rachis
                 if (IsDisposed)
                     return;
 
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     TopologyChanged?.Invoke(this, GetTopology(ctx));
@@ -1079,7 +1082,7 @@ namespace Raven.Server.Rachis
                 {
                     RachisHello initialMessage;
                     ClusterTopology clusterTopology;
-                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     {
                         initialMessage = remoteConnection.InitFollower(context);
 
@@ -1110,7 +1113,7 @@ namespace Raven.Server.Rachis
                     }
                     if (_tag == InitialTag)
                     {
-                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         using (context.OpenWriteTransaction())
                         {
                             if (_tag == InitialTag)// double checked locking under tx write lock
@@ -1153,7 +1156,7 @@ namespace Raven.Server.Rachis
                 {
                     try
                     {
-                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             remoteConnection.Send(context, e);
                     }
                     catch
@@ -1220,7 +1223,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe long InsertToLeaderLog(TransactionOperationContext context, long term, BlittableJsonReaderObject cmd,
+        public unsafe long InsertToLeaderLog(ClusterOperationContext context, long term, BlittableJsonReaderObject cmd,
             RachisEntryFlags flags)
         {
             Debug.Assert(context.Transaction != null);
@@ -1255,7 +1258,7 @@ namespace Raven.Server.Rachis
             return lastIndex;
         }
 
-        public unsafe void ClearLogEntriesAndSetLastTruncate(TransactionOperationContext context, long index, long term)
+        public unsafe void ClearLogEntriesAndSetLastTruncate(ClusterOperationContext context, long index, long term)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             while (true)
@@ -1273,7 +1276,7 @@ namespace Raven.Server.Rachis
                 data[1] = term;
             }
         }
-        public unsafe void TruncateLogBefore(TransactionOperationContext context, long upto)
+        public unsafe void TruncateLogBefore(ClusterOperationContext context, long upto)
         {
             GetLastCommitIndex(context, out long lastIndex, out long lastTerm);
 
@@ -1324,7 +1327,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe (BlittableJsonReaderObject LastTopology, long LastTopologyIndex) AppendToLog(TransactionOperationContext context,
+        public unsafe (BlittableJsonReaderObject LastTopology, long LastTopologyIndex) AppendToLog(ClusterOperationContext context,
             List<RachisEntry> entries)
         {
             Debug.Assert(entries.Count > 0);
@@ -1445,8 +1448,8 @@ namespace Raven.Server.Rachis
             RachisInvalidOperationException.Throw(message);
         }
 
-        internal static void GetLastTruncated(TransactionOperationContext context, out long lastTruncatedIndex,
-            out long lastTruncatedTerm)
+        internal static void GetLastTruncated<TTransaction>(TransactionOperationContext<TTransaction> context, out long lastTruncatedIndex, out long lastTruncatedTerm)
+            where TTransaction : RavenTransaction
         {
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(LastTruncatedSlice);
@@ -1462,7 +1465,7 @@ namespace Raven.Server.Rachis
         }
 
 
-        public unsafe BlittableJsonReaderObject GetEntry(TransactionOperationContext context, long index,
+        public unsafe BlittableJsonReaderObject GetEntry(ClusterOperationContext context, long index,
             out RachisEntryFlags flags)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
@@ -1484,7 +1487,8 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public long GetLastCommitIndex(TransactionOperationContext context)
+        public long GetLastCommitIndex<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
         {
             Debug.Assert(context.Transaction != null);
 
@@ -1495,7 +1499,7 @@ namespace Raven.Server.Rachis
             return read.Reader.ReadLittleEndianInt64();
         }
 
-        public void GetLastCommitIndex(TransactionOperationContext context, out long index, out long term)
+        public void GetLastCommitIndex(ClusterOperationContext context, out long index, out long term)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -1514,7 +1518,7 @@ namespace Raven.Server.Rachis
 
 
 
-        public unsafe void SetLastCommitIndex(TransactionOperationContext context, long index, long term)
+        public unsafe void SetLastCommitIndex(ClusterOperationContext context, long index, long term)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -1552,7 +1556,7 @@ namespace Raven.Server.Rachis
             while (timeoutTask.IsCompleted == false)
             {
                 var task = _commitIndexChanged.Task;
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var commitIndex = GetLastCommitIndex(context);
@@ -1606,7 +1610,7 @@ namespace Raven.Server.Rachis
             return (min, max);
         }
 
-        public unsafe long GetFirstEntryIndex(TransactionOperationContext context)
+        public unsafe long GetFirstEntryIndex(ClusterOperationContext context)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -1621,7 +1625,7 @@ namespace Raven.Server.Rachis
             return max;
         }
 
-        public unsafe long GetLastEntryIndex(TransactionOperationContext context)
+        public unsafe long GetLastEntryIndex(ClusterOperationContext context)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -1637,7 +1641,7 @@ namespace Raven.Server.Rachis
             return max;
         }
 
-        public long GetTermForKnownExisting(TransactionOperationContext context, long index)
+        public long GetTermForKnownExisting(ClusterOperationContext context, long index)
         {
             var termFor = GetTermFor(context, index);
             if (termFor == null)
@@ -1646,7 +1650,7 @@ namespace Raven.Server.Rachis
             return termFor.Value;
         }
 
-        public unsafe long? GetTermFor(TransactionOperationContext context, long index)
+        public unsafe long? GetTermFor(ClusterOperationContext context, long index)
         {
             Debug.Assert(context.Transaction != null);
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
@@ -1677,7 +1681,7 @@ namespace Raven.Server.Rachis
             if (term <= CurrentTerm)
                 return;
 
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -1700,7 +1704,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe void CastVoteInTerm(TransactionOperationContext context, long term, string votedFor, string reason)
+        public unsafe void CastVoteInTerm(ClusterOperationContext context, long term, string votedFor, string reason)
         {
             Debug.Assert(context.Transaction != null);
             if (term <= CurrentTerm)
@@ -1757,7 +1761,7 @@ namespace Raven.Server.Rachis
             }, null);
         }
 
-        public (string VotedFor, long LastVotedTerm) GetWhoGotMyVoteIn(TransactionOperationContext context, long term)
+        public (string VotedFor, long LastVotedTerm) GetWhoGotMyVoteIn(ClusterOperationContext context, long term)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -1802,7 +1806,7 @@ namespace Raven.Server.Rachis
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
 
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
                 if (CurrentState != RachisState.Passive)
@@ -1843,7 +1847,7 @@ namespace Raven.Server.Rachis
 
         public string HardResetToNewCluster(string nodeTag = "A")
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
                 var topologyId = Guid.NewGuid().ToString();
@@ -1875,7 +1879,7 @@ namespace Raven.Server.Rachis
 
         public void HardResetToPassive(string topologyId = null)
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
                 UpdateNodeTag(ctx, InitialTag);
@@ -1981,14 +1985,14 @@ namespace Raven.Server.Rachis
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
-        public abstract long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
+        public abstract long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
         public abstract Task SnapshotInstalledAsync(long lastIncludedIndex, CancellationToken token);
 
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
 
-        public void InvokeBeforeAppendToRaftLog(TransactionOperationContext context, CommandBase cmd)
+        public void InvokeBeforeAppendToRaftLog(ClusterOperationContext context, CommandBase cmd)
         {
             BeforeAppendToRaftLog?.Invoke(context, cmd);
         }
@@ -2055,7 +2059,7 @@ namespace Raven.Server.Rachis
             return dja;
         }
 
-        public void UpdateNodeTag(TransactionOperationContext context, string newTag)
+        public void UpdateNodeTag(ClusterOperationContext context, string newTag)
         {
             ValidateNodeTag(newTag);
 
@@ -2080,7 +2084,8 @@ namespace Raven.Server.Rachis
 
         public bool RequestSnapshot { get; private set; }
 
-        public void SetSnapshotRequest(TransactionOperationContext context, bool request)
+        public void SetSnapshotRequest<TTransaction>(TransactionOperationContext<TTransaction> context, bool request)
+            where TTransaction : RavenTransaction
         {
             var oldValue = GetSnapshotRequest(context);
 
@@ -2097,7 +2102,8 @@ namespace Raven.Server.Rachis
             };
         }
 
-        public bool GetSnapshotRequest(TransactionOperationContext context)
+        public bool GetSnapshotRequest<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             var reader = state.Read(SnapshotRequestSlice);
@@ -2113,7 +2119,7 @@ namespace Raven.Server.Rachis
             LeaderElected?.Invoke(null, null);
         }
 
-        public unsafe void ClearAppendedEntriesAfter(TransactionOperationContext context, long index)
+        public unsafe void ClearAppendedEntriesAfter(ClusterOperationContext context, long index)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             var reversedEntryIndex = Bits.SwapBytes(index);

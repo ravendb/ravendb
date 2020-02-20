@@ -134,7 +134,7 @@ namespace RachisTests
             var waitForTopologySuccessful = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5));
             Assert.True(waitForTopologySuccessful);
 
-            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 var topology = leader.GetTopology(ctx);
@@ -155,7 +155,7 @@ namespace RachisTests
             await node2.PutAsync(new TestCommand { Name = "test", Value = 20 });
 
             string id;
-            using (node1.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (node1.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 id = node1.GetTopology(ctx).TopologyId;
@@ -170,8 +170,8 @@ namespace RachisTests
             await node1.AddToClusterAsync(url);
             await node2.WaitForTopology(Leader.TopologyModification.Voter);
 
-            using (node1.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx1))
-            using (node2.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx2))
+            using (node1.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx1))
+            using (node2.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx2))
             using (ctx1.OpenReadTransaction())
             using (ctx2.OpenReadTransaction())
             {

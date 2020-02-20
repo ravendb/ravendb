@@ -36,7 +36,7 @@ namespace Raven.Server.Rachis
             {
                 while (true)
                 {
-                    using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
 
@@ -311,7 +311,7 @@ namespace Raven.Server.Rachis
             public long VotedTerm;
         }
 
-        private HandleVoteResult ShouldGrantVote(TransactionOperationContext context, long lastIndex, RequestVote rv)
+        private HandleVoteResult ShouldGrantVote(ClusterOperationContext context, long lastIndex, RequestVote rv)
         {
             var result = new HandleVoteResult();
             var lastLogIndexUnderWriteLock = _engine.GetLastEntryIndex(context);

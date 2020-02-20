@@ -69,7 +69,7 @@ namespace Raven.Server.Documents
 
             Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Configuration);
 
-            ContextPool = new TransactionContextPool(Environment, clusterChanges: null, db.Configuration.Memory.MaxContextSizeToKeep);
+            ContextPool = new TransactionContextPool(Environment, db.Configuration.Memory.MaxContextSizeToKeep);
         }
 
         public void Initialize()

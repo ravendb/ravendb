@@ -45,9 +45,9 @@ namespace Raven.Server.ServerWide.Commands
             FromBackup = fromBackup;
         }
 
-        protected abstract CompareExchangeResult ExecuteInternal(TransactionOperationContext context, Table items, long index);
+        protected abstract CompareExchangeResult ExecuteInternal(ClusterOperationContext context, Table items, long index);
 
-        public CompareExchangeResult Execute(TransactionOperationContext context, Table items, long index)
+        public CompareExchangeResult Execute(ClusterOperationContext context, Table items, long index)
         {
             var result = ExecuteInternal(context, items, index);
 
@@ -138,7 +138,7 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
-        public unsafe bool Validate(TransactionOperationContext context, Table items, long index, out long currentIndex)
+        public unsafe bool Validate(ClusterOperationContext context, Table items, long index, out long currentIndex)
         {
             currentIndex = -1;
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
@@ -221,7 +221,7 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        protected override unsafe CompareExchangeResult ExecuteInternal(TransactionOperationContext context, Table items, long index)
+        protected override unsafe CompareExchangeResult ExecuteInternal(ClusterOperationContext context, Table items, long index)
         {
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
@@ -265,7 +265,7 @@ namespace Raven.Server.ServerWide.Commands
             };
         }
 
-        private unsafe void WriteCompareExchangeTombstone(TransactionOperationContext context, long index)
+        private unsafe void WriteCompareExchangeTombstone(ClusterOperationContext context, long index)
         {
             GetKeyAndPrefixIndexSlices(context.Allocator, Database, Key, index, out var keyTuple, out var indexTuple);
             var tombstoneItems = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.CompareExchangeTombstoneSchema, ClusterStateMachine.CompareExchangeTombstones);
@@ -302,7 +302,7 @@ namespace Raven.Server.ServerWide.Commands
             Value = value;
         }
 
-        protected override unsafe CompareExchangeResult ExecuteInternal(TransactionOperationContext context, Table items, long index)
+        protected override unsafe CompareExchangeResult ExecuteInternal(ClusterOperationContext context, Table items, long index)
         {
             // We have to clone the Value because we might have gotten this command from another node
             // and it was serialized. In that case, it is an _internal_ object, not a full document,

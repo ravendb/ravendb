@@ -123,7 +123,7 @@ namespace Raven.Server.Rachis
             return type;
         }
 
-        public void InsertHistoryLog(TransactionOperationContext context, long index, long term, BlittableJsonReaderObject cmd)
+        public void InsertHistoryLog(ClusterOperationContext context, long index, long term, BlittableJsonReaderObject cmd)
         {
             if (HasHistoryLog(context, cmd, out _, out _, out _))
             {
@@ -164,7 +164,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void UpdateHistoryLog(TransactionOperationContext context, long index, long term, BlittableJsonReaderObject cmd, object result, Exception exception)
+        public void UpdateHistoryLog(ClusterOperationContext context, long index, long term, BlittableJsonReaderObject cmd, object result, Exception exception)
         {
             var guid = GetGuidFromCommand(cmd);
             if (guid == null) // shouldn't happened in new cluster version!
@@ -177,7 +177,7 @@ namespace Raven.Server.Rachis
             UpdateInternal(context, guid, type, index, term, HistoryStatus.Committed, result, exception);
         }
 
-        private unsafe void UpdateInternal(TransactionOperationContext context, string guid, string type, long index, long term, HistoryStatus status, object result, Exception exception)
+        private unsafe void UpdateInternal(ClusterOperationContext context, string guid, string type, long index, long term, HistoryStatus status, object result, Exception exception)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
 
@@ -240,7 +240,7 @@ namespace Raven.Server.Rachis
             public HistoryStatus Status;
         }
 
-        public unsafe void CancelHistoryEntriesFrom(TransactionOperationContext context, long from, long term, string msg)
+        public unsafe void CancelHistoryEntriesFrom(ClusterOperationContext context, long from, long term, string msg)
         {
             var reversedIndex = Bits.SwapBytes(from);
 
@@ -379,7 +379,7 @@ namespace Raven.Server.Rachis
             return guid;
         }
 
-        public unsafe bool HasHistoryLog(TransactionOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out Exception exception)
+        public unsafe bool HasHistoryLog(ClusterOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out Exception exception)
         {
             result = null;
             exception = null;

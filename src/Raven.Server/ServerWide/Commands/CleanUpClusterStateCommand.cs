@@ -18,7 +18,7 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public unsafe Dictionary<string, long> Clean(TransactionOperationContext context, long index)
+        public unsafe Dictionary<string, long> Clean(ClusterOperationContext context, long index)
         {
             var affectedDatabases = new Dictionary<string, long>();
             foreach (var tuple in ClusterTransactionsCleanup)

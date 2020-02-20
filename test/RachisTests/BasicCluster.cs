@@ -35,7 +35,7 @@ namespace RachisTests
                 await task;
             }
 
-            using (a.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (a.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var actual = a.GetLastEntryIndex(context);
@@ -90,7 +90,7 @@ namespace RachisTests
                 await leader.PutAsync(new TestCommand { Name = "test", Value = i });
             }
 
-            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var actual = leader.StateMachine.Read(context, "test");
@@ -156,8 +156,7 @@ namespace RachisTests
             }
 
             Assert.True(await b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).WaitAsync(15000));
-            TransactionOperationContext context;
-            using (b.ContextPool.AllocateOperationContext(out context))
+            using (b.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 Assert.Equal(expected, b.StateMachine.Read(context, "test"));
@@ -184,7 +183,7 @@ namespace RachisTests
             var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
             Assert.True(await waitForCommitIndexChange.WaitAsync(TimeSpan.FromSeconds(5)));
 
-            using (b.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (b.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 Assert.Equal(expected, b.StateMachine.Read(context, "test"));
@@ -201,7 +200,7 @@ namespace RachisTests
                 await rachis.PutAsync(new TestCommand { Name = "test", Value = i });
             }
 
-            using (rachis.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (rachis.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 Assert.Equal("0123456789", rachis.StateMachine.Read(context, "test"));

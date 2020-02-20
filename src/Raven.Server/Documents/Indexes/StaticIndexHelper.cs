@@ -185,18 +185,18 @@ namespace Raven.Server.Documents.Indexes
                     foreach (var referencedCollection in referencedCollections)
                     {
                         var lastDocEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(queryContext.Documents, referencedCollection.Name);
-                    var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+                        var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
 
-                    var lastTombstoneEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, referencedCollection.Name);
-                    var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+                        var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(queryContext.Documents, referencedCollection.Name);
+                        var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
 
                         *(long*)writePos = lastDocEtag;
                         writePos += sizeof(long);
-                    *(long*)writePos = lastProcessedReferenceEtag;
-                    writePos += sizeof(long);
-                    *(long*)writePos = lastTombstoneEtag;
-                    writePos += sizeof(long);
-                    *(long*)writePos = lastProcessedTombstoneEtag;
+                        *(long*)writePos = lastProcessedReferenceEtag;
+                        writePos += sizeof(long);
+                        *(long*)writePos = lastTombstoneEtag;
+                        writePos += sizeof(long);
+                        *(long*)writePos = lastProcessedTombstoneEtag;
                     }
                 }
 
@@ -204,6 +204,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
                     var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
+
+                    // TODO [ppekrol]
 
                     *(long*)writePos = lastCompareExchangeEtag;
                     writePos += sizeof(long);

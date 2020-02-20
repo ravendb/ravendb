@@ -68,7 +68,7 @@ namespace Raven.Server.Rachis
             {
                 entries.Clear();
 
-                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 {
                     using (context.OpenReadTransaction())
                     {
@@ -252,7 +252,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private (bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate,  long LastCommit)  ApplyLeaderStateToLocalState(Stopwatch sp, TransactionOperationContext context, List<RachisEntry> entries, AppendEntries appendEntries)
+        private (bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate,  long LastCommit)  ApplyLeaderStateToLocalState(Stopwatch sp, ClusterOperationContext context, List<RachisEntry> entries, AppendEntries appendEntries)
         {
             long lastTruncate;
             long lastCommit;
@@ -339,7 +339,7 @@ namespace Raven.Server.Rachis
         public static bool CheckIfValidLeader(RachisConsensus engine, RemoteConnection connection, out LogLengthNegotiation negotiation)
         {
             negotiation = null;
-            using (engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 var logLength = connection.Read<LogLengthNegotiation>(context);
 
@@ -370,7 +370,7 @@ namespace Raven.Server.Rachis
             return true;
         }
 
-        private void NegotiateWithLeader(TransactionOperationContext context, LogLengthNegotiation negotiation)
+        private void NegotiateWithLeader(ClusterOperationContext context, LogLengthNegotiation negotiation)
         {
             _debugRecorder.Start();
             // only the leader can send append entries, so if we accepted it, it's the leader
@@ -521,7 +521,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void ReadAndCommitSnapshot(TransactionOperationContext context, InstallSnapshot snapshot, CancellationToken token)
+        private void ReadAndCommitSnapshot(ClusterOperationContext context, InstallSnapshot snapshot, CancellationToken token)
         {
             using (context.OpenWriteTransaction())
             {
@@ -606,7 +606,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private bool InstallSnapshot(TransactionOperationContext context, CancellationToken token)
+        private bool InstallSnapshot(ClusterOperationContext context, CancellationToken token)
         {
             var txw = context.Transaction.InnerTransaction;
 
@@ -630,7 +630,7 @@ namespace Raven.Server.Rachis
             return true;
         }
         
-        private unsafe bool ReadSnapshot(SnapshotReader reader, TransactionOperationContext context, Transaction txw, bool dryRun, CancellationToken token)
+        private unsafe bool ReadSnapshot(SnapshotReader reader, ClusterOperationContext context, Transaction txw, bool dryRun, CancellationToken token)
         {
             var type = reader.ReadInt32();
             if (type == -1)
@@ -809,7 +809,7 @@ namespace Raven.Server.Rachis
             });
         }
 
-        private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context, RemoteConnection connection, LogLengthNegotiation negotiation)
+        private void NegotiateMatchEntryWithLeaderAndApplyEntries(ClusterOperationContext context, RemoteConnection connection, LogLengthNegotiation negotiation)
         {
             long minIndex;
             long maxIndex;
@@ -908,7 +908,7 @@ namespace Raven.Server.Rachis
             });
         }
 
-        private bool CanHandleLogDivergence(TransactionOperationContext context, LogLengthNegotiation negotiation, ref long midpointIndex, ref long midpointTerm,
+        private bool CanHandleLogDivergence(ClusterOperationContext context, LogLengthNegotiation negotiation, ref long midpointIndex, ref long midpointTerm,
             ref long minIndex, ref long maxIndex)
         {
             if (_engine.Log.IsInfoEnabled)
@@ -952,7 +952,7 @@ namespace Raven.Server.Rachis
             return true;
         }
 
-        private void RequestAllEntries(TransactionOperationContext context, RemoteConnection connection, string message)
+        private void RequestAllEntries(ClusterOperationContext context, RemoteConnection connection, string message)
         {
             connection.Send(context,
                 new LogLengthNegotiationResponse
@@ -1004,7 +1004,7 @@ namespace Raven.Server.Rachis
                 {
                     try
                     {
-                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
@@ -1017,7 +1017,7 @@ namespace Raven.Server.Rachis
                     catch (Exception e)
                     {
                         _debugRecorder.Record($"Sending error: {e}");
-                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {
                             _connection.Send(context, e);
                         }

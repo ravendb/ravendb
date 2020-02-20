@@ -90,7 +90,7 @@ namespace Raven.Server.Rachis
             _running.Raise();
 
             ClusterTopology clusterTopology;
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 clusterTopology = _engine.GetTopology(context);
@@ -341,7 +341,7 @@ namespace Raven.Server.Rachis
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {
-                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         using (context.OpenWriteTransaction())
                         {
                             _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
@@ -423,11 +423,10 @@ namespace Raven.Server.Rachis
 
         private void OnVoterConfirmation()
         {
-            TransactionOperationContext context;
             if (_hasNewTopology.Lower())
             {
                 ClusterTopology clusterTopology;
-                using (_engine.ContextPool.AllocateOperationContext(out context))
+                using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     clusterTopology = _engine.GetTopology(context);
@@ -449,7 +448,7 @@ namespace Raven.Server.Rachis
                 return; // nothing to do here
 
             bool changedFromLeaderElectToLeader;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 _lastCommit = _engine.GetLastCommitIndex(context);
@@ -537,7 +536,7 @@ namespace Raven.Server.Rachis
         protected long GetLowestIndexInEntireCluster()
         {
             long lowestIndex;
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 lowestIndex = _engine.GetLastEntryIndex(context);
@@ -564,7 +563,7 @@ namespace Raven.Server.Rachis
         protected long GetMaxIndexOnQuorum(int minSize)
         {
             _nodesPerIndex.Clear();
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 _nodesPerIndex[_engine.GetLastEntryIndex(context)] = 1;
@@ -590,7 +589,7 @@ namespace Raven.Server.Rachis
         private void CheckPromotables()
         {
             long lastIndex;
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 lastIndex = _engine.GetLastEntryIndex(context);
@@ -679,7 +678,7 @@ namespace Raven.Server.Rachis
             var tasks = new List<Task<(long, object)>>();
             var lostLeadershipException = new NotLeadingException("We are no longer the leader, this leader is disposed");
 
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 try
                 {
@@ -933,7 +932,7 @@ namespace Raven.Server.Rachis
 
                 try
                 {
-                    using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenWriteTransaction())
                     {
                         var clusterTopology = _engine.GetTopology(context);

@@ -563,7 +563,7 @@ namespace SlowTests.Cluster
 
                 var val = await WaitForValueAsync(() =>
                 {
-                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
                         return ClusterTransactionCommand.ReadFirstClusterTransaction(ctx, store.Database)?.PreviousCount ?? 0;
@@ -1066,7 +1066,7 @@ namespace SlowTests.Cluster
                 }
 
                 long lastRaftIndex;
-                using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     lastRaftIndex = leader.ServerStore.Engine.GetLastCommitIndex(ctx);

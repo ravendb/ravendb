@@ -53,8 +53,8 @@ namespace RachisTests
             var nonLeader = GetRandomFollower();
             var tasks = new List<Task>();
             long lastIndex;
-            TransactionOperationContext context;
-            using (leader.ContextPool.AllocateOperationContext(out context))
+
+            using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 for (var i = 0; i < commandCount; i++)
                 {
@@ -79,8 +79,8 @@ namespace RachisTests
             var nonLeader = GetRandomFollower();
             var tasks = new List<Task>();
             long lastIndex;
-            TransactionOperationContext context;
-            using (leader.ContextPool.AllocateOperationContext(out context))
+
+            using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 for (var i = 0; i < commandCount; i++)
                 {
@@ -94,7 +94,7 @@ namespace RachisTests
 
             Assert.True(tasks.All(t => t.Status == TaskStatus.RanToCompletion), "Some commands didn't complete");
             DisconnectFromNode(leader);
-            using (leader.ContextPool.AllocateOperationContext(out context))
+            using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 try
                 {

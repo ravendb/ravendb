@@ -3,26 +3,24 @@ using Sparrow.Json;
 using Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
-using System.Collections.Generic;
 
 namespace Raven.Server.ServerWide.Context
 {
     public class TransactionOperationContext : TransactionOperationContext<RavenTransaction>
     {
-        private readonly StorageEnvironment _environment;
-        private readonly ClusterChanges _clusterChanges;
         public bool IgnoreStalenessDueToReduceOutputsToDelete;
 
-        public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag, ClusterChanges clusterChanges = null)
+        public readonly StorageEnvironment Environment;
+
+        public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
             : base(initialSize, longLivedSize, lowMemoryFlag)
         {
-            _environment = environment;
-            _clusterChanges = clusterChanges;
+            Environment = environment;
         }
 
         protected override RavenTransaction CloneReadTransaction(RavenTransaction previous)
         {
-            var clonedTx = new RavenTransaction(_environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator), _clusterChanges);
+            var clonedTx = new RavenTransaction(Environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator));
 
             previous.Dispose();
 
@@ -31,15 +29,13 @@ namespace Raven.Server.ServerWide.Context
 
         protected override RavenTransaction CreateReadTransaction()
         {
-            return new RavenTransaction(_environment.ReadTransaction(PersistentContext, Allocator), _clusterChanges);
+            return new RavenTransaction(Environment.ReadTransaction(PersistentContext, Allocator));
         }
 
         protected override RavenTransaction CreateWriteTransaction(TimeSpan? timeout = null)
         {
-            return new RavenTransaction(_environment.WriteTransaction(PersistentContext, Allocator, timeout), _clusterChanges);
+            return new RavenTransaction(Environment.WriteTransaction(PersistentContext, Allocator, timeout));
         }
-
-        public StorageEnvironment Environment => _environment;
     }
 
     public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext

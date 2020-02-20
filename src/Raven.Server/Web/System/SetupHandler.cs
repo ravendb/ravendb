@@ -498,7 +498,7 @@ namespace Raven.Server.Web.System
         {
             AssertOnlyInSetupMode();
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "setup-unsecured"))
             {
                 // Making sure we don't have leftovers from previous setup

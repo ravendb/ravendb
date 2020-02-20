@@ -60,7 +60,7 @@ namespace Tests.Infrastructure
             var initialCount = RachisConsensuses.Count;
             var leaderIndex = _random.Next(0, nodeCount);
             var timeout = TimeSpan.FromSeconds(10);
-            var electionTimeout = Math.Max(300, nodeCount * 60); // We want to make it easier for the tests, since we are running multiple servers on the same machine.
+            var electionTimeout = Math.Max(300, nodeCount * 60); // We want to make it easier for the tests, since we are running multiple servers on the same machine. 
             for (var i = 0; i < nodeCount; i++)
             {
                 // ReSharper disable once ExplicitCallerInfoArgument
@@ -285,7 +285,7 @@ namespace Tests.Infrastructure
 
             await ActionWithLeader(l =>
             {
-                using (l.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (l.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                     index = l.GetLastEntryIndex(context);
                 return Task.CompletedTask;
@@ -380,14 +380,14 @@ namespace Tests.Infrastructure
 
         public class CountingStateMachine : RachisStateMachine
         {
-            public string Read(TransactionOperationContext context, string name)
+            public string Read(ClusterOperationContext context, string name)
             {
                 var tree = context.Transaction.InnerTransaction.ReadTree("values");
                 var read = tree.Read(name);
                 return read?.Reader.ToStringValue();
             }
 
-            protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+            protected override void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
             {
                 Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name));
                 Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val));
@@ -410,7 +410,7 @@ namespace Tests.Infrastructure
             public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
             {
                 TimeSpan time;
-                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     time = _parent.ElectionTimeout * (_parent.GetTopology(ctx).AllNodes.Count - 2);
@@ -471,7 +471,7 @@ namespace Tests.Infrastructure
             public TestCommandWithRaftId(string name, string uniqueRequestId) : base(uniqueRequestId)
             {
                 Name = name;
-            }
+    }
 
             public override DynamicJsonValue ToJson(JsonOperationContext context)
             {
@@ -480,7 +480,7 @@ namespace Tests.Infrastructure
                 djv[nameof(Value)] = Value;
 
                 return djv;
-            }
+}
         }
     }
 }

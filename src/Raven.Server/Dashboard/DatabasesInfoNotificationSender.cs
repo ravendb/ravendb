@@ -106,7 +106,7 @@ namespace Raven.Server.Dashboard
             public List<Client.ServerWide.Operations.MountPointUsage> MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>();
             public DateTime NextDiskSpaceCheck;
         }
-        
+
         public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, Func<string, bool> isValidFor, CancellationTokenSource cts)
         {
             var databasesInfo = new DatabasesInfo();
@@ -116,11 +116,11 @@ namespace Raven.Server.Dashboard
 
             trafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
 
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
-            using (transactionContext.OpenReadTransaction())
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
                 // 1. Fetch databases info
-                foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(transactionContext, Constants.Documents.Prefix, 0, long.MaxValue))
+                foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, 0, long.MaxValue))
                 {
                     var databaseName = databaseTuple.ItemName.Substring(Constants.Documents.Prefix.Length);
                     if (cts.IsCancellationRequested)
@@ -132,7 +132,7 @@ namespace Raven.Server.Dashboard
                     if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
                     {
                         // database does not exist on this server, is offline or disabled
-                        SetOfflineDatabaseInfo(serverStore, transactionContext, databaseName, databasesInfo, drivesUsage, disabled: DatabasesLandlord.IsDatabaseDisabled(databaseTuple.Value));
+                        SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: DatabasesLandlord.IsDatabaseDisabled(databaseTuple.Value));
                         continue;
                     }
 
@@ -141,7 +141,7 @@ namespace Raven.Server.Dashboard
                         var databaseOnline = IsDatabaseOnline(databaseTask, out var database);
                         if (databaseOnline == false)
                         {
-                            SetOfflineDatabaseInfo(serverStore, transactionContext, databaseName, databasesInfo, drivesUsage, disabled: false);
+                            SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: false);
                             continue;
                         }
 
@@ -219,17 +219,17 @@ namespace Raven.Server.Dashboard
                     }
                     catch (Exception)
                     {
-                        SetOfflineDatabaseInfo(serverStore, transactionContext, databaseName, databasesInfo, drivesUsage, disabled: false);
+                        SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: false);
                     }
                 }
-                
+
                 // 2. Fetch <system> info 
-                if (isValidFor == null) 
+                if (isValidFor == null)
                 {
                     var currentSystemHash = serverStore._env.CurrentReadTransactionId;
                     var cachedSystemInfoCopy = CachedSystemInfo;
-                    
-                    if (currentSystemHash != cachedSystemInfoCopy.Hash || cachedSystemInfoCopy.NextDiskSpaceCheck <  SystemTime.UtcNow)
+
+                    if (currentSystemHash != cachedSystemInfoCopy.Hash || cachedSystemInfoCopy.NextDiskSpaceCheck < SystemTime.UtcNow)
                     {
                         var systemInfo = new SystemInfoCache()
                         {
@@ -237,11 +237,11 @@ namespace Raven.Server.Dashboard
                             NextDiskSpaceCheck = SystemTime.UtcNow.AddSeconds(30),
                             MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>()
                         };
-                    
+
                         // Get new data 
                         var systemEnv = new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env);
                         var systemMountPoints = ServerStore.GetMountPointUsageDetailsFor(systemEnv, includeTempBuffers: true);
-                    
+
                         foreach (var systemPoint in systemMountPoints)
                         {
                             UpdateMountPoint(serverStore.Configuration.Storage, systemPoint, "<System>", drivesUsage);
@@ -299,7 +299,7 @@ namespace Raven.Server.Dashboard
             usage.VolumeLabel = mountPointUsage.DiskSpaceResult.VolumeLabel;
             usage.FreeSpace = mountPointUsage.DiskSpaceResult.TotalFreeSpaceInBytes;
             usage.TotalCapacity = mountPointUsage.DiskSpaceResult.TotalSizeInBytes;
-            usage.IsLowSpace = StorageSpaceMonitor.IsLowSpace(new Size(usage.FreeSpace, SizeUnit.Bytes), new Size(usage.TotalCapacity, SizeUnit.Bytes), storageConfiguration, out string _);    
+            usage.IsLowSpace = StorageSpaceMonitor.IsLowSpace(new Size(usage.FreeSpace, SizeUnit.Bytes), new Size(usage.TotalCapacity, SizeUnit.Bytes), storageConfiguration, out string _);
 
             var existingDatabaseUsage = usage.Items.FirstOrDefault(x => x.Database == databaseName);
             if (existingDatabaseUsage == null)
