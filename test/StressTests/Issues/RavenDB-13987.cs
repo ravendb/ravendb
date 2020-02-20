@@ -36,17 +36,16 @@ namespace StressTests.Issues
             const int clusterSize = 3;
             _databaseName = GetDatabaseName();
 
-            var leader = await CreateRaftClusterAndGetLeader(3, false,
-                customSettings: new Dictionary<string, string>()
-                {
-                    [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
-                    [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
-                    [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "300",
-                    [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                    [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
-                    [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
-                    [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
-                });
+            var leader = await CreateRaftClusterAndGetLeader(3, customSettings: new Dictionary<string, string>()
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "300",
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
+                [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
+                [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+            });
 
             DatabasePutResult databaseResult;
             using (var store = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = _databaseName }.Initialize())
