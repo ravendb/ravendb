@@ -7,6 +7,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,11 +40,13 @@ namespace Sparrow.Logging
         private readonly ManualResetEventSlim _readyToCompress = new ManualResetEventSlim(false);
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private readonly LightWeightThreadLocal<LocalThreadWriterState> _localState;
+
+        private readonly LimitedConcurrentSet<LogMessageEntry>[] _freePooledMessageEntries;
+        private readonly LimitedConcurrentSet<LogMessageEntry>[] _activePoolMessageEntries;
+
         private Thread _loggingThread;
         private Thread _compressLoggingThread;
         private int _generation;
-        private readonly ConcurrentQueue<WeakReference<LocalThreadWriterState>> _newThreadStates =
-            new ConcurrentQueue<WeakReference<LocalThreadWriterState>>();
 
         private bool _updateLocalTimeOffset;
         private string _path;
@@ -152,6 +155,17 @@ namespace Sparrow.Logging
             _path = path;
             _name = name;
             _localState = new LightWeightThreadLocal<LocalThreadWriterState>(GenerateThreadWriterState);
+            _freePooledMessageEntries = new LimitedConcurrentSet<LogMessageEntry>[Environment.ProcessorCount];
+            _activePoolMessageEntries = new LimitedConcurrentSet<LogMessageEntry>[Environment.ProcessorCount];
+            for (int i = 0; i < _freePooledMessageEntries.Length; i++)
+            {
+                _freePooledMessageEntries[i] = new LimitedConcurrentSet<LogMessageEntry>(1000);
+            }
+            for (int i = 0; i < _activePoolMessageEntries.Length; i++)
+            {
+                _activePoolMessageEntries[i] = new LimitedConcurrentSet<LogMessageEntry>(1000);
+            }
+
 
             SetupLogMode(logMode, path, retentionTime, retentionSize, compress);
         }
@@ -471,16 +485,13 @@ namespace Sparrow.Logging
         private LocalThreadWriterState GenerateThreadWriterState()
         {
             var currentThread = Thread.CurrentThread;
-            var state = new LocalThreadWriterState
+            return new LocalThreadWriterState
             {
                 OwnerThread = currentThread.Name,
                 ThreadId = currentThread.ManagedThreadId,
                 Generation = _generation
             };
-            _newThreadStates.Enqueue(new WeakReference<LocalThreadWriterState>(state));
-            return state;
         }
-
         public void Log(ref LogEntry entry, TaskCompletionSource<object> tcs = null)
         {
             var state = _localState.Value;
@@ -489,7 +500,10 @@ namespace Sparrow.Logging
                 state = _localState.Value = GenerateThreadWriterState();
             }
 
-            if (state.Free.Dequeue(out var item))
+            int currentProcessNumber = CurrentProcessorIdHelper.GetCurrentProcessorId() % _freePooledMessageEntries.Length;
+            var pool = _freePooledMessageEntries[currentProcessNumber];
+
+            if (pool.TryDequeue(out var item))
             {
                 item.Data.SetLength(0);
                 item.WebSocketsList.Clear();
@@ -498,8 +512,7 @@ namespace Sparrow.Logging
             }
             else
             {
-                item = new WebSocketMessageEntry();
-                item.Task = tcs;
+                item = new LogMessageEntry { Task = tcs };
                 state.ForwardingStream.Destination = new MemoryStream();
             }
 
@@ -513,8 +526,9 @@ namespace Sparrow.Logging
 
             WriteEntryToWriter(state.Writer, ref entry);
             item.Data = state.ForwardingStream.Destination;
+            Debug.Assert(item.Data != null);
 
-            state.Full.Enqueue(item, timeout: 128);
+            _activePoolMessageEntries[currentProcessNumber].Enqueue(item, 128);
 
             _hasEntries.Set();
         }
@@ -572,7 +586,6 @@ namespace Sparrow.Logging
             try
             {
                 Interlocked.Increment(ref _generation);
-                var threadStates = new List<WeakReference<LocalThreadWriterState>>();
                 var threadStatesToRemove = new FastStack<WeakReference<LocalThreadWriterState>>();
                 while (_keepLogging)
                 {
@@ -623,37 +636,21 @@ namespace Sparrow.Logging
                                 }
 
                                 foundEntry = false;
-                                foreach (var threadStateRef in threadStates)
+                                for (var index = 0; index < _activePoolMessageEntries.Length; index++)
                                 {
-                                    if (threadStateRef.TryGetTarget(out LocalThreadWriterState threadState) == false)
+                                    var messages = _activePoolMessageEntries[index];
+                                    for (var limit = 0; limit < 16; limit++)
                                     {
-                                        threadStatesToRemove.Push(threadStateRef);
-                                        continue;
-                                    }
-
-                                    for (var i = 0; i < 16; i++)
-                                    {
-                                        if (threadState.Full.Dequeue(out WebSocketMessageEntry item) == false)
+                                        if (messages.TryDequeue(out LogMessageEntry item) == false)
                                             break;
 
                                         foundEntry = true;
 
                                         sizeWritten += ActualWriteToLogTargets(item, currentFile);
-
-                                        threadState.Free.Enqueue(item);
+                                        Debug.Assert(item.Data != null);
+                                        _freePooledMessageEntries[index].Enqueue(item, 128);
                                     }
                                 }
-
-                                while (threadStatesToRemove.TryPop(out var ts))
-                                    threadStates.Remove(ts);
-
-                                if (_newThreadStates.IsEmpty)
-                                    continue;
-
-                                while (_newThreadStates.TryDequeue(out WeakReference<LocalThreadWriterState> result))
-                                    threadStates.Add(result);
-
-                                _hasEntries.Set(); // we need to start writing logs again from new thread states
                             }
                         }
                     }
@@ -661,7 +658,7 @@ namespace Sparrow.Logging
                     {
                         Console.Error.WriteLine("Out of memory exception while trying to log, will avoid logging for the next 5 seconds");
 
-                        DisableLogsFor(threadStates, TimeSpan.FromSeconds(5));
+                        DisableLogsFor(TimeSpan.FromSeconds(5));
                     }
                     catch (Exception e)
                     {
@@ -672,7 +669,7 @@ namespace Sparrow.Logging
 
                         Console.Error.WriteLine($"{msg}{Environment.NewLine}{e}");
 
-                        DisableLogsFor(threadStates, TimeSpan.FromSeconds(30));
+                        DisableLogsFor(TimeSpan.FromSeconds(30));
                     }
                 }
             }
@@ -684,7 +681,7 @@ namespace Sparrow.Logging
             }
         }
 
-        private void DisableLogsFor(List<WeakReference<LocalThreadWriterState>> threadStates, TimeSpan timeout)
+        private void DisableLogsFor(TimeSpan timeout)
         {
             var prevIsInfoEnabled = IsInfoEnabled;
             var prevIsOperationsEnabled = IsOperationsEnabled;
@@ -694,15 +691,9 @@ namespace Sparrow.Logging
                 IsInfoEnabled = false;
                 IsOperationsEnabled = false;
 
-                // discard all logs
-                foreach (var threadStateRef in threadStates)
+                foreach (var queue in _activePoolMessageEntries)
                 {
-                    DiscardThreadLogState(threadStateRef);
-                }
-
-                foreach (var newThreadState in _newThreadStates)
-                {
-                    DiscardThreadLogState(newThreadState);
+                    queue.Clear();
                 }
 
                 Thread.Sleep(timeout);
@@ -815,14 +806,6 @@ namespace Sparrow.Logging
             }
         }
 
-        private static void DiscardThreadLogState(WeakReference<LocalThreadWriterState> threadStateRef)
-        {
-            if (threadStateRef.TryGetTarget(out LocalThreadWriterState threadState) == false)
-                return;
-            while (threadState.Full.Dequeue(out WebSocketMessageEntry _))
-                break;
-        }
-
         public void AttachPipeSink(Stream stream)
         {
             _pipeSink = stream;
@@ -833,9 +816,11 @@ namespace Sparrow.Logging
             _pipeSink = null;
         }
 
-        private int ActualWriteToLogTargets(WebSocketMessageEntry item, Stream file)
+        private int ActualWriteToLogTargets(LogMessageEntry item, Stream file)
         {
             item.Data.TryGetBuffer(out var bytes);
+            Debug.Assert(bytes.Array != null);
+
             file.Write(bytes.Array, bytes.Offset, bytes.Count);
             _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
 
@@ -875,7 +860,7 @@ namespace Sparrow.Logging
 
         private Task[] _tasks = new Task[0];
 
-        private void SendToWebSockets(WebSocketMessageEntry item, ArraySegment<byte> bytes)
+        private void SendToWebSockets(LogMessageEntry item, ArraySegment<byte> bytes)
         {
             if (_tasks.Length != item.WebSocketsList.Count)
                 Array.Resize(ref _tasks, item.WebSocketsList.Count);
@@ -951,12 +936,6 @@ namespace Sparrow.Logging
             public int Generation;
 
             public readonly ForwardingStream ForwardingStream;
-
-            public readonly SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry> Free =
-                new SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry>(1024);
-
-            public readonly SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry> Full =
-                new SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry>(1024);
 
             public readonly StreamWriter Writer;
 

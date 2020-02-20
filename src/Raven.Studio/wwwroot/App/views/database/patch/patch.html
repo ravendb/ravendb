@@ -24,13 +24,22 @@
                     <div class="col-sm-9 col-lg-10 margin-bottom">
                         <div class="patch-container">
                             <div class="patch-main">
-                                    <pre class="form-control editor query-source"
-                                         data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 300, maxHeight: 300, lang:'ace/mode/rql', completer: queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
-
-                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query">
-                                        <div class="help-block" data-bind="validationMessage: patchDocument().query"></div>
+                                <div class="btn-group btn-group-sm pull-right" role="group">
+                                    <div class="dropdown">
+                                        <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                            <i class="icon-settings"></i><span>Settings</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
+                                        </div>
                                     </div>
                                 </div>
+                                <pre class="form-control editor query-source"
+                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 300, maxHeight: 300, lang:'ace/mode/rql', completer: queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query">
+                                    <div class="help-block" data-bind="validationMessage: patchDocument().query"></div>
+                                </div>
+                            </div>
                             <div class="patch-controls">
                                 <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch" title="Execute patch">
                                     <i class="icon-play2 icon-lg"></i><br />
@@ -61,6 +70,7 @@
     <div id="test-container" data-bind="template: { name: 'test-component' }, collapse: test.testMode()"></div>
 </div>
 <div class="backdrop" data-bind="click: test.closeTestMode"></div>
+
 <script type="text/html" id="test-component">
     <div class="row margin-bottom form-horizontal" data-bind="with: test">
         <label class="control-label col-sm-3 col-lg-2">Document ID</label>
@@ -256,6 +266,41 @@
                                 <a href="#" data-bind="click: $parent.removePatch" class="patch-remove"><i class="icon-trash"></i></a>
                             </li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="settings-template">
+    <div class="padding margin-left">
+        <strong><h4>Patching behavior for stale indexes:</h4></strong>
+        <div class="radio">
+            <input id="allowPatchingStaleIndex" type="radio" data-bind="checked: staleIndexBehavior" name="staleBehavior" value="patchStale">
+            <label for="allowPatchingStaleIndex">Patch immediately</label>
+        </div>
+        <div class="radio margin-bottom">
+            <input id="timeToWaitForNonStale" type="radio" data-bind="checked: staleIndexBehavior" name="staleBehavior" value="timeoutDefined">
+            <label for="timeToWaitForNonStale">Define timeout to wait for index to become non-stale</label>
+            <div class="margin-left margin-left-lg" data-bind="collapse: staleIndexBehavior() === 'timeoutDefined'">
+                <input type="text" class="form-control" data-bind="durationPicker: staleTimeout, durationPickerOptions: { showDays: false, showSeconds: true }" />
+            </div>
+            <div class="margin-left margin-left-lg margin-top margin-top-sm" data-bind="visible: staleIndexBehavior() === 'timeoutDefined'">
+                <small><i class="icon-warning"></i>  An exception is thrown when timeout has passed</small>
+            </div>
+        </div>
+        <hr class="margin-right">
+        <div class="margin-left margin-left-sm">
+            <div class="toggle toggle-primary">
+                <input id="maxOperations" class="styled" type="checkbox" data-bind="checked: defineMaxOperationsPerSecond">
+                <label for="maxOperations">Limit number of operations</label>
+            </div>
+            <div class="margin-left" data-bind="collapse: defineMaxOperationsPerSecond">
+                <div class="margin-left margin-left-lg margin-right margin-right-lg margin-bottom margin-bottom-sm">
+                    <div class="input-group margin-right">
+                        <input id="operationsPerSecond" type="number" min="1" class="form-control input-border" data-bind="numericInput: maxOperationsPerSecond" placeholder="Max operations"/>
+                        <div class="input-group-addon input-border">per second</div>
                     </div>
                 </div>
             </div>

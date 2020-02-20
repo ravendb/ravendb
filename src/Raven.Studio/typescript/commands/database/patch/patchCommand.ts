@@ -3,14 +3,18 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 interface patchCommandOptions {
-    test: boolean;
+    test?: boolean;
     documentId?: string;
+    allowStale?: boolean;
+    staleTimeout?: string;
+    maxOpsPerSecond?: number;
 }
 
 class patchCommand extends commandBase {
 
     constructor(private queryStr: string, private db: database, private options: patchCommandOptions = null) {
         super();
+                
         this.options = this.options || {
             test: false,
             documentId: null
@@ -18,8 +22,11 @@ class patchCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
+
         const args = {
-            allowStale: true,
+            allowStale: this.options.allowStale,
+            staleTimeout: this.options.staleTimeout,
+            maxOpsPerSec: this.options.maxOpsPerSecond,
             id: this.options.test ? this.options.documentId : undefined
         };
 
@@ -45,7 +52,6 @@ class patchCommand extends commandBase {
                 this.reportError(`Failed to ${this.options.test ? 'test' : 'schedule' } patch`, response.responseText, response.statusText);
             });
     }
-
 }
 
 export = patchCommand; 

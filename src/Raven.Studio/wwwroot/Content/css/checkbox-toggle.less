@@ -11,6 +11,10 @@
    // box-shadow: 0 0 1px 1px lighten(@brand-primary, 10%) !important;
 }
 
+.radio input[type="radio"]:focus + label::before {
+    outline: none !important;
+}
+
 .radio-inline + .radio-inline, .checkbox-inline + .checkbox-inline {
     margin-left: 0;
 }

@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             var minLength = MinimumSizeForCalculateIndexEtagLength(query);
             var length = minLength +
-                         sizeof(long) * 2 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags and last processed reference collection etags
+                         sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             var indexEtagBytes = stackalloc byte[length];
 

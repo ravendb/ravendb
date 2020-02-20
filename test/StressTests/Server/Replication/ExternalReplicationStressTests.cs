@@ -248,7 +248,7 @@ namespace StressTests.Server.Replication
         {
             const int clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3, false, customSettings: new Dictionary<string, string>()
+            var leader = await CreateRaftClusterAndGetLeader(3, customSettings: new Dictionary<string, string>()
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
