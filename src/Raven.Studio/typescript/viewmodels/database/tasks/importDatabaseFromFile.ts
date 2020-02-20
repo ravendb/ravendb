@@ -132,16 +132,17 @@ class importDatabaseFromFile extends viewModelBase {
                 return false;
             }
             
-            return generalUtils.isFileOfType(this.importedFileName(), 
-                ["ravendb-full-backup", "ravendb-encrypted-full-backup", "ravendb-incremental-backup", "ravendb-encrypted-incremental-backup"]);
+            const fileExtension = generalUtils.getFileExtension(this.importedFileName());
+            return _.includes(["ravendb-full-backup", "ravendb-encrypted-full-backup", "ravendb-incremental-backup", "ravendb-encrypted-incremental-backup"], fileExtension);
         });
 
         this.isSnapshotFileType = ko.pureComputed(() => {
             if (!this.hasFileSelected() || !this.importedFileName()) {
                 return false;
             }
-            
-            return generalUtils.isFileOfType(this.importedFileName(), ["ravendb-snapshot", "ravendb-encrypted-snapshot"]);
+
+            const fileExtension = generalUtils.getFileExtension(this.importedFileName());
+            return _.includes(["ravendb-snapshot", "ravendb-encrypted-snapshot"], fileExtension);
         });
         
         this.setupValidation();
