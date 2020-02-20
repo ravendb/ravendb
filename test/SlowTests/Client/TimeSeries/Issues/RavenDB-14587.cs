@@ -153,5 +153,42 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
+        [Fact]
+        public void PreventAppendingNaN_6()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                var baseline = new DateTime(1980, 1, 1);
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/1");
+                    tsf.Append("speed", baseline, tag: null, new[] { 90d , 91 });
+                    tsf.Append("speed", baseline.AddHours(1), tag: null, new[] { 104d, 104});
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/1");
+                    tsf.Append("speed", baseline.AddMinutes(10), tag: null, new[] { 98d, 97 });
+                    tsf.Append("speed", baseline.AddMinutes(20), tag: null, new[] { 102d, 100 });
+                    tsf.Append("speed", baseline.AddMinutes(30), tag: null, new[] { 88d, double.NaN });
+                    tsf.Append("speed", baseline.AddMinutes(40), tag: null, new[] { 92d, 93 });
+
+                    var ex = Assert.Throws<RavenException>(() => session.SaveChanges());
+
+                    Assert.Contains("TimeSeries entries cannot have 'double.NaN' as one of their values", ex.Message);
+                }
+            }
+        }
+
     }
 }
