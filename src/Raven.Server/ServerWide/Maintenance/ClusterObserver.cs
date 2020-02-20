@@ -498,7 +498,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private void AddToDecisionLog(string database, string updateReason, Exception e)
         {
             if (e != null)
-                updateReason += $"\nError: {e}";
+                updateReason += $"{Environment.NewLine}Error: {e}";
 
             AddToDecisionLog(database, updateReason);
         }
