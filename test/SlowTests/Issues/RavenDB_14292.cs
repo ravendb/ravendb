@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -62,7 +62,9 @@ namespace SlowTests.Issues
 
                 var first = true;
                 long backupTaskId = 0;
-
+                long opId1 = 0;
+                long opId2 = 0;
+                DateTime firstBackupStartTime = default;
                 for (int i = 0; i < rounds; i++)
                 {
                     // let db get idle
@@ -75,11 +77,13 @@ namespace SlowTests.Issues
                         now = DateTime.Now;
                     }
 
-                    Assert.True(1 == server.ServerStore.IdleDatabases.Count, 
+                    Assert.True(1 == server.ServerStore.IdleDatabases.Count,
                         $"1 == server.ServerStore.IdleDatabases.Count({server.ServerStore.IdleDatabases.Count}), finishedOnTime? {now < nextNow}, now = {now}, nextNow = {nextNow}");
+                    Assert.True(server.ServerStore.IdleDatabases.ContainsKey(dbName));
 
                     if (first)
                     {
+                        firstBackupStartTime = DateTime.UtcNow;
                         var putConfiguration = new ServerWideBackupConfiguration
                         {
                             FullBackupFrequency = "*/2 * * * *",
@@ -112,22 +116,66 @@ namespace SlowTests.Issues
                         $"0 == server.ServerStore.IdleDatabases.Count({server.ServerStore.IdleDatabases.Count}), finishedOnTime? {now < nextNow}, now = {now}, nextNow = {nextNow}");
 
                     var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                    var value = WaitForValue(() =>
+                    PeriodicBackupStatus status1 = null;
+                    Assert.True(WaitForValue(() =>
                     {
-                        var status = store.Maintenance.Send(operation).Status;
-                        return status?.LastEtag;
-                    }, 1);
-                    Assert.Equal(1, value);
+                        status1 = store.Maintenance.ForDatabase(dbName).Send(operation).Status;
 
-                    Assert.True(2 == Directory.GetDirectories(backupPath).Length, $"2 == Directory.GetDirectories(backupPath).Length({Directory.GetDirectories(backupPath).Length})");
-                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, testDatabaseName)).Length, $"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, '{testDatabaseName}')).Length({Directory.GetDirectories(Path.Combine(backupPath, testDatabaseName)).Length})");
-                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length, $"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length({Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length})");
+                        if (status1?.LastOperationId != null && status1.LastOperationId.Value > opId1)
+                        {
+                            opId1 = status1.LastOperationId.Value;
+                            return true;
+                        }
+
+                        return false;
+
+                    }, true));
+                    PeriodicBackupStatus status2 = null;
+                    Assert.True(WaitForValue(() =>
+                    {
+                        status2 = store.Maintenance.ForDatabase(testDatabaseName).Send(operation).Status;
+
+                        if (status2?.LastOperationId != null && status2.LastOperationId.Value > opId2)
+                        {
+                            opId2 = status2.LastOperationId.Value;
+                            return true;
+                        }
+
+                        return false;
+
+                    }, true));
+
+                    var backupsDir = Directory.GetDirectories(backupPath);
+                    var backupsNum = backupsDir.Length;
+
+                    var testDatabaseBackupPath = Path.Combine(backupPath, testDatabaseName);
+                    var testDatabaseBackupDirs = Directory.GetDirectories(testDatabaseBackupPath);
+                    var testDatabaseBackupNum = testDatabaseBackupDirs.Length;
+
+                    var dbNameBackupPath = Path.Combine(backupPath, dbName);
+                    var dbNameBackupDirs = Directory.GetDirectories(dbNameBackupPath);
+                    var dbNameBackupNum = dbNameBackupDirs.Length;
+
+                    Assert.Equal(2, backupsNum);
+                    Assert.True(i + 1 == testDatabaseBackupNum,
+                        $"firstBackupStartTime: {firstBackupStartTime}, i: {i}, testDatabaseBackupNum: {testDatabaseBackupNum}, path: {testDatabaseBackupPath}, {PrintBackups(status1, testDatabaseBackupDirs)}");
+                    Assert.True(i + 1 == dbNameBackupNum,
+                        $"firstBackupStartTime: {firstBackupStartTime}, i: {i}, dbNameBackupNum: {dbNameBackupNum}, path: {dbNameBackupPath}, {PrintBackups(status2, dbNameBackupDirs)}");
                 }
             }
             finally
             {
                 server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
             }
+        }
+
+        private string PrintBackups(PeriodicBackupStatus pb, string[] dirs)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"LocalBackup:{Environment.NewLine}Directory:{pb.LocalBackup.BackupDirectory}, Exception: {pb.LocalBackup.Exception}");
+            sb.AppendLine($"Status:{Environment.NewLine}LastFullBackup: {pb.LastFullBackup}, FolderName: {pb.FolderName}, Exception:{pb.Error?.Exception}");
+            sb.AppendLine($"Dirs:{Environment.NewLine}{string.Join(", ", dirs)}");
+            return sb.ToString();
         }
     }
 }
