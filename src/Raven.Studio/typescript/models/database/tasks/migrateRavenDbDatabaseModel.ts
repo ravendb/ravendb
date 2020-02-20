@@ -19,8 +19,6 @@ class migrateRavenDbDatabaseModel {
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(true);
     includeSubscriptions = ko.observable(true);
-    includeDocumentsTombstones = ko.observable(true);
-    includeCompareExchangeTombstones = ko.observable(true);
 
     databaseModel = new smugglerDatabaseRecord();
     
@@ -134,12 +132,6 @@ class migrateRavenDbDatabaseModel {
             }
             if (this.includeSubscriptions() && !this.isLegacy()) {
                 operateOnTypes.push("Subscriptions");
-            }
-            if (this.includeDocumentsTombstones() && !this.isLegacy()) {
-                operateOnTypes.push("Tombstones");
-            }
-            if (this.includeCompareExchangeTombstones() && this.isV42orAbove()) {
-                operateOnTypes.push("CompareExchangeTombstones");
             }
         }
 
@@ -355,9 +347,7 @@ class migrateRavenDbDatabaseModel {
                     this.includeSubscriptions() ||
                     this.includeIdentities() ||
                     this.includeCompareExchange() ||
-                    this.includeCounters() ||
-                    this.includeDocumentsTombstones() ||
-                    (this.includeCompareExchangeTombstones() && this.isV42orAbove());
+                    this.includeCounters();
             }
 
             const hasIncludes = this.includeDocuments() ||

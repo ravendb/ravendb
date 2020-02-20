@@ -17,6 +17,7 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import generalUtils = require("common/generalUtils");
 
 class importDatabaseFromFile extends viewModelBase {
 
@@ -33,6 +34,8 @@ class importDatabaseFromFile extends viewModelBase {
 
     hasFileSelected = ko.observable(false);
     importedFileName = ko.observable<string>();
+    isBackupFileType: KnockoutComputed<boolean>;
+    isSnapshotFileType: KnockoutComputed<boolean>;
 
     isUploading = ko.observable<boolean>(false);
     uploadStatus = ko.observable<number>();
@@ -124,12 +127,36 @@ class importDatabaseFromFile extends viewModelBase {
             }
         });
 
+        this.isBackupFileType = ko.pureComputed(() => {
+            if (!this.hasFileSelected() || !this.importedFileName()) {
+                return false;
+            }
+            
+            return generalUtils.isFileOfType(this.importedFileName(), 
+                ["ravendb-full-backup", "ravendb-encrypted-full-backup", "ravendb-incremental-backup", "ravendb-encrypted-incremental-backup"]);
+        });
+
+        this.isSnapshotFileType = ko.pureComputed(() => {
+            if (!this.hasFileSelected() || !this.importedFileName()) {
+                return false;
+            }
+            
+            return generalUtils.isFileOfType(this.importedFileName(), ["ravendb-snapshot", "ravendb-encrypted-snapshot"]);
+        });
+        
         this.setupValidation();
     }
     
     private setupValidation() {
         this.importedFileName.extend({
-            required: true
+            required: true,
+            validation: [
+                {
+                    validator: () => !this.isSnapshotFileType(),
+                    message: "The selected file is a RavenDB Snapshot file and cannot be imported. " +
+                             "Use the 'Restore' option (under Create New Database) in order to restore data from a RavenDB Snapshot file."
+                }
+            ]
         });
     }
 

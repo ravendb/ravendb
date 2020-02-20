@@ -106,8 +106,11 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
                 result.push(this.mapToExportListItem("Counters", status.Counters));
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
-                result.push(this.mapToExportListItem("Tombstones", status.Tombstones));
-                result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones));
+                
+                if (this.op.taskType() === "DatabaseImport") {
+                    result.push(this.mapToExportListItem("Tombstones", status.Tombstones));
+                    result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones));
+                }
             }
 
             const currentlyProcessingItems = smugglerDatabaseDetails.findCurrentlyProcessingItems(result);

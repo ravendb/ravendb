@@ -406,6 +406,16 @@ class genUtils {
         return inputNumber.toLocaleString(undefined, { minimumFractionDigits: n, maximumFractionDigits: n });
     };
 
+    /***  File Methods ***/
+    
+    static isFileOfType(fileName: string, possibleFileTypes: string[]): boolean {
+        const fileParts = _.split(fileName,".");
+        const fileExtension = fileParts[fileParts.length-1];
+
+        return fileParts.length === 2 &&
+            _.includes(possibleFileTypes, fileExtension);
+    }
+    
     /***  Other Methods ***/
 
     static delayedSpinner(spinner: KnockoutObservable<boolean>, promise: JQueryPromise<any>, delay = 100) {
