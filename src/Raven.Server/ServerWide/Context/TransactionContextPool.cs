@@ -15,10 +15,12 @@ namespace Raven.Server.ServerWide.Context
     public class TransactionContextPool : JsonContextPoolBase<TransactionOperationContext> ,ITransactionContextPool
     {
         private StorageEnvironment _storageEnvironment;
+        private readonly ClusterChanges _clusterChanges;
 
-        public TransactionContextPool(StorageEnvironment storageEnvironment, Size? maxContextSizeToKeepInMb = null) : base(maxContextSizeToKeepInMb)
+        public TransactionContextPool(StorageEnvironment storageEnvironment, ClusterChanges clusterChanges = null, Size? maxContextSizeToKeepInMb = null) : base(maxContextSizeToKeepInMb)
         {
             _storageEnvironment = storageEnvironment;
+            _clusterChanges = clusterChanges;
         }
 
         protected override TransactionOperationContext CreateContext()
@@ -31,9 +33,9 @@ namespace Raven.Server.ServerWide.Context
             else
             {
                 initialSize = 32*1024;
-            }
+                }
 
-            return new TransactionOperationContext(_storageEnvironment, initialSize, 16*1024, LowMemoryFlag);
+            return new TransactionOperationContext(_storageEnvironment, initialSize, 16*1024, LowMemoryFlag, _clusterChanges);
         }
 
         public override void Dispose()

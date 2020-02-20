@@ -173,7 +173,7 @@ namespace Tests.Infrastructure
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment, configuration, configuration.Core.ServerUrls[0], out _);
+            rachis.Initialize(storageEnvironment, configuration, changes: null, configuration.Core.ServerUrls[0], out _);
             rachis.OnDispose += (sender, args) =>
             {
                 serverStore.Dispose();

@@ -27,7 +27,7 @@ namespace Raven.Server.Documents
         private Dictionary<string, CollectionName> _collectionCache;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
-            : base(transaction)
+            : base(transaction, clusterChanges: null)
         {
             _context = context;
             _changes = changes;
@@ -83,12 +83,7 @@ namespace Raven.Server.Documents
                 _context.Transaction = null;
             }
 
-            var committed = InnerTransaction.LowLevelTransaction.Committed;
-
             base.Dispose();
-
-            if (committed)
-                AfterCommit();
         }
 
         private static void ThrowInvalidTransactionUsage()
@@ -96,16 +91,10 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException("There is a different transaction in context.");
         }
 
-        private void AfterCommit()
+        protected override void RaiseNotifications()
         {
-            if (_documentNotifications == null && _counterNotifications == null && _timeSeriesNotifications == null)
-                return;
+            base.RaiseNotifications();
 
-            ThreadPool.QueueUserWorkItem(state => ((DocumentsTransaction)state).RaiseNotifications(), this);
-        }
-
-        private void RaiseNotifications()
-        {
             if (_documentNotifications?.Count > 0)
             {
                 foreach (var notification in _documentNotifications)

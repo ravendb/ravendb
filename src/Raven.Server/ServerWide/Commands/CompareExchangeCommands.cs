@@ -45,7 +45,16 @@ namespace Raven.Server.ServerWide.Commands
             FromBackup = fromBackup;
         }
 
-        public abstract CompareExchangeResult Execute(TransactionOperationContext context, Table items, long index);
+        protected abstract CompareExchangeResult ExecuteInternal(TransactionOperationContext context, Table items, long index);
+
+        public CompareExchangeResult Execute(TransactionOperationContext context, Table items, long index)
+        {
+            var result = ExecuteInternal(context, items, index);
+
+            context.Transaction.AddAfterCommitNotification(new CompareExchangeChange { Database = Database });
+
+            return result;
+        }
 
         public static unsafe void GetKeyAndPrefixIndexSlices(
             ByteStringContext allocator, string db, string key, long index,
@@ -212,7 +221,7 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public override unsafe CompareExchangeResult Execute(TransactionOperationContext context, Table items, long index)
+        protected override unsafe CompareExchangeResult ExecuteInternal(TransactionOperationContext context, Table items, long index)
         {
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
@@ -293,7 +302,7 @@ namespace Raven.Server.ServerWide.Commands
             Value = value;
         }
 
-        public override unsafe CompareExchangeResult Execute(TransactionOperationContext context, Table items, long index)
+        protected override unsafe CompareExchangeResult ExecuteInternal(TransactionOperationContext context, Table items, long index)
         {
             // We have to clone the Value because we might have gotten this command from another node
             // and it was serialized. In that case, it is an _internal_ object, not a full document,

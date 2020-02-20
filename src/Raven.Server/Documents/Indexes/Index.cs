@@ -662,7 +662,7 @@ namespace Raven.Server.Documents.Indexes
         private void InitializeComponentsUsingEnvironment(DocumentDatabase documentDatabase, StorageEnvironment environment)
         {
             _contextPool?.Dispose();
-            _contextPool = new TransactionContextPool(environment, documentDatabase.Configuration.Memory.MaxContextSizeToKeep);
+            _contextPool = new TransactionContextPool(environment, clusterChanges: null, documentDatabase.Configuration.Memory.MaxContextSizeToKeep);
 
             _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
             _indexStorage.Initialize(environment);
@@ -1862,17 +1862,30 @@ namespace Raven.Server.Documents.Indexes
         {
             if (documentDatabase != null)
                 documentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
+
+            if (Definition.HasCompareExchange)
+                documentDatabase.ServerStore.Cluster.Changes.OnCompareExchangeChange += HandleCompareExchangeChange;
         }
 
         protected virtual void UnsubscribeFromChanges(DocumentDatabase documentDatabase)
         {
             if (documentDatabase != null)
                 documentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
+
+            if (Definition.HasCompareExchange)
+                documentDatabase.ServerStore.Cluster.Changes.OnCompareExchangeChange -= HandleCompareExchangeChange;
         }
 
         protected virtual void HandleDocumentChange(DocumentChange change)
         {
             if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false)
+                return;
+            _mre.Set();
+        }
+
+        protected virtual void HandleCompareExchangeChange(CompareExchangeChange change)
+        {
+            if (string.Equals(DocumentDatabase.Name, change.Database, StringComparison.OrdinalIgnoreCase) == false)
                 return;
             _mre.Set();
         }
