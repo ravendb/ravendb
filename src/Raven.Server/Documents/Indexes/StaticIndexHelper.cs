@@ -205,11 +205,16 @@ namespace Raven.Server.Documents.Indexes
                     var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
                     var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
 
-                    // TODO [ppekrol]
+                    var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
+                    var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
 
                     *(long*)writePos = lastCompareExchangeEtag;
                     writePos += sizeof(long);
                     *(long*)writePos = lastProcessedReferenceEtag;
+                    writePos += sizeof(long);
+                    *(long*)writePos = lastTombstoneEtag;
+                    writePos += sizeof(long);
+                    *(long*)writePos = lastProcessedTombstoneEtag;
                 }
             }
 

@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 length += sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             if (_handleCompareExchangeReferences != null)
-                length += sizeof(long) * 4 * (Collections.Count * 1); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+                length += sizeof(long) * 4 * Collections.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             var indexEtagBytes = stackalloc byte[length];
 

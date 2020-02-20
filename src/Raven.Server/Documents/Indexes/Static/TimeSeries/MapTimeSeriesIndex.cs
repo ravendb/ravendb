@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         private bool? _isSideBySide;
 
         private HandleReferences _handleReferences;
+        private HandleReferences _handleCompareExchangeReferences;
 
         protected MapTimeSeriesIndex(MapIndexDefinition definition, StaticTimeSeriesIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
@@ -87,6 +88,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
             };
 
+            if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
+                throw new NotImplementedException("TODO ppekrol"); //workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleTimeSeriesReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
@@ -97,7 +101,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (_referencedCollections.Count > 0)
+            if (_handleCompareExchangeReferences != null)
+                _handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+
+            if (_handleReferences != null)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
 
             writer.DeleteBySourceDocument(tombstone.LowerId, stats);
@@ -125,7 +132,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
-            if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
+            if (isStale && (stalenessReasons == null || (_handleReferences == null && _handleCompareExchangeReferences == null)))
                 return isStale;
 
             return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
@@ -139,12 +146,17 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         protected override unsafe long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             QueryMetadata query, bool isStale)
         {
-            if (_referencedCollections.Count == 0)
+            if (_handleReferences == null && _handleCompareExchangeReferences == null)
                 return base.CalculateIndexEtag(queryContext, indexContext, query, isStale);
 
             var minLength = MinimumSizeForCalculateIndexEtagLength(query);
-            var length = minLength +
-                         sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+            var length = minLength;
+
+            if (_handleReferences != null)
+                length += sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+
+            if (_handleCompareExchangeReferences != null)
+                length += sizeof(long) * 4 * Collections.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             var indexEtagBytes = stackalloc byte[length];
 
