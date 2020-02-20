@@ -157,7 +157,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     return;
             }
             _lastLogs[message] = _iteration;
-            AddToDecisionLog(database, message);
+            AddToDecisionLog(database, message, e);
 
             if (_logger.IsInfoEnabled)
             {
@@ -284,6 +284,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         // this is sort of expected, if the database was
                         // modified by someone else, we'll avoid changing
                         // it and run the logic again on the next round
+                        AddToDecisionLog(command.Update.DatabaseName, $"Topology of database '{command.Update.DatabaseName}' was not changed, reason: {nameof(ConcurrencyException)}");
                     }
                 }
                 if (deletions != null)
@@ -492,6 +493,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 return null;
 
             return commandCount;
+        }
+
+        private void AddToDecisionLog(string database, string updateReason, Exception e)
+        {
+            if (e != null)
+                updateReason += $"\nError: {e}";
+
+            AddToDecisionLog(database, updateReason);
         }
 
         private void AddToDecisionLog(string database, string updateReason)
