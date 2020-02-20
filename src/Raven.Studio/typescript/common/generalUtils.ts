@@ -408,12 +408,10 @@ class genUtils {
 
     /***  File Methods ***/
     
-    static isFileOfType(fileName: string, possibleFileTypes: string[]): boolean {
-        const fileParts = _.split(fileName,".");
-        const fileExtension = fileParts[fileParts.length-1];
-
-        return fileParts.length === 2 &&
-            _.includes(possibleFileTypes, fileExtension);
+    static getFileExtension(filePath: string): string {
+        const fileParts = _.split(filePath, ".");
+        
+        return fileParts.length > 1 ? fileParts.pop() : null;
     }
     
     /***  Other Methods ***/
