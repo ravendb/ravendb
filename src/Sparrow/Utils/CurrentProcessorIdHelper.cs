@@ -3,14 +3,14 @@ using System.Threading;
 
 namespace Sparrow.Utils
 {
-    public static class CurrentProcessorIdHelper
+    internal static class CurrentProcessorIdHelper
     {
         public static int GetCurrentProcessorId()
         {
-#if NETCOREAPP3_1
-            return Thread.GetCurrentProcessorId();
-#else
+#if NETSTANDARD2_0
             return Thread.CurrentThread.ManagedThreadId % Environment.ProcessorCount;
+#else
+            return Thread.GetCurrentProcessorId();
 #endif
         }
     }
