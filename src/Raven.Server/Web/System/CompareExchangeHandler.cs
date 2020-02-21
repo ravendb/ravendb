@@ -54,7 +54,7 @@ namespace Raven.Server.Web.System
                         numberOfResults++;
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
-                            [nameof(CompareExchangeListItem.Key)] = item.Key,
+                            [nameof(CompareExchangeListItem.Key)] = item.Key.Key,
                             [nameof(CompareExchangeListItem.Value)] = item.Value,
                             [nameof(CompareExchangeListItem.Index)] = item.Index
                         });

@@ -47,7 +47,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -245,8 +244,8 @@ namespace Raven.Server.ServerWide
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
                         ExecuteCompareExchangeBatch(context, cmd, index, type);
                         break;
-                    //The reason we have a separate case for removing node from database is because we must 
-                    //actually delete the database before we notify about changes to the record otherwise we 
+                    //The reason we have a separate case for removing node from database is because we must
+                    //actually delete the database before we notify about changes to the record otherwise we
                     //don't know that it was us who needed to delete the database.
                     case nameof(RemoveNodeFromDatabaseCommand):
                         RemoveNodeFromDatabase(context, cmd, index, leader, serverStore);
@@ -747,7 +746,7 @@ namespace Raven.Server.ServerWide
                     }
                     var certInstallation = GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                     if (certInstallation == null)
-                        return; // already applied? 
+                        return; // already applied?
 
                     if (certInstallation.TryGet(nameof(CertificateReplacement.Thumbprint), out string storedThumbprint) == false)
                         throw new RachisApplyException($"{nameof(CertificateReplacement.Thumbprint)} property didn't exist in 'server/cert' value");
@@ -769,7 +768,7 @@ namespace Raven.Server.ServerWide
                     if (_parent.Log.IsOperationsEnabled)
                         _parent.Log.Operations("Confirming to replace the server certificate.");
 
-                    // this will trigger the handling of the certificate update 
+                    // this will trigger the handling of the certificate update
                     NotifyValueChanged(context, nameof(ConfirmReceiptServerCertificateCommand), index);
                 }
             }
@@ -869,7 +868,7 @@ namespace Raven.Server.ServerWide
 
                     var certInstallation = GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                     if (certInstallation == null)
-                        return; // already applied? 
+                        return; // already applied?
 
                     if (certInstallation.TryGet(nameof(CertificateReplacement.Thumbprint), out string storedThumbprint) == false)
                         throw new RachisApplyException($"'{nameof(CertificateReplacement.Thumbprint)}' property didn't exist in 'server/cert' value");
@@ -1168,7 +1167,6 @@ namespace Raven.Server.ServerWide
             {
                 LogCommand(nameof(RemoveNodeFromDatabaseCommand), index, exception, remove?.AdditionalDebugInformation(exception));
             }
-
         }
 
         private static void DeleteDatabaseRecord(ClusterOperationContext context, long index, Table items, Slice lowerKey, string databaseName, ServerStore serverStore)
@@ -1628,6 +1626,7 @@ namespace Raven.Server.ServerWide
                 NotifyValueChanged(context, type, index);
             }
         }
+
         private void PutValueDirectly(ClusterOperationContext context, string key, BlittableJsonReaderObject value, long index)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -2335,9 +2334,9 @@ namespace Raven.Server.ServerWide
         }
 
         public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesByKey(TransactionOperationContext context,
-            string dbName, long fromIndex = 0, long take = long.MaxValue)
+            string databaseName, long fromIndex = 0, long take = long.MaxValue)
         {
-            using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
+            using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, databaseName, fromIndex, out var buffer))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
                 using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
@@ -2348,13 +2347,39 @@ namespace Raven.Server.ServerWide
                         if (take-- <= 0)
                             yield break;
 
-                        var key = ReadCompareExchangeKey(context, tvr.Result.Reader, dbName);
+                        var key = ReadCompareExchangeKey(context, tvr.Result.Reader, databaseName);
                         var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
 
                         yield return (key, index);
                     }
                 }
             }
+        }
+
+        internal bool HasCompareExchangeTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(TransactionOperationContext context, string databaseName, long start, long end)
+        {
+            if (start >= end)
+                return false;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
+            if (table == null)
+                return false;
+
+            using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, databaseName, start + 1, out var buffer)) // start + 1 => we want greater than
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var tvr in table.SeekForwardFromPrefix(CompareExchangeTombstoneSchema.Indexes[CompareExchangeTombstoneIndex], keySlice, prefix, 0))
+                {
+                    var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
+                    if (index <= end)
+                        return true;
+
+                    return false;
+                }
+            }
+
+            return false;
         }
 
         private void ClearCompareExchangeTombstones(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out bool result)

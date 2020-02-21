@@ -938,7 +938,7 @@ namespace Raven.Server.Documents.Indexes
                         end);
         }
 
-        internal virtual bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
+        internal virtual bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, long? compareExchangeReferenceCutoff = null, List<string> stalenessReasons = null)
         {
             if (Type == IndexType.Faulty)
                 return true;
@@ -2507,7 +2507,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
+                (long? DocEtag, long? ReferenceEtag, long? CompareExchangeReferenceEtag)? cutoffEtag = null;
 
                 var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
 
@@ -2535,7 +2535,7 @@ namespace Raven.Server.Documents.Indexes
                             if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(queryContext);
 
-                            isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
+                            isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag, cutoffEtag?.CompareExchangeReferenceEtag);
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
                                 ThrowIfPartOfGraphQuery(query); //precaution
@@ -2747,7 +2747,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
+                (long? DocEtag, long? ReferenceEtag, long? CompareExchangeReferenceEtag)? cutoffEtag = null;
 
                 var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
 
@@ -2768,7 +2768,7 @@ namespace Raven.Server.Documents.Indexes
                             if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(queryContext);
 
-                            isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
+                            isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag, cutoffEtag?.CompareExchangeReferenceEtag);
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
                                 queryContext.CloseTransaction();
@@ -2846,7 +2846,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
+                (long? DocEtag, long? ReferenceEtag, long? CompareExchangeReferenceEtag)? cutoffEtag = null;
 
                 while (true)
                 {
@@ -2869,7 +2869,7 @@ namespace Raven.Server.Documents.Indexes
                             if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(queryContext);
 
-                            var isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
+                            var isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag, cutoffEtag?.CompareExchangeReferenceEtag);
 
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
@@ -2948,7 +2948,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
+                (long? DocEtag, long? ReferenceEtag, long? CompareExchangeReferenceEtag)? cutoffEtag = null;
 
                 while (true)
                 {
@@ -2971,7 +2971,7 @@ namespace Raven.Server.Documents.Indexes
                             if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(queryContext);
 
-                            var isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
+                            var isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag, cutoffEtag?.CompareExchangeReferenceEtag);
 
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
@@ -3053,7 +3053,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private (long DocumentCutoff, long? ReferenceCutoff) GetCutoffEtag(QueryOperationContext queryContext)
+        private (long DocumentCutoff, long? ReferenceCutoff, long? CompareExchangeReferenceCutoff) GetCutoffEtag(QueryOperationContext queryContext)
         {
             long cutoffEtag = 0;
 
@@ -3081,7 +3081,19 @@ namespace Raven.Server.Documents.Indexes
                     }
             }
 
-            return (cutoffEtag, referenceCutoffEtag);
+            long? compareExchangeReferenceCutoff = null;
+            if (Definition.HasCompareExchange)
+                compareExchangeReferenceCutoff = GetLastCompareExchangeEtag();
+
+            return (cutoffEtag, referenceCutoffEtag, compareExchangeReferenceCutoff);
+
+            long GetLastCompareExchangeEtag()
+            {
+                var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
+                var lastCompareExchangeTombstoneEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
+
+                return Math.Max(lastCompareExchangeEtag, lastCompareExchangeTombstoneEtag);
+            }
         }
 
         private void ThrowErrored()
