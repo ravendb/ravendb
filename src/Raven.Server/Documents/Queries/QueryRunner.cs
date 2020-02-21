@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     index = GetIndex(indexName);
 
-                    using (var context = QueryOperationContext.ForIndex(documentsContext, index))
+                    using (var context = QueryOperationContext.ForQuery(documentsContext, index))
                     {
                         var etag = index.GetIndexEtag(null);
                         if (etag == existingResultEtag)

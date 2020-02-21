@@ -153,7 +153,6 @@ namespace Raven.Server.Documents.Handlers
                     w.WritePropertyName(nameof(IndexHistoryEntry.Source));
                     w.WriteString(entry.Source);
                     w.WriteEndObject();
-
                 });
 
                 writer.WriteEndObject();
@@ -437,9 +436,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/progress", "GET", AuthorizationStatus.ValidUser)]
         public Task Progress()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-            using (var writer = new BlittableJsonTextWriter(documentsContext, ResponseBodyStream()))
-            using (documentsContext.OpenReadTransaction())
+            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
+            using (var writer = new BlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
@@ -450,20 +449,17 @@ namespace Raven.Server.Documents.Handlers
                 {
                     try
                     {
-                        using (var context = QueryOperationContext.ForIndex(documentsContext, index))
-                        {
-                            if (index.IsStale(context) == false)
-                                continue;
+                        if (index.IsStale(context) == false)
+                            continue;
 
-                            var progress = index.GetProgress(context, isStale: true);
+                        var progress = index.GetProgress(context, isStale: true);
 
-                            if (first == false)
-                                writer.WriteComma();
+                        if (first == false)
+                            writer.WriteComma();
 
-                            first = false;
+                        first = false;
 
-                            writer.WriteIndexProgress(context.Documents, progress);
-                        }
+                        writer.WriteIndexProgress(context.Documents, progress);
                     }
                     catch (ObjectDisposedException)
                     {
@@ -863,7 +859,6 @@ namespace Raven.Server.Documents.Handlers
                                     .LastOrDefault(x => x.Completed != null)
                                     ?.Completed ?? DateTime.UtcNow;
 
-
                     dja.Add(new DynamicJsonValue
                     {
                         ["Name"] = index.Name,
@@ -953,7 +948,6 @@ namespace Raven.Server.Documents.Handlers
                 writer.Flush();
             }
             return Task.CompletedTask;
-
         }
 
         [RavenAction("/databases/*/indexes/try", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
@@ -1036,7 +1030,6 @@ namespace Raven.Server.Documents.Handlers
                     var first = true;
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-
                         writer.WriteStartObject();
                         writer.WritePropertyName("MapResults");
                         writer.WriteStartArray();
@@ -1051,7 +1044,6 @@ namespace Raven.Server.Documents.Handlers
                                 writer.WriteString(jsStr.ToString());
                                 first = false;
                             }
-
                         }
                         writer.WriteEndArray();
                         if (indexDefinition.Reduce != null)
@@ -1078,7 +1070,6 @@ namespace Raven.Server.Documents.Handlers
                                         writer.WriteString(jsStr.ToString());
                                         first = false;
                                     }
-
                                 }
                             }
 
@@ -1086,7 +1077,6 @@ namespace Raven.Server.Documents.Handlers
                         }
                         writer.WriteEndObject();
                     }
-
                 }
             }
         }

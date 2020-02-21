@@ -3360,7 +3360,7 @@ namespace Raven.Server.Documents.Indexes
                 if (valid == false)
                     return DateTime.UtcNow.Ticks; // must be always different
 
-                using (var context = QueryOperationContext.ForIndex(this))
+                using (var context = QueryOperationContext.ForQuery(this, q))
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 {
                     using (indexContext.OpenReadTransaction())
