@@ -116,11 +116,6 @@ namespace Raven.Server.Documents.Indexes
             return new QueryOperationContext(documentsContext, releaseDocumentsContext: false, needsServerContext: index.Definition.HasCompareExchange);
         }
 
-        public static QueryOperationContext ForQuery(Index index, QueryMetadata queryMetadata)
-        {
-            return new QueryOperationContext(index.DocumentDatabase, index.Definition.HasCompareExchange || queryMetadata.HasCmpXchg || queryMetadata.HasCmpXchgSelect);
-        }
-
         public static QueryOperationContext ForIndex(Index index)
         {
             return new QueryOperationContext(index.DocumentDatabase, index.Definition.HasCompareExchange);

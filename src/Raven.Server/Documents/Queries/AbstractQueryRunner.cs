@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Queries
 
             if (existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtag(query.Metadata);
+                var etag = index.GetIndexEtag(queryContext, query.Metadata);
                 if (etag == existingResultEtag.Value)
                     return SuggestionQueryResult.NotModifiedResult;
             }

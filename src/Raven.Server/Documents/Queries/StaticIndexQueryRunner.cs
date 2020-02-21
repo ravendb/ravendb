@@ -25,17 +25,19 @@ namespace Raven.Server.Documents.Queries
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
-            {
-                var etag = index.GetIndexEtag(query.Metadata);
-                if (etag == existingResultEtag)
-                    return DocumentQueryResult.NotModifiedResult;
-            }
-
-            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                return await index.Query(query, context, token);
+                if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
+                {
+                    var etag = index.GetIndexEtag(context, query.Metadata);
+                    if (etag == existingResultEtag)
+                        return DocumentQueryResult.NotModifiedResult;
+                }
+
+                using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+                {
+                    return await index.Query(query, context, token);
+                }
             }
         }
 
@@ -65,17 +67,19 @@ namespace Raven.Server.Documents.Queries
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            if (existingResultEtag.HasValue)
-            {
-                var etag = index.GetIndexEtag(query.Metadata);
-                if (etag == existingResultEtag)
-                    return IndexEntriesQueryResult.NotModifiedResult;
-            }
-
-            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                return await index.IndexEntries(query, context, token);
+                if (existingResultEtag.HasValue)
+                {
+                    var etag = index.GetIndexEtag(context, query.Metadata);
+                    if (etag == existingResultEtag)
+                        return IndexEntriesQueryResult.NotModifiedResult;
+                }
+
+                using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+                {
+                    return await index.IndexEntries(query, context, token);
+                }
             }
         }
 
@@ -87,17 +91,20 @@ namespace Raven.Server.Documents.Queries
             var fq = FacetQuery.Create(documentsContext, query);
 
             var index = GetIndex(query.Metadata.IndexName);
-            if (existingResultEtag.HasValue)
-            {
-                var etag = index.GetIndexEtag(query.Metadata) ^ fq.FacetsEtag;
-                if (etag == existingResultEtag)
-                    return FacetedQueryResult.NotModifiedResult;
-            }
 
-            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                return await index.FacetedQuery(fq, context, token);
+                if (existingResultEtag.HasValue)
+                {
+                    var etag = index.GetIndexEtag(context, query.Metadata) ^ fq.FacetsEtag;
+                    if (etag == existingResultEtag)
+                        return FacetedQueryResult.NotModifiedResult;
+                }
+
+                using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+                {
+                    return await index.FacetedQuery(fq, context, token);
+                }
             }
         }
 
