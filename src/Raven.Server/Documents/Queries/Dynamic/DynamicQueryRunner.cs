@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = await MatchIndex(query, true, customStalenessWaitTimeout: TimeSpan.FromSeconds(60), token.Token);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token, true))
-            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
+            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
                 await index.StreamQuery(response, writer, query, context, token);
             }
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
+            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
                 return await index.Query(query, context, token);
             }
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
+            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
                 return await index.IndexEntries(query, context, token);
             }
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = await MatchIndex(query, true, null, token.Token);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
+            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
                 return await ExecuteDelete(query, index, options, context, onProgress, token);
             }
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = await MatchIndex(query, true, null, token.Token);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
+            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
                 return await ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
             }
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = await MatchIndex(query, true, null, token.Token);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-            using (var context = QueryOperationContext.ForIndex(documentsContext, index))
+            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
                 return await ExecuteSuggestion(query, index, context, existingResultEtag, token);
             }
