@@ -383,9 +383,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return PutMapResults(indexItem.LowerId, indexItem.Id, wrapper, indexContext, stats);
         }
 
-        internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
+        internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, long? compareExchangeReferenceCutoff = null, List<string> stalenessReasons = null)
         {
-            var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
+            var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
 
             if (isStale == false && OutputReduceToCollection?.HasDocumentsToDelete(indexContext) == true)
             {
@@ -399,7 +399,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (isStale && (stalenessReasons == null || (_handleReferences == null && _handleCompareExchangeReferences == null)))
                 return isStale;
 
-            return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
+            return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons) || isStale;
         }
 
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()

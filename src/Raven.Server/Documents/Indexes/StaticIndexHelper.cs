@@ -13,21 +13,21 @@ namespace Raven.Server.Documents.Indexes
     public static class StaticIndexHelper
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStaleDueToReferences(MapIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        public static bool IsStaleDueToReferences(MapIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons)
         {
-            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, stalenessReasons);
+            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStaleDueToReferences(MapTimeSeriesIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        public static bool IsStaleDueToReferences(MapTimeSeriesIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons)
         {
-            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, stalenessReasons);
+            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStaleDueToReferences(MapReduceIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        public static bool IsStaleDueToReferences(MapReduceIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons)
         {
-            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, stalenessReasons);
+            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons)
         {
             foreach (var collection in index.Collections)
             {
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Indexes
                                     if (stalenessReasons == null)
                                         return true;
 
-                                    stalenessReasons.Add($"There are still tombstones to process from collection '{referencedCollection.Name}' with etag range '{lastProcessedTombstoneEtag} - {referenceCutoff.Value}'.");
+                                    stalenessReasons.Add($"There are still some tombstones to process from collection '{referencedCollection.Name}' with etag range '{lastProcessedTombstoneEtag} - {referenceCutoff.Value}'.");
                                 }
                             }
                         }
@@ -150,23 +150,50 @@ namespace Raven.Server.Documents.Indexes
                         var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
                         var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
 
-                        if (lastCompareExchangeEtag > lastProcessedReferenceEtag)
+                        if (compareExchangeReferenceCutoff == null)
                         {
-                            if (stalenessReasons == null)
-                                return true;
+                            if (lastCompareExchangeEtag > lastProcessedReferenceEtag)
+                            {
+                                if (stalenessReasons == null)
+                                    return true;
 
-                            stalenessReasons.Add($"There are still some compare exchange references to process for collection '{collection}'. The last compare exchange etag is '{lastCompareExchangeEtag:#,#;;0}' but last processed compare exchange etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
+                                stalenessReasons.Add($"There are still some compare exchange references to process for collection '{collection}'. The last compare exchange etag is '{lastCompareExchangeEtag:#,#;;0}', but last processed compare exchange etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
+                            }
+
+                            var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
+                            var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
+
+                            if (lastTombstoneEtag > lastProcessedTombstoneEtag)
+                            {
+                                if (stalenessReasons == null)
+                                    return true;
+
+                                stalenessReasons.Add($"There are still some compare exchange tombstone references to process for collection '{collection}'. The last compare exchange tombstone etag is '{lastTombstoneEtag:#,#;;0}', but last processed compare exchange tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.");
+                            }
                         }
-
-                        var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
-                        var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
-
-                        if (lastTombstoneEtag > lastProcessedTombstoneEtag)
+                        else
                         {
-                            if (stalenessReasons == null)
-                                return true;
+                            var minCompareExchangeEtag = Math.Min(compareExchangeReferenceCutoff.Value, lastCompareExchangeEtag);
+                            if (minCompareExchangeEtag > lastProcessedReferenceEtag)
+                            {
+                                if (stalenessReasons == null)
+                                    return true;
 
-                            stalenessReasons.Add($"There are still some compare exchange tombstone references to process for collection '{collection}'. The last compare exchange tombstone etag is '{lastTombstoneEtag:#,#;;0}' but last processed compare exchange tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.");
+                                stalenessReasons.Add($"There are still some compare exchange references to process for collection '{collection}'. The last compare exchange etag is '{lastCompareExchangeEtag:#,#;;0}' with cutoff set to '{compareExchangeReferenceCutoff.Value}', but last processed compare exchange etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
+                            }
+
+                            var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
+                            var hasTombstones = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.HasCompareExchangeTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(queryContext.Server, queryContext.Documents.DocumentDatabase.Name,
+                                    lastProcessedTombstoneEtag,
+                                    compareExchangeReferenceCutoff.Value);
+
+                            if (hasTombstones)
+                            {
+                                if (stalenessReasons == null)
+                                    return true;
+
+                                stalenessReasons.Add($"There are still some compare exchange tombstones to process for collection '{collection}' with etag range '{lastProcessedTombstoneEtag} - {compareExchangeReferenceCutoff.Value}'.");
+                            }
                         }
                     }
                 }
