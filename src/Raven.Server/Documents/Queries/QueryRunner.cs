@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Queries
 
                     using (var context = QueryOperationContext.ForQuery(documentsContext, index))
                     {
-                        var etag = index.GetIndexEtag(null);
+                        var etag = index.GetIndexEtag(context, null);
                         if (etag == existingResultEtag)
                             return TermsQueryResultServerSide.NotModifiedResult;
 

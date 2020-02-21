@@ -3353,14 +3353,13 @@ namespace Raven.Server.Documents.Indexes
             *indexEtagBytes = (byte)indexState;
         }
 
-        public long GetIndexEtag(QueryMetadata q)
+        public long GetIndexEtag(QueryOperationContext context, QueryMetadata q)
         {
             using (CurrentlyInUse(out var valid))
             {
                 if (valid == false)
                     return DateTime.UtcNow.Ticks; // must be always different
 
-                using (var context = QueryOperationContext.ForQuery(this, q))
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 {
                     using (indexContext.OpenReadTransaction())

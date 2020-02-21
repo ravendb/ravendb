@@ -49,17 +49,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
             using (query.Timings?.For(nameof(QueryTimingsScope.Names.Optimizer)))
                 index = await MatchIndex(query, true, null, token.Token);
 
-            if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
-            {
-                var etag = index.GetIndexEtag(query.Metadata);
-                if (etag == existingResultEtag)
-                    return DocumentQueryResult.NotModifiedResult;
-            }
-
-            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                return await index.Query(query, context, token);
+                if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
+                {
+                    var etag = index.GetIndexEtag(context, query.Metadata);
+                    if (etag == existingResultEtag)
+                        return DocumentQueryResult.NotModifiedResult;
+                }
+
+                using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+                {
+                    return await index.Query(query, context, token);
+                }
             }
         }
 
@@ -70,17 +72,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(query.Metadata.CollectionName);
 
-            if (existingResultEtag.HasValue)
-            {
-                var etag = index.GetIndexEtag(query.Metadata);
-                if (etag == existingResultEtag)
-                    return IndexEntriesQueryResult.NotModifiedResult;
-            }
-
-            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                return await index.IndexEntries(query, context, token);
+                if (existingResultEtag.HasValue)
+                {
+                    var etag = index.GetIndexEtag(context, query.Metadata);
+                    if (etag == existingResultEtag)
+                        return IndexEntriesQueryResult.NotModifiedResult;
+                }
+
+                using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+                {
+                    return await index.IndexEntries(query, context, token);
+                }
             }
         }
 
