@@ -24,7 +24,7 @@ namespace FastTests.Voron.Bugs
             {
                 var allocatePage = tx1.LowLevelTransaction.AllocatePage(1);
 
-                using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction())
+                using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction(tx1.LowLevelTransaction.PersistentContext))
                 {
                     using (tx1)
                     {
