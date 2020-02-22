@@ -723,8 +723,6 @@ namespace SlowTests.Client.TimeSeries
                             timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 4012.5d, "web");
                         }
                     }
-
-                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
