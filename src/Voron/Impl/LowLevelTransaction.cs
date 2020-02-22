@@ -194,7 +194,7 @@ namespace Voron.Impl
 
         }
 
-        private LowLevelTransaction(LowLevelTransaction previous, long txId)
+        private LowLevelTransaction(LowLevelTransaction previous, TransactionPersistentContext persistentContext, long txId)
         {
             // this is meant to be used with transaction merging only
             // so it makes a lot of assumptions about the usage scenario
@@ -213,7 +213,8 @@ namespace Voron.Impl
             _journal = env.Journal;
             _id = txId;
             _freeSpaceHandling = previous._freeSpaceHandling;
-            PersistentContext = previous.PersistentContext;
+            Debug.Assert(persistentContext != null, "persistentContext != null");
+            PersistentContext = persistentContext;
 
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             _disposeAllocator = true;
@@ -914,7 +915,7 @@ namespace Voron.Impl
         /// The current transaction is considered completed in memory but not yet
         /// committed to disk. This *must* be completed by calling EndAsyncCommit.
         /// </summary>
-        public LowLevelTransaction BeginAsyncCommitAndStartNewTransaction()
+        public LowLevelTransaction BeginAsyncCommitAndStartNewTransaction(TransactionPersistentContext persistentContext)
         {
             if (Flags != TransactionFlags.ReadWrite)
                 ThrowReadTranscationCannotDoAsyncCommit();
@@ -927,7 +928,7 @@ namespace Voron.Impl
 
             CommitStage1_CompleteTransaction();
 
-            var nextTx = new LowLevelTransaction(this,
+            var nextTx = new LowLevelTransaction(this, persistentContext,
                 writeToJournalIsRequired ? Id + 1 : Id
                 );
             _asyncCommitNextTransaction = nextTx;

@@ -110,13 +110,13 @@ namespace Voron.Impl
             _lowLevelTransaction.Commit();
         }
 
-        public Transaction BeginAsyncCommitAndStartNewTransaction()
+        public Transaction BeginAsyncCommitAndStartNewTransaction(TransactionPersistentContext persistentContext)
         {
             if (_lowLevelTransaction.Flags != TransactionFlags.ReadWrite)
                 ThrowInvalidAsyncCommitOnRead();
 
             PrepareForCommit();
-            var tx = _lowLevelTransaction.BeginAsyncCommitAndStartNewTransaction();
+            var tx = _lowLevelTransaction.BeginAsyncCommitAndStartNewTransaction(persistentContext);
             return new Transaction(tx);
         }
 

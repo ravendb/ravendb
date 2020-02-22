@@ -30,7 +30,7 @@ namespace SlowTests.Voron.Issues
                 {
                     tx1.LowLevelTransaction.BeforeCommitFinalization += delegate { throw  new InvalidOperationException();};
 
-                    Assert.Throws<InvalidOperationException>(() => tx1.BeginAsyncCommitAndStartNewTransaction());
+                    Assert.Throws<InvalidOperationException>(() => tx1.BeginAsyncCommitAndStartNewTransaction(tx1.LowLevelTransaction.PersistentContext));
                 }
             }
             finally

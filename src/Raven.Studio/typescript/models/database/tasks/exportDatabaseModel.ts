@@ -16,8 +16,6 @@ class exportDatabaseModel {
     includeTimeSeries = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeSubscriptions = ko.observable(true);
-    includeDocumentsTombstones = ko.observable(true);
-    includeCompareExchangeTombstones = ko.observable(true);
     
     revisionsAreConfigured: KnockoutComputed<boolean>;
     encryptOutput = ko.observable<boolean>(false);
@@ -146,12 +144,6 @@ class exportDatabaseModel {
         if (this.includeSubscriptions()) {
             operateOnTypes.push("Subscriptions");
         }
-        if (this.includeDocumentsTombstones()) {
-            operateOnTypes.push("Tombstones");
-        }
-        if (this.includeCompareExchangeTombstones()) {
-            operateOnTypes.push("CompareExchangeTombstones");
-        }
 
         const recordTypes = (databaseRecordTypes.length ? databaseRecordTypes.join(",") : undefined) as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
         
@@ -181,9 +173,7 @@ class exportDatabaseModel {
                 || this.includeCounters() 
                 || this.includeTimeSeries()
                 || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) 
-                || this.includeDocuments()
-                || this.includeDocumentsTombstones()
-                || this.includeCompareExchangeTombstones();
+                || this.includeDocuments();
         });
 
         this.transformScript.extend({

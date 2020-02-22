@@ -2,8 +2,14 @@
 <div class="panel">
     <div class="panel-body">
         <form data-bind="submit: importDb">
-            <h3>Import data from a .ravendbdump file into the current database</h3>
-            <div class="bg-warning padding padding-xs margin-bottom"><small><i class="icon-warning"></i> Note: Importing will overwrite any existing documents and indexes.</small></div>
+            <div class="row">
+                <div class="col-sm-8 col-lg-6 col-xl-5">
+                    <h3>Import data from a .ravendbdump file into the current database</h3>
+                    <div class="bg-warning text-warning padding padding-xs margin-top margin-bottom">
+                        <small><i class="icon-warning"></i><span>Note: Importing will overwrite any existing documents and indexes.</span></small>
+                    </div>
+                </div>
+            </div>
             <div class="row">
                 <div class="col-sm-8 col-lg-6 col-xl-5">
                     <div class="input-group file-input" data-bind="validationElement: importedFileName">
@@ -15,6 +21,13 @@
                             </label>
                         </span>
                         <p class="help-block" data-bind="validationMessage: importedFileName"></p>
+                    </div>
+                    <div class="text-warning bg-warning padding padding-xs margin-top flex-horizontal" data-bind="visible: isBackupFileType">
+                        <div class="flex-start"><small><i class="icon-warning"></i></small></div>
+                        <div>
+                            <div><small>The selected file is a <strong>RavenDB Backup file</strong>.</small></div>
+                            <div><small>Please use the <strong>Restore</strong> option (under Create New Database) in order to restore data from a RavenDB Backup file.</small></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -198,7 +211,7 @@
             <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
                 Advanced
             </button>
-            <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': isImporting() }"><span class="icon-import"></span> <span>Import Database</span></button>
+            <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': isImporting() }"><span class="icon-import"></span><span>Import Database</span></button>
         </form>
     </div>
 </div>

@@ -49,7 +49,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 }
                 finally
                 {
-                    fieldToFormatPosition.Add(groups[1].ToString(), numberOfFields);
+                    string fieldName = groups[1].ToString();
+
+                    if (fieldToFormatPosition.ContainsKey(fieldName))
+                        throw new NotSupportedException($"Pattern should contain unique fields only. Duplicated field: '{fieldName}'");
+
+                    fieldToFormatPosition.Add(fieldName, numberOfFields);
                     numberOfFields++;
                 }
                 
