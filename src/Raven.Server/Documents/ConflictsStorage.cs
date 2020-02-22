@@ -7,6 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -833,10 +834,9 @@ namespace Raven.Server.Documents
             return indexOfLargestEtag;
         }
 
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, out string conflictingVector, out bool hasLocalClusterTx)
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, out bool hasLocalClusterTx)
         {
             hasLocalClusterTx = false;
-            conflictingVector = null;
 
             //tombstones also can be a conflict entry
             var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
@@ -848,7 +848,7 @@ namespace Raven.Server.Documents
                     status = ChangeVectorUtils.GetConflictStatus(changeVector, existingConflict.ChangeVector);
                     if (status == ConflictStatus.Conflict)
                     {
-                        conflictingVector = existingConflict.ChangeVector;
+                        ConflictManager.AssertChangeVectorNotNull(existingConflict.ChangeVector);
                         return ConflictStatus.Conflict;
                     }
                 }
@@ -877,9 +877,8 @@ namespace Raven.Server.Documents
             status = ChangeVectorUtils.GetConflictStatus(changeVector, local);
             if (status == ConflictStatus.Conflict)
             {
-                conflictingVector = local;
+                ConflictManager.AssertChangeVectorNotNull(local);
             }
-
             return status;
         }
 
