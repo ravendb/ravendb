@@ -65,6 +65,41 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
+        [Fact]
+        public void CanDefineReferencesCollectionName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Orders_ProfitByProductAndOrderedAt("MyProfitsReferences").Execute(store);
+
+                new Profits_Monthly_Loading_MyProfitsReferences().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    PutOrders(session);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<Profits_Monthly_Loading_MyProfitsReferences.Result, Profits_Monthly_Loading_MyProfitsReferences>().OrderBy(x => x.ProfitValue).ToList();
+
+                    Assert.Equal(2, results.Count);
+
+                    Assert.Equal(1, results[0].ProfitValue);
+                    Assert.Equal(2, results[0].Month);
+                    Assert.Equal(2020, results[0].Year);
+
+                    Assert.Equal(4, results[1].ProfitValue);
+                    Assert.Equal(1, results[1].Month);
+                    Assert.Equal(2020, results[1].Year);
+                }
+            }
+        }
+
         private class Orders_ProfitByProductAndOrderedAt : AbstractIndexCreationTask<Order, Orders_ProfitByProductAndOrderedAt.Result>
         {
             public class Result
@@ -74,7 +109,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 public decimal ProfitValue { get; set; }
             }
 
-            public Orders_ProfitByProductAndOrderedAt()
+            public Orders_ProfitByProductAndOrderedAt(string referencesCollectionName = null)
             {
                 Map = orders => from order in orders
                     from line in order.Lines
@@ -88,6 +123,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 OutputReduceToCollection = "Profits";
 
                 PatternForOutputReduceToCollectionReferences = x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
+
+                if (referencesCollectionName != null)
+                    PatternReferencesCollectionName = referencesCollectionName;
             }
         }
 
@@ -96,6 +134,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             public DateTime OrderedAt { get; set; }
             public string Product { get; set; }
             public decimal ProfitValue { get; set; }
+        }
+
+        public class MyProfitsReferences : OutputReduceToCollectionReference
+        {
+
         }
 
         private class Profits_Monthly : AbstractIndexCreationTask<Order, Profits_Monthly.Result>
@@ -144,6 +187,37 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 Map = orders => from order in orders
                     let reference = LoadDocument<OutputReduceToCollectionReference>($"reports/daily/{order.OrderedAt:yyyy-MM-dd}", "Profits/References")
                     from reduceResult in LoadDocument<Profit>(reference.ReduceOutputs)
+                    select new Result
+                    {
+                        Products = new List<string>() { reduceResult.Product },
+                        Month = reduceResult.OrderedAt.Month,
+                        Year = reduceResult.OrderedAt.Year,
+                        ProfitValue = reduceResult.ProfitValue
+                    };
+
+                Reduce = results => from r in results
+                    group r by new { r.Month, r.Year }
+                    into g
+                    select new Result { Month = g.Key.Month, Year = g.Key.Year, ProfitValue = g.Sum(r => r.ProfitValue), Products = g.SelectMany(x => x.Products).Distinct() };
+            }
+        }
+
+        private class Profits_Monthly_Loading_MyProfitsReferences : AbstractIndexCreationTask<Order, Profits_Monthly.Result>
+        {
+            public class Result
+            {
+                public int Month { get; set; }
+                public int Year { get; set; }
+                public IEnumerable<string> Products { get; set; }
+                public decimal ProfitValue { get; set; }
+            }
+
+            public Profits_Monthly_Loading_MyProfitsReferences()
+            {
+                Map = orders => from order in orders
+                    let reference = LoadDocument<MyProfitsReferences>($"reports/daily/{order.OrderedAt:yyyy-MM-dd}")
+                    from id in reference.ReduceOutputs
+                    let reduceResult = LoadDocument<Profit>(id)
                     select new Result
                     {
                         Products = new List<string>() { reduceResult.Product },

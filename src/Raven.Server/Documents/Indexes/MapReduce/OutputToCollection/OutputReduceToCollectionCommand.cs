@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             _indexWriteTxHolder = indexWriteTxHolder;
 
             if (_patternForReduceOutputReferences != null) 
-                _outputToCollectionReferences = new OutputReduceToCollectionReferencesCommand(index, outputReduceToCollection);
+                _outputToCollectionReferences = new OutputReduceToCollectionReferencesCommand(index, outputReduceToCollection, _patternForReduceOutputReferences.ReferencesCollectionName);
         }
 
         /// <summary>
@@ -289,15 +289,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             private readonly MapReduceIndex _index;
             private readonly string _outputReduceToCollection;
+            private readonly string _referencesCollectionName;
             private readonly DocumentDatabase _database;
             private readonly Dictionary<string, HashSet<string>> _referencesOfReduceOutputs = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             private readonly List<string> _deletedReduceOutputs = new List<string>();
             private readonly Dictionary<string, HashSet<string>> _idsToDeleteByReferenceDocumentId = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-            public OutputReduceToCollectionReferencesCommand(MapReduceIndex index, string outputReduceToCollection)
+            public OutputReduceToCollectionReferencesCommand(MapReduceIndex index, string outputReduceToCollection, string referencesCollectionName)
             {
                 _index = index;
                 _outputReduceToCollection = outputReduceToCollection;
+                _referencesCollectionName = referencesCollectionName;
                 _database = index.DocumentDatabase;
             }
 
@@ -418,7 +420,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                             [nameof(OutputReduceToCollectionReference.ReduceOutputs)] = new DynamicJsonArray(uniqueIds),
                             [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Documents.Metadata.Collection] = $"{_outputReduceToCollection}/References"
+                                [Constants.Documents.Metadata.Collection] = _referencesCollectionName ?? $"{_outputReduceToCollection}/References"
                             }
                         };
 

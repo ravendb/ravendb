@@ -969,6 +969,10 @@ namespace Raven.Server.Json
             writer.WriteString(indexDefinition.PatternForOutputReduceToCollectionReferences);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(indexDefinition.PatternReferencesCollectionName));
+            writer.WriteString(indexDefinition.PatternReferencesCollectionName);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(indexDefinition.Configuration));
             writer.WriteStartObject();
             var isFirstInternal = true;
