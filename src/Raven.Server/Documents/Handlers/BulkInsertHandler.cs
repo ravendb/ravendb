@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Handlers
                                     }
 
                                     if (numberOfCommands >= array.Length)
-                                        Array.Resize(ref array, array.Length * 2);
+                                        Array.Resize(ref array, Math.Min(1024, array.Length * 2));
 
                                     array[numberOfCommands++] = commandData;
                                 }
