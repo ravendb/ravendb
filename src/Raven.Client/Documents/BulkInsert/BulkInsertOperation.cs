@@ -144,6 +144,8 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _first = true;
         private CommandType _previousCommandType = CommandType.None;
         private string _previousId = null;
+        private int _numberOfTimeSeriesForId = 0;
+        private const int _maxNumberOfTimeSeriesForIdInBatch = 10 * 1024;
         private long _operationId = -1;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
@@ -303,7 +305,6 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         using (var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context,
                             _defaultSerializer, new DocumentInfo {MetadataInstance = metadata}))
-
                         {
                             _currentWriter.Flush();
                             json.WriteJsonTo(_currentWriter.BaseStream);
@@ -332,14 +333,18 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 await ExecuteBeforeStore().ConfigureAwait(false);
 
-                var isNewCommand = _previousCommandType != CommandType.TimeSeries ||
+                var isNewTimeSeries = _previousCommandType != CommandType.TimeSeries ||
                                    _previousId.Equals(id, StringComparison.OrdinalIgnoreCase) == false;
 
-                //TODO: we should limit the number of appends to send for a single document. 10K?
-
-                await WriteToStream(writeComma: isNewCommand, () =>
+                if (isNewTimeSeries == false && _numberOfTimeSeriesForId > _maxNumberOfTimeSeriesForIdInBatch)
                 {
-                    if (isNewCommand)
+                    isNewTimeSeries = true;
+                    _numberOfTimeSeriesForId = 0;
+                }
+
+                await WriteToStream(writeComma: isNewTimeSeries, () =>
+                {
+                    if (isNewTimeSeries)
                     {
                         // writing a new time series for a new document
                         _currentWriter.Write("{\"Id\":\"");
@@ -352,6 +357,7 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         // this is a time series append for the same document id
                         _currentWriter.Write(',');
+                        _numberOfTimeSeriesForId++;
                     }
 
                     var appendOperation = new TimeSeriesOperation.AppendOperation
