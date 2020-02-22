@@ -1760,8 +1760,21 @@ namespace Raven.Client.Documents.Indexes
             {
                 var type = node.Method.GetGenericArguments()[0];
                 _loadDocumentTypes.Add(type);
-                var collection = _conventions.GetCollectionName(type);
-                Out($", \"{collection}\"");
+
+                var parameters = node.Method.GetParameters();
+                if (parameters.Length == 1)
+                {
+                    var collection = _conventions.GetCollectionName(type);
+                    Out($", \"{collection}\"");
+                }
+                else if (parameters.Length == 2)
+                {
+                    // nothing do to - collection name was provided - LoadDocument<T>("id", "CollectionName")
+                }
+                else
+                {
+                    throw new NotSupportedException($"Unknown overload of {nameof(AbstractIndexCreationTask.LoadDocument)} method");
+                }
             }
 
             Out(IsIndexerCall(node) ? "]" : ")");
