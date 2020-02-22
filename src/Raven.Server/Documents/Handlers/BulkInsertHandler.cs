@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -6,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -93,12 +95,22 @@ namespace Raven.Server.Documents.Handlers
                                     }
 
                                     var commandData = await task;
-                                    if (commandData.Type == CommandType.None)
-                                        break;
 
-                                    totalSize += commandData.Document.Size;
+                                    switch (commandData.Type)
+                                    {
+                                        case CommandType.None:
+                                            break;
+                                        case CommandType.PUT:
+                                            totalSize += commandData.Document.Size;
+                                            break;
+                                        case CommandType.TimeSeries:
+                                            //TODO
+                                            break;
+                                    }
+
                                     if (numberOfCommands >= array.Length)
                                         Array.Resize(ref array, array.Length * 2);
+
                                     array[numberOfCommands++] = commandData;
                                 }
                             }
@@ -173,42 +185,65 @@ namespace Raven.Server.Documents.Handlers
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
             public long TotalSize;
+
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 for (int i = 0; i < NumberOfCommands; i++)
                 {
                     var cmd = Commands[i];
-                    Debug.Assert(cmd.Type == CommandType.PUT);
-                    try
-                    {
-                        Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
-                    }
-                    catch (Voron.Exceptions.VoronConcurrencyErrorException)
-                    {
-                        // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
-                        // this means that we have existing values under the current etag
-                        // we'll generate a new (random) id for them. 
+                    Debug.Assert(cmd.Type == CommandType.PUT || cmd.Type == CommandType.TimeSeries);
 
-                        // The TransactionMerger will re-run us when we ask it to as a 
-                        // separate transaction
-
-                        for (; i < NumberOfCommands; i++)
+                    if (cmd.Type == CommandType.PUT)
+                    {
+                        try
                         {
-                            cmd = Commands[i];
-                            if (cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
-                            {
-                                cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
-                                RetryOnError = true;
-                            }
+                            Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
                         }
+                        catch (Voron.Exceptions.VoronConcurrencyErrorException)
+                        {
+                            // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                            // this means that we have existing values under the current etag
+                            // we'll generate a new (random) id for them. 
 
-                        throw;
+                            // The TransactionMerger will re-run us when we ask it to as a 
+                            // separate transaction
+
+                            for (; i < NumberOfCommands; i++)
+                            {
+                                cmd = Commands[i];
+                                if (cmd.Type != CommandType.PUT)
+                                    continue;
+
+                                if (cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
+                                {
+                                    cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
+                                    RetryOnError = true;
+                                }
+                            }
+
+                            throw;
+                        }
+                    }
+                    else if (cmd.Type == CommandType.TimeSeries)
+                    {
+                        foreach (var appendOperation in cmd.TimeSeries.Appends)
+                        {
+                            var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
+                            Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                                cmd.Id,
+                                docCollection,
+                                appendOperation.Name,
+                                new []{ appendOperation }
+                            );
+                        }
                     }
                 }
+
                 if (Logger.IsInfoEnabled)
                 {
                     Logger.Info($"Merged {NumberOfCommands:#,#;;0} operations ({Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb)");
                 }
+
                 return NumberOfCommands;
             }
 
