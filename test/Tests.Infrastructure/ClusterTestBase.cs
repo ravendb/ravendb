@@ -94,6 +94,34 @@ namespace Tests.Infrastructure
                 return timeoutTask.IsCompleted == false;
             }
         }
+         
+        protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
+        {
+            var id = "marker/" + Guid.NewGuid();
+            using (var s = src.OpenSession())
+            {
+                s.Store(new { }, id);
+                s.SaveChanges();
+            } Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
+        }
+
+        protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
+            where T : class
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds <= timeout)
+            {
+                using (var session = store.OpenSession(store.Database))
+                {
+                    var doc = session.Load<T>(id);
+                    if (doc != null)
+                        return doc;
+                }
+                Thread.Sleep(100);
+            }
+
+            return null;
+        }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
         {
