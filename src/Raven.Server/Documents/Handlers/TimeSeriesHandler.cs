@@ -425,7 +425,7 @@ namespace Raven.Server.Documents.Handlers
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                string docCollection = GetDocumentCollection(context, _operation);
+                string docCollection = GetDocumentCollection(_database, context, _operation.DocumentId, _fromEtl);
 
                 if (docCollection == null)
                     return 0L;
@@ -480,18 +480,17 @@ namespace Raven.Server.Documents.Handlers
                 return changes;
             }
 
-            private string GetDocumentCollection(DocumentsOperationContext context, TimeSeriesOperation operation)
+            public static string GetDocumentCollection(DocumentDatabase database, DocumentsOperationContext context, string documentId, bool fromEtl)
             {
                 try
                 {
-                    var doc = _database.DocumentsStorage.Get(context, operation.DocumentId,
-                         throwOnConflict: true);
+                    var doc = database.DocumentsStorage.Get(context, documentId, throwOnConflict: true);
                     if (doc == null)
                     {
-                        if (_fromEtl)
+                        if (fromEtl)
                             return null;
 
-                        ThrowMissingDocument(operation.DocumentId);
+                        ThrowMissingDocument(documentId);
                         return null;// never hit
                     }
 
@@ -502,7 +501,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch (DocumentConflictException)
                 {
-                    if (_fromEtl)
+                    if (fromEtl)
                         return null;
 
                     // this is fine, we explicitly support
@@ -510,7 +509,7 @@ namespace Raven.Server.Documents.Handlers
                     // done by the conflict resolver
 
                     // avoid loading same document again, we validate write using the metadata instance
-                    return _database.DocumentsStorage.ConflictsStorage.GetCollection(context, operation.DocumentId);
+                    return database.DocumentsStorage.ConflictsStorage.GetCollection(context, documentId);
                 }
             }
 
