@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -11,6 +12,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
@@ -263,30 +265,11 @@ namespace Raven.Client.Documents.BulkInsert
 
         public async Task StoreAsync(object entity, string id, IMetadataDictionary metadata = null)
         {
-            if (Interlocked.CompareExchange(ref _concurrentCheck, 1, 0) == 1)
-                throw new InvalidOperationException("Bulk Insert store methods cannot be executed concurrently.");
-
-            try
+            using (ConcurrencyCheck())
             {
                 VerifyValidId(id);
 
-                if (_stream == null)
-                {
-                    await WaitForId().ConfigureAwait(false);
-                    await EnsureStream().ConfigureAwait(false);
-                }
-
-                if (_bulkInsertExecuteTask.IsFaulted)
-                {
-                    try
-                    {
-                        await _bulkInsertExecuteTask.ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        await ThrowBulkInsertAborted(e).ConfigureAwait(false);
-                    }
-                }
+                await ExecuteBeforeStore().ConfigureAwait(false);
 
                 if (metadata == null)
                     metadata = new MetadataAsDictionary();
@@ -305,25 +288,16 @@ namespace Raven.Client.Documents.BulkInsert
                         metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
                 }
 
-                if (_first == false)
-                {
-                    _currentWriter.Write(',');
-                }
-
-                _first = false;
-                try
+                await WriteToStream(() =>
                 {
                     _currentWriter.Write("{\"Id\":\"");
-                    WriteId(_currentWriter, id);
+                    WriteString(_currentWriter, id);
                     _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
 
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
                         using (var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context,
-                            _defaultSerializer, new DocumentInfo
-                            {
-                                MetadataInstance = metadata
-                            }))
+                            _defaultSerializer, new DocumentInfo {MetadataInstance = metadata}))
 
                         {
                             _currentWriter.Flush();
@@ -332,49 +306,138 @@ namespace Raven.Client.Documents.BulkInsert
                     }
 
                     _currentWriter.Write("}");
-                    _currentWriter.Flush();
+                }, id).ConfigureAwait(false);
+            }
+        }
 
-                    if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
-                        _asyncWrite.IsCompleted)
+        public void AppendTimeSeries(string id, string timeseries, DateTime timestamp, string tag, IEnumerable<double> values)
+        {
+            AsyncHelpers.RunSync(() => AppendTimeSeriesAsync(id, timeseries, timestamp, tag, values));
+        }
+
+        public async Task AppendTimeSeriesAsync(string id, string timeseries, DateTime timestamp, string tag, IEnumerable<double> values)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentNullException(nameof(id));
+
+            if (string.IsNullOrWhiteSpace(timeseries))
+                throw new ArgumentNullException(nameof(timeseries));
+
+            using (ConcurrencyCheck())
+            {
+                await ExecuteBeforeStore().ConfigureAwait(false);
+
+                await WriteToStream(() =>
+                {
+                    _currentWriter.Write("{\"Id\":\"");
+                    WriteString(_currentWriter, id);
+                    _currentWriter.Write("\",\"Type\":\"TimeSeries\",\"TimeSeries\":{\"DocumentId\":\"");
+                    WriteString(_currentWriter, id);
+                    _currentWriter.Write("\",\"Appends\":[");
+
+                    //TODO: optimize to send multiple appends for the same document
+
+                    var appendOperation = new TimeSeriesOperation.AppendOperation
                     {
-                        await _asyncWrite.ConfigureAwait(false);
+                        Name = timeseries,
+                        Timestamp = timestamp,
+                        Tag = tag,
+                        Values = values is double[] arr
+                            ? arr
+                            : values.ToArray()
+                    };
 
-                        var tmp = _currentWriter;
-                        _currentWriter = _backgroundWriter;
-                        _backgroundWriter = tmp;
-                        _currentWriter.BaseStream.SetLength(0);
-                        ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                        _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+                    using (var json = _context.ReadObject(appendOperation.ToJson(), id))
+                    {
+                        _currentWriter.Flush();
+                        json.WriteJsonTo(_currentWriter.BaseStream);
                     }
+
+                    _currentWriter.Write("]}}");
+                }, id).ConfigureAwait(false);
+            }
+        }
+
+        private async Task WriteToStream(Action writeOperation, string documentId)
+        {
+            if (_first == false)
+            {
+                _currentWriter.Write(',');
+            }
+
+            _first = false;
+
+            try
+            {
+                writeOperation();
+
+                _currentWriter.Flush();
+
+                if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
+                    _asyncWrite.IsCompleted)
+                {
+                    await _asyncWrite.ConfigureAwait(false);
+
+                    var tmp = _currentWriter;
+                    _currentWriter = _backgroundWriter;
+                    _backgroundWriter = tmp;
+                    _currentWriter.BaseStream.SetLength(0);
+                    ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
+                    _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+                }
+            }
+            catch (Exception e)
+            {
+                var error = await GetExceptionFromOperation().ConfigureAwait(false);
+                if (error != null)
+                {
+                    throw error;
+                }
+
+                await ThrowOnUnavailableStream(documentId, e).ConfigureAwait(false);
+            }
+        }
+
+        private IDisposable ConcurrencyCheck()
+        {
+            if (Interlocked.CompareExchange(ref _concurrentCheck, 1, 0) == 1)
+                throw new InvalidOperationException("Bulk Insert store methods cannot be executed concurrently.");
+
+            return new DisposableAction(() => Interlocked.CompareExchange(ref _concurrentCheck, 0, 1));
+        }
+
+        private static void WriteString(StreamWriter writer, string input)
+        {
+            for (var i = 0; i < input.Length; i++)
+            {
+                var c = input[i];
+                if (c == '"')
+                {
+                    if (i == 0 || input[i - 1] != '\\')
+                        writer.Write("\\");
+                }
+
+                writer.Write(c);
+            }
+        }
+
+        private async Task ExecuteBeforeStore()
+        {
+            if (_stream == null)
+            {
+                await WaitForId().ConfigureAwait(false);
+                await EnsureStream().ConfigureAwait(false);
+            }
+
+            if (_bulkInsertExecuteTask.IsFaulted)
+            {
+                try
+                {
+                    await _bulkInsertExecuteTask.ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
-                    var error = await GetExceptionFromOperation().ConfigureAwait(false);
-                    if (error != null)
-                    {
-                        throw error;
-                    }
-
-                    await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
-                }
-            }
-            finally
-            {
-                Interlocked.CompareExchange(ref _concurrentCheck, 0, 1);
-            }
-
-            void WriteId(StreamWriter writer, string input)
-            {
-                for (var i = 0; i < input.Length; i++)
-                {
-                    var c = input[i];
-                    if (c == '"')
-                    {
-                        if (i == 0 || input[i - 1] != '\\')
-                            writer.Write("\\");
-                    }
-
-                    writer.Write(c);
+                    await ThrowBulkInsertAborted(e).ConfigureAwait(false);
                 }
             }
         }
