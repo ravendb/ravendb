@@ -7,14 +7,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class OutputReferencesPattern
     {
+        public string ReferencesCollectionName { get; }
         public string Pattern => _builder?.Pattern; 
         
         private static readonly Regex FieldsRegex = new Regex(@"\{([^\:}]*)\:?([^}]*)\}", RegexOptions.Compiled);
 
         private readonly DocumentIdBuilder _builder;
 
-        public OutputReferencesPattern(string pattern)
+        public OutputReferencesPattern(string pattern, string referencesCollectionName = null)
         {
+            ReferencesCollectionName = referencesCollectionName;
             var matches = FieldsRegex.Matches(pattern);
 
             if (matches.Count == 0)

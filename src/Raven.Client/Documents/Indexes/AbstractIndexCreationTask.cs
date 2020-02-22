@@ -182,6 +182,7 @@ namespace Raven.Client.Documents.Indexes
                 SpatialIndexesStrings = SpatialIndexesStrings,
                 OutputReduceToCollection = OutputReduceToCollection,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
+                PatternReferencesCollectionName = PatternReferencesCollectionName,
                 AdditionalSources = AdditionalSources,
                 Configuration = Configuration
             }.ToIndexDefinition(Conventions);
