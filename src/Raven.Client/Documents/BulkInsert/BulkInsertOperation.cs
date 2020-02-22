@@ -12,7 +12,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
@@ -375,7 +374,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
             else if (_inProgressCommand == CommandType.TimeSeries)
             {
-
+                TimeSeriesBulkInsert.EndCommand(_currentWriter);
             }
         }
 
@@ -592,12 +591,17 @@ namespace Raven.Client.Documents.BulkInsert
                 _operation._inProgressCommand = CommandType.TimeSeries;
             }
 
-            public void Append(DateTime time, double value, string tag = null)
+            public void Append(DateTime timestamp, double value, string tag = null)
             {
-                AsyncHelpers.RunSync(() => AppendAsync(time, value, tag));
+                AsyncHelpers.RunSync(() => AppendAsync(timestamp, value, tag));
+            }
+            
+            public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
+            {
+                //AsyncHelpers.RunSync(() => AppendAsync(timestamp, value, tag));
             }
 
-            public async Task AppendAsync(DateTime time, double value, string tag = null)
+            public async Task AppendAsync(DateTime timestamp, double value, string tag = null)
             {
                 using (_operation.ConcurrencyCheck())
                 {
@@ -607,6 +611,9 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         if (_first)
                         {
+                            if (_operation._first == false)
+                                _operation._currentWriter.Write(",");
+
                             WritePrefixForNewCommand();
                         }
                         else if (_timeSeriesInBatch >= _maxTimeSeriesInBatch)
@@ -616,6 +623,15 @@ namespace Raven.Client.Documents.BulkInsert
                         }
 
                         _timeSeriesInBatch++;
+
+                        if (_first == false)
+                        {
+                            _operation._currentWriter.Write(",");
+                        }
+
+                        _first = false;
+
+
 
                         //TODO: optimize to send multiple appends for the same document
 
@@ -665,14 +681,6 @@ namespace Raven.Client.Documents.BulkInsert
                         //    WritePrefixForNewCommand();
                         //}
 
-                        //_countersInBatch++;
-
-                        //if (_first == false)
-                        //{
-                        //    _operation._currentWriter.Write(",");
-                        //}
-
-                        //_first = false;
 
                         //_operation._currentWriter.Write("{\"Type\":\"Increment\",\"CounterName\":\"");
                         //WriteString(_operation._currentWriter, name);
@@ -701,9 +709,17 @@ namespace Raven.Client.Documents.BulkInsert
                 _operation._currentWriter.Write("\",\"Appends\":[");
             }
 
+            public static void EndCommand(StreamWriter currentWriter)
+            {
+                currentWriter.Write("]}}");
+            }
+
             public void Dispose()
             {
                 _operation._inProgressCommand = CommandType.None;
+
+                if (_first == false)
+                    EndCommand(_operation._currentWriter);
             }
         }
 

@@ -26,13 +26,17 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var val = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var val = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .Single();
 
                     Assert.Equal(new[] { 59d }, val.Values);
@@ -53,15 +57,19 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 60d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 61d });
+
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), 60d, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), 61d, "watches/fitbit");
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var val = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var val = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
                     Assert.Equal(2, val.Count);
                 }
@@ -79,25 +87,29 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 69d });
-                    bulkInsert.AppendTimeSeries(documentId,"Heartrate", baseline.AddMinutes(3), "watches/fitbit", new[] { 79d });
+
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), 69d, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(3), 79d, "watches/fitbit");
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, documentId);
-                    session.TimeSeriesFor(documentId)
-                        .Remove("Heartrate", baseline.AddMinutes(2));
+                    session.TimeSeriesFor(documentId, "Heartrate").Remove(baseline.AddMinutes(2));
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                         .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                         .Get(DateTime.MinValue, DateTime.MaxValue)
                          .ToList();
+
                     Assert.Equal(2, vals.Count);
                     Assert.Equal(new[] { 59d }, vals[0].Values);
                     Assert.Equal("watches/fitbit", vals[0].Tag);
@@ -121,16 +133,21 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(2), "watches/apple", new[] { 70d });
+
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), 70d, "watches/fitbit");
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
 
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
+
                     Assert.Equal(2, vals.Count);
                     Assert.Equal(new[] { 59d }, vals[0].Values);
                     Assert.Equal("watches/fitbit", vals[0].Tag);
@@ -155,15 +172,18 @@ namespace SlowTests.Client.TimeSeries
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
 
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(2), "watches/apple", new[] { 70d, 120d, 80d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(3), "watches/fitbit", new[] { 69d });
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), new[] { 70d, 120d, 80d }, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(3), 69d, "watches/fitbit");
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.Equal(3, vals.Count);
@@ -194,15 +214,18 @@ namespace SlowTests.Client.TimeSeries
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
 
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(1), "watches/apple", new[] { 70d, 120d, 80d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 59d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(3), "watches/fitbit", new[] { 69d });
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new[] { 70d, 120d, 80d }, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), new[] { 59d }, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(3), new[] { 69d }, "watches/fitbit");
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.Equal(3, vals.Count);
@@ -233,19 +256,22 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    bulkInsert.TimeSeriesFor(documentId, "Heartrate").Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
                 }
 
                 using (var bulkInsert = store.BulkInsert())
                 {
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 61d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(3), "watches/apple-watch", new[] { 62d });
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), 61d, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(3), 62d, "watches/apple-watch");
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.Equal(3, vals.Count);
@@ -285,17 +311,19 @@ namespace SlowTests.Client.TimeSeries
                 {
                     using (var bulkInsert = store.BulkInsert())
                     {
+                        var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate");
+
                         for (int j = 0; j < 1000; j++)
                         {
-                            bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(offset++), "watches/fitbit", new double[] { offset });
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new double[] { offset }, "watches/fitbit");
                         }
                     }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.Equal(10_000, vals.Count);
@@ -329,10 +357,11 @@ namespace SlowTests.Client.TimeSeries
 
                 using (var bulkInsert = store.BulkInsert())
                 {
+                    var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate");
+
                     for (int j = 0; j < retries; j++)
                     {
-                        bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(offset), "watches/fitbit", new double[] { offset });
-
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(offset), new double[] { offset }, "watches/fitbit");
                         offset += 5;
                     }
                 }
@@ -341,17 +370,20 @@ namespace SlowTests.Client.TimeSeries
 
                 using (var bulkInsert = store.BulkInsert())
                 {
-                    for (int j = 0; j < retries; j++)
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
                     {
-                        bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(offset), "watches/fitbit", new double[] { offset });
-                        offset += 5;
+                        for (int j = 0; j < retries; j++)
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(offset), new double[] { offset }, "watches/fitbit");
+                            offset += 5;
+                        }
                     }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.Equal(2 * retries, vals.Count);
@@ -386,29 +418,26 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline, "watches/fitbit", new[] { 0d });
+                    bulkInsert.TimeSeriesFor(documentId, "Heartrate").Append(baseline, new[] { 0d }, "watches/fitbit");
                 }
 
-                using (var session = store.OpenSession())
+                using (var bulkInsert = store.BulkInsert())
                 {
-                    var timeSeriesFor = session.TimeSeriesFor(documentId);
-
-                    for (double i = 1; i < 10; i++)
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
                     {
-                        timeSeriesFor
-                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] { i });
+                        for (double i = 1; i < 10; i++)
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), i, "watches/fitbit");
+                        }
                     }
-
-                    session.SaveChanges();
                 }
-
 
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenSession())
                     {
-                        var vals = session.TimeSeriesFor(documentId)
-                            .Get("Heartrate", baseline.AddMinutes(i), DateTime.MaxValue)
+                        var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                            .Get(baseline.AddMinutes(i), DateTime.MaxValue)
                             .ToList();
 
                         Assert.Equal(10 - i, vals.Count);
@@ -428,8 +457,8 @@ namespace SlowTests.Client.TimeSeries
                 {
                     using (var session = store.OpenSession())
                     {
-                        var vals = session.TimeSeriesFor(documentId)
-                            .Get("Heartrate", baseline, maxTimeStamp.AddMinutes(-i))
+                        var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                            .Get(baseline, maxTimeStamp.AddMinutes(-i))
                             .ToList();
 
                         Assert.Equal(10 - i, vals.Count);
@@ -454,20 +483,24 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline, "watches/fitbit", new[] { 58d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(10), "watches/fitbit", new[] { 60d });
+
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline, new[] { 58d }, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(10), new[] { 60d }, "watches/fitbit");
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", baseline.AddMinutes(-10), baseline.AddMinutes(-5))
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(baseline.AddMinutes(-10), baseline.AddMinutes(-5))
                         .ToList();
 
                     Assert.Equal(0, vals.Count);
 
-                    vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", baseline.AddMinutes(5), baseline.AddMinutes(9))
+                    vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(baseline.AddMinutes(5), baseline.AddMinutes(9))
                         .ToList();
 
                     Assert.Equal(0, vals.Count);
@@ -486,23 +519,23 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new User(), documentId1);
-                    bulkInsert.AppendTimeSeries(documentId1, "Nasdaq2", DateTime.Now, "web", new[] { 7547.31 });
+                    bulkInsert.TimeSeriesFor(documentId1, "Nasdaq2").Append(DateTime.Now, new[] { 7547.31 }, "web");
                 }
 
                 using (var bulkInsert = store.BulkInsert())
                 {
-                    bulkInsert.AppendTimeSeries(documentId1, "Heartrate2", DateTime.Now, "web", new[] { 7547.31 });
+                    bulkInsert.TimeSeriesFor(documentId1, "Heartrate2").Append(DateTime.Now, new[] { 7547.31 }, "web");
                 }
 
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new User(), documentId2);
-                    bulkInsert.AppendTimeSeries(documentId2, "Nasdaq", DateTime.Now, "web", new[] { 7547.31 });
+                    bulkInsert.TimeSeriesFor(documentId1, "Nasdaq").Append(DateTime.Now, new[] { 7547.31 }, "web");
                 }
 
                 using (var bulkInsert = store.BulkInsert())
                 {
-                    bulkInsert.AppendTimeSeries(documentId2, "Heartrate", DateTime.Today.AddMinutes(1), "fitbit", new[] { 58d });
+                    bulkInsert.TimeSeriesFor(documentId1, "Heartrate").Append(DateTime.Now, new[] { 58d }, "fitbit");
                 }
 
                 using (var session = store.OpenSession())
@@ -527,12 +560,9 @@ namespace SlowTests.Client.TimeSeries
                     Assert.Equal("Nasdaq2", tsNames[1]);
                 }
 
-                using (var session = store.OpenSession())
+                using (var bulkInsert = store.BulkInsert())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("heartrate", DateTime.Today.AddMinutes(1), "fitbit", new[] { 58d }); // putting ts name as lower cased
-
-                    session.SaveChanges();
+                    bulkInsert.TimeSeriesFor("users/ayende", "heartrate").Append(DateTime.Today.AddMinutes(1), new[] { 58d }, "fitbit");
                 }
 
                 using (var session = store.OpenSession())
@@ -568,9 +598,12 @@ namespace SlowTests.Client.TimeSeries
                 {
                     using (var bulkInsert = store.BulkInsert())
                     {
-                        for (int j = 0; j < 1000; j++)
+                        using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
                         {
-                            bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(offset++), "watches/fitbit", new double[] { offset });
+                            for (int j = 0; j < 1000; j++)
+                            {
+                                timeSeriesBulkInsert.Append(baseline.AddMinutes(offset++), new double[] { offset }, "watches/fitbit");
+                            }
                         }
                     }
                 }
@@ -581,17 +614,20 @@ namespace SlowTests.Client.TimeSeries
                 {
                     using (var bulkInsert = store.BulkInsert())
                     {
-                        for (int j = 0; j < 1000; j++)
+                        using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Pulse"))
                         {
-                            bulkInsert.AppendTimeSeries(documentId, "Pulse", baseline.AddMinutes(offset++), "watches/fitbit", new double[] { offset });
+                            for (int j = 0; j < 1000; j++)
+                            {
+                                timeSeriesBulkInsert.Append(baseline.AddMinutes(offset++), new double[] { offset }, "watches/fitbit");
+                            }
                         }
                     }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
                     Assert.Equal(100_000, vals.Count);
 
@@ -604,8 +640,8 @@ namespace SlowTests.Client.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Pulse", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor(documentId, "Pulse")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
                     Assert.Equal(100_000, vals.Count);
 
@@ -646,12 +682,33 @@ namespace SlowTests.Client.TimeSeries
                             Name = "Oren"
                         }, id);
 
-                        bulkInsert.AppendTimeSeries(id, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                        using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(id, "Heartrate"))
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                        }
                     }
                 }
 
                 var cvs = new List<string>();
 
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    for (int i = 1; i <= 5; i++)
+                    {
+                        var id = $"users/{i}";
+                        bulkInsert.Store(new User
+                        {
+                            Name = "Oren"
+                        }, id);
+
+                        using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(id, "Heartrate"))
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                        }
+                    }
+                }
+
+                using (var bulkInsert = store.BulkInsert())
                 using (var session = store.OpenSession())
                 {
                     for (int i = 2; i < 5; i++)
@@ -661,9 +718,10 @@ namespace SlowTests.Client.TimeSeries
                         var cv = session.Advanced.GetChangeVectorFor(u);
                         cvs.Add(cv);
 
-                        session.TimeSeriesFor(id)
-                            .Append("Nasdaq", baseline.AddMinutes(1), "web", new[] { 4012.5d });
-
+                        using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(id, "Nasdaq"))
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 4012.5d, "web");
+                        }
                     }
 
                     session.SaveChanges();
@@ -699,13 +757,13 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, "users/ayende");
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", values);
+                    bulkInsert.TimeSeriesFor(documentId, "Heartrate").Append(baseline.AddMinutes(1), values, "watches/fitbit");
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var val = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var val = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .Single();
                     Assert.Equal(new[] { 59d }, val.Values);
                     Assert.Equal("watches/fitbit", val.Tag);
@@ -726,9 +784,16 @@ namespace SlowTests.Client.TimeSeries
                 {
                     bulkInsert.Store(new User { Name = "Oren" }, documentId);
 
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new []{ 59d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 59d });
-                    bulkInsert.AppendTimeSeries(documentId, "Heartrate2", baseline.AddMinutes(1), "watches/apple", new[] { 59d });
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new double[] { 59d }, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), new double[] { 59d }, "watches/fitbit");
+                    }
+
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate2"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new double[] { 59d }, "watches/apple");
+                    }
                 }
 
                 using (var session = store.OpenSession())
@@ -739,10 +804,12 @@ namespace SlowTests.Client.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId).Get("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue);
                     Assert.Equal(0, vals.Count());
 
-                    vals = session.TimeSeriesFor(documentId).Get("Heartrate2", DateTime.MinValue, DateTime.MaxValue);
+                    vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue);
                     Assert.Equal(0, vals.Count());
                 }
             }
@@ -760,16 +827,19 @@ namespace SlowTests.Client.TimeSeries
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
 
-                    for (int i = 0; i < 100; i++)
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
                     {
-                        bulkInsert.AppendTimeSeries(documentId, "Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] { 100d + i });
+                        for (int i = 0; i < 100; i++)
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(i), new[] { 100d + i }, "watches/fitbit");
+                        }
                     }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor(documentId)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue, start: 5, pageSize :20)
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue, start: 5, pageSize :20)
                         .ToList();
 
                     Assert.Equal(20, vals.Count);
@@ -778,6 +848,85 @@ namespace SlowTests.Client.TimeSeries
                     {
                         Assert.Equal(baseline.AddMinutes(5 + i), vals[i].Timestamp);
                         Assert.Equal(105d + i, vals[i].Value);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanStoreAndReadMultipleTimeseriesForDifferentDocuments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+                const string documentId1 = "users/ayende";
+                const string documentId2 = "users/grisha";
+
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.Store(new { Name = "Oren" }, documentId1);
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId1, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    }
+
+                    bulkInsert.Store(new { Name = "Grisha" }, documentId2);
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId2, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    }
+                }
+
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId1, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), new[] { 61d }, "watches/fitbit");
+                    }
+
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId2, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), new[] { 61d }, "watches/fitbit");
+                    }
+                    
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId1, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(3), new[] { 62d }, "watches/apple-watch");
+                    }
+
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId2, "Heartrate"))
+                    {
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(3), new[] { 62d }, "watches/apple-watch");
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor(documentId1, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    ValidateValues();
+
+                    vals = session.TimeSeriesFor(documentId2, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    ValidateValues();
+
+                    void ValidateValues()
+                    {
+                        Assert.Equal(3, vals.Count);
+
+                        Assert.Equal(new[] { 59d }, vals[0].Values);
+                        Assert.Equal("watches/fitbit", vals[0].Tag);
+                        Assert.Equal(baseline.AddMinutes(1), vals[0].Timestamp);
+
+                        Assert.Equal(new[] { 61d }, vals[1].Values);
+                        Assert.Equal("watches/fitbit", vals[1].Tag);
+                        Assert.Equal(baseline.AddMinutes(2), vals[1].Timestamp);
+
+                        Assert.Equal(new[] { 62d }, vals[2].Values);
+                        Assert.Equal("watches/apple-watch", vals[2].Tag);
+                        Assert.Equal(baseline.AddMinutes(3), vals[2].Timestamp);
                     }
                 }
             }
