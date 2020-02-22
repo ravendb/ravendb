@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
@@ -141,6 +142,8 @@ namespace Raven.Client.Documents.BulkInsert
         private Stream _stream;
         private readonly StreamExposerContent _streamExposerContent;
         private bool _first = true;
+        private CommandType _previousCommandType = CommandType.None;
+        private string _previousId = null;
         private long _operationId = -1;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
@@ -160,6 +163,8 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         try
                         {
+                            EndPreviousCommandIfNeeded();
+
                             _currentWriter.Write(']');
                             _currentWriter.Flush();
                             await _asyncWrite.ConfigureAwait(false);
@@ -288,7 +293,7 @@ namespace Raven.Client.Documents.BulkInsert
                         metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
                 }
 
-                await WriteToStream(() =>
+                await WriteToStream(writeComma: true, () =>
                 {
                     _currentWriter.Write("{\"Id\":\"");
                     WriteString(_currentWriter, id);
@@ -306,7 +311,7 @@ namespace Raven.Client.Documents.BulkInsert
                     }
 
                     _currentWriter.Write("}");
-                }, id).ConfigureAwait(false);
+                }, id, CommandType.PUT).ConfigureAwait(false);
             }
         }
 
@@ -327,15 +332,27 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 await ExecuteBeforeStore().ConfigureAwait(false);
 
-                await WriteToStream(() =>
-                {
-                    _currentWriter.Write("{\"Id\":\"");
-                    WriteString(_currentWriter, id);
-                    _currentWriter.Write("\",\"Type\":\"TimeSeries\",\"TimeSeries\":{\"DocumentId\":\"");
-                    WriteString(_currentWriter, id);
-                    _currentWriter.Write("\",\"Appends\":[");
+                var isNewCommand = _previousCommandType != CommandType.TimeSeries ||
+                                   _previousId.Equals(id, StringComparison.OrdinalIgnoreCase) == false;
 
-                    //TODO: optimize to send multiple appends for the same document
+                //TODO: we should limit the number of appends to send for a single document. 10K?
+
+                await WriteToStream(writeComma: isNewCommand, () =>
+                {
+                    if (isNewCommand)
+                    {
+                        // writing a new time series for a new document
+                        _currentWriter.Write("{\"Id\":\"");
+                        WriteString(_currentWriter, id);
+                        _currentWriter.Write("\",\"Type\":\"TimeSeries\",\"TimeSeries\":{\"DocumentId\":\"");
+                        WriteString(_currentWriter, id);
+                        _currentWriter.Write("\",\"Appends\":[");
+                    }
+                    else
+                    {
+                        // this is a time series append for the same document id
+                        _currentWriter.Write(',');
+                    }
 
                     var appendOperation = new TimeSeriesOperation.AppendOperation
                     {
@@ -352,20 +369,23 @@ namespace Raven.Client.Documents.BulkInsert
                         _currentWriter.Flush();
                         json.WriteJsonTo(_currentWriter.BaseStream);
                     }
-
-                    _currentWriter.Write("]}}");
-                }, id).ConfigureAwait(false);
+                }, id, CommandType.TimeSeries).ConfigureAwait(false);
             }
         }
 
-        private async Task WriteToStream(Action writeOperation, string documentId)
+        private async Task WriteToStream(bool writeComma, Action writeOperation, string documentId, CommandType commandType)
         {
-            if (_first == false)
+            if (writeComma)
             {
-                _currentWriter.Write(',');
-            }
+                EndPreviousCommandIfNeeded();
 
-            _first = false;
+                if (_first == false)
+                {
+                    _currentWriter.Write(',');
+                }
+
+                _first = false;
+            }
 
             try
             {
@@ -385,6 +405,9 @@ namespace Raven.Client.Documents.BulkInsert
                     ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
                     _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
                 }
+
+                _previousId = documentId;
+                _previousCommandType = commandType;
             }
             catch (Exception e)
             {
@@ -396,6 +419,12 @@ namespace Raven.Client.Documents.BulkInsert
 
                 await ThrowOnUnavailableStream(documentId, e).ConfigureAwait(false);
             }
+        }
+
+        private void EndPreviousCommandIfNeeded()
+        {
+            if (_previousCommandType == CommandType.TimeSeries)
+                _currentWriter.Write("]}}");
         }
 
         private IDisposable ConcurrencyCheck()

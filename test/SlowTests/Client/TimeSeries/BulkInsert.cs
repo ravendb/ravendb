@@ -782,5 +782,62 @@ namespace SlowTests.Client.TimeSeries
                 }
             }
         }
+
+        [Fact]
+        public void CanStoreAndReadMultipleTimeseriesForDifferentDocuments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+                const string documentId1 = "users/ayende";
+                const string documentId2 = "users/grisha";
+
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.Store(new { Name = "Oren" }, documentId1);
+                    bulkInsert.AppendTimeSeries(documentId1, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    bulkInsert.Store(new { Name = "Grisha" }, documentId2);
+                    bulkInsert.AppendTimeSeries(documentId2, "Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                }
+
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.AppendTimeSeries(documentId1, "Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 61d });
+                    bulkInsert.AppendTimeSeries(documentId2, "Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 61d });
+                    bulkInsert.AppendTimeSeries(documentId1, "Heartrate", baseline.AddMinutes(3), "watches/apple-watch", new[] { 62d });
+                    bulkInsert.AppendTimeSeries(documentId2, "Heartrate", baseline.AddMinutes(3), "watches/apple-watch", new[] { 62d });
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor(documentId1)
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    ValidateValues();
+
+                    vals = session.TimeSeriesFor(documentId2)
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    ValidateValues();
+
+                    void ValidateValues()
+                    {
+                        Assert.Equal(3, vals.Count);
+
+                        Assert.Equal(new[] { 59d }, vals[0].Values);
+                        Assert.Equal("watches/fitbit", vals[0].Tag);
+                        Assert.Equal(baseline.AddMinutes(1), vals[0].Timestamp);
+
+                        Assert.Equal(new[] { 61d }, vals[1].Values);
+                        Assert.Equal("watches/fitbit", vals[1].Tag);
+                        Assert.Equal(baseline.AddMinutes(2), vals[1].Timestamp);
+
+                        Assert.Equal(new[] { 62d }, vals[2].Values);
+                        Assert.Equal("watches/apple-watch", vals[2].Tag);
+                        Assert.Equal(baseline.AddMinutes(3), vals[2].Timestamp);
+                    }
+                }
+            }
+        }
     }
 }
