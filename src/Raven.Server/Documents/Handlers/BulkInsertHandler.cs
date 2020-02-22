@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Handlers
                                             totalSize += commandData.Document.Size;
                                             break;
                                         case CommandType.TimeSeries:
-                                            //TODO
+                                            totalSize += GetEstimatedTimeSeriesSize(commandData.TimeSeries.Appends);
                                             break;
                                     }
 
@@ -153,6 +153,24 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.Headers["Connection"] = "close";
                 throw new InvalidOperationException("Failed to process bulk insert. " + progress, e);
             }
+        }
+
+        private static long GetEstimatedTimeSeriesSize(List<TimeSeriesOperation.AppendOperation> timeSeriesAppends)
+        {
+            // we don't know the size of the change so we are just estimating
+
+            long total = 0;
+
+            foreach (var append in timeSeriesAppends)
+            {
+                total += 2;
+                if (string.IsNullOrWhiteSpace(append.Tag) == false)
+                    total += 4;
+
+                total += append.Values.Length * 4;
+            }
+
+            return total;
         }
 
         private IDisposable ReplaceContextIfCurrentlyInUse(Task<BatchRequestParser.CommandData> task, int numberOfCommands, BatchRequestParser.CommandData[] array)
