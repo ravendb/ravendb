@@ -168,8 +168,20 @@ namespace Raven.Server.Documents.Handlers
 
                     return size;
                 case CommandType.TimeSeries:
-                    //TODO
-                    return 0;
+                    // we don't know the size of the change so we are just estimating
+
+                    long total = 0;
+
+                    foreach (var append in commandData.TimeSeries.Appends)
+                    {
+                        total += 2;
+                        if (string.IsNullOrWhiteSpace(append.Tag) == false)
+                            total += 4;
+
+                        total += append.Values.Length * 4;
+                    }
+
+                    return total;
                 default:
                     throw new ArgumentOutOfRangeException($"'{commandData.Type}' isn't supported");
             }
