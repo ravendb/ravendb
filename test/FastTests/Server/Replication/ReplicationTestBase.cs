@@ -35,18 +35,7 @@ namespace FastTests.Server.Replication
         public ReplicationTestBase(ITestOutputHelper output) : base(output)
         {
         }
-        
-        protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
-        {
-            var id = "marker/" + Guid.NewGuid();
-            using (var s = src.OpenSession())
-            {
-                s.Store(new { }, id);
-                s.SaveChanges();
-            }
-            Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
-        }
-
+       
         protected Dictionary<string, string[]> GetConnectionFailures(DocumentStore store)
         {
             using (var commands = store.Commands())
@@ -153,24 +142,6 @@ namespace FastTests.Server.Replication
 
                 return command.Result;
             }
-        }
-
-        protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
-            where T : class
-        {
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds <= timeout)
-            {
-                using (var session = store.OpenSession(store.Database))
-                {
-                    var doc = session.Load<T>(id);
-                    if (doc != null)
-                        return doc;
-                }
-                Thread.Sleep(100);
-            }
-
-            return null;
         }
 
         protected T WaitForDocumentWithAttachmentToReplicate<T>(IDocumentStore store, string id, string attachmentName, int timeout)
