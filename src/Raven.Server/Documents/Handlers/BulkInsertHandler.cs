@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -75,8 +76,7 @@ namespace Raven.Server.Documents.Handlers
                                                 Commands = array,
                                                 NumberOfCommands = numberOfCommands,
                                                 Database = Database,
-                                                Logger = logger,
-                                                TotalSize = totalSize
+                                                Logger = logger
                                             });
                                         }
 
@@ -122,8 +122,7 @@ namespace Raven.Server.Documents.Handlers
                                     Commands = array,
                                     NumberOfCommands = numberOfCommands,
                                     Database = Database,
-                                    Logger = logger,
-                                    TotalSize = totalSize
+                                    Logger = logger
                                 });
 
                                 progress.BatchCount++;
@@ -202,10 +201,11 @@ namespace Raven.Server.Documents.Handlers
             public DocumentDatabase Database;
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
-            public long TotalSize;
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+                long documentsSize = 0;
+
                 for (int i = 0; i < NumberOfCommands; i++)
                 {
                     var cmd = Commands[i];
@@ -215,6 +215,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         try
                         {
+                            documentsSize += cmd.Document.Size;
                             Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
                         }
                         catch (Voron.Exceptions.VoronConcurrencyErrorException)
@@ -259,7 +260,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (Logger.IsInfoEnabled)
                 {
-                    Logger.Info($"Merged {NumberOfCommands:#,#;;0} operations ({Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb)");
+                    Logger.Info($"Merged {NumberOfCommands:#,#;;0} operations, documents size: ({new Size(documentsSize, SizeUnit.Bytes)})");
                 }
 
                 return NumberOfCommands;
@@ -284,7 +285,6 @@ namespace Raven.Server.Documents.Handlers
             return new BulkInsertHandler.MergedInsertBulkCommand
             {
                 NumberOfCommands = Commands.Length,
-                TotalSize = Commands.Sum(c => c.Document.Size),
                 Commands = Commands,
                 Database = database,
                 Logger = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name)
