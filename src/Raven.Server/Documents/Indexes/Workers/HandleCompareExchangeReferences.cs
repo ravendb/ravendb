@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Indexes.Workers
     {
         private readonly HashSet<string> _collectionsWithCompareExchangeReferences;
 
-        private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>
+        private static readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>
         {
             IndexStorage.CompareExchangeReferences.CompareExchange
         };
@@ -45,7 +45,12 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected override bool TryGetReferencedCollectionsFor(string collection, out HashSet<CollectionName> referencedCollections)
         {
-            if (_collectionsWithCompareExchangeReferences.Contains(collection))
+            return TryGetReferencedCollectionsFor(_collectionsWithCompareExchangeReferences, collection, out referencedCollections);
+        }
+
+        protected static bool TryGetReferencedCollectionsFor(HashSet<string> collectionsWithCompareExchangeReferences, string collection, out HashSet<CollectionName> referencedCollections)
+        {
+            if (collectionsWithCompareExchangeReferences.Contains(collection))
             {
                 referencedCollections = _referencedCollections;
                 return true;
