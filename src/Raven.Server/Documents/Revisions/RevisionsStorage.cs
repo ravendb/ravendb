@@ -373,6 +373,9 @@ namespace Raven.Server.Documents.Revisions
 
                 PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
 
+                if (table.VerifyKeyExists(changeVectorSlice)) // we might create
+                    return true; 
+
                 flags |= DocumentFlags.Revision;
                 var etag = _database.DocumentsStorage.GenerateNextEtag();
                 var newEtagSwapBytes = Bits.SwapBytes(etag);
