@@ -167,6 +167,9 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     return size;
+                case CommandType.TimeSeries:
+                    //TODO
+                    return 0;
                 default:
                     throw new ArgumentOutOfRangeException($"'{commandData.Type}' isn't supported");
             }
@@ -224,7 +227,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var cmd = Commands[i];
 
-                    Debug.Assert(cmd.Type == CommandType.PUT || cmd.Type == CommandType.Counters);
+                    Debug.Assert(cmd.Type == CommandType.PUT || cmd.Type == CommandType.Counters || cmd.Type == CommandType.TimeSeries);
 
                     if (cmd.Type == CommandType.PUT)
                     {
@@ -266,6 +269,19 @@ namespace Raven.Server.Documents.Handlers
                             counterOperation.DocumentId = cmd.Counters.DocumentId;
                             Database.DocumentsStorage.CountersStorage.IncrementCounter(
                                 context, cmd.Id, collection, counterOperation.CounterName, counterOperation.Delta, out _);
+                        }
+                    }
+                    else if (cmd.Type == CommandType.TimeSeries)
+                    {
+                        foreach (var appendOperation in cmd.TimeSeries.Appends)
+                        {
+                            var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
+                            Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                                cmd.Id,
+                                docCollection,
+                                appendOperation.Name,
+                                new[] { appendOperation }
+                            );
                         }
                     }
                 }
