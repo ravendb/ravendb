@@ -420,6 +420,14 @@ class genUtils {
         return inputNumber.toLocaleString(undefined, { minimumFractionDigits: n, maximumFractionDigits: n });
     };
 
+    /***  File Methods ***/
+    
+    static getFileExtension(filePath: string): string {
+        const fileParts = _.split(filePath, ".");
+        
+        return fileParts.length > 1 ? fileParts.pop() : null;
+    }
+    
     /***  Other Methods ***/
 
     static delayedSpinner(spinner: KnockoutObservable<boolean>, promise: JQueryPromise<any>, delay = 100) {

@@ -246,20 +246,34 @@ namespace Raven.Client.Documents.Indexes
                 {
                     var expression = methodCall.Arguments[i];
 
+                    RewritePatternParameters(expression, i - 1);
+                }
+
+                void RewritePatternParameters(Expression expression, int position)
+                {
                     if (expression is UnaryExpression unaryExpression)
                     {
                         if (!(unaryExpression.Operand is MemberExpression memberExpression))
                             throw new InvalidOperationException($"Properties provided in {nameof(PatternForOutputReduceToCollectionReferences)} expression must be {nameof(MemberAccessException)}");
 
-                        pattern = pattern.Replace((i - 1).ToString(), memberExpression.Member.Name);
+                        pattern = pattern.Replace((position).ToString(), memberExpression.Member.Name);
                     }
                     else if (expression is MemberExpression member)
                     {
-                        pattern = pattern.Replace((i - 1).ToString(), member.Member.Name);
+                        pattern = pattern.Replace((position).ToString(), member.Member.Name);
+                    }
+                    else if (expression is NewArrayExpression arrayExpression)
+                    {
+                        for (int arrayIndex = 0; arrayIndex < arrayExpression.Expressions.Count; arrayIndex++)
+                        {
+                            var arrayValueExpression = arrayExpression.Expressions[arrayIndex];
+
+                            RewritePatternParameters(arrayValueExpression, arrayIndex);
+                        }
                     }
                     else
                     {
-                        throw new NotSupportedException($"Unsupported expression in {nameof(PatternForOutputReduceToCollectionReferences)}: '{expression}'");
+                        throw new NotSupportedException($"Unsupported expression in {nameof(PatternForOutputReduceToCollectionReferences)}: '{expression}' (type: {expression.GetType().FullName})");
                     }
                 }
 

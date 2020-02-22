@@ -1,13 +1,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
-using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Collections;
 
 namespace Sparrow.Logging
 {
-    public class LogMessageEntry
+    internal class LogMessageEntry
     {
         public MemoryStream Data;
         public TaskCompletionSource<object> Task;

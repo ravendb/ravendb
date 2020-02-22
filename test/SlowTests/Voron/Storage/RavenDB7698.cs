@@ -30,7 +30,7 @@ namespace SlowTests.Voron.Storage
 
             try
             {
-                using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction())
+                using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction(tx1.LowLevelTransaction.PersistentContext))
                 {
                     using (tx1)
                     {

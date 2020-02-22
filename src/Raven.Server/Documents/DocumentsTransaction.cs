@@ -36,7 +36,7 @@ namespace Raven.Server.Documents
         public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsOperationContext context)
         {
             _replaced = true;
-            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction();
+            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction(context.PersistentContext);
             return new DocumentsTransaction(context, tx, _changes);
         }
 

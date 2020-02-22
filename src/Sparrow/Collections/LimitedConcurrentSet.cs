@@ -1,10 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading;
-using System.Transactions;
 
 namespace Sparrow.Collections
 {
-    public class LimitedConcurrentSet<T>
+    internal class LimitedConcurrentSet<T>
     {
         private readonly int _max;
         private int _count;
