@@ -12,6 +12,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
@@ -372,6 +373,10 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 _countersOperation.EndPreviousCommandIfNeeded();
             }
+            else if (_inProgressCommand == CommandType.TimeSeries)
+            {
+
+            }
         }
 
         private static void WriteString(StreamWriter writer, string input)
@@ -527,6 +532,17 @@ namespace Raven.Client.Documents.BulkInsert
             return new CountersBulkInsert(this, id);
         }
 
+        public TimeSeriesBulkInsert TimeSeriesFor(string id, string name)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException("Document id cannot be null or empty", nameof(id));
+
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException("Time series name cannot be null or empty", nameof(name));
+
+            return new TimeSeriesBulkInsert(this, id, name);
+        }
+
         public struct CountersBulkInsert
         {
             private readonly BulkInsertOperation _operation;
@@ -546,6 +562,148 @@ namespace Raven.Client.Documents.BulkInsert
             public Task IncrementAsync(string name, long delta = 1L)
             {
                 return _operation._countersOperation.IncrementAsync(_id, name, delta);
+            }
+        }
+
+        public class TimeSeriesBulkInsert : IDisposable
+        {
+            private readonly BulkInsertOperation _operation;
+            private readonly string _id;
+            private readonly string _name;
+            private bool _first = true;
+            private const int _maxTimeSeriesInBatch = 1024;
+            private int _timeSeriesInBatch = 0;
+
+            public TimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name)
+            {
+                switch (_operation._inProgressCommand)
+                {
+                    case CommandType.TimeSeries:
+                        throw new InvalidOperationException($"Cannot");
+                    case CommandType.Counters:
+                        _operation._countersOperation.EndPreviousCommandIfNeeded();
+                        break;
+                }
+
+                _operation = operation;
+                _id = id;
+                _name = name;
+
+                _operation._inProgressCommand = CommandType.TimeSeries;
+            }
+
+            public void Append(DateTime time, double value, string tag = null)
+            {
+                AsyncHelpers.RunSync(() => AppendAsync(time, value, tag));
+            }
+
+            public async Task AppendAsync(DateTime time, double value, string tag = null)
+            {
+                using (_operation.ConcurrencyCheck())
+                {
+                    await _operation.ExecuteBeforeStore().ConfigureAwait(false);
+
+                    try
+                    {
+                        if (_first)
+                        {
+                            WritePrefixForNewCommand();
+                        }
+                        else if (_timeSeriesInBatch >= _maxTimeSeriesInBatch)
+                        {
+                            _operation._currentWriter.Write("]}},");
+                            WritePrefixForNewCommand();
+                        }
+
+                        _timeSeriesInBatch++;
+
+                        //TODO: optimize to send multiple appends for the same document
+
+                        //var appendOperation = new TimeSeriesOperation.AppendOperation
+                        //{
+                        //    Name = _name,
+                        //    Timestamp = time,
+                        //    Tag = tag,
+                        //    Values = values is double[] arr
+                        //        ? arr
+                        //        : values.ToArray()
+                        //};
+
+                        //using (var json = _operation._context.ReadObject(appendOperation.ToJson(), id))
+                        //{
+                        //    _currentWriter.Flush();
+                        //    json.WriteJsonTo(_currentWriter.BaseStream);
+                        //}
+
+                        //_currentWriter.Write("]}}");
+
+                        //var isFirst = _id == null;
+                        //if (isFirst || _id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
+                        //{
+                        //    if (isFirst == false)
+                        //    {
+                        //        //we need to end the command for the previous document id
+                        //        _operation._currentWriter.Write("]}},");
+                        //    }
+                        //    else if (_operation._first == false)
+                        //    {
+                        //        _operation._currentWriter.Write(",");
+                        //    }
+
+                        //    _operation._first = false;
+
+                        //    _id = id;
+                        //    _operation._inProgressCommand = CommandType.Counters;
+
+                        //    WritePrefixForNewCommand();
+                        //}
+
+                        //if (_countersInBatch >= _maxCountersInBatch)
+                        //{
+                        //    _operation._currentWriter.Write("]}},");
+
+                        //    WritePrefixForNewCommand();
+                        //}
+
+                        //_countersInBatch++;
+
+                        //if (_first == false)
+                        //{
+                        //    _operation._currentWriter.Write(",");
+                        //}
+
+                        //_first = false;
+
+                        //_operation._currentWriter.Write("{\"Type\":\"Increment\",\"CounterName\":\"");
+                        //WriteString(_operation._currentWriter, name);
+                        //_operation._currentWriter.Write("\",\"Delta\":");
+                        //_operation._currentWriter.Write(delta);
+                        //_operation._currentWriter.Write("}");
+
+                        await _operation.FlushIfNeeded().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        await _operation.HandleErrors(_id, e).ConfigureAwait(false);
+                    }
+                }
+            }
+
+            private void WritePrefixForNewCommand()
+            {
+                _first = true;
+                _timeSeriesInBatch = 0;
+
+                _operation._currentWriter.Write("{\"Id\":\"");
+                WriteString(_operation._currentWriter, _id);
+                _operation._currentWriter.Write("\",\"Type\":\"TimeSeries\",\"TimeSeries\":{\"DocumentId\":\"");
+                WriteString(_operation._currentWriter, _id);
+                _operation._currentWriter.Write("\",\"Appends\":[");
+            }
+
+            public void Dispose()
+            {
+                _operation._inProgressCommand = CommandType.None;
             }
         }
 
