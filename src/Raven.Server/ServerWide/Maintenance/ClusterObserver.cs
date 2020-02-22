@@ -254,7 +254,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 await CleanUpUnusedAutoIndexes(state);
 
                             if (cleanupTombstones)
-                                _hasMoreTombstones |= await CleanUpCompareExchangeTombstones(database, context);
+                                _hasMoreTombstones |= await CleanUpCompareExchangeTombstones(database, state, context);
                         }
                     }
 
@@ -406,20 +406,18 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        internal async Task<bool> CleanUpCompareExchangeTombstones(string dbName, TransactionOperationContext context)
+        internal async Task<bool> CleanUpCompareExchangeTombstones(string databaseName, DatabaseObservationState state, TransactionOperationContext context)
         {
             const int amountToDelete = 8192;
             var hasMore = false;
 
-            if (_server.Cluster.HasCompareExchangeTombstones(context, dbName))
+            if (_server.Cluster.HasCompareExchangeTombstones(context, databaseName))
             {
-                var maxEtag = GetMaxTombstonesEtagToDelete(context, dbName);
-                if (maxEtag < 0)
+                var maxEtag = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, state);
+                if (maxEtag == null)
                     return false;
-                if (maxEtag == 0)
-                    maxEtag = long.MaxValue;
 
-                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag, amountToDelete, RaftIdGenerator.NewId()));
+                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag.Value, amountToDelete, RaftIdGenerator.NewId()));
                 await _server.Cluster.WaitForIndexNotification(result.Index);
                 hasMore = (bool)result.Result;
             }
@@ -427,41 +425,65 @@ namespace Raven.Server.ServerWide.Maintenance
             return hasMore;
         }
 
-        private long GetMaxTombstonesEtagToDelete(TransactionOperationContext context, string dbName)
+        private long? GetMaxCompareExchangeTombstonesEtagToDelete(TransactionOperationContext context, string databaseName, DatabaseObservationState state)
         {
             List<long> periodicBackupTaskIds;
-            var maxEtag = long.MaxValue;
+            long? maxEtag = long.MaxValue;
 
-            using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, dbName))
-            {
+            using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
                 periodicBackupTaskIds = rawRecord.GetPeriodicBackupsTaskIds();
-                if (periodicBackupTaskIds == null || periodicBackupTaskIds.Count == 0)
-                    return 0;
-            }
 
-            foreach (var taskId in periodicBackupTaskIds)
+            if (periodicBackupTaskIds != null && periodicBackupTaskIds.Count > 0)
             {
-                var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(dbName, taskId));
-                if (singleBackupStatus == null)
-                    continue;
+                foreach (var taskId in periodicBackupTaskIds)
+                {
+                    var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
+                    if (singleBackupStatus == null)
+                        continue;
 
-                if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LocalBackup), out BlittableJsonReaderObject localBackup) == false
-                    || singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false)
-                    continue;
+                    if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LocalBackup), out BlittableJsonReaderObject localBackup) == false
+                        || singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndex) == false)
+                        continue;
 
-                if (localBackup.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackup), out DateTime? lastIncrementalBackupDate) == false
-                    || lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false)
-                    continue;
+                    if (localBackup.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackup), out DateTime? lastIncrementalBackupDate) == false
+                        || lastRaftIndex.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastEtag) == false)
+                        continue;
 
-                if (lastIncrementalBackupDate == null || lastRaftIndex == null)
-                    continue;
+                    if (lastIncrementalBackupDate == null || lastEtag == null)
+                        continue;
 
-                if (lastRaftIndex < maxEtag)
-                    maxEtag = lastRaftIndex.Value;
+                    if (lastEtag < maxEtag)
+                        maxEtag = lastEtag.Value;
+
+                    if (maxEtag == 0)
+                        return 0;
+                }
             }
 
-            if (maxEtag == long.MaxValue)
-                return -1;
+            if (state != null && state.DatabaseTopology.Count == state.Current.Count)
+            {
+                foreach (var node in state.DatabaseTopology.AllNodes)
+                {
+                    if (state.Current.TryGetValue(node, out var nodeReport) == false)
+                        continue;
+
+                    if (nodeReport.Report.TryGetValue(state.Name, out var report) == false)
+                        continue;
+
+                    foreach (var kvp in report.LastIndexStats)
+                    {
+                        var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;
+                        if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
+                            continue;
+
+                        if (lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
+                            maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
+
+                        if (maxEtag == 0)
+                            return 0;
+                    }
+                }
+            }
 
             return maxEtag;
         }
@@ -614,7 +636,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             rotatePreferredNode = true;
                         }
                     }
-                    
+
                     someNodesRequireMoreTime = true;
                     continue;
                 }
@@ -875,7 +897,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
             foreach (var rehab in topology.Rehabs)
             {
-                if (FailedDatabaseInstanceOrNode( rehab, state) != DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(rehab, state) != DatabaseHealth.Bad)
                     goodMembers++;
             }
             return goodMembers;

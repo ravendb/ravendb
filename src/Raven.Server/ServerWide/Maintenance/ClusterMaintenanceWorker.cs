@@ -303,6 +303,8 @@ namespace Raven.Server.ServerWide.Maintenance
             report.LastIndexStats[index.Name] = new DatabaseStatusReport.ObservedIndexStatus
             {
                 LastIndexedEtag = stats.LastProcessedEtag,
+                LastIndexedCompareExchangeReferenceEtag = stats.LastProcessedCompareExchangeReferenceEtag,
+                LastIndexedCompareExchangeReferenceTombstoneEtag = stats.LastProcessedCompareExchangeReferenceTombstoneEtag,
                 LastQueried = lastQueried,
                 IsSideBySide = index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase),
                 IsStale = stats.IsStale,

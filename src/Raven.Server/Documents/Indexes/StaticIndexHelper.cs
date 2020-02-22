@@ -281,6 +281,26 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public static (long? LastProcessedCompareExchangeReferenceEtag, long? LastProcessedCompareExchangeReferenceTombstoneEtag) GetLastProcessedCompareExchangeReferenceEtags(Index index, AbstractStaticIndexBase compiled, TransactionOperationContext indexContext)
+        {
+            long? lastProcessedCompareExchangeReferenceEtag = null;
+            long? lastProcessedCompareExchangeReferenceTombstoneEtag = null;
+            foreach (var collection in compiled.CollectionsWithCompareExchangeReferences)
+            {
+                var lastProcessedCompareExchangeReferenceEtagForCollection = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, IndexStorage.CompareExchangeReferences.CompareExchange);
+                lastProcessedCompareExchangeReferenceEtag = lastProcessedCompareExchangeReferenceEtag.HasValue
+                    ? Math.Max(lastProcessedCompareExchangeReferenceEtag.Value, lastProcessedCompareExchangeReferenceEtagForCollection)
+                    : lastProcessedCompareExchangeReferenceEtagForCollection;
+
+                var lastProcessedCompareExchangeReferenceTombstoneEtagForCollection = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, IndexStorage.CompareExchangeReferences.CompareExchange);
+                lastProcessedCompareExchangeReferenceTombstoneEtag = lastProcessedCompareExchangeReferenceTombstoneEtag.HasValue
+                    ? Math.Max(lastProcessedCompareExchangeReferenceTombstoneEtag.Value, lastProcessedCompareExchangeReferenceTombstoneEtagForCollection)
+                    : lastProcessedCompareExchangeReferenceTombstoneEtagForCollection;
+            }
+
+            return (lastProcessedCompareExchangeReferenceEtag, lastProcessedCompareExchangeReferenceTombstoneEtag);
+        }
+
         public static bool ShouldReplace(Index index, ref bool? isSideBySide)
         {
             if (isSideBySide.HasValue == false)

@@ -885,31 +885,34 @@ namespace Raven.Server.Documents.Indexes
             RunningStorageOperation = -2,
         }
 
-        public virtual (bool IsStale, long LastProcessedEtag) GetIndexStats(QueryOperationContext queryContext)
+        public (bool IsStale, long LastProcessedEtag, long? LastProcessedCompareExchangeReferenceEtag, long? LastProcessedCompareExchangeReferenceTombstoneEtag) GetIndexStats(QueryOperationContext queryContext)
         {
             queryContext.AssertOpenedTransactions();
 
             if (Type == IndexType.Faulty)
-                return (true, (long)IndexProgressStatus.Faulty);
+                return (true, (long)IndexProgressStatus.Faulty, null, null);
 
             using (CurrentlyInUse(out var valid))
             {
+                var hasCompareExchangeReferences = Definition.HasCompareExchange;
+
                 if (valid == false)
-                    return (true, (long)IndexProgressStatus.RunningStorageOperation);
+                    return (true, (long)IndexProgressStatus.RunningStorageOperation, hasCompareExchangeReferences ? (long?)0L : null, hasCompareExchangeReferences ? (long?)0L : null);
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 using (indexContext.OpenReadTransaction())
-                {
-                    long lastEtag = 0;
-                    foreach (var collection in Collections)
-                    {
-                        lastEtag = Math.Max(lastEtag, _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
-                    }
-
-                    var isStale = IsStale(queryContext, indexContext);
-                    return (isStale, lastEtag);
-                }
+                    return GetIndexStatsInternal(queryContext, indexContext);
             }
+        }
+
+        protected virtual (bool IsStale, long LastProcessedEtag, long? LastProcessedCompareExchangeReferenceEtag, long? LastProcessedCompareExchangeReferenceTombstoneEtag) GetIndexStatsInternal(QueryOperationContext queryContext, TransactionOperationContext indexContext)
+        {
+            long lastProcessedEtag = 0;
+            foreach (var collection in Collections)
+                lastProcessedEtag = Math.Max(lastProcessedEtag, _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
+
+            var isStale = IsStale(queryContext, indexContext);
+            return (isStale, lastProcessedEtag, null, null);
         }
 
         protected virtual IndexItem GetItemByEtag(QueryOperationContext queryContext, long etag)
