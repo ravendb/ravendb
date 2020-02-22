@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         private bool? _isSideBySide;
 
         private HandleReferences _handleReferences;
-        private HandleReferences _handleCompareExchangeReferences;
+        private HandleCompareExchangeTimeSeriesReferences _handleCompareExchangeReferences;
 
         protected MapTimeSeriesIndex(MapIndexDefinition definition, StaticTimeSeriesIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             };
 
             if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
-                throw new NotImplementedException("TODO ppekrol"); //workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeTimeSeriesReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleTimeSeriesReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
