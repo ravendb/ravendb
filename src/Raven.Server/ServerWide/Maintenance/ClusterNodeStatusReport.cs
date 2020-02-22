@@ -65,6 +65,8 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             public bool IsSideBySide;
             public long LastIndexedEtag;
+            public long? LastIndexedCompareExchangeReferenceEtag;
+            public long? LastIndexedCompareExchangeReferenceTombstoneEtag;
             public TimeSpan? LastQueried;
             public bool IsStale;
             public IndexState State;
@@ -107,6 +109,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 indexStats[stat.Key] = new DynamicJsonValue
                 {
                     [nameof(stat.Value.LastIndexedEtag)] = stat.Value.LastIndexedEtag,
+                    [nameof(stat.Value.LastIndexedCompareExchangeReferenceEtag)] = stat.Value.LastIndexedCompareExchangeReferenceEtag,
+                    [nameof(stat.Value.LastIndexedCompareExchangeReferenceTombstoneEtag)] = stat.Value.LastIndexedCompareExchangeReferenceTombstoneEtag,
                     [nameof(stat.Value.LastQueried)] = stat.Value.LastQueried,
                     [nameof(stat.Value.IsSideBySide)] = stat.Value.IsSideBySide,
                     [nameof(stat.Value.IsStale)] = stat.Value.IsStale,

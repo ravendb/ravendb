@@ -168,6 +168,17 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, queryContext, indexContext);
         }
 
+        protected override (bool IsStale, long LastProcessedEtag, long? LastProcessedCompareExchangeReferenceEtag, long? LastProcessedCompareExchangeReferenceTombstoneEtag) GetIndexStatsInternal(QueryOperationContext queryContext, TransactionOperationContext indexContext)
+        {
+            var result = base.GetIndexStatsInternal(queryContext, indexContext);
+            if (_handleCompareExchangeReferences == null)
+                return result;
+
+            (result.LastProcessedCompareExchangeReferenceEtag, result.LastProcessedCompareExchangeReferenceTombstoneEtag) = StaticIndexHelper.GetLastProcessedCompareExchangeReferenceEtags(this, _compiled, indexContext);
+
+            return result;
+        }
+
         public override long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)

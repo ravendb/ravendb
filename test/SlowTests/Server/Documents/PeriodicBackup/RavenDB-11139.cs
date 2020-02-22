@@ -1488,7 +1488,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (context.OpenReadTransaction())
                 {
                     // clean tombstones
-                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, context);
+                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, null, context);
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1586,7 +1586,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (context.OpenReadTransaction())
                 {
                     // clean tombstones
-                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, context);
+                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, null, context);
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
