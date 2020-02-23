@@ -10,7 +10,8 @@ namespace Raven.Server.Documents.Handlers
     {
         public override void AddResult(Document res)
         {
-            WriteCsvHeaderIfNeeded(res.Data);
+            // add @id property if res.Id != null, res.Id is null in map-reduce index
+            WriteCsvHeaderIfNeeded(res.Data, res.Id != null);
 
             foreach (var (property, path) in GetProperties())
             {
