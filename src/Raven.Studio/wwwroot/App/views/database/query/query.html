@@ -128,17 +128,25 @@
                         </span>
                     </small>
                 </div>
-                <div class="btn-group btn-group-sm pull-right" role="group">
+                <div class="pull-right" role="group">
                     <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': !canDeleteDocumentsMatchingQuery() ? 'Available only for map indexes' : '' }">
-                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
+                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i><span>Delete documents</span></button>
                     </div>
-                    <button type="button" class="btn btn-default" title="Export query results as CSV"
-                        data-bind="click: exportCsv, enable: totalResultsForUi()">
-                        <i class="icon-csv-export"></i> <span>Export CSV</span>
-                    </button>
-                    <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats">
+                    <button class="btn btn-default btn-sm statistics" data-bind="click: openQueryStats, enable: queryStats">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default btn-sm" data-bind="click: exportCsvFull" title="Export query results to CSV file">
+                            <i class="icon-csv-export"></i><span>Export as CSV</span>
+                        </button>
+                        <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li title="Export visible columns only"><a href="#" data-bind="click: exportCsvVisibleColumns"><i class="icon-csv-export"></i><span>Export visible columns only</span></a></li>
+                        </ul>
+                    </div>
                     <div class="btn-group dropdown-right">
                         <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <i class="icon-table"></i><span>Display</span>
@@ -148,7 +156,7 @@
                             <div data-bind="compose: $root.columnsSelector"></div>
                         </ul>
                     </div>
-                    <button class="btn btn-default" data-bind="click: toggleResults">
+                    <button class="btn btn-default btn-sm" data-bind="click: toggleResults">
                         <i data-bind="attr: { class: resultsExpanded() ? 'icon-fold' : 'icon-unfold'} "></i>
                         <span data-bind="text: resultsExpanded() ? 'Collapse results' : 'Expand results'"></span>
                     </button>
