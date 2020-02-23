@@ -361,6 +361,15 @@ namespace Raven.Server.Documents
 
         internal HashSet<string> UnusedDatabaseIds;
 
+        public bool HasUnusedDatabaseIds()
+        {
+            var list = UnusedDatabaseIds;
+            if (list == null || list.Count == 0)
+                return false;
+
+            return true;
+        }
+
         public bool TryRemoveUnusedIds(ref string changeVector)
         {
             if (string.IsNullOrEmpty(changeVector))
