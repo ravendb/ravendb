@@ -87,7 +87,6 @@ namespace Raven.Server.Documents.Expiration
 
         public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(DocumentsOperationContext context,
             DateTime currentTime, bool applyToExistingDocuments, int take, out Stopwatch duration, CancellationToken cancellationToken)
-
         {
             return GetDocuments(context, currentTime, applyToExistingDocuments, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, take, out duration, cancellationToken);
         }
@@ -232,7 +231,6 @@ namespace Raven.Server.Documents.Expiration
             return false;
         }
 
-
         public int DeleteDocumentsExpiration(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired)
         {
             var deletionCount = 0;
@@ -276,7 +274,7 @@ namespace Raven.Server.Documents.Expiration
 
         public int RefreshDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired)
         {
-            var deletionCount = 0;
+            var refreshCount = 0;
             var refreshTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByRefresh);
             var currentTime = _database.Time.GetUtcNow();
 
@@ -304,14 +302,14 @@ namespace Raven.Server.Documents.Expiration
                             }
                         }
 
-                        deletionCount++;
+                        refreshCount++;
                     }
 
                     refreshTree.MultiDelete(pair.Key, ids.LowerId);
                 }
             }
 
-            return deletionCount;
+            return refreshCount;
         }
     }
 }
