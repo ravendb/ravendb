@@ -254,7 +254,22 @@ namespace Raven.Server.ServerWide.Maintenance
                                 await CleanUpUnusedAutoIndexes(state);
 
                             if (cleanupTombstones)
-                                _hasMoreTombstones |= await CleanUpCompareExchangeTombstones(database, state, context);
+                            {
+                                var cleanupState = await CleanUpCompareExchangeTombstones(database, state, context);
+                                switch (cleanupState)
+                                {
+                                    case CompareExchangeTombstonesCleanupState.HasMoreTombstones:
+                                    case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
+                                        _hasMoreTombstones = true;
+                                        break;
+                                    case CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus:
+                                    case CompareExchangeTombstonesCleanupState.NoMoreTombstones:
+                                        _hasMoreTombstones |= false;
+                                        break;
+                                    default:
+                                        throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
+                                }
+                            }
                         }
                     }
 
@@ -406,29 +421,52 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        internal async Task<bool> CleanUpCompareExchangeTombstones(string databaseName, DatabaseObservationState state, TransactionOperationContext context)
+        internal async Task<CompareExchangeTombstonesCleanupState> CleanUpCompareExchangeTombstones(string databaseName, DatabaseObservationState state, TransactionOperationContext context)
         {
             const int amountToDelete = 8192;
             var hasMore = false;
 
             if (_server.Cluster.HasCompareExchangeTombstones(context, databaseName))
             {
-                var maxEtag = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, state);
-                if (maxEtag == null)
-                    return false;
+                var cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, state, out var maxEtag);
+                switch (cleanupState)
+                {
+                    case CompareExchangeTombstonesCleanupState.HasMoreTombstones:
+                        break;
+                    case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
+                    case CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus:
+                    case CompareExchangeTombstonesCleanupState.NoMoreTombstones:
+                        return cleanupState;
+                    default:
+                        throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
+                }
 
-                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag.Value, amountToDelete, RaftIdGenerator.NewId()));
+                if (maxEtag <= 0)
+                    return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+
+                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId()));
                 await _server.Cluster.WaitForIndexNotification(result.Index);
                 hasMore = (bool)result.Result;
             }
 
-            return hasMore;
+            if (hasMore)
+                return CompareExchangeTombstonesCleanupState.HasMoreTombstones;
+
+            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
         }
 
-        private long? GetMaxCompareExchangeTombstonesEtagToDelete(TransactionOperationContext context, string databaseName, DatabaseObservationState state)
+        public enum CompareExchangeTombstonesCleanupState
+        {
+            HasMoreTombstones,
+            InvalidDatabaseObservationState,
+            InvalidPeriodicBackupStatus,
+            NoMoreTombstones
+        }
+
+        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete(TransactionOperationContext context, string databaseName, DatabaseObservationState state, out long maxEtag)
         {
             List<long> periodicBackupTaskIds;
-            long? maxEtag = long.MaxValue;
+            maxEtag = long.MaxValue;
 
             using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
                 periodicBackupTaskIds = rawRecord.GetPeriodicBackupsTaskIds();
@@ -439,29 +477,31 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
                     if (singleBackupStatus == null)
-                        continue;
+                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
 
                     if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LocalBackup), out BlittableJsonReaderObject localBackup) == false
                         || singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndex) == false)
-                        continue;
+                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
 
-                    if (localBackup.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackup), out DateTime? lastIncrementalBackupDate) == false
-                        || lastRaftIndex.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastEtag) == false)
-                        continue;
+                    if (lastRaftIndex.TryGet(nameof(LastRaftIndex.LastEtag), out long? lastEtag) == false)
+                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
 
-                    if (lastIncrementalBackupDate == null || lastEtag == null)
-                        continue;
+                    if (lastEtag == null)
+                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
 
                     if (lastEtag < maxEtag)
                         maxEtag = lastEtag.Value;
 
                     if (maxEtag == 0)
-                        return 0;
+                        return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                 }
             }
 
-            if (state != null && state.DatabaseTopology.Count == state.Current.Count)
+            if (state != null)
             {
+                if (state.DatabaseTopology.Count != state.Current.Count) // we have a state change, do not remove anything
+                    return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+
                 foreach (var node in state.DatabaseTopology.AllNodes)
                 {
                     if (state.Current.TryGetValue(node, out var nodeReport) == false)
@@ -480,12 +520,15 @@ namespace Raven.Server.ServerWide.Maintenance
                             maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
 
                         if (maxEtag == 0)
-                            return 0;
+                            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                     }
                 }
             }
 
-            return maxEtag;
+            if (maxEtag == 0)
+                return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+
+            return CompareExchangeTombstonesCleanupState.HasMoreTombstones;
         }
 
         private long? CleanUpDatabaseValues(DatabaseObservationState state)
