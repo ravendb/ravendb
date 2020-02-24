@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Microsoft.CodeAnalysis.CSharp;
+using FastTests.Server.Replication;
+using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -30,7 +31,7 @@ using Xunit.Abstractions;
 
 namespace RachisTests.DatabaseCluster
 {
-    public class ClusterDatabaseMaintenance : ClusterTestBase
+    public class ClusterDatabaseMaintenance : ReplicationTestBase
     {
         public ClusterDatabaseMaintenance(ITestOutputHelper output) : base(output)
         {
@@ -1450,17 +1451,119 @@ namespace RachisTests.DatabaseCluster
             EnsureReplicating(nonDeletedStores[0], nonDeletedStores[1]);
             EnsureReplicating(nonDeletedStores[1], nonDeletedStores[0]);
 
+            await EnsureNoReplicationLoop(nonDeletedNodes[0], nonDeletedNodes[1], database);
+        }
+
+        [Fact]
+        public async Task HandleConflictShouldTakeUnusedDatabasesIntoAccount4()
+        {
+            var database = GetDatabaseName();
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            var databaseResult = await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+
+            using var store1 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[0].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store2 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[1].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store3 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[2].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+            
+            
+            var allStores = new [] {(DocumentStore)store1, (DocumentStore)store2, (DocumentStore)store3};
+            var toDelete = cluster.Nodes.First(n => n != cluster.Leader);
+            var toBeDeletedStore = allStores.Single(s => s.Urls[0] == toDelete.WebUrl);
+            var nonDeletedStores = allStores.Where(s => s.Urls[0] != toDelete.WebUrl).ToArray();
+            var nonDeletedNodes = cluster.Nodes.Where(n => n.ServerStore.NodeTag != toDelete.ServerStore.NodeTag).ToArray();
+
+            await RevisionsHelper.SetupRevisions(toDelete.ServerStore, database, new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false
+                }
+            });
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User{Name = "Karmel"}, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                session.Delete("foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User{Name = "Karmel2"}, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenSession())
+            {
+                var t = await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel2", TimeSpan.FromSeconds(15));
+                Assert.True(t);
+            }
+
+            var rep1 = await BreakReplication(nonDeletedNodes[0].ServerStore, database);
+            var rep2 = await BreakReplication(nonDeletedNodes[1].ServerStore, database);
+
+            await RevisionsHelper.SetupRevisions(nonDeletedNodes[0].ServerStore, database, new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 0
+                }
+            });
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User{Name = "Karmel3"}, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenSession())
+            {
+                var t = await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel3", TimeSpan.FromSeconds(15));
+                Assert.True(t);
+            }
+
+            await RemoveDatabaseNode(cluster.Nodes, database, toDelete.ServerStore.NodeTag);
+
+            rep1.Mend();
+            rep2.Mend();
+
             await Task.Delay(1000);
+            EnsureReplicating(nonDeletedStores[0], nonDeletedStores[1]);
+            EnsureReplicating(nonDeletedStores[1], nonDeletedStores[0]);
 
-            var etag1= nonDeletedStorage1.DocumentsStorage.GenerateNextEtag();
-
-            await Task.Delay(3000);
-
-            var etag2 = nonDeletedStorage1.DocumentsStorage.GenerateNextEtag();
-
-            Assert.Equal(etag1 + 1, etag2);
-
-            WaitForUserToContinueTheTest(nonDeletedStores[0]);
+            await EnsureNoReplicationLoop(nonDeletedNodes[0], nonDeletedNodes[1], database);
         }
 
         [Fact]
