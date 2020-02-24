@@ -1451,7 +1451,8 @@ namespace RachisTests.DatabaseCluster
             EnsureReplicating(nonDeletedStores[0], nonDeletedStores[1]);
             EnsureReplicating(nonDeletedStores[1], nonDeletedStores[0]);
 
-            await EnsureNoReplicationLoop(nonDeletedNodes[0], nonDeletedNodes[1], database);
+            await EnsureNoReplicationLoop(nonDeletedNodes[0], database);
+            await EnsureNoReplicationLoop(nonDeletedNodes[1], database);
         }
 
         [Fact]
@@ -1563,7 +1564,8 @@ namespace RachisTests.DatabaseCluster
             EnsureReplicating(nonDeletedStores[0], nonDeletedStores[1]);
             EnsureReplicating(nonDeletedStores[1], nonDeletedStores[0]);
 
-            await EnsureNoReplicationLoop(nonDeletedNodes[0], nonDeletedNodes[1], database);
+            await EnsureNoReplicationLoop(nonDeletedNodes[0], database);
+            await EnsureNoReplicationLoop(nonDeletedNodes[1], database);
         }
 
         [Fact]
