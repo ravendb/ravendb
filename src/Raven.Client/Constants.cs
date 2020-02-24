@@ -192,6 +192,8 @@ namespace Raven.Client
 
                 public const string RevisionCounters = "@counters-snapshot";
 
+                public const string RevisionTimeSeries = "@timeseries-snapshot";
+
                 public const string LegacyAttachmentsMetadata = "@legacy-attachment-metadata";
 
                 public const string IndexScore = "@index-score";
