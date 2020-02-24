@@ -148,16 +148,15 @@ namespace Tests.Infrastructure
             Assert.Equal(1, record.UnusedDatabaseIds.Count);
         }
 
-        public async Task EnsureNoReplicationLoop(RavenServer server1, RavenServer server2, string database)
+        public async Task EnsureNoReplicationLoop(RavenServer server, string database)
         {
-            var storage1 = await server1.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-            var storage2 = await server2.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
 
-            var etag1 = storage1.DocumentsStorage.GenerateNextEtag();
+            var etag1 = storage.DocumentsStorage.GenerateNextEtag();
             
             await Task.Delay(3000);
             
-            var etag2 = storage2.DocumentsStorage.GenerateNextEtag();
+            var etag2 = storage.DocumentsStorage.GenerateNextEtag();
 
             Assert.Equal(etag1 + 1, etag2);
         }
