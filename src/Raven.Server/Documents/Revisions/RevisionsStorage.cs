@@ -369,7 +369,7 @@ namespace Raven.Server.Documents.Revisions
                     _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVectorSlice);
                 }
 
-                document = RecreateCountersIfNeeded(context, id, document);
+                document = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document);
 
                 PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
 
@@ -407,10 +407,12 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        private BlittableJsonReaderObject RecreateCountersIfNeeded(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+        private BlittableJsonReaderObject AddCounterAndTimeSeriesSnapshotsIfNeeded(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
         {
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counterNames))
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                return document;
+
+            if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counterNames))
             {
                 var dvj = new DynamicJsonValue();
                 for (var i = 0; i < counterNames.Length; i++)
@@ -426,7 +428,35 @@ namespace Raven.Server.Documents.Revisions
                 {
                     [Constants.Documents.Metadata.RevisionCounters] = dvj
                 };
+
                 metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+            }
+
+            if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames))
+            {
+                var dvj = new DynamicJsonValue();
+                for (var i = 0; i < timeSeriesNames.Length; i++)
+                {
+                    var name = timeSeriesNames[i].ToString();
+                    var (count, start, end) = _documentsStorage.TimeSeriesStorage.GetStatsFor(context, id, name);
+
+                    dvj[name] = new DynamicJsonValue
+                    {
+                        ["Count"] = count, 
+                        ["Start"] = start, 
+                        ["End"] = end
+                    };
+                }
+
+                metadata.Modifications ??= new DynamicJsonValue(metadata);
+
+                metadata.Modifications[Constants.Documents.Metadata.RevisionTimeSeries] = dvj;
+
+                metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
+            }
+
+            if (metadata.Modifications != null)
+            {
                 document.Modifications = new DynamicJsonValue(document)
                 {
                     [Constants.Documents.Metadata.Key] = metadata

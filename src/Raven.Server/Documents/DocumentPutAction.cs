@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -12,8 +11,6 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 using System.Linq;
-using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
