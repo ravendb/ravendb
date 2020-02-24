@@ -32,8 +32,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly IndexFieldOptions _allFields;
 
-        protected JintLuceneDocumentConverterBase(ICollection<IndexField> fields, IndexDefinition definition, bool indexImplicitNull = false, bool indexEmptyEntries = false, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
-            : base(fields, indexImplicitNull, indexEmptyEntries, keyFieldName, storeValue, storeValueFieldName)
+        protected JintLuceneDocumentConverterBase(ICollection<IndexField> fields, IndexDefinition definition, bool indexImplicitNull = false, bool indexEmptyEntries = false, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+            : base(fields, indexImplicitNull, indexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
         {
             definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
         }
