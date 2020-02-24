@@ -881,6 +881,16 @@ namespace Raven.Server.Documents
             }
         }
 
+        public void SetChangeVector(string changeVector)
+        {
+            using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+            using (var tx = documentsContext.OpenWriteTransaction())
+            {
+                DocumentsStorage.SetDatabaseChangeVector(documentsContext, changeVector);
+                tx.Commit();
+            }
+        }
+
         public void RunIdleOperations()
         {
             if (Monitor.TryEnter(_idleLocker) == false)
