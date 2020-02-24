@@ -14,6 +14,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -41,7 +42,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 //make sure that the PutCompareExchangeValueOperation succeeds
                 //because otherwise we might have NRE at the Assert.Equal() calls
-                Assert.True(operationResult.Successful,"Failing early because the test will fail anyways - the PutCompareExchangeValueOperation failed...");
+                Assert.True(operationResult.Successful, "Failing early because the test will fail anyways - the PutCompareExchangeValueOperation failed...");
 
                 var config = new PeriodicBackupConfiguration
                 {
@@ -64,7 +65,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                 operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/pooclown", user2, 0));
-                Assert.True(operationResult.Successful,"Failing early because the test will fail anyways - the PutCompareExchangeValueOperation failed...");
+                Assert.True(operationResult.Successful, "Failing early because the test will fail anyways - the PutCompareExchangeValueOperation failed...");
 
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
@@ -103,11 +104,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         var user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("emojis/poo"));
                         var user3 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("emojis/pooclown"));
-                        
+
                         //precaution, those shouldn't be null
                         Assert.NotNull(user1);
                         Assert.NotNull(user3);
-                        
+
                         Assert.Equal(user.Name, user1.Value.Name);
                         Assert.Equal(user2.Name, user3.Value.Name);
                     }
@@ -151,7 +152,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                
+
                 RunBackup(result.TaskId, documentDatabase, false, store);   // INCREMENTAL
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
@@ -537,7 +538,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangesAndDeleteBetween()
         {
-            var list = new List<string>(new [] {"🐃", "🐂", "🐄", "🐎", "🐖",
+            var list = new List<string>(new[] {"🐃", "🐂", "🐄", "🐎", "🐖",
                                                 "🐏", "🐑", "🐐", "🦌", "🐕",
                                                 "🐩", "🐈", "🐓", "🦃", "🕊",
                                                 "🐇", "🐁", "🐀", "🐿", "🦔"});
@@ -992,7 +993,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             ZipFile.ExtractToDirectory(zipPath.FullPath, folder);
 
-            using (var server = GetNewServer(new ServerCreationOptions {DeletePrevious = false, RunInMemory = false, DataDirectory = folder, RegisterForDisposal = false}))
+            using (var server = GetNewServer(new ServerCreationOptions { DeletePrevious = false, RunInMemory = false, DataDirectory = folder, RegisterForDisposal = false }))
             {
                 using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -1191,7 +1192,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             Name = "Egor3"
                         }, "users|");
                         await session.SaveChangesAsync();
-                        
+
                         var bestUser = await session.LoadAsync<User>("users/1");
                         var mediocreUser1 = await session.LoadAsync<User>("users/2");
                         var mediocreUser2 = await session.LoadAsync<User>("users/3");
@@ -1488,7 +1489,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (context.OpenReadTransaction())
                 {
                     // clean tombstones
-                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, null, context);
+                    Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, null, context));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1586,7 +1587,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (context.OpenReadTransaction())
                 {
                     // clean tombstones
-                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, null, context);
+                    Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, null, context));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
