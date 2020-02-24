@@ -152,7 +152,7 @@ namespace SlowTests.Issues
                     {
                         using (context.OpenReadTransaction())
                         {
-                            var indexStats = index.GetIndexStats(context);
+                            var indexStats = index.GetIndexingState(context);
 
                             Assert.True(indexStats.IsStale);
                         }
