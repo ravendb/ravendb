@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using StressTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -243,143 +241,107 @@ namespace StressTests.Server.Replication
             }
         }
 
+        private List<RavenServer> _nodes;
+
         [Fact]
         public async Task CanIdleDatabaseInCluster()
         {
             const int clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3, customSettings: new Dictionary<string, string>()
+
+            var cluster = await CreateRaftCluster(numberOfNodes: clusterSize, shouldRunInMemory: false, customSettings: new Dictionary<string, string>()
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "300",
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
-                [RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1",
-                [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
-                [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+                [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3"
             });
 
-            DatabasePutResult databaseResult;
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName
-            }.Initialize())
-            {
-                var doc = new DatabaseRecord(databaseName);
-                databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-            }
-            Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
+            _nodes = cluster.Nodes;
 
-            foreach (var server in Servers)
+            try
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
-            }
-            foreach (var server in Servers.Where(s => databaseResult.NodesAddedTo.Any(n => n == s.WebUrl)))
-            {
-                await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-            }
-
-            var now = DateTime.Now;
-            var nextNow = now + TimeSpan.FromSeconds(300);
-            while (now < nextNow && GetIdleCount() < clusterSize)
-            {
-                await Task.Delay(3000);
-                now = DateTime.Now;
-            }
-
-            foreach (var server in Servers)
-            {
-                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
-                Assert.True(server.ServerStore.IdleDatabases.TryGetValue(databaseName, out var dictionary));
-
-                // new incoming replications not saved in IdleDatabases
-                Assert.Equal(0, dictionary.Count);
-            }
-
-            var rnd = new Random();
-            var index = rnd.Next(0, Servers.Count - 1);
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { Servers[index].WebUrl },
-                Database = databaseName
-            }.Initialize())
-            {
-                await store.Maintenance.SendAsync(new GetStatisticsOperation());
-            }
-
-            Assert.Equal(2, GetIdleCount());
-
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { Servers[index].WebUrl },
-                Database = databaseName
-            }.Initialize())
-            {
-                using (var s = store.OpenAsyncSession())
+                foreach (var server in _nodes)
                 {
-                    await s.StoreAsync(new User()
+                    server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
+                }
+
+                using (var store = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => databaseName,
+                    ReplicationFactor = clusterSize,
+                    Server = cluster.Leader,
+                    RunInMemory = false
+                }))
+                {
+                    var count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), clusterSize, GetIdleCount);
+                    Assert.Equal(clusterSize, count);
+
+                    foreach (var server in _nodes)
                     {
-                        Name = "Egor"
-                    }, "foo/bar");
+                        Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+                        Assert.True(server.ServerStore.IdleDatabases.TryGetValue(databaseName, out var dictionary));
 
-                    await s.SaveChangesAsync();
+                        // new incoming replications not saved in IdleDatabases
+                        Assert.Equal(0, dictionary.Count);
+                    }
+
+                    var rnd = new Random();
+                    var index = rnd.Next(0, clusterSize);
+                    using (var store2 = new DocumentStore { Urls = new[] { _nodes[index].WebUrl }, Conventions = { DisableTopologyUpdates = true }, Database = databaseName }.Initialize())
+                    {
+                        await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    }
+
+                    Assert.Equal(2, GetIdleCount());
+
+                    using (var s = store.OpenAsyncSession())
+                    {
+                        await s.StoreAsync(new User() { Name = "Egor" }, "foo/bar");
+                        await s.SaveChangesAsync();
+                    }
+
+                    count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), 0, GetIdleCount);
+                    Assert.Equal(0, count);
+
+                    foreach (var server in _nodes)
+                    {
+                        using (var store2 = new DocumentStore { Urls = new[] { server.WebUrl }, Conventions = { DisableTopologyUpdates = true }, Database = databaseName }.Initialize())
+                        {
+                            var docs = (await store.Maintenance.SendAsync(new GetStatisticsOperation())).CountOfDocuments;
+                            Assert.Equal(1, docs);
+                        }
+                    }
+
+                    index = rnd.Next(0, clusterSize);
+                    var nextNow = DateTime.Now + TimeSpan.FromSeconds(300);
+                    var now = DateTime.Now;
+                    using (var store2 = new DocumentStore { Urls = new[] { _nodes[index].WebUrl }, Conventions = { DisableTopologyUpdates = true }, Database = databaseName }.Initialize())
+                    {
+                        while (now < nextNow && GetIdleCount() < 2)
+                        {
+                            await Task.Delay(2000);
+                            await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                            now = DateTime.Now;
+                        }
+                    }
+                    Assert.Equal(2, GetIdleCount());
                 }
             }
-
-            nextNow = DateTime.Now + TimeSpan.FromSeconds(300);
-            while (now < nextNow && GetIdleCount() > 0)
+            finally
             {
-                await Task.Delay(3000);
-                now = DateTime.Now;
-            }
-
-            Assert.Equal(0, GetIdleCount());
-
-            foreach (var server in Servers)
-            {
-                using (var store = new DocumentStore
+                foreach (var server in _nodes)
                 {
-                    Urls = new[] { server.WebUrl },
-                    Database = databaseName
-                }.Initialize())
-                {
-                    var docs = (await store.Maintenance.SendAsync(new GetStatisticsOperation())).CountOfDocuments;
-                    Assert.Equal(1, docs);
+                    server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
                 }
             }
-
-            index = rnd.Next(0, Servers.Count - 1);
-            nextNow = DateTime.Now + TimeSpan.FromSeconds(300);
-
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { Servers[index].WebUrl },
-                Database = databaseName
-            }.Initialize())
-            {
-                while (now < nextNow && GetIdleCount() < 2)
-                {
-                    await Task.Delay(3000);
-                    await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                    now = DateTime.Now;
-                }
-            }
-
-            Assert.Equal(2, GetIdleCount());
         }
 
         private int GetIdleCount()
         {
-            int idleCount = 0;
-            foreach (var server in Servers)
-            {
-                if (server.ServerStore.IdleDatabases.Count == 1)
-                    idleCount++;
-            }
-
-            return idleCount;
+            return _nodes.Sum(server => server.ServerStore.IdleDatabases.Count);
         }
     }
 }
