@@ -219,7 +219,6 @@ namespace Raven.Server.Documents
             }
         }
 
-
         [Conditional("DEBUG")]
         private static void ValidateDocument(string id, BlittableJsonReaderObject document, ref ulong documentDebugHash)
         {

@@ -40,26 +40,25 @@
             </div>
             <div class="clearfix">
                 <div class="pull-right">
-                    <button class="btn btn-default btn-sm" title="Query current collection" data-bind="click: $root.queryCollection"> 
+                    <button class="btn btn-default btn-sm" title="Query current collection" data-bind="click: $root.queryCollection">
                         <i class="icon-query"></i>
                         <span>Query</span>
                     </button>
                     <div class="btn-group" data-bind="visible: canExportAsCsv">
-                        <button type="button" class="btn btn-default btn-sm" data-bind="click: exportCsv" title="Exports collection to CSV file (visible columns only)">
-                            <i class="icon-csv-export"></i>
-                            <span>Export CSV</span>
+                        <button type="button" class="btn btn-default btn-sm" data-bind="click: exportCsvFull" title="Export collection to CSV file (full documents)">
+                            <i class="icon-csv-export"></i><span>Export as CSV</span>
                         </button>
                         <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href="#" data-bind="click: exportCsvFull"><i class="icon-csv-export"></i> <span>Export full documents as a CSV file.</span></a></li>
+                            <li title="Export visible columns only"><a href="#" data-bind="click: exportCsvVisibleColumns"><i class="icon-csv-export"></i><span>Export visible columns only</span></a></li>
                         </ul>
                     </div>
                     <div class="btn-group dropdown-right">
                         <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                            data-bind="css: { active: columnsSelector.customLayout }, attr: { title: columnsSelector.customLayout() ? 'Using custom columns and its order' : 'Choose visible columns' } ">
+                                data-bind="css: { active: columnsSelector.customLayout }, attr: { title: columnsSelector.customLayout() ? 'Using custom columns and its order' : 'Choose visible columns' } ">
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
                         </button>

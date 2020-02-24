@@ -20,6 +20,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
+using Raven.Server.Documents;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -35,7 +36,6 @@ namespace FastTests.Server.Replication
         public ReplicationTestBase(ITestOutputHelper output) : base(output)
         {
         }
-        
         protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
         {
             var id = "marker/" + Guid.NewGuid();
@@ -45,6 +45,31 @@ namespace FastTests.Server.Replication
                 s.SaveChanges();
             }
             Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
+        }
+
+        public class BrokenReplication
+        {
+            private readonly DocumentDatabase _database;
+
+            public BrokenReplication(DocumentDatabase database)
+            {
+                _database = database;
+            }
+
+            public void Mend()
+            {
+                var mre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
+                Assert.NotNull(mre);
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                mre.Set();
+            }
+        }
+        public async Task<BrokenReplication> BreakReplication(Raven.Server.ServerWide.ServerStore from, string database)
+        {
+            var deletedStorage = await from.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            var mre = new ManualResetEventSlim(false);
+            deletedStorage.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+            return new BrokenReplication(deletedStorage);
         }
 
         protected Dictionary<string, string[]> GetConnectionFailures(DocumentStore store)
@@ -153,24 +178,6 @@ namespace FastTests.Server.Replication
 
                 return command.Result;
             }
-        }
-
-        protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
-            where T : class
-        {
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds <= timeout)
-            {
-                using (var session = store.OpenSession(store.Database))
-                {
-                    var doc = session.Load<T>(id);
-                    if (doc != null)
-                        return doc;
-                }
-                Thread.Sleep(100);
-            }
-
-            return null;
         }
 
         protected T WaitForDocumentWithAttachmentToReplicate<T>(IDocumentStore store, string id, string attachmentName, int timeout)

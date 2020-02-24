@@ -7,6 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -833,10 +834,9 @@ namespace Raven.Server.Documents
             return indexOfLargestEtag;
         }
 
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, out string conflictingVector, out bool hasLocalClusterTx)
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, out bool hasLocalClusterTx)
         {
             hasLocalClusterTx = false;
-            conflictingVector = null;
 
             //tombstones also can be a conflict entry
             var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
@@ -848,7 +848,7 @@ namespace Raven.Server.Documents
                     status = ChangeVectorUtils.GetConflictStatus(changeVector, existingConflict.ChangeVector);
                     if (status == ConflictStatus.Conflict)
                     {
-                        conflictingVector = existingConflict.ChangeVector;
+                        ConflictManager.AssertChangeVectorNotNull(existingConflict.ChangeVector);
                         return ConflictStatus.Conflict;
                     }
                 }
@@ -872,15 +872,42 @@ namespace Raven.Server.Documents
             else
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
 
-            context.SkipChangeVectorValidation = context.DocumentDatabase.DocumentsStorage.TryRemoveUnusedIds(ref local);
-
-            status = ChangeVectorUtils.GetConflictStatus(changeVector, local);
+            status = GetConflictStatusForDocument(context, changeVector, local);
             if (status == ConflictStatus.Conflict)
             {
-                conflictingVector = local;
+                ConflictManager.AssertChangeVectorNotNull(local);
+            }
+            return status;
+        }
+
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string remote, string local)
+        {
+            var originalStatus = ChangeVectorUtils.GetConflictStatus(remote, local);
+            if (originalStatus == ConflictStatus.Conflict && 
+                context.DocumentDatabase.DocumentsStorage.HasUnusedDatabaseIds())
+            {
+                // We need to distinguish between few cases here
+                // let's assume that node C was removed
+
+                // our local change vector is     A:10, B:10, C:10
+                // case 1: incoming change vector A:10, B:10, C:11  -> update           (original: update, after: already merged)
+                // case 2: incoming change vector A:11, B:10, C:10  -> update           (original: update, after: update)
+                // case 3: incoming change vector A:11, B:10        -> update           (original: conflict, after: update)
+                // case 4: incoming change vector A:10, B:10        -> already merged   (original: already merged, after: already merged)
+
+                // our local change vector is     A:11, B:10
+                // case 1: incoming change vector A:10, B:10, C:10 -> already merged        (original: conflict, after: already merged)        
+                // case 2: incoming change vector A:10, B:11, C:10 -> conflict              (original: conflict, after: conflict)
+                // case 3: incoming change vector A:11, B:10, C:10 -> update                (original: update, after: already merged)
+                // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
+
+                context.DocumentDatabase.DocumentsStorage.TryRemoveUnusedIds(ref remote);
+                context.SkipChangeVectorValidation = context.DocumentDatabase.DocumentsStorage.TryRemoveUnusedIds(ref local);
+
+                return ChangeVectorUtils.GetConflictStatus(remote, local);
             }
 
-            return status;
+            return originalStatus;
         }
 
         public long GetNumberOfDocumentsConflicts(DocumentsOperationContext context)

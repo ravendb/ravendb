@@ -1101,8 +1101,7 @@ namespace Raven.Server.Documents.Replication
                                 }
 
                                 var hasRemoteClusterTx = doc.Flags.Contain(DocumentFlags.FromClusterTransaction);
-                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, out var conflictingVector,
-                                    out var hasLocalClusterTx);
+                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, out var hasLocalClusterTx);
 
                                 var flags = doc.Flags;
                                 var resolvedDocument = document;
@@ -1172,8 +1171,7 @@ namespace Raven.Server.Documents.Replication
                                             // that we need to distribute to our siblings
                                             IsIncomingReplication = false;
                                             _replicationInfo.ConflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
-                                                document,
-                                                rcvdChangeVector, conflictingVector, doc.Flags);
+                                                document, rcvdChangeVector, doc.Flags);
                                         }
 
                                         break;

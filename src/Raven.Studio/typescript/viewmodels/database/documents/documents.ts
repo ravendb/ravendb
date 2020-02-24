@@ -369,7 +369,7 @@ class documents extends viewModelBase {
         app.showBootstrapDialog(new showDataDialog("Document IDs", text, "javascript"));
     }
 
-    exportCsv() {
+    exportCsvVisibleColumns() {
         const columns = this.columnsSelector.getSimpleColumnsFields();
         this.exportCsvInternal(columns);
     }

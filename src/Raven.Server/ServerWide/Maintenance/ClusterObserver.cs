@@ -254,7 +254,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 await CleanUpUnusedAutoIndexes(state);
 
                             if (cleanupTombstones)
-                                _hasMoreTombstones = await CleanUpCompareExchangeTombstones(database, context);
+                                _hasMoreTombstones |= await CleanUpCompareExchangeTombstones(database, context);
                         }
                     }
 

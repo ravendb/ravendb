@@ -1320,20 +1320,26 @@ class query extends viewModelBase {
         this.graphQueryResults.onResize();
     }
     
-    exportCsv() {
+
+    exportCsvVisibleColumns() {
+        const columns = this.columnsSelector.getSimpleColumnsFields();
+        this.exportCsvInternal(columns);
+    }
+
+    exportCsvFull() {
+        this.exportCsvInternal();
+    }
+
+    private exportCsvInternal(columns?: string[]) {
         eventsCollector.default.reportEvent("query", "export-csv");
 
-        let args: { format: string, debug?: string };
+        let args: { format: string, debug?: string, field?: string[] };
         if (this.criteria().indexEntries()) {
-            args = {
-                format: "csv",
-                debug: "entries"
-            };
+            args = { format: "csv", debug: "entries", field: columns };
         } else {
-            args = {
-                format: "csv"
-            };
+            args = { format: "csv", field: columns };
         }
+        
         let payload: { Query: string };
         if (this.criteria().showFields()) {
             payload = {
