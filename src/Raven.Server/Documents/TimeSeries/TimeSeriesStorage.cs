@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -106,8 +107,6 @@ namespace Raven.Server.Documents.TimeSeries
                 Name = CollectionDeletedRangesEtagsSlice
             });
         }
-
-
 
         public TimeSeriesStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
@@ -1317,6 +1316,12 @@ namespace Raven.Server.Documents.TimeSeries
                         var current = appendEnumerator.Current;
                         Debug.Assert(current != null);
 
+                        if (changeVectorFromReplication == null)
+                        {
+                            // not from replication 
+                            AssertNoNanValue(current);
+                        }
+
                         current.Timestamp = EnsureMillisecondsPrecision(current.Timestamp);
 
                         using (var slicer = new TimeSeriesSlicer(context, documentId, name, current.Timestamp))
@@ -1431,7 +1436,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (newSegment.Append(context.Allocator, (int)deltaInMs, current.Values.Span, slicer.TagAsSpan(current.Tag), current.Status))
                     {
                         newValueFetched = true;
-                        current = GetNext(appendEnumerator);
+                        current = GetNext(appendEnumerator, segmentHolder.FromReplication);
                         if (current == null)
                         {
                             // we appended everything
@@ -1523,7 +1528,7 @@ namespace Raven.Server.Documents.TimeSeries
                                     timeSeriesSegment.AddValue(currentTime, updatedValues, currentTag.AsSpan(), ref splitSegment, localStatus);
                                     if (currentTime == current?.Timestamp)
                                     {
-                                        current = GetNext(reader);
+                                        current = GetNext(reader, timeSeriesSegment.FromReplication);
                                     }
                                     break;
                                 }
@@ -1547,10 +1552,10 @@ namespace Raven.Server.Documents.TimeSeries
 
                                 if (currentTime == current.Timestamp)
                                 {
-                                    current = GetNext(reader);
+                                    current = GetNext(reader, timeSeriesSegment.FromReplication);
                                     break; // the local value was overwritten
                                 }
-                                current = GetNext(reader);
+                                current = GetNext(reader, timeSeriesSegment.FromReplication);
                             }
                         }
                     }
@@ -1594,12 +1599,17 @@ namespace Raven.Server.Documents.TimeSeries
             return false;
         }
 
-        private Reader.SingleResult GetNext(IEnumerator<Reader.SingleResult> reader)
+        private static Reader.SingleResult GetNext(IEnumerator<Reader.SingleResult> reader, bool fromReplication)
         {
             Reader.SingleResult next = null;
             if (reader.MoveNext())
             {
                 next = reader.Current;
+
+                if (fromReplication == false)
+                {
+                    AssertNoNanValue(next);
+                }
             }
 
             return next;
@@ -1842,6 +1852,16 @@ namespace Raven.Server.Documents.TimeSeries
             var fstIndex = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
+        }
+
+        private static void AssertNoNanValue(Reader.SingleResult toAppend)
+        {
+            foreach (var val in toAppend.Values.Span)
+            {
+                if (double.IsNaN(val))
+                    throw new InvalidOperationException("Failed to append TimeSeries entry. TimeSeries entries cannot have 'double.NaN' as one of their values. " +
+                                                        $"Failed on Timestamp : '{toAppend.Timestamp.GetDefaultRavenFormat()}', Values : [{string.Join(',', toAppend.Values.ToArray())}]. ");
+            }
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.ExternalScope AddEtagToKeySlice(DocumentsOperationContext context, ByteString buffer,
