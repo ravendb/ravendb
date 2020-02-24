@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -121,6 +122,44 @@ namespace Tests.Infrastructure
             }
 
             return null;
+        }
+
+        
+        public async Task RemoveDatabaseNode(List<RavenServer> cluster, string database, string toDeleteTag)
+        {
+            var deleted = cluster.Single(n => n.ServerStore.NodeTag == toDeleteTag);
+            var nonDeleted = cluster.Where(n => n != deleted).ToArray();
+
+            using var store = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { nonDeleted[0].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            var deleteResult = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(database, hardDelete: true,
+                fromNode: toDeleteTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
+            await Task.WhenAll(nonDeleted.Select(n =>
+                n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + 1)));
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
+            Assert.Equal(1, record.UnusedDatabaseIds.Count);
+        }
+
+        public async Task EnsureNoReplicationLoop(RavenServer server1, RavenServer server2, string database)
+        {
+            var storage1 = await server1.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            var storage2 = await server2.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+
+            var etag1 = storage1.DocumentsStorage.GenerateNextEtag();
+            
+            await Task.Delay(3000);
+            
+            var etag2 = storage2.DocumentsStorage.GenerateNextEtag();
+
+            Assert.Equal(etag1 + 1, etag2);
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
