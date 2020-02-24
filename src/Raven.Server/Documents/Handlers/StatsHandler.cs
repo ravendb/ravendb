@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var size = Database.GetSizeOnDisk();
 
-                stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
+                stats.LastDocEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
                 stats.CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context);
