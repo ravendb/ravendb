@@ -179,8 +179,21 @@ namespace FastTests
                     var runInMemory = options.RunInMemory;
 
                     var pathToUse = options.Path;
-                    if (pathToUse == null)
+                    if (runInMemory == false && options.ReplicationFactor > 1)
+                    {
+                        if (pathToUse == null)
+                        {
+                            // the folders will be assigned automatically
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"You cannot set {nameof(Options)}.{nameof(Options.Path)} when, {nameof(Options)}.{nameof(Options.ReplicationFactor)} > 1 and {nameof(Options)}.{nameof(Options.RunInMemory)} == false.");
+                        }
+                    }
+                    else if (pathToUse == null)
+                    {
                         pathToUse = NewDataPath(name);
+                    }
                     else
                     {
                         hardDelete = false;
@@ -194,11 +207,15 @@ namespace FastTests
                             [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
                             [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
-                            [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = pathToUse,
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
                         }
                     };
+
+                    if (pathToUse != null)
+                    {
+                        doc.Settings.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), pathToUse);
+                    }
 
                     if (options.Encrypted)
                     {
