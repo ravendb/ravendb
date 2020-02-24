@@ -296,7 +296,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private static void FillIndexInfo(Index index, QueryOperationContext context, DateTime now, DatabaseStatusReport report)
         {
-            var stats = index.GetIndexStats(context);
+            var stats = index.GetIndexingState(context);
             var lastQueried = GetLastQueryInfo(index, now);
 
             //We might have old version of this index with the same name

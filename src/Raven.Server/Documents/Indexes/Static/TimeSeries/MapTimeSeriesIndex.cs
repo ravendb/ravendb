@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 length += sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             if (_handleCompareExchangeReferences != null)
-                length += sizeof(long) * 4 * Collections.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+                length += sizeof(long) * 4 * _compiled.CollectionsWithCompareExchangeReferences.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             var indexEtagBytes = stackalloc byte[length];
 
@@ -168,9 +168,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, queryContext, indexContext);
         }
 
-        protected override (bool IsStale, long LastProcessedEtag, long? LastProcessedCompareExchangeReferenceEtag, long? LastProcessedCompareExchangeReferenceTombstoneEtag) GetIndexStatsInternal(QueryOperationContext queryContext, TransactionOperationContext indexContext)
+        protected override IndexingState GetIndexingStateInternal(QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
-            var result = base.GetIndexStatsInternal(queryContext, indexContext);
+            var result = base.GetIndexingStateInternal(queryContext, indexContext);
             if (_handleCompareExchangeReferences == null)
                 return result;
 

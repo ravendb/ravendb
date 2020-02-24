@@ -885,34 +885,40 @@ namespace Raven.Server.Documents.Indexes
             RunningStorageOperation = -2,
         }
 
-        public (bool IsStale, long LastProcessedEtag, long? LastProcessedCompareExchangeReferenceEtag, long? LastProcessedCompareExchangeReferenceTombstoneEtag) GetIndexStats(QueryOperationContext queryContext)
+        public IndexingState GetIndexingState(QueryOperationContext queryContext)
         {
             queryContext.AssertOpenedTransactions();
 
             if (Type == IndexType.Faulty)
-                return (true, (long)IndexProgressStatus.Faulty, null, null);
+                return new IndexingState(isStale: true, lastProcessedEtag: (long)IndexProgressStatus.Faulty, lastProcessedCompareExchangeReferenceEtag: null, lastProcessedCompareExchangeReferenceTombstoneEtag: null);
 
             using (CurrentlyInUse(out var valid))
             {
-                var hasCompareExchangeReferences = Definition.HasCompareExchange;
+                long? lastProcessedCompareExchangeReferenceEtag = null;
+                long? lastProcessedCompareExchangeReferenceTombstoneEtag = null;
+                if (Definition.HasCompareExchange)
+                {
+                    lastProcessedCompareExchangeReferenceEtag = 0;
+                    lastProcessedCompareExchangeReferenceTombstoneEtag = 0;
+                }
 
                 if (valid == false)
-                    return (true, (long)IndexProgressStatus.RunningStorageOperation, hasCompareExchangeReferences ? (long?)0L : null, hasCompareExchangeReferences ? (long?)0L : null);
+                    return new IndexingState(isStale: true, lastProcessedEtag: (long)IndexProgressStatus.RunningStorageOperation, lastProcessedCompareExchangeReferenceEtag: lastProcessedCompareExchangeReferenceEtag, lastProcessedCompareExchangeReferenceTombstoneEtag: lastProcessedCompareExchangeReferenceTombstoneEtag);
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 using (indexContext.OpenReadTransaction())
-                    return GetIndexStatsInternal(queryContext, indexContext);
+                    return GetIndexingStateInternal(queryContext, indexContext);
             }
         }
 
-        protected virtual (bool IsStale, long LastProcessedEtag, long? LastProcessedCompareExchangeReferenceEtag, long? LastProcessedCompareExchangeReferenceTombstoneEtag) GetIndexStatsInternal(QueryOperationContext queryContext, TransactionOperationContext indexContext)
+        protected virtual IndexingState GetIndexingStateInternal(QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
             long lastProcessedEtag = 0;
             foreach (var collection in Collections)
                 lastProcessedEtag = Math.Max(lastProcessedEtag, _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
 
             var isStale = IsStale(queryContext, indexContext);
-            return (isStale, lastProcessedEtag, null, null);
+            return new IndexingState(isStale, lastProcessedEtag, lastProcessedCompareExchangeReferenceEtag: null, lastProcessedCompareExchangeReferenceTombstoneEtag: null);
         }
 
         protected virtual IndexItem GetItemByEtag(QueryOperationContext queryContext, long etag)
