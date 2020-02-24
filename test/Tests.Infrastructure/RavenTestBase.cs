@@ -191,8 +191,8 @@ namespace FastTests
                     {
                         Settings =
                         {
-                            // [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
-                            // [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
+                            [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
+                            [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
                             [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = pathToUse,
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
