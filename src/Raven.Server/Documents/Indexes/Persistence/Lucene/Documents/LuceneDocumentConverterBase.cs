@@ -74,6 +74,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected readonly Dictionary<string, IndexField> _fields;
         private readonly bool _indexImplicitNull;
         private readonly bool _indexEmptyEntries;
+        private readonly int _numberOfBaseFields;
         private readonly string _keyFieldName;
         protected readonly bool _storeValue;
 
@@ -91,6 +92,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             ICollection<IndexField> fields,
             bool indexImplicitNull,
             bool indexEmptyEntries,
+            int numberOfBaseFields,
             string keyFieldName = null,
             bool storeValue = false,
             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
@@ -102,6 +104,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
+            _numberOfBaseFields = numberOfBaseFields;
             _keyFieldName = keyFieldName ?? (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
             _storeValue = storeValue;
             _storeValueField = new Field(storeValueFieldName, new byte[0], 0, 0, Field.Store.YES);
@@ -118,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, sourceDocumentId, document, indexContext);
             if (_fields.Count > 0)
             {
-                shouldSkip = _indexEmptyEntries == false && numberOfFields <= 1; // there is always a key field, but we want to filter-out empty documents
+                shouldSkip = _indexEmptyEntries == false && numberOfFields <= _numberOfBaseFields; // there is always a key field, but we want to filter-out empty documents
             }
             else
             {
