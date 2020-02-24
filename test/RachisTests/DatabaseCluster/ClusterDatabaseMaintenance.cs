@@ -1,20 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Replication;
+using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
@@ -28,7 +31,7 @@ using Xunit.Abstractions;
 
 namespace RachisTests.DatabaseCluster
 {
-    public class ClusterDatabaseMaintenance : ClusterTestBase
+    public class ClusterDatabaseMaintenance : ReplicationTestBase
     {
         public ClusterDatabaseMaintenance(ITestOutputHelper output) : base(output)
         {
@@ -1234,6 +1237,335 @@ namespace RachisTests.DatabaseCluster
                 var rev = await session.Advanced.Revisions.GetMetadataForAsync("foo/bar");
                 Assert.Equal(0, rev.Count);
             }
+        }
+
+        [Fact]
+        public async Task HandleConflictShouldTakeUnusedDatabasesIntoAccount2()
+        {
+            var database = GetDatabaseName();
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            var databaseResult = await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+
+            using var store1 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[0].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store2 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[1].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store3 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[2].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+            
+            
+            var allStores = new [] {(DocumentStore)store1, (DocumentStore)store2, (DocumentStore)store3};
+            var toDelete = cluster.Nodes.First(n => n != cluster.Leader);
+            var toBeDeletedStore = allStores.Single(s => s.Urls[0] == toDelete.WebUrl);
+            var nonDeletedStores = allStores.Where(s => s.Urls[0] != toDelete.WebUrl).ToArray();
+            var nonDeletedNodes = cluster.Nodes.Where(n => n.ServerStore.NodeTag != toDelete.ServerStore.NodeTag).ToArray();
+            var deletedNode = cluster.Nodes.Single(n => n.ServerStore.NodeTag == toDelete.ServerStore.NodeTag);
+
+            var deletedStorage = await deletedNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            var mre = new ManualResetEventSlim(false);
+            deletedStorage.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+
+            var nonDeletedStorage1 = await nonDeletedNodes[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            var mre1 = new ManualResetEventSlim(false);
+            nonDeletedStorage1.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre1;
+
+            var nonDeletedStorage2 = await nonDeletedNodes[1].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            var mre2 = new ManualResetEventSlim(false);
+            nonDeletedStorage2.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre2;
+
+            using (var session = nonDeletedStores[0].OpenAsyncSession())
+            {
+                await session.StoreAsync(new User {Name = "Karmel"}, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User{Name = "Karmel2"}, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            var t1 = Task.Run(()=>WaitForDocument<User>(nonDeletedStores[0], "foo/bar", u => u.Name == "Karmel2"));
+            var t2 = Task.Run(()=>WaitForDocument<User>(nonDeletedStores[1], "foo/bar", u => u.Name == "Karmel2"));
+
+            var t = Task.WhenAll(t1, t2);
+            while (t.IsCompleted == false)
+            {
+                mre.Set();
+                await Task.Delay(250);
+            }
+
+            Assert.True(await t1);
+            Assert.True(await t2);
+            
+            
+            using (var session1 = nonDeletedStores[0].OpenAsyncSession())
+            {
+                var rev1 = await session1.Advanced.Revisions.GetMetadataForAsync("foo/bar");
+                Assert.Equal(3, rev1.Count);
+            }
+
+            var deleteResult = await nonDeletedStores[0].Maintenance.Server.SendAsync(new DeleteDatabasesOperation(database, hardDelete: true, fromNode: toDelete.ServerStore.NodeTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
+
+            await Task.WhenAll(nonDeletedNodes.Select(n =>
+                n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + 1)));
+
+            var record = await nonDeletedStores[0].Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
+            Assert.Equal(1, record.UnusedDatabaseIds.Count);
+
+            nonDeletedStorage2.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+            nonDeletedStorage1.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+
+            mre1.Set();
+            mre2.Set();
+
+            await Task.Delay(1000);
+            EnsureReplicating(nonDeletedStores[0], nonDeletedStores[1]);
+            EnsureReplicating(nonDeletedStores[1], nonDeletedStores[0]);
+
+
+            using (var session1 = nonDeletedStores[0].OpenAsyncSession())
+            using (var session2 = nonDeletedStores[1].OpenAsyncSession())
+            {
+                var rev1 = await session1.Advanced.Revisions.GetMetadataForAsync("foo/bar");
+                var rev2 = await session2.Advanced.Revisions.GetMetadataForAsync("foo/bar");
+                Assert.Equal(rev2.Count, rev1.Count);
+                Assert.Equal(3, rev1.Count);
+            }
+        }
+
+        [Fact]
+        public async Task HandleConflictShouldTakeUnusedDatabasesIntoAccount3()
+        {
+            var database = GetDatabaseName();
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            var databaseResult = await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+
+            using var store1 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[0].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store2 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[1].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store3 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[2].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+            
+            
+            var allStores = new [] {(DocumentStore)store1, (DocumentStore)store2, (DocumentStore)store3};
+            var toDelete = cluster.Nodes.First(n => n != cluster.Leader);
+            var toBeDeletedStore = allStores.Single(s => s.Urls[0] == toDelete.WebUrl);
+            var nonDeletedStores = allStores.Where(s => s.Urls[0] != toDelete.WebUrl).ToArray();
+            var nonDeletedNodes = cluster.Nodes.Where(n => n.ServerStore.NodeTag != toDelete.ServerStore.NodeTag).ToArray();
+            var deletedNode = cluster.Nodes.Single(n => n.ServerStore.NodeTag == toDelete.ServerStore.NodeTag);
+
+            var deletedStorage = await deletedNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            var mre = new ManualResetEventSlim(false);
+            deletedStorage.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+
+            var nonDeletedStorage1 = await nonDeletedNodes[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            var mre1 = new ManualResetEventSlim(false);
+            nonDeletedStorage1.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre1;
+
+            var nonDeletedStorage2 = await nonDeletedNodes[1].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            var mre2 = new ManualResetEventSlim(false);
+            nonDeletedStorage2.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre2;
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User{Name = "Karmel"}, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenSession())
+            {
+                var t = WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel", TimeSpan.FromSeconds(15));
+
+                while (t.IsCompleted == false)
+                {
+                    mre.Set();
+                    await Task.Delay(250);
+                }
+
+                await t;
+            }
+
+            var deleteResult = await nonDeletedStores[0].Maintenance.Server.SendAsync(new DeleteDatabasesOperation(database, hardDelete: true, fromNode: toDelete.ServerStore.NodeTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
+
+            await Task.WhenAll(nonDeletedNodes.Select(n =>
+                n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + 1)));
+
+            var record = await nonDeletedStores[0].Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
+            Assert.Equal(1, record.UnusedDatabaseIds.Count);
+
+            nonDeletedStorage2.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+            nonDeletedStorage1.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+
+            mre1.Set();
+            mre2.Set();
+
+            await Task.Delay(1000);
+            EnsureReplicating(nonDeletedStores[0], nonDeletedStores[1]);
+            EnsureReplicating(nonDeletedStores[1], nonDeletedStores[0]);
+
+            await EnsureNoReplicationLoop(nonDeletedNodes[0], database);
+            await EnsureNoReplicationLoop(nonDeletedNodes[1], database);
+        }
+
+        [Fact]
+        public async Task HandleConflictShouldTakeUnusedDatabasesIntoAccount4()
+        {
+            var database = GetDatabaseName();
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            var databaseResult = await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+
+            using var store1 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[0].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store2 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[1].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store3 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[2].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+            
+            
+            var allStores = new [] {(DocumentStore)store1, (DocumentStore)store2, (DocumentStore)store3};
+            var toDelete = cluster.Nodes.First(n => n != cluster.Leader);
+            var toBeDeletedStore = allStores.Single(s => s.Urls[0] == toDelete.WebUrl);
+            var nonDeletedStores = allStores.Where(s => s.Urls[0] != toDelete.WebUrl).ToArray();
+            var nonDeletedNodes = cluster.Nodes.Where(n => n.ServerStore.NodeTag != toDelete.ServerStore.NodeTag).ToArray();
+
+            await RevisionsHelper.SetupRevisions(toDelete.ServerStore, database, new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false
+                }
+            });
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User{Name = "Karmel"}, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                session.Delete("foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User{Name = "Karmel2"}, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenSession())
+            {
+                var t = await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel2", TimeSpan.FromSeconds(15));
+                Assert.True(t);
+            }
+
+            var rep1 = await BreakReplication(nonDeletedNodes[0].ServerStore, database);
+            var rep2 = await BreakReplication(nonDeletedNodes[1].ServerStore, database);
+
+            await RevisionsHelper.SetupRevisions(nonDeletedNodes[0].ServerStore, database, new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 0
+                }
+            });
+
+            using (var session = toBeDeletedStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User{Name = "Karmel3"}, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = toBeDeletedStore.OpenSession())
+            {
+                var t = await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel3", TimeSpan.FromSeconds(15));
+                Assert.True(t);
+            }
+
+            await RemoveDatabaseNode(cluster.Nodes, database, toDelete.ServerStore.NodeTag);
+
+            rep1.Mend();
+            rep2.Mend();
+
+            await Task.Delay(1000);
+            EnsureReplicating(nonDeletedStores[0], nonDeletedStores[1]);
+            EnsureReplicating(nonDeletedStores[1], nonDeletedStores[0]);
+
+            await EnsureNoReplicationLoop(nonDeletedNodes[0], database);
+            await EnsureNoReplicationLoop(nonDeletedNodes[1], database);
         }
 
         [Fact]

@@ -33,7 +33,6 @@ namespace Raven.Server.Documents.Replication
             long lastModifiedTicks,
             BlittableJsonReaderObject doc,
             string changeVector,
-            string conflictedChangeVector,
             DocumentFlags flags)
         {
             if (id.StartsWith(HiLoHandler.RavenHiloIdPrefix, StringComparison.OrdinalIgnoreCase))
@@ -74,10 +73,6 @@ namespace Raven.Server.Documents.Replication
 
                 if (_conflictResolver.ConflictSolver?.ResolveToLatest ?? true)
                 {
-                    if (conflictedChangeVector == null) //precaution
-                        throw new InvalidOperationException(
-                            "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
-
                     var conflicts = new List<DocumentConflict>
                     {
                         conflictedDoc.Clone()
@@ -97,6 +92,13 @@ namespace Raven.Server.Documents.Replication
 
                 _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
             }
+        }
+
+        public static void AssertChangeVectorNotNull(string conflictedChangeVector)
+        {
+            if (conflictedChangeVector == null) //precaution
+                throw new InvalidOperationException(
+                    "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
         }
 
         private bool TryResolveConflictByScript(

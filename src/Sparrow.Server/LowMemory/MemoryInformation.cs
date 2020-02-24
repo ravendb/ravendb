@@ -330,9 +330,6 @@ namespace Sparrow.LowMemory
                         result = GetMemoryInfoLinux(smapsReader, extended);
                 }
 
-                var totalScratchAllocated = GetTotalScratchAllocatedMemory();
-
-                result.AvailableMemory.Add(-totalScratchAllocated, SizeUnit.Bytes);
                 return result;
 
             }

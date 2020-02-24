@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -93,6 +94,71 @@ namespace Tests.Infrastructure
 
                 return timeoutTask.IsCompleted == false;
             }
+        }
+         
+        protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
+        {
+            var id = "marker/" + Guid.NewGuid();
+            using (var s = src.OpenSession())
+            {
+                s.Store(new { }, id);
+                s.SaveChanges();
+            } Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
+        }
+
+        protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
+            where T : class
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds <= timeout)
+            {
+                using (var session = store.OpenSession(store.Database))
+                {
+                    var doc = session.Load<T>(id);
+                    if (doc != null)
+                        return doc;
+                }
+                Thread.Sleep(100);
+            }
+
+            return null;
+        }
+
+        
+        public async Task RemoveDatabaseNode(List<RavenServer> cluster, string database, string toDeleteTag)
+        {
+            var deleted = cluster.Single(n => n.ServerStore.NodeTag == toDeleteTag);
+            var nonDeleted = cluster.Where(n => n != deleted).ToArray();
+
+            using var store = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { nonDeleted[0].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            var deleteResult = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(database, hardDelete: true,
+                fromNode: toDeleteTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
+            await Task.WhenAll(nonDeleted.Select(n =>
+                n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + 1)));
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
+            Assert.Equal(1, record.UnusedDatabaseIds.Count);
+        }
+
+        public async Task EnsureNoReplicationLoop(RavenServer server, string database)
+        {
+            var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+
+            var etag1 = storage.DocumentsStorage.GenerateNextEtag();
+            
+            await Task.Delay(3000);
+            
+            var etag2 = storage.DocumentsStorage.GenerateNextEtag();
+
+            Assert.Equal(etag1 + 1, etag2);
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
