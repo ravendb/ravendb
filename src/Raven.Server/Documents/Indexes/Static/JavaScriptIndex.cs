@@ -11,6 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
@@ -33,6 +34,8 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             _definitions = definition;
 
+            var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
+
             // we create the Jint instance directly instead of using SingleRun
             // because the index is single threaded and long lived
             var resolver = new JintPreventResolvingTasksReferenceResolver();
@@ -40,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 options.LimitRecursion(64)
                     .SetReferencesResolver(resolver)
-                    .MaxStatements(configuration.Indexing.MaxStepsForScript)
+                    .MaxStatements(indexConfiguration.MaxStepsForScript)
                     .Strict(configuration.Patching.StrictMode)
                     .AddObjectConverter(new JintGuidConverter())
                     .AddObjectConverter(new JintStringConverter())
@@ -56,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var definitions = GetDefinitions();
 
-                ProcessMaps(configuration, definitions, resolver, mapList, mapReferencedCollections, out var collectionFunctions);
+                ProcessMaps(definitions, resolver, mapList, mapReferencedCollections, out var collectionFunctions);
 
                 ProcessReduce(definition, definitions, resolver);
 
@@ -118,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private void ProcessMaps(RavenConfiguration configuration, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList,
+        private void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList,
             List<HashSet<CollectionName>> mapReferencedCollections, out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
         {
             var mapsArray = definitions.GetProperty(MapsProperty).Value;
@@ -153,7 +156,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     MapFunc = funcInstance,
                     IndexName = _definitions.Name,
-                    Configuration = configuration,
                     MapString = mapList[i]
                 };
                 if (map.HasOwnProperty(MoreArgsProperty))
@@ -321,7 +323,7 @@ function createSpatialField(lat, lng) {
 ";
 
         private readonly IndexDefinition _definitions;
-        private readonly Engine _engine;
+        internal readonly Engine _engine;
         private readonly JavaScriptUtils _javaScriptUtils;
 
         public JavaScriptReduceOperation ReduceOperation { get; private set; }
