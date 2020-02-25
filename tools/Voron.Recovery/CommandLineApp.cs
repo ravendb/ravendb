@@ -3,6 +3,11 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
+using Raven.Client.Documents;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server;
+using Raven.Server.Config;
 using Sparrow.Logging;
 
 namespace Voron.Recovery
@@ -67,16 +72,28 @@ namespace Voron.Recovery
                 var ignoreInvalidJournalErrorsArg = cmd.Option("--IgnoreInvalidJournalErrors", "Default is false.", CommandOptionType.SingleValue);
                 var ignoreDataIntegrityErrorsOfAlreadySyncedTransactionsArg = cmd.Option("--IgnoreInvalidDataErrorsOfAlreadySyncedTransactions", "Default is false.", CommandOptionType.SingleValue);
                 var ignoreInvalidPagesInARowArg = cmd.Option("--IgnoreInvalidPagesInARow", "Default is false.", CommandOptionType.SingleValue);
-
                 var loggingModeArg = cmd.Option("--LoggingMode", "Logging mode: Operations or Information.", CommandOptionType.SingleValue);
-
                 var masterKey = cmd.Option("--MasterKey", "Encryption key: base64 string of the encryption master key", CommandOptionType.SingleValue);
+                var recoveredServerPath = cmd.Option("--RecoveredServerPath", "Recovered database server destination", CommandOptionType.SingleValue);
+
+                if (recoveredServerPath.HasValue() == false)
+                    ExitWithError("Must have 'recoveredServerPath' options set to existing server", cmd);
+                var recoveredDatabaseName = "RecoveredDB-" + Guid.NewGuid();
+                using var server = new RavenServer(RavenConfiguration.CreateForServer(recoveredDatabaseName, recoveredServerPath.Value()));
+                using var store = new DocumentStore
+                {
+                    Urls = new [] {server.WebUrl},
+                    Database = recoveredDatabaseName
+                };
+                var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoveredDatabaseName}));
+                var recoveredDatabase = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(recoveredDatabaseName).Result;
 
                 cmd.OnExecute(() =>
                 {
                     VoronRecoveryConfiguration config = new VoronRecoveryConfiguration
                     {
                         DataFileDirectory = dataFileDirectoryArg.Value,
+                        RecoveredDatabase = recoveredDatabase
                     };
 
                     if (string.IsNullOrWhiteSpace(config.DataFileDirectory) ||

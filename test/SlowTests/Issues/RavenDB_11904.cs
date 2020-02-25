@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Voron.Recovery;
 using Xunit;
@@ -27,6 +29,7 @@ namespace SlowTests.Issues
 
             DatabaseStatistics databaseStatistics;
 
+            string recoverDbName = $"RecoverDB_{Guid.NewGuid().ToString()}";
             // create db with sample data
             using (var store = GetDocumentStore(new Options()
             {
@@ -34,19 +37,22 @@ namespace SlowTests.Issues
             }))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
-
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
+
+                var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
             }
 
             var journals = new DirectoryInfo(Path.Combine(dbPath, "Journals")).GetFiles();
-            
+
             // run recovery
+            var recoveredDatabase = await GetDatabase(recoverDbName);
             using (var recovery = new Recovery(new VoronRecoveryConfiguration()
             {
                 LoggingMode = Sparrow.Logging.LogMode.None,
                 DataFileDirectory = dbPath,
                 PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
                 OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
+                RecoveredDatabase = recoveredDatabase
             }))
             {
                 recovery.Execute(TextWriter.Null, CancellationToken.None);

@@ -12,6 +12,8 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -54,7 +56,7 @@ namespace SlowTests.Issues
             var recoveryExportPath = NewDataPath(prefix: Guid.NewGuid().ToString());
 
             DatabaseStatistics databaseStatistics;
-
+            string recoverDbName = $"RecoverDB_{Guid.NewGuid().ToString()}";
             using (var store = GetDocumentStore(new Options()
             {
                 AdminCertificate = certificates.ServerCertificate.Value,
@@ -65,10 +67,12 @@ namespace SlowTests.Issues
             }))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
-
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
+
+                var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
             }
 
+            var recoveredDatabase = await GetDatabase(recoverDbName);
             using (var recovery = new Recovery(new VoronRecoveryConfiguration()
             {
                 LoggingMode = Sparrow.Logging.LogMode.None,
@@ -76,7 +80,8 @@ namespace SlowTests.Issues
                 PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
                 OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
                 MasterKey = masterKey,
-                DisableCopyOnWriteMode = nullifyMasterKey
+                DisableCopyOnWriteMode = nullifyMasterKey,
+                RecoveredDatabase = recoveredDatabase
             }))
             {
                 recovery.Execute(TextWriter.Null, CancellationToken.None);

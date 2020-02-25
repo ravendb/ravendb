@@ -1,4 +1,5 @@
-﻿using Sparrow.Logging;
+﻿using Raven.Server.Documents;
+using Sparrow.Logging;
 
 namespace Voron.Recovery
 {
@@ -17,6 +18,8 @@ namespace Voron.Recovery
         public LogMode LoggingMode { get; set; } = LogMode.Operations;
 
         public byte[] MasterKey { get; set; }
-        public bool IgnoreInvalidPagesInARow { get; set; } 
+        public bool IgnoreInvalidPagesInARow { get; set; }
+
+        public DocumentDatabase RecoveredDatabase { get; set; }
     }
 }
