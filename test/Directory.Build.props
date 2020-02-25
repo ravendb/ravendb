@@ -15,6 +15,7 @@
 
     <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
+    <DefineConstants>$(DefineConstants);$(CustomConstants)</DefineConstants>
     
   </PropertyGroup>
 </Project>
