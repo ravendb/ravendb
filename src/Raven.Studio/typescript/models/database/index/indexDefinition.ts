@@ -44,9 +44,11 @@ class indexDefinition {
 
     hasReduce = ko.observable<boolean>(false);
     outputReduceToCollection = ko.observable<boolean>();
-    reduceOutputCollectionName = ko.observable<string>(); 
-    hasPatternForReduceOutputCollection = ko.observable<boolean>(); 
+    reduceOutputCollectionName = ko.observable<string>();
+    
+    createReferencesToResultsCollection = ko.observable<boolean>();
     patternForReferencesToReduceOutputCollection = ko.observable<string>();
+    collectionNameForReferenceDocuments = ko.observable<string>();
 
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
@@ -71,8 +73,9 @@ class indexDefinition {
         this.outputReduceToCollection(!!dto.OutputReduceToCollection);
         this.reduceOutputCollectionName(dto.OutputReduceToCollection);
         
-        this.hasPatternForReduceOutputCollection(!!dto.PatternForOutputReduceToCollectionReferences);
+        this.createReferencesToResultsCollection(!!dto.PatternForOutputReduceToCollectionReferences);
         this.patternForReferencesToReduceOutputCollection(dto.PatternForOutputReduceToCollectionReferences);
+        this.collectionNameForReferenceDocuments(dto.PatternReferencesCollectionName);
         
         this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
         
@@ -155,8 +158,17 @@ class indexDefinition {
 
         this.patternForReferencesToReduceOutputCollection.extend({
             required: {
-                onlyIf: () => this.hasReduce() && this.hasPatternForReduceOutputCollection()
+                onlyIf: () => this.hasReduce() && this.createReferencesToResultsCollection()
             }
+        });
+        
+        this.collectionNameForReferenceDocuments.extend({
+           validation: [
+               {
+                   validator: (value: string) => value !== this.reduceOutputCollectionName(),
+                   message: 'Name for Referencing Collection cannot be the same as the Reduce Output Collection.'
+               }
+           ] 
         });
 
         this.validationGroup = ko.validatedObservable({
@@ -164,6 +176,7 @@ class indexDefinition {
             reduce: this.reduce,
             reduceOutputCollectionName: this.reduceOutputCollectionName,
             patternForReferencesToReduceOutputCollection: this.patternForReferencesToReduceOutputCollection,
+            collectionNameForReferenceDocuments: this.collectionNameForReferenceDocuments,
             fields: this.fields
         });
     }
@@ -237,9 +250,16 @@ class indexDefinition {
                                            this.reduceOutputCollectionName() : null,
             PatternForOutputReduceToCollectionReferences: this.hasReduce() &&
                                                           this.reduce()    &&
-                                                          this.outputReduceToCollection() && 
-                                                          this.hasPatternForReduceOutputCollection() ? 
+                                                          this.outputReduceToCollection() &&
+                                                          this.createReferencesToResultsCollection() && 
+                                                          this.patternForReferencesToReduceOutputCollection() ? 
                                                                this.patternForReferencesToReduceOutputCollection() : null,
+            PatternReferencesCollectionName: this.hasReduce() &&
+                                             this.reduce()    &&
+                                             this.outputReduceToCollection() &&
+                                             this.createReferencesToResultsCollection() &&
+                                             this.collectionNameForReferenceDocuments() ?
+                                                this.collectionNameForReferenceDocuments() : null,
             AdditionalSources: this.additionalSourceToDto()
         }
     }
@@ -295,7 +315,8 @@ class indexDefinition {
             Type: "Map",
             OutputReduceToCollection: null,
             AdditionalSources: null,
-            PatternForOutputReduceToCollectionReferences: null
+            PatternForOutputReduceToCollectionReferences: null,
+            PatternReferencesCollectionName: null
         });
     }
 }

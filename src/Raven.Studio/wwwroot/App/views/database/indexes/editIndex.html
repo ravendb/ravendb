@@ -90,31 +90,55 @@
                         <i class="icon-plus"></i><span>Add Reduction</span>
                     </button>
                 </div>
-                <div class="row" data-bind="visible: hasReduce()">
-                    <div class="col-md-4 no-padding-right margin-left margin-left-sm">
-                        <div class="toggle">
-                            <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection">
-                            <Label for="toggleOutputToCollection">Output the Reduce Results to a Collection <small><i id="reduce-output-info" class="icon-info text-info"></i></small></Label>
+                <div class="panel padding">
+                    <div class="row" data-bind="visible: hasReduce()">
+                        <div class="col-lg-4">
+                            <div class="toggle margin-left">
+                                <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection">
+                                <label for="toggleOutputToCollection" class="control-label"><strong>Output Reduce Results to Collection </strong>
+                                    <small><i id="reduce-output-info" class="icon-info text-info"></i></small>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-lg-7 margin-left">
+                            <div data-bind="visible: outputReduceToCollection, validationElement: reduceOutputCollectionName">
+                                <input id="test" type="text" class="form-control" placeholder="Enter Name for the Reduce Results Collection"
+                                       data-bind="textInput: reduceOutputCollectionName" autocomplete="off">
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6 no-padding-left">
-                        <div data-bind="visible: outputReduceToCollection, validationElement: reduceOutputCollectionName">
-                            <input id="test" type="text" class="form-control" placeholder="Enter the Collection Name"
-                                   data-bind="textInput: reduceOutputCollectionName">
+                    <div class="row" data-bind="collapse: hasReduce() && outputReduceToCollection()">
+                        <div class="col-lg-5">
+                            <div class="toggle margin-top margin-top-sm margin-left margin-left-lg">
+                                <input id="togglePatternForReferences" type="checkbox" data-bind="checked: createReferencesToResultsCollection">
+                                <label class="control-label"><strong>Create References to Results Collection </strong>
+                                    <small><i id="reference-docs-info" class="icon-info text-info"></i></small>
+                                </label>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="row margin-top" data-bind="visible: hasReduce() && outputReduceToCollection()">
-                    <div class="col-md-4 no-padding-right margin-left margin-left-lg">
-                        <div class="toggle">
-                            <input id="togglePatternForReferences" type="checkbox" data-bind="checked: hasPatternForReduceOutputCollection">
-                            <label for="togglePatternForReferences">Create References to the Results Collection <small><i id="reference-docs-info" class="icon-info text-info"></i></small></label>
+                    <div data-bind="collapse: createReferencesToResultsCollection() && outputReduceToCollection">
+                        <div class="row" data-bind="validationElement: patternForReferencesToReduceOutputCollection">
+                            <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
+                                <label for="referencePattern" class="control-label margin-top margin-top-sm">Reference Documents ID Pattern <i class="required"></i> 
+                                    <small><i id="reference-docs-pattern-info" class="icon-info text-info"></i></small>
+                                </label>
+                            </div>
+                            <div class="col-lg-7 margin-left">
+                                <input type="text" class="form-control" placeholder="Enter Pattern for the Reference Documents ID" id="referencePattern"
+                                       data-bind="textInput: patternForReferencesToReduceOutputCollection" autocomplete="off">
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-6 no-padding-left margin-left margin-left-sm">
-                        <div data-bind="visible: hasPatternForReduceOutputCollection, validationElement: patternForReferencesToReduceOutputCollection">
-                            <input type="text" class="form-control" placeholder="Enter Pattern for the Reference Documents ID"
-                                   data-bind="textInput: patternForReferencesToReduceOutputCollection">
+                        <div class="row" data-bind="validationElement: collectionNameForReferenceDocuments">
+                            <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
+                                <label for="referenceCollectionName" class="control-label margin-top margin-top-sm">Reference Documents Collection Name 
+                                    <small><i id="reference-docs-collection-name-info" class="icon-info text-info"></i></small>
+                                </label>
+                            </div>
+                            <div class="col-lg-7 margin-left">
+                            <input type="text" class="form-control" placeholder="Enter Name for the Reference Documents Collection (Optional)" id="referenceCollectionName"
+                                   data-bind="textInput: collectionNameForReferenceDocuments" autocomplete="off">
+                            </div>
                         </div>
                     </div>
                 </div>
