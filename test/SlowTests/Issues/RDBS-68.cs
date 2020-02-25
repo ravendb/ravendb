@@ -37,13 +37,13 @@ namespace SlowTests.Issues
 
                 var deleteList = new List<string>();
 
-                var totalInBatch = ExpiredDocumentsCleaner.BatchSize;
-                var batches = totalInBatch / 128;
+                var batchSize = 10;
+                var batches = 5;
                 for (var i = 0; i < batches; i++)
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        for (var j = 0; j < 128; j++)
+                        for (var j = 0; j < batchSize; j++)
                         {
                             var item = new Item();
                             await session.StoreAsync(item);
@@ -79,10 +79,10 @@ namespace SlowTests.Issues
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                ValidateTotalExpirationCount(ExpiredDocumentsCleaner.BatchSize);
+                ValidateTotalExpirationCount(batchSize);
 
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
-                await expiredDocumentsCleaner.CleanupExpiredDocs();
+                await expiredDocumentsCleaner.CleanupExpiredDocs(batchSize);
 
                 ValidateTotalExpirationCount(0);
 
@@ -98,7 +98,7 @@ namespace SlowTests.Issues
                     using (context.OpenReadTransaction())
                     {
                         var currentTime = database.Time.GetUtcNow();
-                        var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, applyToExistingDocuments: false, ExpiredDocumentsCleaner.BatchSize, out _, CancellationToken.None);
+                        var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, applyToExistingDocuments: false, batchSize, out _, CancellationToken.None);
                         var totalCount = 0;
                         if (expired != null)
                         {
