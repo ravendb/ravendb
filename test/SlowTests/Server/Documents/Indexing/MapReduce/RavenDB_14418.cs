@@ -6,6 +6,7 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -100,6 +101,85 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
+        [Fact]
+        public void ShouldNotAllowToProvideSameCollectionNameForOutputReduceAndReferences()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var ex = Assert.Throws<IndexInvalidException>(() => new Orders_ProfitByProductAndOrderedAt("Profits").Execute(store));
+
+                Assert.Contains("Collection defined in PatternReferencesCollectionName must not be the same as in OutputReduceToCollection. Collection name: 'Profits'", ex.Message);
+            }
+        }
+
+        [Fact]
+        public void CanUpdateReferencesCollectionName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Orders_ProfitByProductAndOrderedAt("MyProfitsReferences").Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    PutOrders(session);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                new Orders_ProfitByProductAndOrderedAt("MyNewProfitsReferences").Execute(store);
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<dynamic>(collectionName: "MyProfitsReferences").Count();
+
+                    Assert.Equal(0, count);
+
+                    count = session.Query<dynamic>(collectionName: "MyNewProfitsReferences").Count();
+
+                    Assert.Equal(3, count);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanChangeOutputCollectionNameIfPatternIsDefined()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Orders_ProfitByProductAndOrderedAt(outputReduceToCollection: "Profits").Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    PutOrders(session);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                new Orders_ProfitByProductAndOrderedAt(outputReduceToCollection: "Profits2").Execute(store);
+
+                WaitForIndexing(store);
+
+                WaitForUserToContinueTheTest(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<dynamic>(collectionName: "Profits").Count();
+
+                    Assert.Equal(0, count);
+
+                    count = session.Query<dynamic>(collectionName: "Profits2").Count();
+
+                    Assert.Equal(4, count);
+                }
+            }
+        }
+
         private class Orders_ProfitByProductAndOrderedAt : AbstractIndexCreationTask<Order, Orders_ProfitByProductAndOrderedAt.Result>
         {
             public class Result
@@ -109,7 +189,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 public decimal ProfitValue { get; set; }
             }
 
-            public Orders_ProfitByProductAndOrderedAt(string referencesCollectionName = null)
+            public Orders_ProfitByProductAndOrderedAt(string referencesCollectionName = null, string outputReduceToCollection = null)
             {
                 Map = orders => from order in orders
                     from line in order.Lines
@@ -120,7 +200,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     into g
                     select new { g.Key.Product, g.Key.OrderedAt, ProfitValue = g.Sum(r => r.ProfitValue) };
 
-                OutputReduceToCollection = "Profits";
+                OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
                 PatternForOutputReduceToCollectionReferences = x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
 
