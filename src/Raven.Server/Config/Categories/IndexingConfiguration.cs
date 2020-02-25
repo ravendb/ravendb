@@ -120,7 +120,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Max number of steps in the script execution of a JavaScript index")]
         [DefaultValue(10_000)]
-        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.MaxStepsForScript", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxStepsForScript { get; set; }
 

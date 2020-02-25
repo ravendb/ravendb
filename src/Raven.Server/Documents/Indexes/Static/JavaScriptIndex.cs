@@ -319,7 +319,7 @@ function createSpatialField(lat, lng) {
 ";
 
         private readonly IndexDefinition _definitions;
-        private readonly Engine _engine;
+        internal readonly Engine _engine;
         private readonly JavaScriptUtils _javaScriptUtils;
 
         public JavaScriptReduceOperation ReduceOperation { get; private set; }
