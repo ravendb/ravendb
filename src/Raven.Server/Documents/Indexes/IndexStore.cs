@@ -16,6 +16,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Configuration;
@@ -62,8 +63,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal Action<(string IndexName, bool DidWork)> IndexBatchCompleted;
 
-        private const int PathLengthLimit = 259; // Roslyn's MetadataWriter.PathLengthLimit = 259 
-
+        private const int PathLengthLimit = 259; // Roslyn's MetadataWriter.PathLengthLimit = 259
 
         internal static int MaxIndexNameLength = PathLengthLimit -
                                                  IndexCompiler.IndexNamePrefix.Length -
@@ -866,7 +866,6 @@ namespace Raven.Server.Documents.Indexes
                 throw new ArgumentException(
                     $"Index name '{name}' is not permitted. Index name cannot exceed {MaxIndexNameLength} characters.", nameof(name));
             }
-
         }
 
         public Index ResetIndex(string name)
@@ -903,7 +902,7 @@ namespace Raven.Server.Documents.Indexes
             var originalIndex = GetIndex(originalIndexName);
             if (originalIndex == null)
             {
-                // we cannot find the original index 
+                // we cannot find the original index
                 // but we need to remove the side by side one by the original name
                 var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(originalIndexName, _documentDatabase.Name, raftRequestId));
 
@@ -1179,7 +1178,6 @@ namespace Raven.Server.Documents.Indexes
                         }
                     }
 
-
                     StartIndex(index);
 
                     return index;
@@ -1338,7 +1336,24 @@ namespace Raven.Server.Documents.Indexes
                     UpdateStaticIndexLockModeAndPriority(staticIndexDefinition, index, differences);
                 }
 
-                index.Start();
+                var startIndex = true;
+                if (index.State == IndexState.Error)
+                {
+                    switch (_documentDatabase.Configuration.Indexing.ErrorIndexStartupBehavior)
+                    {
+                        case IndexingConfiguration.IndexStartupBehavior.Start:
+                            index.SetState(IndexState.Normal);
+                            break;
+                        case IndexingConfiguration.IndexStartupBehavior.ResetAndStart:
+                            index = ResetIndexInternal(index);
+                            startIndex = false; // reset already starts the index
+                            break;
+                    }
+                }
+
+                if (startIndex)
+                    index.Start();
+
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Started {index.Name} from {indexPath}");
 
@@ -1584,7 +1599,7 @@ namespace Raven.Server.Documents.Indexes
 
                         if (needToStop)
                         {
-                            // stop the indexing to allow renaming the index 
+                            // stop the indexing to allow renaming the index
                             // the write tx required to rename it might be hold by indexing thread
                             ExecuteIndexAction(() =>
                             {

@@ -190,11 +190,24 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.IndexEmptyEntries", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool IndexEmptyEntries { get; set; }
 
+        [Description("Indicates how error indexes should behave on database startup when they are loaded. By default they are not started.")]
+        [DefaultValue(IndexStartupBehavior.Default)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.ErrorIndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public IndexStartupBehavior ErrorIndexStartupBehavior { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
             if (updateTypeAttribute == null)
                 throw new InvalidOperationException($"No {nameof(IndexUpdateTypeAttribute)} available for '{property.Name}' property.");
+        }
+
+        public enum IndexStartupBehavior
+        {
+            Default,
+            Start,
+            ResetAndStart
         }
     }
 }
