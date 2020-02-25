@@ -36,7 +36,8 @@ class index {
     reduceErrors = ko.observable<number>();
     reduceSuccesses = ko.observable<number>();
     reduceOutputCollectionName = ko.observable<string>();
-    hasPatternForReduceOutputCollection = ko.observable<boolean>(); 
+    patternForReferencesToReduceOutputCollection = ko.observable<string>();
+    collectionNameForReferenceDocuments = ko.observable<string>();
     mapReduceIndexInfoTooltip: KnockoutComputed<string>;
     
     type = ko.observable<Raven.Client.Documents.Indexes.IndexType>();
@@ -96,7 +97,8 @@ class index {
         this.reduceErrors(dto.ReduceErrors);
         this.reduceSuccesses(dto.ReduceSuccesses);
         this.reduceOutputCollectionName(dto.ReduceOutputCollection);
-        this.hasPatternForReduceOutputCollection(!!dto.ReduceOutputReferencePattern);
+        this.patternForReferencesToReduceOutputCollection(dto.ReduceOutputReferencePattern);
+        this.collectionNameForReferenceDocuments(dto.PatternReferencesCollectionName);
         this.type(dto.Type);
         this.state(dto.State);
         this.globalIndexingStatus = globalIndexingStatus;
@@ -251,7 +253,10 @@ class index {
             if (this.reduceOutputCollectionName()) {
                 infoTextHtml = `Reduce Results are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}</strong>`;
             }
-            if (this.hasPatternForReduceOutputCollection()) {
+            
+            if (this.collectionNameForReferenceDocuments()) {
+                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${this.collectionNameForReferenceDocuments()}</strong>`;
+            } else if (this.patternForReferencesToReduceOutputCollection()) {
                 infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}/References</strong>`;
             }
 

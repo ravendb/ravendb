@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private readonly string _collectionOfReduceOutputs;
         private readonly long? _reduceOutputVersion;
         private readonly OutputReferencesPattern _patternForOutputReduceToCollectionReferences;
+        private readonly string? _referenceDocumentsCollectionName;
 
         static OutputReduceToCollectionActions()
         {
@@ -46,6 +47,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             return _patternForOutputReduceToCollectionReferences?.Pattern;
         }
         
+        public string GetReferenceDocumentsCollectionName()
+        {
+            return _referenceDocumentsCollectionName;
+        }
+        
         public OutputReduceToCollectionActions(MapReduceIndex index)
         {
             _index = index;
@@ -54,6 +60,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             _collectionOfReduceOutputs = index.Definition.OutputReduceToCollection;
             _reduceOutputVersion = index.Definition.ReduceOutputIndex;
+            _referenceDocumentsCollectionName = index.Definition.PatternReferencesCollectionName;
 
             if (string.IsNullOrEmpty(index.Definition.PatternForOutputReduceToCollectionReferences) == false)
                 _patternForOutputReduceToCollectionReferences = new OutputReferencesPattern(index.Definition.PatternForOutputReduceToCollectionReferences, index.Definition.PatternReferencesCollectionName);
