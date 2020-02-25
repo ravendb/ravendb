@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -109,10 +110,23 @@ namespace Raven.Server.Documents.Handlers
             
             return Task.CompletedTask;
         }
-        
-        
+
         [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
         public Task Read()
+        {
+            var documentId = GetStringQueryString("id");
+            var name = GetStringQueryString("name");
+            var start = GetStart();
+            var pageSize = GetPageSize();
+
+            WriteResponse(documentId, name, StringValues.Empty, StringValues.Empty, start, pageSize);
+
+            return Task.CompletedTask;
+        }
+
+
+        [RavenAction("/databases/*/timeseries/getRanges", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetRanges()
         {
             var documentId = GetStringQueryString("id");
             var name = GetStringQueryString("name");
@@ -127,6 +141,13 @@ namespace Raven.Server.Documents.Handlers
                 throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
             }
 
+            WriteResponse(documentId, name, fromList, toList, start, pageSize);
+
+            return Task.CompletedTask;
+        }
+
+        private void WriteResponse(string documentId, string name, StringValues fromList, StringValues toList, int start, int pageSize)
+        {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -134,7 +155,6 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
                     {
-
                         writer.WritePropertyName(nameof(TimeSeriesDetails.Id));
                         writer.WriteString(documentId);
                         writer.WriteComma();
@@ -157,22 +177,30 @@ namespace Raven.Server.Documents.Handlers
                                     var from = ParseDate(fromList[i], name);
                                     var to = ParseDate(toList[i], name);
 
-                                    WriteRange(context, writer, documentId, name, from, to, ref start, ref pageSize);
+                                    WriteRange(context, writer, documentId, name, @from, to, ref start, ref pageSize);
                                 }
                             }
 
                             writer.WriteEndArray();
-
                         }
                         writer.WriteEndObject();
 
+                        if (fromList.Count == 0)
+                        {
+                            // add total entries count to the response 
+
+                            var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetStatsFor(context, documentId, name);
+
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(TimeSeriesDetails.TotalResults));
+                            writer.WriteInteger(stats.Count);
+                        }
                     }
                     writer.WriteEndObject();
 
                     writer.Flush();
                 }
             }
-            return Task.CompletedTask;
         }
 
         public static unsafe DateTime ParseDate(string dateStr, string name)

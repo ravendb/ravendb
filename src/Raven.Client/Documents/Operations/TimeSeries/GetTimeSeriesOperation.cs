@@ -72,8 +72,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 var pathBuilder = new StringBuilder(node.Url);
                 pathBuilder.Append("/databases/")
                     .Append(node.Database)
-                    .Append("/timeseries?")
-                    .Append("id=")
+                    .Append("/timeseries");
+
+                if (_ranges != null)
+                {
+                    pathBuilder.Append("/getRanges");
+                }
+
+                pathBuilder.Append("?id=")
                     .Append(Uri.EscapeDataString(_docId))
                     .Append("&name=")
                     .Append(Uri.EscapeDataString(_timeseries));
@@ -128,5 +134,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     {
         public string Id;
         public Dictionary<string, List<TimeSeriesRangeResult>> Values = new Dictionary<string, List<TimeSeriesRangeResult>>();
+        public int TotalResults;
     }
 }
