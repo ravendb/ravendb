@@ -134,18 +134,14 @@
                             <i class="icon-trash"></i> <span>Delete documents</span>
                         </button>
                     </div>
-                    <button type="button" class="btn btn-default" title="Export query results as CSV"
-                        data-bind="click: exportCsv, enable: canExportCsv, visible: currentTab() === 'results'">
-                        <i class="icon-csv-export"></i> <span>Export CSV</span>
-                    </button>
-                    <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats, visible: currentTab() === 'results'">
+                    <button class="btn btn-default btn-sm statistics" data-bind="click: openQueryStats, enable: queryStats, visible: currentTab() === 'results'">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default btn-sm" data-bind="click: exportCsvFull" title="Export query results to CSV file">
+                    <div class="btn-group" data-bind="visible: currentTab() === 'results'">
+                        <button type="button" class="btn btn-default btn-sm" data-bind="click: exportCsvFull, enable: canExportCsv" title="Export query results to CSV file">
                             <i class="icon-csv-export"></i><span>Export as CSV</span>
                         </button>
-                        <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
+                        <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" data-bind="enable: canExportCsv">
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
