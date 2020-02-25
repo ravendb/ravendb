@@ -1,6 +1,7 @@
 import appUrl = require("common/appUrl");
 import indexProgress = require("models/database/index/indexProgress");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import generalUtils = require("common/generalUtils");
 
 class index {
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
@@ -251,13 +252,13 @@ class index {
             let infoTextHtml = "";
 
             if (this.reduceOutputCollectionName()) {
-                infoTextHtml = `Reduce Results are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}</strong>`;
+                infoTextHtml = `Reduce Results are saved in Collection:<br><strong>${generalUtils.escapeHtml(this.reduceOutputCollectionName())}</strong>`;
             }
             
             if (this.collectionNameForReferenceDocuments()) {
-                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${this.collectionNameForReferenceDocuments()}</strong>`;
+                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${generalUtils.escapeHtml(this.collectionNameForReferenceDocuments())}</strong>`;
             } else if (this.patternForReferencesToReduceOutputCollection()) {
-                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}/References</strong>`;
+                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${generalUtils.escapeHtml(this.reduceOutputCollectionName())}/References</strong>`;
             }
 
             return infoTextHtml;
