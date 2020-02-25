@@ -426,6 +426,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                         using (var referenceJson = context.ReadObject(referenceDoc, "reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                         {
+                            _database.DocumentsStorage.Delete(context, referencesOfReduceOutput.Key, null);
+
                             _database.DocumentsStorage.Put(context, referencesOfReduceOutput.Key, null, referenceJson,
                                 flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
 
