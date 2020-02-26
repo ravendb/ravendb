@@ -163,12 +163,12 @@ class indexDefinition {
         });
         
         this.collectionNameForReferenceDocuments.extend({
-           validation: [
-               {
-                   validator: (value: string) => value !== this.reduceOutputCollectionName(),
-                   message: 'Name for Referencing Collection cannot be the same as the Reduce Output Collection.'
-               }
-           ] 
+            validation: [
+                {
+                    validator: (value: string) => !value || value !== this.reduceOutputCollectionName(),
+                    message: 'Name for Referencing Collection cannot be the same as the Reduce Output Collection.'
+                }
+            ]
         });
 
         this.validationGroup = ko.validatedObservable({
