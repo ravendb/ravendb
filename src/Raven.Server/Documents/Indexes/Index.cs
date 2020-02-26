@@ -2583,7 +2583,6 @@ namespace Raven.Server.Documents.Indexes
                                 if (query.Metadata.TimeSeriesIncludes != null)
                                 {
                                     includeTimeSeriesCommand = new IncludeTimeSeriesCommand(
-                                        DocumentDatabase,
                                         documentsContext,
                                         query.Metadata.TimeSeriesIncludes.TimeSeries);
                                 }
