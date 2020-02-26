@@ -196,7 +196,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public HashSet<CollectionName> ReferencedCollections { get; set; } = new HashSet<CollectionName>();
         public ArrayInstance MoreArguments { get; set; }
-        public RavenConfiguration Configuration { get; set; }
         public string MapString { get; internal set; }
 
         private bool CompareFields(ObjectExpression oe)
