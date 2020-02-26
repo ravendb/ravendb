@@ -177,7 +177,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (query.Metadata.TimeSeriesIncludes != null)
                 {
                     includeTimeSeriesCommand = new IncludeTimeSeriesCommand(
-                        Database,
                         context,
                         query.Metadata.TimeSeriesIncludes.TimeSeries);
                 }

@@ -296,7 +296,7 @@ namespace Raven.Server.Documents.Handlers
                 });
             }
 
-            includeTimeSeries = new IncludeTimeSeriesCommand(database, context,
+            includeTimeSeries = new IncludeTimeSeriesCommand(context,
                 new Dictionary<string, HashSet<TimeSeriesRange>> {{string.Empty, hs}});
         }
 

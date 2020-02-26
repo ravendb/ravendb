@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 if (_ranges != null)
                 {
-                    pathBuilder.Append("/getRanges");
+                    pathBuilder.Append("/get-ranges");
                 }
 
                 pathBuilder.Append("?id=")
@@ -106,7 +106,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                             .Append(range.To.GetDefaultRavenFormat());
                     }
                 }
-
 
                 var request = new HttpRequestMessage
                 {
