@@ -280,6 +280,7 @@ namespace Raven.Client.Documents.Operations.ETL
             };
         }
 
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public bool IsEqual(Transformation transformation)
         {
             if (transformation == null)
@@ -300,6 +301,41 @@ namespace Raven.Client.Documents.Operations.ETL
                    transformation.Script == Script &&
                    transformation.ApplyToAllDocuments == ApplyToAllDocuments &&
                    transformation.Disabled == Disabled;
+        }
+
+        internal EtlConfigurationCompareDifferences Compare(Transformation transformation)
+        {
+            if (transformation == null)
+                throw new ArgumentNullException(nameof(transformation), "Got null transformation to compare");
+
+            var differences = EtlConfigurationCompareDifferences.None;
+
+            if (transformation.Collections.Count != Collections.Count)
+                differences |= EtlConfigurationCompareDifferences.TransformationsCount;
+
+            var collections = new List<string>(Collections);
+
+            foreach (var collection in transformation.Collections)
+            {
+                collections.Remove(collection);
+            }
+
+            if (collections.Count != 0)
+                differences |= EtlConfigurationCompareDifferences.TransformationCollectionsCount;
+
+            if (transformation.Name != Name)
+                differences |= EtlConfigurationCompareDifferences.TransformationName;
+
+            if (transformation.Script != Script)
+                differences |= EtlConfigurationCompareDifferences.TransformationScript;
+
+            if (transformation.ApplyToAllDocuments != ApplyToAllDocuments)
+                differences |= EtlConfigurationCompareDifferences.TransformationApplyToAllDocuments;
+
+            if (transformation.Disabled != Disabled)
+                differences |= EtlConfigurationCompareDifferences.TransformationDisabled;
+
+            return differences;
         }
 
         public string[] GetCollectionsFromScript()
