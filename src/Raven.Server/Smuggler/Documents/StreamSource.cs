@@ -523,12 +523,23 @@ namespace Raven.Server.Smuggler.Documents
         private unsafe bool ReadSegment(int size, out TimeSeriesValuesSegment segment)
         {
             var mem = _context.GetMemory(size);
-            var read = _parser.Copy(mem.Address, size);
+            var offset = 0;
 
-            if (read.BytesRead != size)
+            while (size > 0)
             {
-                segment = default;
-                return false;
+                var read = _parser.Copy(mem.Address + offset, size);
+                if (read.Done == false)
+                {
+                    offset += read.BytesRead;
+
+                    var read2 = _peepingTomStream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
+                    if (read2 == 0)
+                        throw new EndOfStreamException("Stream ended without reaching end of stream content");
+
+                    _parser.SetBuffer(_buffer, 0, read2);
+                }
+
+                size -= read.BytesRead;
             }
 
             segment = new TimeSeriesValuesSegment(mem.Address, size);
