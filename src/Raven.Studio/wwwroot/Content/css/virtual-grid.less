@@ -319,19 +319,20 @@
     }
     
     .ts-group-property {
-        margin-top: 14px;
-        padding-top: 2px;
+        padding-top: 16px;
         display: inline-block;
         position: relative;
         font-size: 14px;
         min-width: 46px;
         line-height: 14px;
+        overflow: hidden;
+        text-overflow: ellipsis;
 
         &:before {
             color: @text-muted;
             position: absolute;
             left: 0;
-            top: -14px;
+            top: 2px;
             line-height: 10px;
             font-size: 10px;
             text-transform: uppercase;

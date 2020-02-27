@@ -1,22 +1,22 @@
-<div class="row flex-grow flex-row time-series-details">
-    <div class="col-lg-8 flex-grow dynamic-container">
+<div class="time-series-details absolute-fill">
+    <div class="dynamic-container">
         
     </div>
-    <div class="col-lg-4 flex-vertical">
-        <h3>Legend</h3>
+    <div class="time-series-legend">
+        <h4 class="ts-legend-header">LEGEND</h4>
         <div class="flex-grow" style="position: relative">
-            <div class="scroll absolute-fill">
+            <div class="scroll">
                 <div data-bind="foreach: allTimeSeries">
-                    <div class="flex-horizontal">
-                        <div data-bind="text: sectionName" class="flex-grow"></div>
-                    </div>
                     
-                    <div class="margin-left legend" data-bind="foreach: series">
+                    <div data-bind="text: sectionName" class="section-name"></div>
+                    
+                    
+                    <div class="legend" data-bind="foreach: series">
                         <div class="checkbox">
                             <input type="checkbox" data-bind="attr: { id: uniqueId }, checked: visible" />
                             <label data-bind="attr: { for: uniqueId }">
                                 <span data-bind="attr: { class: $root.getColorClass($data) + ' ' + $parent.type }">
-                                    <i class="icon-stats"></i>
+                                    <i class="icon-graph"></i>
                                 </span>
                                 <span data-bind="text: name"></span>
                             </label>
