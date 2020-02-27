@@ -41,7 +41,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         var previous = 0.0;
                         var tsf = session.TimeSeriesFor("zzz/1");
 
-                        for (var i = 0; i < 100_000; i++)
+                        for (var i = 0; i < 4000; i++)
                         {
                             var nextDouble = previous * 0.9 + 0.1 * r.NextDouble();
 
@@ -62,7 +62,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
-                    Assert.Equal(376, stats.CountOfTimeSeriesSegments);
+                    Assert.Equal(16, stats.CountOfTimeSeriesSegments);
 
                     using (var session = store2.OpenSession())
                     {
@@ -70,7 +70,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         Assert.NotNull(doc);
 
                         var ts = session.TimeSeriesFor(doc).Get("small", DateTime.MinValue, DateTime.MaxValue).ToList();
-                        Assert.Equal(100_000, ts.Count);
+                        Assert.Equal(4000, ts.Count);
                     }
                 }
             }
