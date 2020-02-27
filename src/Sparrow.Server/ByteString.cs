@@ -110,7 +110,14 @@ namespace Sparrow.Server
         internal ByteString(ByteStringStorage* ptr)
         {
             _pointer = ptr;
+#if DEBUG
+            Generation = -1;
+#endif
         }
+#endif
+
+#if DEBUG
+        public int Generation;
 #endif
         public ByteStringType Flags
         {
@@ -739,6 +746,10 @@ namespace Sparrow.Server
             PrepareForValidation();
         }
 
+#if DEBUG
+        public int Generation;
+#endif
+
         public void Reset()
         {
             if (_disposed)
@@ -746,6 +757,9 @@ namespace Sparrow.Server
                 ThrowObjectDisposed();
             }
                 
+#if DEBUG
+            Generation++;
+#endif
 
             Array.Clear(_internalReusableStringPoolCount, 0, _internalReusableStringPoolCount.Length);
             foreach (var stack in _internalReusableStringPool)
@@ -1025,7 +1039,12 @@ namespace Sparrow.Server
             // We are registering the storage for validation here. Not the ByteString itself
             RegisterForValidation(basePtr);
 
-            return new ByteString(basePtr);
+            return new ByteString(basePtr)
+            {
+#if DEBUG
+                Generation = Generation
+#endif
+            };
         }
 
         private ByteString AllocateWholeSegment(int length, ByteStringType type)
@@ -1090,6 +1109,9 @@ namespace Sparrow.Server
             if (_disposed)
                 ThrowObjectDisposed();
 
+#if DEBUG
+            Debug.Assert(value.Generation == Generation);
+#endif
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
             if (value._pointer == null) // this is a safe-guard on Release, it is better to not release the memory than fail
                 return;
