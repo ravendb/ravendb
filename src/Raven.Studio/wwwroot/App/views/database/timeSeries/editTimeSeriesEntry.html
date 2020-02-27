@@ -59,26 +59,26 @@
                         
                         <div class="flex-grow">
                             <div data-bind="foreach: values">
-                                <div class="flex-horizontal margin-bottom margin-bottom-xs">
+                                <div class="input-group margin-bottom margin-bottom-xs">
                                     <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: value">
-                                        <input type="text" class="form-control" data-bind="textInput: value" />
+                                        <input type="text" class="form-control" data-bind="textInput: value" style="width: 100%" />
                                         <div data-bind="validationElement: value">
                                             <div class="help-block" data-bind="validationMessage: value"></div>
                                         </div>
                                     </div>
 
                                     <a title="Remove value" href="#"
-                                       class="margin-left margin-left-sm flex-start"
+                                       class="btn"
                                        data-bind="click: $parent.removeValue.bind($parent, $data)">
                                         <i class="icon-trash"></i>
                                     </a>
                                 </div>    
                             </div>
                             
-                            <div class="form-group" data-bind="if: values.error()">
-                                <span data-bind="validationElement: values">
-                                    <span class="help-block" data-bind="validationMessage: values"></span>
-                                </span>
+                            <div data-bind="if: values.error()">
+                                <div data-bind="validationElement: values">
+                                    <div class="help-block margin-bottom" data-bind="validationMessage: values"></div>
+                                </div>
                             </div>
                             
                             <button class="btn btn-default btn-sm" data-bind="click: addValue">

@@ -80,7 +80,7 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
             
             const plotButtonExtra = model.getCount() > 0 ? `` : ` disabled="disabled" `;
             const plotButton = this.handler 
-                ? `<button title="Plot time series graph" ${plotButtonExtra} class="btn btn-default btn-sm" ${customPlotAction}><i class="icon-stats"></i></button>`
+                ? `<button title="Plot time series graph" ${plotButtonExtra} class="btn btn-default btn-sm" ${customPlotAction}><i class="icon-graph"></i></button>`
                 : "";
             
             const previewButton = this.handler 

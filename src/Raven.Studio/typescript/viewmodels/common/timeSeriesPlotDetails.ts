@@ -710,7 +710,7 @@ class timeSeriesPlotDetails extends viewModelBase {
                     const series = data.rangeSeries[i];
                     contextContext.beginPath();
                     contextContext.strokeStyle = this.getColor(series);
-                    contextContext.lineWidth = 2;
+                    contextContext.lineWidth = 1;
                     for (let p = 0; p < series.points.length; p++) {
                         const point = series.points[p];
                         const yValue = this.yBrush(point.value);
@@ -729,7 +729,7 @@ class timeSeriesPlotDetails extends viewModelBase {
                     if (points.points.length) {
                         contextContext.beginPath();
                         contextContext.strokeStyle = this.colors[this.colorClassScale(points.uniqueId)];
-                        contextContext.lineWidth = 2;
+                        contextContext.lineWidth = 1;
                         const renderer = new quantizedLineRenderer(contextContext, pixelTimeDelta, this.xBrush, this.yBrush);
                         renderer.draw(points.points[0].date, points.points[0].value);
 
@@ -758,7 +758,7 @@ class timeSeriesPlotDetails extends viewModelBase {
                 const series = data.rangeSeries[i];
                 focusContext.beginPath();
                 focusContext.strokeStyle = this.getColor(series);
-                focusContext.lineWidth = 2;
+                focusContext.lineWidth = 1;
                 for (let p = 0; p < series.points.length; p++) {
                     const point = series.points[p];
                     const yValue = this.y(point.value);
@@ -780,7 +780,7 @@ class timeSeriesPlotDetails extends viewModelBase {
                 if (points.points.length) {
                     focusContext.beginPath();
                     focusContext.strokeStyle = this.colors[this.colorClassScale(points.uniqueId)];
-                    focusContext.lineWidth = 2;
+                    focusContext.lineWidth = 1;
                     const renderer = new quantizedLineRenderer(focusContext, pixelTimeDelta, this.x, this.y);
                     renderer.draw(points.points[startIdx].date, points.points[startIdx].value);
 

@@ -1,63 +1,112 @@
-@time-series-color-1: #f75e71;
-@time-series-color-2: #f38861;
-@time-series-color-3: #f0ae5e;
-@time-series-color-4: #edcd51;
-@time-series-color-5: #7bd85d;
-@time-series-color-6: #37c4ac;
-@time-series-color-7: #2f9ef3;
-@time-series-color-8: #6972ee;
-@time-series-color-9: #9457b5;
-@time-series-color-10: #d45598;
+@time-series-color-1: @color-1;
+@time-series-color-2: @color-3;
+@time-series-color-3: @color-5;
+@time-series-color-4: @color-2;
+@time-series-color-5: @color-4;
+@time-series-color-6: @color-1-2;
+@time-series-color-7: @color-3-2;
+@time-series-color-8: @color-5-2;
+@time-series-color-9: @color-2-2;
+@time-series-color-10: @color-4-2;
 
 
 .time-series-details {
     overflow: hidden;
-    
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+
+    @media (min-width: @screen-lg) {
+        flex-direction: row;
+    }
+
+    .dynamic-container {
+        flex-grow: 1;
+    }
+
     .dynamic-container {
         canvas, svg {
             position: absolute;
-            left: 0; 
+            left: 0;
             top: 0;
         }
     }
-    
+
+    .time-series-legend {
+        padding: @gutter;
+        max-height: 300px;
+
+        @media (min-width: @screen-lg) {
+            max-height: initial;
+            width: 300px;
+        }
+
+        .ts-legend-header {
+            margin-top: 0;
+            font-weight: bold;
+        }
+
+        .section-name {
+            display: flex;
+            font-size: 12px;
+            align-items: center;
+
+            &::after {
+                content: '';
+                display: block;
+                border-bottom: 1px solid @gray-dark;
+                flex-grow: 1;
+                margin-left: @gutter-xs;
+            }
+        }
+    }
+
     .color-definitions, .legend, .tooltip {
         .color-1 {
             color: @time-series-color-1;
         }
+
         .color-2 {
             color: @time-series-color-2;
         }
+
         .color-3 {
             color: @time-series-color-3;
         }
+
         .color-4 {
             color: @time-series-color-4;
         }
+
         .color-5 {
             color: @time-series-color-5;
         }
+
         .color-6 {
             color: @time-series-color-6;
         }
+
         .color-7 {
             color: @time-series-color-7;
         }
+
         .color-8 {
             color: @time-series-color-8;
         }
+
         .color-9 {
             color: @time-series-color-9;
         }
+
         .color-10 {
             color: @time-series-color-10;
         }
     }
-    
+
     .focus-canvas {
         pointer-events: none;
     }
-    
+
     svg {
         font: 10px sans-serif;
 
@@ -65,48 +114,57 @@
             fill: none;
             stroke: @gray-light;
         }
-        
+
         &.hover-area {
             pointer-events: none;
-            
+
             .points, .ranges {
                 circle {
                     fill: @gray-darker;
                     stroke-width: 2;
                 }
-                
+
                 line {
                     stroke-width: 4;
                     fill: none;
                 }
-                
+
                 .color-1 {
                     stroke: @time-series-color-1;
                 }
+
                 .color-2 {
                     stroke: @time-series-color-2;
                 }
+
                 .color-3 {
                     stroke: @time-series-color-3;
                 }
+
                 .color-4 {
                     stroke: @time-series-color-4;
                 }
+
                 .color-5 {
                     stroke: @time-series-color-5;
                 }
+
                 .color-6 {
                     stroke: @time-series-color-6;
                 }
+
                 .color-7 {
                     stroke: @time-series-color-7;
                 }
+
                 .color-8 {
                     stroke: @time-series-color-8;
                 }
+
                 .color-9 {
                     stroke: @time-series-color-9;
                 }
+
                 .color-10 {
                     stroke: @time-series-color-10;
                 }
@@ -131,16 +189,17 @@
         shape-rendering: crispEdges;
         clip-path: url(#clip);
     }
-    
+
     .axis {
         .domain {
             stroke: @text-color;
         }
-        
+
         .tick {
             text {
                 fill: @text-color;
             }
+
             line {
                 stroke: @text-color;
             }
@@ -155,13 +214,13 @@
 
     .ts-tooltip {
         pointer-events: none;
-        
+        box-shadow: 0 1px 3px @gray-base;
         font-size: 12px;
-        
+
         .name {
             text-align: left;
         }
-        
+
         .date {
             text-align: center;
         }
@@ -169,7 +228,7 @@
 
     .tooltip-inner {
         max-width: 600px;
-        
+
         td {
             white-space: nowrap;
         }
