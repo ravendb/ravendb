@@ -33,6 +33,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         private readonly string _bucketName;
         private readonly Logger _logger;
+        private readonly Uri _customS3ServerUrl;
+
+
+        private bool IsCustomS3Server => _customS3ServerUrl != null;
 
         public RavenAwsS3Client(S3Settings s3Settings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null)
             : base(s3Settings, progress, cancellationToken)
@@ -43,9 +47,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (string.IsNullOrWhiteSpace(s3Settings.AwsAccessKey))
                 throw new ArgumentException("AWS Access Key cannot be null or empty");
 
-            if (string.IsNullOrWhiteSpace(s3Settings.AwsRegionName))
-                throw new ArgumentException("AWS Region Name cannot be null or empty");
-
+            if (string.IsNullOrWhiteSpace(s3Settings.CustomS3ServerUrl))
+            {
+                if (string.IsNullOrWhiteSpace(s3Settings.AwsRegionName))
+                    throw new ArgumentException("AWS region Name cannot be null or empty");
+                AwsRegion = s3Settings.AwsRegionName.ToLower();
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(s3Settings.AwsRegionName) == false)
+                    throw new ArgumentException($"There is no need for region in custom S3 server: AwsRegionName({s3Settings.AwsRegionName})");
+                _customS3ServerUrl = new Uri(s3Settings.CustomS3ServerUrl);
+            }
+            
             _bucketName = s3Settings.BucketName;
             _logger = logger;
         }
@@ -301,20 +315,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public void TestConnection()
         {
-            try
+            if (IsCustomS3Server == false)
             {
-                var bucketLocation = GetBucketLocation();
-                if (bucketLocation.Equals(AwsRegion, StringComparison.OrdinalIgnoreCase) == false)
+                try
                 {
-                    throw new InvalidOperationException(
-                        $"AWS location is set to {AwsRegion}, " +
-                        $"but the bucket named: '{_bucketName}' " +
-                        $"is located in: {bucketLocation}");
+                    var bucketLocation = GetBucketLocation();
+                    if (bucketLocation.Equals(AwsRegion, StringComparison.OrdinalIgnoreCase) == false)
+                    {
+                        throw new InvalidOperationException(
+                            $"AWS location is set to {AwsRegion}, " +
+                            $"but the bucket named: '{_bucketName}' " +
+                            $"is located in: {bucketLocation}");
+                    }
                 }
-            }
-            catch (AwsForbiddenException)
-            {
-                // we don't have the permissions to view the bucket location
+                catch (AwsForbiddenException)
+                {
+                    // we don't have the permissions to view the bucket location
+                }
             }
 
             try
@@ -375,17 +392,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
                     if (value.Equals(string.Empty))
                     {
+                        if (IsCustomS3Server)
+                            return null;
+                        
                         // when the bucket's region is US East (N. Virginia - us-east-1), 
                         // Amazon S3 returns an empty string for the bucket's region
-                        value = DefaultRegion;
+                        return DefaultRegion;
                     }
-                    else if (value.Equals("EU", StringComparison.OrdinalIgnoreCase))
-                    {
+                    if (value.Equals("EU", StringComparison.OrdinalIgnoreCase))
                         // EU (Ireland) => EU or eu-west-1
-                        value = "eu-west-1";
-                    }
+                        return "eu-west-1";
 
-                    return value == string.Empty ? DefaultRegion : value;
+                    return value;
                 }
             }
         }
@@ -927,12 +945,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public override string GetUrl()
         {
-            var baseUrl = base.GetUrl();
-            return $"{baseUrl}/{_bucketName}";
+            return IsCustomS3Server 
+                ? $"{_customS3ServerUrl}{_bucketName}" 
+                : $"{base.GetUrl()}/{_bucketName}";
         }
 
         public override string GetHost()
         {
+            if (IsCustomS3Server)
+                return _customS3ServerUrl.GetComponents(UriComponents.Host | UriComponents.Port, UriFormat.UriEscaped);
+            
             if (AwsRegion == DefaultRegion || IsRegionInvariantRequest)
                 return "s3.amazonaws.com";
 
