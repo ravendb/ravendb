@@ -953,6 +953,9 @@ namespace Raven.Server.Documents.Replication
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+
+                var toDispose = new List<IDisposable>();
+
                 try
                 {
                     IsIncomingReplication = true;
@@ -982,8 +985,8 @@ namespace Raven.Server.Documents.Replication
                         switch (item)
                         {
                             case AttachmentReplicationItem attachment:
-                                item.ToDispose(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name,out _, out Slice attachmentName));
-                                item.ToDispose(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
+                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name,out _, out Slice attachmentName));
+                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName, contentType, attachment.Base64Hash,
                                     attachment.ChangeVector);
@@ -1004,7 +1007,7 @@ namespace Raven.Server.Documents.Replication
                                 break;
 
                             case RevisionTombstoneReplicationItem revisionTombstone:
-                                item.ToDispose(Slice.From(context.Allocator, revisionTombstone.Id, out var id)); // TODO: From not required
+                                toDispose.Add(Slice.From(context.Allocator, revisionTombstone.Id, out var id)); // TODO: From not required
 
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
                                     rcvdChangeVector, revisionTombstone.LastModifiedTicks);
@@ -1202,6 +1205,11 @@ namespace Raven.Server.Documents.Replication
                 }
                 finally
                 {
+                    foreach (var item in toDispose)
+                    {
+                        item.Dispose();
+                    }
+
                     IsIncomingReplication = false;
                 }
             }
