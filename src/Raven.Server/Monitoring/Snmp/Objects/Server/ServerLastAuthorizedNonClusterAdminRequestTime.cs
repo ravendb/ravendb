@@ -19,7 +19,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             if (_statistics.LastAuthorizedNonClusterAdminRequestTime.HasValue)
                 return new TimeTicks(SystemTime.UtcNow - _statistics.LastAuthorizedNonClusterAdminRequestTime.Value);
 
-            return null;
+            return new TimeTicks(uint.MaxValue);
         }
     }
 }
