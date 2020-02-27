@@ -6,8 +6,6 @@ using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Exceptions;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.ServerWide.Context;
@@ -18,53 +16,15 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromS3 : RavenTestBase
+    public abstract class RestoreFromS3 : RavenTestBase
     {
-        public RestoreFromS3(ITestOutputHelper output) : base(output)
+        protected RestoreFromS3(ITestOutputHelper output) : base(output)
         {
         }
 
-        private readonly string _cloudPathPrefix = $"{nameof(RestoreFromS3)}-{Guid.NewGuid()}";
+        protected readonly string _cloudPathPrefix = $"{nameof(RestoreFromS3)}-{Guid.NewGuid()}";
 
-        [Fact, Trait("Category", "Smuggler")]
-        public void restore_s3_settings_tests()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => $"{s}_2"
-            }))
-            {
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-                var restoreConfiguration = new RestoreFromS3Configuration
-                {
-                    DatabaseName = databaseName
-                };
-
-                var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-
-                var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS access key cannot be null or empty", e.InnerException.Message);
-
-                restoreConfiguration.Settings.AwsAccessKey = "test";
-                restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS secret key cannot be null or empty", e.InnerException.Message);
-
-                restoreConfiguration.Settings.AwsSecretKey = "test";
-                restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS region cannot be null or empty", e.InnerException.Message);
-
-                restoreConfiguration.Settings.AwsRegionName = "test";
-                restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS Bucket name cannot be null or empty", e.InnerException.Message);
-            }
-        }
-
-        [AmazonS3Fact, Trait("Category", "Smuggler")]
-        public async Task can_backup_and_restore()
+        protected async Task can_backup_and_restore_internal()
         {
             var defaultS3Settings = GetS3Settings();
 
@@ -155,8 +115,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AmazonS3Fact, Trait("Category", "Smuggler")]
-        public async Task can_backup_and_restore_snapshot()
+        protected async Task can_backup_and_restore_snapshot_internal()
         {
             var defaultS3Settings = GetS3Settings();
 
@@ -264,8 +223,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AmazonS3Fact, Trait("Category", "Smuggler")]
-        public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key()
+        protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key_internal()
         {
             var defaultS3Settings = GetS3Settings();
 
@@ -359,8 +317,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AmazonS3Fact, Trait("Category", "Smuggler")]
-        public async Task incremental_and_full_check_last_file_for_backup()
+        protected async Task incremental_and_full_check_last_file_for_backup_internal()
         {
             var defaultS3Settings = GetS3Settings();
 
@@ -458,8 +415,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AmazonS3Fact, Trait("Category", "Smuggler")]
-        public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key()
+        protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key_internal()
         {
             var defaultS3Settings = GetS3Settings();
             var key = EncryptedServer(out var certificates, out string dbName);
@@ -553,8 +509,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AmazonS3Fact, Trait("Category", "Smuggler")]
-        public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB()
+        protected async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_internal()
         {
             var key = EncryptedServer(out var certificates, out string dbName);
 
@@ -619,28 +574,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private S3Settings GetS3Settings(string subPath = null)
-        {
-            var s3Settings = AmazonS3FactAttribute.S3Settings;
-
-            if (s3Settings == null)
-                return null;
-
-            var remoteFolderName = $"{s3Settings.RemoteFolderName}/{_cloudPathPrefix}";
-
-            if (string.IsNullOrEmpty(subPath) == false)
-                remoteFolderName = $"{remoteFolderName}/{subPath}";
-
-            return new S3Settings
-            {
-                BucketName = s3Settings.BucketName,
-                RemoteFolderName = remoteFolderName,
-                AwsAccessKey = s3Settings.AwsAccessKey,
-                AwsRegionName = s3Settings.AwsRegionName,
-                AwsSecretKey = s3Settings.AwsSecretKey,
-                AwsSessionToken = s3Settings.AwsSessionToken,
-            };
-        }
+        protected abstract S3Settings GetS3Settings(string subPath = null);
 
         public override void Dispose()
         {
