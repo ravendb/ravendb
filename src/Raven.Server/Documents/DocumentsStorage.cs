@@ -893,7 +893,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
+        public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true, bool skipValidationInDebug = false)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
@@ -902,7 +902,7 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return Get(context, lowerId, fields, throwOnConflict);
+                return Get(context, lowerId, fields, throwOnConflict, skipValidationInDebug);
             }
         }
 
@@ -1191,7 +1191,7 @@ namespace Raven.Server.Documents
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                     metadata.TryGet(assertionKey, out BlittableJsonReaderArray _) == false)
                 {
-                    Debug.Assert(false, $"Found {DocumentFlags.HasAttachments} flag but {assertionKey} is missing from metadata in document {id} (database: {DocumentDatabase.Name}).");
+                    Debug.Assert(false, $"Found {assertionFlag} flag but {assertionKey} is missing from metadata in document {id} (database: {DocumentDatabase.Name}).");
                 }
             }
             else
