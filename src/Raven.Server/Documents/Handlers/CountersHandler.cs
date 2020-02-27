@@ -440,7 +440,9 @@ namespace Raven.Server.Documents.Handlers
                     try
                     {
                         doc = _database.DocumentsStorage.Get(context, counterGroupDetail.DocumentId,
-                            throwOnConflict: true);
+                            throwOnConflict: true, 
+                            skipValidationInDebug: true); // we are putting a counter, so we are going to update the metadata anyway.
+
                         if (doc == null)
                         {
                             ThrowMissingDocument(counterGroupDetail.DocumentId);
@@ -463,8 +465,6 @@ namespace Raven.Server.Documents.Handlers
                         docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, counterGroupDetail.DocumentId);
                     }
                 }
-
-
             }
 
             private void UpdateDocumentCountersAfterImportBatch(DocumentsOperationContext context, Document doc, string docId,

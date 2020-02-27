@@ -81,6 +81,9 @@ namespace SlowTests.Issues
                     var user1 = await session.LoadAsync<User>("users/1");
                     Assert.NotNull(user1);
 
+                    var metadata = session.Advanced.GetMetadataFor(user1);
+                    Assert.True(metadata.ContainsKey("@counters"));
+
                     var counters = await session.CountersFor(user1).GetAllAsync();
                     Assert.Equal(100, counters.Count);
                     for (int i = 0; i < counters.Count; i++)
