@@ -463,5 +463,25 @@ namespace Tests.Infrastructure
                 return djv;
             }
         }
+
+        internal class TestCommandWithRaftId : CommandBase
+        {
+            private string Name;
+
+            private object Value;
+
+            public TestCommandWithRaftId(string name, string uniqueRequestId) : base(uniqueRequestId)
+            {
+                Name = name;
+            }
+            public override DynamicJsonValue ToJson(JsonOperationContext context)
+            {
+                var djv = base.ToJson(context);
+                djv[nameof(Name)] = Name;
+                djv[nameof(Value)] = Value;
+
+                return djv;
+            }
+        }
     }
 }
