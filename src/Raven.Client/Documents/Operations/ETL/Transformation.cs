@@ -286,21 +286,8 @@ namespace Raven.Client.Documents.Operations.ETL
             if (transformation == null)
                 return false;
 
-            if (transformation.Collections.Count != Collections.Count)
-                return false;
-
-            var collections = new List<string>(Collections);
-
-            foreach (var collection in transformation.Collections)
-            {
-                collections.Remove(collection);
-            }
-
-            return collections.Count == 0 &&
-                   transformation.Name == Name &&
-                   transformation.Script == Script &&
-                   transformation.ApplyToAllDocuments == ApplyToAllDocuments &&
-                   transformation.Disabled == Disabled;
+            var result = Compare(transformation);
+            return result == EtlConfigurationCompareDifferences.None;
         }
 
         internal EtlConfigurationCompareDifferences Compare(Transformation transformation)

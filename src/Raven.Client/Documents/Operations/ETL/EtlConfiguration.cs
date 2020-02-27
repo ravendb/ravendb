@@ -123,26 +123,8 @@ namespace Raven.Client.Documents.Operations.ETL
             if (config == null)
                 return false;
 
-            if (config.Transforms.Count != Transforms.Count)
-                return false;
-
-            var localTransforms = Transforms.OrderBy(x => x.Name);
-            var remoteTransforms = config.Transforms.OrderBy(x => x.Name);
-
-            using (var localEnum = localTransforms.GetEnumerator())
-            using (var remoteEnum = remoteTransforms.GetEnumerator())
-            {
-                while (localEnum.MoveNext() && remoteEnum.MoveNext())
-                {
-                    if (localEnum.Current.IsEqual(remoteEnum.Current) == false)
-                        return false;
-                }
-            }
-
-            return config.ConnectionStringName == ConnectionStringName &&
-                   config.Name == Name &&
-                   config.MentorNode == MentorNode &&
-                   config.Disabled == Disabled;
+            var result = Compare(config);
+            return result == EtlConfigurationCompareDifferences.None;
         }
 
         internal EtlConfigurationCompareDifferences Compare(EtlConfiguration<T> config, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
