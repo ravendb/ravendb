@@ -137,6 +137,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var batchCommand = new SingleNodeBatchCommand(DocumentConventions.Default, context, commands, options);
 
+            var duration = Stopwatch.StartNew();
+
             try
             {
                 AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
@@ -148,10 +150,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 if (CancellationToken.IsCancellationRequested == false)
                 {
-                    ThrowTimeoutException(commands.Count, e);
+                    ThrowTimeoutException(commands.Count, duration.Elapsed, e);
                 }
 
-                throw;
+                return 0;
             }
         }
 
@@ -161,9 +163,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return Transformation.IsEmptyScript == false;
         }
 
-        private static void ThrowTimeoutException(int numberOfCommands, Exception e)
+        private static void ThrowTimeoutException(int numberOfCommands, TimeSpan duration, Exception e)
         {
-            var message = $"Load request applying {numberOfCommands} commands timed out.";
+            var message = $"Load request applying {numberOfCommands} commands timed out after {duration}.";
 
             throw new TimeoutException(message, e);
         }

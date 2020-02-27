@@ -117,6 +117,7 @@ namespace Raven.Client.Documents.Operations.ETL
             return result;
         }
 
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public virtual bool IsEqual(EtlConfiguration<T> config)
         {
             if (config == null)
@@ -142,6 +143,49 @@ namespace Raven.Client.Documents.Operations.ETL
                    config.Name == Name &&
                    config.MentorNode == MentorNode &&
                    config.Disabled == Disabled;
+        }
+
+        internal EtlConfigurationCompareDifferences Compare(EtlConfiguration<T> config, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
+        {
+            if (config == null)
+                throw new ArgumentNullException(nameof(config), "Got null config to compare");
+
+            var differences = EtlConfigurationCompareDifferences.None;
+
+            if (config.Transforms.Count != Transforms.Count)
+                differences |= EtlConfigurationCompareDifferences.TransformationsCount;
+
+            var localTransforms = Transforms.OrderBy(x => x.Name);
+            var remoteTransforms = config.Transforms.OrderBy(x => x.Name);
+
+            using (var localEnum = localTransforms.GetEnumerator())
+            using (var remoteEnum = remoteTransforms.GetEnumerator())
+            {
+                while (localEnum.MoveNext() && remoteEnum.MoveNext())
+                {
+                    var transformationDiff = localEnum.Current.Compare(remoteEnum.Current);
+                    differences |= transformationDiff;
+
+                    if (transformationDiff != EtlConfigurationCompareDifferences.None)
+                    {
+                        transformationDiffs?.Add((localEnum.Current.Name, transformationDiff));
+                    }
+                }
+            }
+
+            if (config.ConnectionStringName != ConnectionStringName)
+                differences |= EtlConfigurationCompareDifferences.ConnectionStringName;
+
+            if (config.Name != Name)
+                differences |= EtlConfigurationCompareDifferences.ConfigurationName;
+
+            if (config.MentorNode != MentorNode)
+                differences |= EtlConfigurationCompareDifferences.MentorNode;
+
+            if (config.Disabled != Disabled)
+                differences |= EtlConfigurationCompareDifferences.ConfigurationDisabled;
+
+            return differences;
         }
 
         [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
