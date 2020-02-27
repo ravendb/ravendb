@@ -393,6 +393,7 @@ namespace Raven.Server.Rachis
                         Status = AmbassadorStatus.Disconnected;
                         StatusMessage = "Graceful shutdown";
                         _debugRecorder.Record(StatusMessage);
+                        return;
                     }
                     catch (RachisConcurrencyException)
                     {
@@ -424,6 +425,10 @@ namespace Raven.Server.Rachis
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                 }
+
+                Status = AmbassadorStatus.Disconnected;
+                StatusMessage = "Graceful shutdown";
+                _debugRecorder.Record(StatusMessage);
             }
             catch (RachisException e)
             {
