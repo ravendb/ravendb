@@ -1535,7 +1535,8 @@ namespace Raven.Client.Documents.Indexes
                     isDictionaryReturn = true;
             }
 
-            if (IsExtensionMethod(node))
+            var shouldConvertToDynamicEnumerable = node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node);
+            if (shouldConvertToDynamicEnumerable == false && IsExtensionMethod(node))
             {
                 num = 1;
                 expression = node.Arguments[0];
@@ -1625,7 +1626,7 @@ namespace Raven.Client.Documents.Indexes
                     }
                 }
 
-                if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
+                if (shouldConvertToDynamicEnumerable)
                 {
                     Out("DynamicEnumerable.");
                 }
@@ -1859,6 +1860,8 @@ namespace Raven.Client.Documents.Indexes
                     case "Union":
                     case "Concat":
                     case "Intersect":
+                    case nameof(Enumerable.OrderBy):
+                    case nameof(Enumerable.OrderByDescending):
                         return true;
                 }
             }
