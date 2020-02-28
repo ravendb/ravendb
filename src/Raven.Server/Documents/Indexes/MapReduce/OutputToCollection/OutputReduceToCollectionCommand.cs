@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                             patternPropertiesAddedSuccessfully = false;
 
                             if (stats != null) // should never be null
-                                stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e.Message}");
+                                stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e}");
                         }
                     }
                 }
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     catch (Exception e)
                     {
                         if (stats != null) // should never be null
-                            stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e.Message}");
+                            stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e}");
                     }
                 }
             }
