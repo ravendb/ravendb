@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         [Fact]
         public void OnSessionCreatedEventWorks()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 store.OnSessionCreated += (sender, args) =>
                 {

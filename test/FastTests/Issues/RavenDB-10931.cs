@@ -25,7 +25,7 @@ namespace FastTests.Issues
             var databaseName = GetDatabaseName();
 
             using(var server = GetNewServer())
-            using(var store = new DocumentStore
+            using(IDocumentStore store = new DocumentStore
             {
                 Database = databaseName,
                 Urls = new[] { server.WebUrl },

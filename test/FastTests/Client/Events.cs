@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -15,7 +16,7 @@ namespace FastTests.Client
         [Fact]
         public void Before_Store_Listener()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 store.OnBeforeStore += (object sender, BeforeStoreEventArgs e) =>
                 {

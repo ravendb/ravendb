@@ -303,7 +303,7 @@ namespace Raven.Embedded
             return (new Uri(url), process);
         }
 
-        private static string BuildStartupExceptionMessage(string outputString, string errorString)
+        private static string BuildStartupExceptionMessage(string? outputString, string? errorString)
         {
             var sb = new StringBuilder();
             sb.AppendLine("Unable to start the RavenDB Server");
@@ -323,7 +323,7 @@ namespace Raven.Embedded
             return sb.ToString();
         }
 
-        private static async Task<string> ReadOutput(StreamReader output, Stopwatch startupDuration, ServerOptions options, Func<string, StringBuilder, Task<bool>>? onLine)
+        private static async Task<string?> ReadOutput(StreamReader output, Stopwatch startupDuration, ServerOptions options, Func<string, StringBuilder, Task<bool>>? onLine)
         {
             var sb = new StringBuilder();
 

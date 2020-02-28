@@ -66,11 +66,11 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = docStore =>
+                ModifyDocumentStore = s =>
                 {
-
-                    docStore.OnBeforeQuery += (sender, args) => args.QueryCustomization.WaitForNonStaleResults();
-                    docStore.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace("[].", "").Replace(".", "");
+                    var documentStore = (IDocumentStore)s;
+                    documentStore.OnBeforeQuery += (sender, args) => args.QueryCustomization.WaitForNonStaleResults();
+                    documentStore.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace("[].", "").Replace(".", "");
                 }
             }))
             {
