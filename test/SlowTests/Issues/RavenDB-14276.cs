@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         [Fact]
         public void Can_Update_Metadata_With_Nested_Dictionary()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 store.OnBeforeStore += OnBeforeStore;
                 const string docId = "users/1";
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
         [Fact]
         public void Can_Update_Metadata_With_Nested_Dictionary_Same_Session()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 store.OnBeforeStore += OnBeforeStore;
                 const string docId = "users/1";
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void VerifyData(DocumentStore store, string docId)
+        private static void VerifyData(IDocumentStore store, string docId)
         {
             using (var session = store.OpenSession())
             {

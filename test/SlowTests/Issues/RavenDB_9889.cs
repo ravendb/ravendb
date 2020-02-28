@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,7 +32,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanUseToDocumentConversionEvents()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 store.OnBeforeConversionToDocument += (sender, args) =>
                 {
@@ -79,7 +80,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanUseToEntityConversionEvents()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 store.OnBeforeConversionToEntity += (sender, args) =>
                 {

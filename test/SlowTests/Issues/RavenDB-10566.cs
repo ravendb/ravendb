@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -139,7 +140,7 @@ Object.keys(this.Trie).filter(function(key) {
         [Fact]
         public async Task ShouldBeAvailable()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 string name = null;
                 store.OnAfterSaveChanges += (object sender, AfterSaveChangesEventArgs e) =>

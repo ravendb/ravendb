@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Sparrow.Json.Parsing;
@@ -25,8 +26,10 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s=> {
-                    s.OnBeforeStore += (sender, args) =>
+                ModifyDocumentStore = s =>
+                {
+                    var documentStore = (IDocumentStore)s;
+                    documentStore.OnBeforeStore += (sender, args) =>
                     {
                         ((IDocumentSession)args.Session).Advanced.Defer(new PutCommandData(args.DocumentId + "/companion", null,
                             new DynamicJsonValue
