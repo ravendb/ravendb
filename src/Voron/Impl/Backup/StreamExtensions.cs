@@ -17,7 +17,7 @@ namespace Voron.Impl.Backup
             ThreadLocalCleanup.ReleaseThreadLocalState += () => _readBuffer = null;
         }
 
-        public static void CopyTo(this Stream source, Stream destination, CancellationToken cancellationToken)
+        public static void CopyTo(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
             if (_readBuffer == null)
                 _readBuffer = new byte[DefaultBufferSize];
@@ -26,6 +26,7 @@ namespace Voron.Impl.Backup
             while ((count = source.Read(_readBuffer, 0, _readBuffer.Length)) != 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                onProgress?.Invoke(count);
                 destination.Write(_readBuffer, 0, count);
             }
         }

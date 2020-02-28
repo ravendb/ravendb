@@ -110,6 +110,11 @@ namespace Raven.Client.Documents.Indexes
         public Expression<Func<TReduceResult, string>> PatternForOutputReduceToCollectionReferences { get; set; }
 
         /// <summary>
+        /// Defines a collection name for reference documents created based on provided pattern
+        /// </summary>
+        public string PatternReferencesCollectionName { get; set; }
+
+        /// <summary>
         /// Add additional sources to be compiled with the index on the server.
         /// </summary>
         public Dictionary<string, string> AdditionalSources { get; set; }
@@ -155,7 +160,9 @@ namespace Raven.Client.Documents.Indexes
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, conventions, "results", translateIdentityProperty: false),
                     LockMode = LockMode,
                     Priority = Priority,
-                    OutputReduceToCollection = OutputReduceToCollection
+                    OutputReduceToCollection = OutputReduceToCollection,
+                    PatternForOutputReduceToCollectionReferences = PatternReferencesCollectionName,
+                    PatternReferencesCollectionName = PatternReferencesCollectionName
                 };
 
                 if (PatternForOutputReduceToCollectionReferences != null)

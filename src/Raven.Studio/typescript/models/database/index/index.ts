@@ -1,6 +1,7 @@
 import appUrl = require("common/appUrl");
 import indexProgress = require("models/database/index/indexProgress");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import generalUtils = require("common/generalUtils");
 
 class index {
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
@@ -36,7 +37,8 @@ class index {
     reduceErrors = ko.observable<number>();
     reduceSuccesses = ko.observable<number>();
     reduceOutputCollectionName = ko.observable<string>();
-    hasPatternForReduceOutputCollection = ko.observable<boolean>(); 
+    patternForReferencesToReduceOutputCollection = ko.observable<string>();
+    collectionNameForReferenceDocuments = ko.observable<string>();
     mapReduceIndexInfoTooltip: KnockoutComputed<string>;
     
     type = ko.observable<Raven.Client.Documents.Indexes.IndexType>();
@@ -98,7 +100,8 @@ class index {
         this.reduceErrors(dto.ReduceErrors);
         this.reduceSuccesses(dto.ReduceSuccesses);
         this.reduceOutputCollectionName(dto.ReduceOutputCollection);
-        this.hasPatternForReduceOutputCollection(!!dto.ReduceOutputReferencePattern);
+        this.patternForReferencesToReduceOutputCollection(dto.ReduceOutputReferencePattern);
+        this.collectionNameForReferenceDocuments(dto.PatternReferencesCollectionName);
         this.type(dto.Type);
         this.sourceType(dto.SourceType);
         this.state(dto.State);
@@ -252,10 +255,13 @@ class index {
             let infoTextHtml = "";
 
             if (this.reduceOutputCollectionName()) {
-                infoTextHtml = `Reduce Results are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}</strong>`;
+                infoTextHtml = `Reduce Results are saved in Collection:<br><strong>${generalUtils.escapeHtml(this.reduceOutputCollectionName())}</strong>`;
             }
-            if (this.hasPatternForReduceOutputCollection()) {
-                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${this.reduceOutputCollectionName()}/References</strong>`;
+            
+            if (this.collectionNameForReferenceDocuments()) {
+                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${generalUtils.escapeHtml(this.collectionNameForReferenceDocuments())}</strong>`;
+            } else if (this.patternForReferencesToReduceOutputCollection()) {
+                infoTextHtml += `<br>Referencing Documents are saved in Collection:<br><strong>${generalUtils.escapeHtml(this.reduceOutputCollectionName())}/References</strong>`;
             }
 
             return infoTextHtml;

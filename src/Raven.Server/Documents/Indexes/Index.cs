@@ -2340,6 +2340,7 @@ namespace Raven.Server.Documents.Indexes
                         var mapReduceIndex = this as MapReduceIndex;
                         stats.ReduceOutputCollection = mapReduceIndex.OutputReduceToCollection?.GetCollectionOfReduceOutput();
                         stats.ReduceOutputReferencePattern = mapReduceIndex.OutputReduceToCollection?.GetPattern();
+                        stats.PatternReferencesCollectionName = mapReduceIndex.OutputReduceToCollection?.GetReferenceDocumentsCollectionName();
                     }
 
                     if (calculateStaleness || calculateLag)

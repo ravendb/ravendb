@@ -14,11 +14,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             OutputReduceToCollection = definition.OutputReduceToCollection;
             ReduceOutputIndex = definition.ReduceOutputIndex;
             PatternForOutputReduceToCollectionReferences = definition.PatternForOutputReduceToCollectionReferences;
+            PatternReferencesCollectionName = definition.PatternReferencesCollectionName;
         }
 
         public HashSet<CompiledIndexField> GroupByFields { get; }
         public string OutputReduceToCollection { get; }
         public long? ReduceOutputIndex { get; set; }
-        public string PatternForOutputReduceToCollectionReferences{ get; }
+        public string PatternForOutputReduceToCollectionReferences { get; }
+        public string PatternReferencesCollectionName { get; }
     }
 }

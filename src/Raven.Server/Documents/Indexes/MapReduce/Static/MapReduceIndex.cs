@@ -95,6 +95,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
                 return;
 
+            if (outputReduceToCollection.Equals(definition.PatternReferencesCollectionName, StringComparison.OrdinalIgnoreCase))
+                throw new IndexInvalidException($"Collection defined in {nameof(definition.PatternReferencesCollectionName)} must not be the same as in {nameof(definition.OutputReduceToCollection)}. Collection name: '{outputReduceToCollection}'");
+
             var collections = index.Maps.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
                 throw new IndexInvalidException($"It is forbidden to create the '{definition.Name}' index " +

@@ -71,6 +71,11 @@ namespace Raven.Client.Documents.Indexes
         /// Pattern for creating IDs for the reduce output reference-collection 
         /// </summary>
         public string ReduceOutputReferencePattern { get; set; }
+        
+        /// <summary>
+        /// Collection name for reduce output reference-collection 
+        /// </summary>
+        public string PatternReferencesCollectionName { get; set; }
 
         /// <summary>
         /// The value of docs/sec rate for the index over the last minute

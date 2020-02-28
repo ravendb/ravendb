@@ -35,7 +35,7 @@ namespace SlowTests.Utils
         {
             DoNotReuseServer();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
             {
                 using (var store = GetDocumentStore())
                 {

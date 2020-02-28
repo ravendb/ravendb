@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -15,7 +16,34 @@ namespace RachisTests
         public CommandsTests(ITestOutputHelper output) : base(output)
         {
         }
-        
+
+        [Fact]
+        public async Task Command_sent_twice_should_not_throw_timeout_error()
+        {
+            var leader = await CreateNetworkAndGetLeader(3);
+            var nonLeader = GetRandomFollower();
+            long lastIndex;
+            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var cmd = new TestCommandWithRaftId("test", RaftIdGenerator.NewId())
+                {
+                    RaftCommandIndex = 322
+                };
+
+                var t = leader.PutAsync(cmd);
+                await leader.PutAsync(cmd);
+
+                // this should not throw timeout exception.
+                var exception = await Record.ExceptionAsync(async () => await t);
+                Assert.Null(exception);
+
+                using (context.OpenReadTransaction())
+                    lastIndex = leader.GetLastEntryIndex(context);
+            }
+            var waitForAllCommits = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            Assert.True(await waitForAllCommits.WaitAsync(LongWaitTime), "didn't commit in time");
+        }
+
         [Fact]
         public async Task When_command_committed_CompletionTaskSource_is_notified()
         {

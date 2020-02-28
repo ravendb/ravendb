@@ -735,19 +735,26 @@ namespace Raven.Server.Rachis
                                 index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
                             }
 
-                            var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                            tasks.Add(tcs.Task);
-                            var state = new
-                                CommandState
-                            // we need to add entry inside write tx lock to avoid
-                            // a situation when command will be applied (and state set)
-                            // before it is added to the entries list
+                            if (_entries.TryGetValue(index, out var state))
                             {
-                                CommandIndex = index,
-                                TaskCompletionSource = tcs,
-                                ConvertResult = GetConvertResult(cmd.Command),
-                            };
-                            _entries[index] = state;
+                                tasks.Add(state.TaskCompletionSource.Task);
+                            }
+                            else
+                            {
+                                var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                                tasks.Add(tcs.Task);
+                                state = new
+                                    CommandState
+                                // we need to add entry inside write tx lock to avoid
+                                // a situation when command will be applied (and state set)
+                                // before it is added to the entries list
+                                {
+                                    CommandIndex = index,
+                                    TaskCompletionSource = tcs,
+                                    ConvertResult = GetConvertResult(cmd.Command),
+                                };
+                                _entries[index] = state;
+                            }
                         }
                         context.Transaction.Commit();
                     }

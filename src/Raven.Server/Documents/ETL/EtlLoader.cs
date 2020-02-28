@@ -402,14 +402,18 @@ namespace Raven.Server.Documents.ETL
                 if (process is RavenEtl ravenEtl)
                 {
                     RavenEtlConfiguration existing = null;
+
                     foreach (var config in myRavenEtl)
                     {
-                        if (ravenEtl.Configuration.IsEqual(config))
+                        var diff = ravenEtl.Configuration.Compare(config);
+
+                        if (diff == EtlConfigurationCompareDifferences.None)
                         {
                             existing = config;
                             break;
                         }
                     }
+
                     if (existing != null)
                     {
                         toRemove.Remove(processesPerConfig.Key);
@@ -421,7 +425,9 @@ namespace Raven.Server.Documents.ETL
                     SqlEtlConfiguration existing = null;
                     foreach (var config in mySqlEtl)
                     {
-                        if (sqlEtl.Configuration.IsEqual(config))
+                        var diff = sqlEtl.Configuration.Compare(config);
+
+                        if (diff == EtlConfigurationCompareDifferences.None)
                         {
                             existing = config;
                             break;
@@ -445,8 +451,9 @@ namespace Raven.Server.Documents.ETL
                 {
                     try
                     {
+                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl);
 
-                        process.Stop(reason: "Database record change");
+                        process.Stop(reason);
                     }
                     catch (Exception e)
                     {
@@ -473,6 +480,46 @@ namespace Raven.Server.Documents.ETL
                     }
                 }
             });
+        }
+
+        private static string GetStopReason(EtlProcess process, List<RavenEtlConfiguration> myRavenEtl, List<SqlEtlConfiguration> mySqlEtl)
+        {
+            EtlConfigurationCompareDifferences? differences = null;
+            var transformationDiffs = new List<(string TransformationName, EtlConfigurationCompareDifferences Difference)>();
+
+            if (process is RavenEtl ravenEtl)
+            {
+                var existing = myRavenEtl.FirstOrDefault(x => x.Name == ravenEtl.ConfigurationName);
+
+                if (existing != null)
+                    differences = ravenEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+
+            if (process is SqlEtl sqlEtl)
+            {
+                var existing = mySqlEtl.FirstOrDefault(x => x.Name == sqlEtl.ConfigurationName);
+
+                if (existing != null)
+                    differences = sqlEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+
+            var reason = "Database record change. ";
+
+            if (differences != null)
+            {
+                reason += $"Configuration changes: {differences}. Details: ";
+
+                foreach (var transformationDiff in transformationDiffs)
+                {
+                    reason += $"Script '{transformationDiff.TransformationName}' - {transformationDiff.Difference}. ";
+                }
+            }
+            else
+            {
+                reason += $"ETL was deleted (no configuration named '{process.ConfigurationName}' was found)";
+            }
+
+            return reason;
         }
 
         public void HandleDatabaseValueChanged(DatabaseRecord record)

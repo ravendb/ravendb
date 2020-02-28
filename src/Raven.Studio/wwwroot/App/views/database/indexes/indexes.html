@@ -169,8 +169,8 @@
                
                 <div class="flex-horizontal clear-left index-info nospacing">
                     <div class="index-type-icon" data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="tooltipText: mapReduceIndexInfoTooltip">
-                        <span data-bind="if: reduceOutputCollectionName() && !hasPatternForReduceOutputCollection()"><i class="icon-output-collection"></i></span>
-                        <span data-bind="if: hasPatternForReduceOutputCollection"><i class="icon-reference-pattern"></i></span>
+                            <span data-bind="if: reduceOutputCollectionName() && !patternForReferencesToReduceOutputCollection()"><i class="icon-output-collection"></i></span>
+                            <span data-bind="if: patternForReferencesToReduceOutputCollection"><i class="icon-reference-pattern"></i></span>
                     </div>
                     <div class="index-type">
                         <span data-bind="text: typeForUI"></span>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -27,6 +28,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private readonly string _collectionOfReduceOutputs;
         private readonly long? _reduceOutputVersion;
         private readonly OutputReferencesPattern _patternForOutputReduceToCollectionReferences;
+        private readonly string? _referenceDocumentsCollectionName;
 
         static OutputReduceToCollectionActions()
         {
@@ -40,12 +42,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             return _collectionOfReduceOutputs;
         }
-        
+
         public string GetPattern()
         {
             return _patternForOutputReduceToCollectionReferences?.Pattern;
         }
-        
+
+        public string GetReferenceDocumentsCollectionName()
+        {
+            return _referenceDocumentsCollectionName;
+        }
+
         public OutputReduceToCollectionActions(MapReduceIndex index)
         {
             _index = index;
@@ -54,9 +61,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             _collectionOfReduceOutputs = index.Definition.OutputReduceToCollection;
             _reduceOutputVersion = index.Definition.ReduceOutputIndex;
+            _referenceDocumentsCollectionName = index.Definition.PatternReferencesCollectionName;
 
             if (string.IsNullOrEmpty(index.Definition.PatternForOutputReduceToCollectionReferences) == false)
-                _patternForOutputReduceToCollectionReferences = new OutputReferencesPattern(index.Definition.PatternForOutputReduceToCollectionReferences);
+                _patternForOutputReduceToCollectionReferences = new OutputReferencesPattern(index.Definition.PatternForOutputReduceToCollectionReferences, index.Definition.PatternReferencesCollectionName);
         }
 
         public void Initialize(RavenTransaction tx)
@@ -96,15 +104,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             var result = tree.Read(reduceResultId);
 
+            // ReSharper disable once UseNullPropagation
             if (result == null)
-                ThrowCouldNotFindPatternGeneratedIdForReduceOutput(reduceResultId);
+            {
+                // pattern id can be null here if it was invalid for a given reduce result
+                return null;
+            }
 
             return result.Reader.ReadString(result.Reader.Length);
-        }
-
-        private void ThrowCouldNotFindPatternGeneratedIdForReduceOutput(string reduceResultId)
-        {
-            throw new InvalidOperationException($"Could not find pattern generated ID for reduce output: {reduceResultId}");
         }
 
         public void DeletePatternGeneratedIdForReduceOutput(Transaction tx, string reduceResultId)
@@ -223,7 +230,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
-                 // ensure that we delete it from in-memory state only after successful commit
+                // ensure that we delete it from in-memory state only after successful commit
                 _prefixesOfReduceOutputDocumentsToDelete.TryRemove(prefix, out _);
             };
         }
