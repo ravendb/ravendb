@@ -103,15 +103,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             var result = tree.Read(reduceResultId);
 
+            // ReSharper disable once UseNullPropagation
             if (result == null)
-                ThrowCouldNotFindPatternGeneratedIdForReduceOutput(reduceResultId);
+            {
+                // pattern id can be null here if it was invalid for a given reduce result
+                return null;
+            }
 
             return result.Reader.ReadString(result.Reader.Length);
-        }
-
-        private void ThrowCouldNotFindPatternGeneratedIdForReduceOutput(string reduceResultId)
-        {
-            throw new InvalidOperationException($"Could not find pattern generated ID for reduce output: {reduceResultId}");
         }
 
         public void DeletePatternGeneratedIdForReduceOutput(Transaction tx, string reduceResultId)
