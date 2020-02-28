@@ -60,7 +60,7 @@ namespace Tests.Infrastructure
             var initialCount = RachisConsensuses.Count;
             var leaderIndex = _random.Next(0, nodeCount);
             var timeout = TimeSpan.FromSeconds(10);
-            var electionTimeout = Math.Max(300, nodeCount * 60); // We want to make it easier for the tests, since we are running multiple servers on the same machine. 
+            var electionTimeout = Math.Max(300, nodeCount * 60); // We want to make it easier for the tests, since we are running multiple servers on the same machine.
             for (var i = 0; i < nodeCount; i++)
             {
                 // ReSharper disable once ExplicitCallerInfoArgument
@@ -98,7 +98,6 @@ namespace Tests.Infrastructure
                      x => x.CurrentState != RachisState.Leader &&
                      x.CurrentState != RachisState.LeaderElect).ToList();
         }
-
 
         protected void DisconnectFromNode(RachisConsensus<CountingStateMachine> node)
         {
@@ -286,7 +285,6 @@ namespace Tests.Infrastructure
 
             await ActionWithLeader(l =>
             {
-
                 using (l.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                     index = l.GetLastEntryIndex(context);
@@ -311,7 +309,6 @@ namespace Tests.Infrastructure
             }
             return waitingList;
         }
-
 
         protected async Task<Task> ActionWithLeader(Func<RachisConsensus<CountingStateMachine>, Task> action)
         {
@@ -366,7 +363,6 @@ namespace Tests.Infrastructure
 
             foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
             {
-
                 Assert.True(mustBeSuccessfulTask.Wait(250));
             }
         }
@@ -468,14 +464,20 @@ namespace Tests.Infrastructure
         {
             private string Name;
 
+#pragma warning disable 649
+            private object Value;
+#pragma warning restore 649
+
             public TestCommandWithRaftId(string name, string uniqueRequestId) : base(uniqueRequestId)
             {
                 Name = name;
             }
+
             public override DynamicJsonValue ToJson(JsonOperationContext context)
             {
                 var djv = base.ToJson(context);
                 djv[nameof(Name)] = Name;
+                djv[nameof(Value)] = Value;
 
                 return djv;
             }
