@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -41,17 +42,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             return _collectionOfReduceOutputs;
         }
-        
+
         public string GetPattern()
         {
             return _patternForOutputReduceToCollectionReferences?.Pattern;
         }
-        
+
         public string GetReferenceDocumentsCollectionName()
         {
             return _referenceDocumentsCollectionName;
         }
-        
+
         public OutputReduceToCollectionActions(MapReduceIndex index)
         {
             _index = index;
@@ -230,7 +231,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
-                 // ensure that we delete it from in-memory state only after successful commit
+                // ensure that we delete it from in-memory state only after successful commit
                 _prefixesOfReduceOutputDocumentsToDelete.TryRemove(prefix, out _);
             };
         }

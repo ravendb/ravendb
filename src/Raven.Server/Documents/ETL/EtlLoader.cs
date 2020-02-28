@@ -425,7 +425,9 @@ namespace Raven.Server.Documents.ETL
                     SqlEtlConfiguration existing = null;
                     foreach (var config in mySqlEtl)
                     {
-                        if (sqlEtl.Configuration.IsEqual(config))
+                        var diff = sqlEtl.Configuration.Compare(config);
+
+                        if (diff == EtlConfigurationCompareDifferences.None)
                         {
                             existing = config;
                             break;

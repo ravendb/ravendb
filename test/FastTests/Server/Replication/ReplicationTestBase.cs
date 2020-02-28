@@ -36,16 +36,6 @@ namespace FastTests.Server.Replication
         public ReplicationTestBase(ITestOutputHelper output) : base(output)
         {
         }
-        protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
-        {
-            var id = "marker/" + Guid.NewGuid();
-            using (var s = src.OpenSession())
-            {
-                s.Store(new { }, id);
-                s.SaveChanges();
-            }
-            Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
-        }
 
         public class BrokenReplication
         {

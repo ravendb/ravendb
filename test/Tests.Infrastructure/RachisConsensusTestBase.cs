@@ -468,8 +468,6 @@ namespace Tests.Infrastructure
         {
             private string Name;
 
-            private object Value;
-
             public TestCommandWithRaftId(string name, string uniqueRequestId) : base(uniqueRequestId)
             {
                 Name = name;
@@ -478,7 +476,6 @@ namespace Tests.Infrastructure
             {
                 var djv = base.ToJson(context);
                 djv[nameof(Name)] = Name;
-                djv[nameof(Value)] = Value;
 
                 return djv;
             }
