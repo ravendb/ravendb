@@ -68,6 +68,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.SqlMigration;
@@ -257,6 +258,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(BuildInfoWithResourceNames));
             scripter.AddType(typeof(MigratedServerUrls));
             scripter.AddType(typeof(MigrationConfiguration));
+            scripter.AddType(typeof(CsvConfiguration));
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
