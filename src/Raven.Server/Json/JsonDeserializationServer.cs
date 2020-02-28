@@ -41,6 +41,7 @@ using Raven.Server.SqlMigration.Model;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Raven.Server.ServerWide;
+using Raven.Server.Smuggler.Documents;
 
 namespace Raven.Server.Json
 {
@@ -185,7 +186,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ServerStatistics> ServerStatistics = GenerateJsonDeserializationRoutine<ServerStatistics>();
 
-
+        public static readonly Func<BlittableJsonReaderObject, CsvConfiguration> CsvConfiguration = GenerateJsonDeserializationRoutine<CsvConfiguration>();
+        
         public class Parameters
         {
             private Parameters()

@@ -743,11 +743,13 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         return;
                     }
                 }
+                
                 var token = new OperationCancelToken(Database.DatabaseShutdown);
                 var result = new SmugglerResult();
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var collection = GetStringQueryString("collection", false);
                 var operationDescription = collection != null ? "Import collection: " + collection : "Import collection from CSV";
+                
                 await Database.Operations.AddOperation(Database, operationDescription, Raven.Server.Documents.Operations.Operations.OperationType.CollectionImportFromCsv,
                     onProgress =>
                     {
@@ -757,6 +759,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             {
                                 var reader = new MultipartReader(MultipartRequestHelper.GetBoundary(MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
                                     MultipartRequestHelper.MultipartBoundaryLengthLimit), HttpContext.Request.Body);
+
+                                CsvConfiguration csvConfig = new CsvConfiguration();
+                                
                                 while (true)
                                 {
                                     var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
@@ -766,6 +771,29 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out ContentDispositionHeaderValue contentDisposition) == false)
                                         continue;
 
+                                    if (MultipartRequestHelper.HasFormDataContentDisposition(contentDisposition))
+                                    {
+                                        var key = HeaderUtilities.RemoveQuotes(contentDisposition.Name);
+                                        if (key != "CsvConfig")
+                                            continue;
+
+                                        BlittableJsonReaderObject blittableJson;
+                                        if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
+                                        {
+                                            using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
+                                            {
+                                                blittableJson = await context.ReadForMemoryAsync(gzipStream, "CsvConfig");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            blittableJson = await context.ReadForMemoryAsync(section.Body, "CsvConfig");
+                                        }
+
+                                        csvConfig = JsonDeserializationServer.CsvConfiguration(blittableJson);
+                                        continue;
+                                    }
+                                    
                                     if (MultipartRequestHelper.HasFileContentDisposition(contentDisposition))
                                     {
                                         if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out contentDisposition) == false)
@@ -778,16 +806,17 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         }
 
                                         var options = new DatabaseSmugglerOptionsServerSide();
+                                        
                                         if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
                                         {
                                             using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
-                                                ImportDocumentsFromCsvStream(gzipStream, context, collection, options, result, onProgress, token);
+                                                ImportDocumentsFromCsvStream(gzipStream, context, collection, options, result, onProgress, token, csvConfig);
                                             }
                                         }
                                         else
                                         {
-                                            ImportDocumentsFromCsvStream(section.Body, context, collection, options, result, onProgress, token);
+                                            ImportDocumentsFromCsvStream(section.Body, context, collection, options, result, onProgress, token, csvConfig);
                                         }
                                     }
                                 }
@@ -805,13 +834,15 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private void ImportDocumentsFromCsvStream(Stream stream, DocumentsOperationContext context, string entity, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        private void ImportDocumentsFromCsvStream(Stream stream, DocumentsOperationContext context, string entity, DatabaseSmugglerOptionsServerSide options, 
+                                                  SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token, CsvConfiguration csvConfig)
         {
             if (string.IsNullOrEmpty(entity) == false && char.IsLower(entity[0]))
                 entity = char.ToUpper(entity[0]) + entity.Substring(1);
 
             result.AddInfo($"Import collection: {entity}");
-            using (var source = new CsvStreamSource(Database, stream, context, entity))
+            
+            using (var source = new CsvStreamSource(Database, stream, context, entity, csvConfig))
             {
                 var destination = new DatabaseDestination(Database);
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
