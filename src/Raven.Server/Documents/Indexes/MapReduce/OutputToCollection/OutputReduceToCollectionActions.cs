@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private readonly string _collectionOfReduceOutputs;
         private readonly long? _reduceOutputVersion;
         private readonly OutputReferencesPattern _patternForOutputReduceToCollectionReferences;
-        private readonly string? _referenceDocumentsCollectionName;
+        private readonly string _referenceDocumentsCollectionName;
 
         static OutputReduceToCollectionActions()
         {
