@@ -243,10 +243,33 @@ namespace Raven.Server.Documents.Queries.AST
 
             for (int i = 0; i < field.Compound.Count; i++)
             {
-                _sb.Append(field.Compound[i].Value);
+                EscapeFieldName(_sb, field.Compound[i].Value);
                 if (i + 1 != field.Compound.Count)
                     _sb.Append(".");
             }
+        }
+
+        private static void EscapeFieldName(StringBuilder sb, string name)
+        {
+            if (name[0] == '_' || char.IsLetter(name[0]))
+            {
+                var valid = true;
+                for (int i = 1; i < name.Length; i++)
+                {
+                    valid &= name[i] == '_' || char.IsLetterOrDigit(name[i]);
+                }
+
+                if (valid)
+                {
+                    sb.Append(name);
+                    return;
+                }
+            }
+
+            if (sb.Length > 0 && sb[^1] == '.')
+                sb.Length--;
+
+            sb.Append("['").Append(name.Replace("'", "\\'")).Append("']");
         }
 
         public override void VisitTrue()

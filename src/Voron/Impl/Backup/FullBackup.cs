@@ -12,6 +12,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using Sparrow;
 using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
@@ -263,6 +264,8 @@ namespace Voron.Impl.Backup
                     : voronDataDir;
 
                 var sw = Stopwatch.StartNew();
+                var swForProgress = Stopwatch.StartNew();
+                long totalRead = 0;
 
                 if (Directory.Exists(dst.FullPath) == false)
                     Directory.CreateDirectory(dst.FullPath);
@@ -270,11 +273,19 @@ namespace Voron.Impl.Backup
                 using (var input = entry.Open())
                 using (var output = SafeFileStream.Create(dst.Combine(entry.Name).FullPath, FileMode.CreateNew))
                 {
-                    input.CopyTo(output, cancellationToken);
+                    input.CopyTo(output, readCount =>
+                    {
+                        totalRead += readCount;
+                        if (swForProgress.ElapsedMilliseconds > 5000)
+                        {
+                            swForProgress.Restart();
+                            onProgress?.Invoke($"Restoring file: '{entry.Name}', {new Size(totalRead, SizeUnit.Bytes)}/{new Size(entry.Length, SizeUnit.Bytes)}");
+                        }
+                    }, cancellationToken);
                 }
 
                 onProgress?.Invoke($"Restored file: '{entry.Name}' to: '{dst}', " +
-                                   $"size in bytes: {entry.Length:#,#;;0}, " +
+                                   $"size: {new Size(entry.Length, SizeUnit.Bytes)}, " +
                                    $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
             }
         }

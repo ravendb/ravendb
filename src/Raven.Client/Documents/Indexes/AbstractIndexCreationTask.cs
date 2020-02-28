@@ -209,6 +209,7 @@ namespace Raven.Client.Documents.Indexes
                 SpatialIndexesStrings = SpatialIndexesStrings,
                 OutputReduceToCollection = OutputReduceToCollection,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
+                PatternReferencesCollectionName = PatternReferencesCollectionName,
                 AdditionalSources = AdditionalSources,
                 Configuration = Configuration
             }.ToIndexDefinition(Conventions);
@@ -303,7 +304,23 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Loads the specified document during the indexing process
         /// </summary>
+        public T LoadDocument<T>(string id, string collectionName)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        /// <summary>
+        /// Loads the specified document during the indexing process
+        /// </summary>
         public T[] LoadDocument<T>(IEnumerable<string> ids)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        /// <summary>
+        /// Loads the specified document during the indexing process
+        /// </summary>
+        public T[] LoadDocument<T>(IEnumerable<string> ids, string collectionName)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }

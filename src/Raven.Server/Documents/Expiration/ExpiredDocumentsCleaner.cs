@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Expiration
                             if (expired == null || expired.Count == 0)
                                 return;
 
-                            var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration);
+                            var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration, currentTime);
                             await _database.TxMerger.Enqueue(command);
 
                             if (Logger.IsInfoEnabled)
@@ -185,22 +185,24 @@ namespace Raven.Server.Documents.Expiration
             private readonly Dictionary<Slice, List<(Slice LowerId, string Id)>> _expired;
             private readonly DocumentDatabase _database;
             private readonly bool _forExpiration;
+            private readonly DateTime _currentTime;
 
             public int DeletionCount;
 
-            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DocumentDatabase database, bool forExpiration)
+            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DocumentDatabase database, bool forExpiration, DateTime currentTime)
             {
                 _expired = expired;
                 _database = database;
                 _forExpiration = forExpiration;
+                _currentTime = currentTime;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 DeletionCount =
                     _forExpiration
-                        ? _database.DocumentsStorage.ExpirationStorage.DeleteDocumentsExpiration(context, _expired)
-                        : _database.DocumentsStorage.ExpirationStorage.RefreshDocuments(context, _expired);
+                        ? _database.DocumentsStorage.ExpirationStorage.DeleteDocumentsExpiration(context, _expired, _currentTime)
+                        : _database.DocumentsStorage.ExpirationStorage.RefreshDocuments(context, _expired, _currentTime);
 
                 return DeletionCount;
             }
@@ -218,8 +220,9 @@ namespace Raven.Server.Documents.Expiration
 
                 return new DeleteExpiredDocumentsCommandDto
                 {
+                    Expired = keyValuePairs,
                     ForExpiration = _forExpiration,
-                    Expired = keyValuePairs
+                    CurrentTime = _currentTime
                 };
             }
         }
@@ -234,12 +237,14 @@ namespace Raven.Server.Documents.Expiration
             {
                 expired[item.Key] = item.Value;
             }
-            var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(expired, database, ForExpiration);
+            var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(expired, database, ForExpiration, CurrentTime);
             return command;
         }
 
+        public KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[] Expired { get; set; }
+
         public bool ForExpiration { get; set; }
 
-        public KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[] Expired { get; set; }
+        public DateTime CurrentTime { get; set; }
     }
 }

@@ -129,6 +129,9 @@ namespace Raven.Client.Documents.Indexes
             if (string.Equals(PatternForOutputReduceToCollectionReferences, other.PatternForOutputReduceToCollectionReferences, StringComparison.OrdinalIgnoreCase) == false)
                 result |= IndexDefinitionCompareDifferences.Reduce;
 
+            if (string.Equals(PatternReferencesCollectionName, other.PatternReferencesCollectionName, StringComparison.OrdinalIgnoreCase) == false)
+                result |= IndexDefinitionCompareDifferences.Reduce;
+
             if (LockMode != other.LockMode)
             {
                 if ((LockMode == null && other.LockMode == IndexLockMode.Unlock) || (LockMode == IndexLockMode.Unlock && other.LockMode == null))
@@ -381,6 +384,11 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public string PatternForOutputReduceToCollectionReferences{ get; set; }
 
+        /// <summary>
+        /// Defines a collection name for reference documents created based on provided pattern
+        /// </summary>
+        public string PatternReferencesCollectionName { get; set; }
+
         public override string ToString()
         {
             return Name;
@@ -425,7 +433,8 @@ namespace Raven.Client.Documents.Indexes
 #endif
                 OutputReduceToCollection = OutputReduceToCollection,
                 ReduceOutputIndex = ReduceOutputIndex,
-                PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences
+                PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
+                PatternReferencesCollectionName = PatternReferencesCollectionName
             };
 
             foreach (var kvp in _configuration)

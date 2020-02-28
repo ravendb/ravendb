@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             _indexWriteTxHolder = indexWriteTxHolder;
 
             if (_patternForReduceOutputReferences != null) 
-                _outputToCollectionReferences = new OutputReduceToCollectionReferencesCommand(index, outputReduceToCollection);
+                _outputToCollectionReferences = new OutputReduceToCollectionReferencesCommand(index, outputReduceToCollection, _patternForReduceOutputReferences.ReferencesCollectionName);
         }
 
         /// <summary>
@@ -145,16 +145,30 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             using (_patternForReduceOutputReferences?.BuildReferenceDocumentId(out referenceDocIdBuilder))
             {
+                var patternPropertiesAddedSuccessfully = true;
+
                 foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
                 {
                     var value = property.Value;
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
 
                     if (referenceDocIdBuilder?.ContainsField(property.Key) == true)
-                        referenceDocIdBuilder.Add(property.Key, property.Value);
+                    {
+                        try
+                        {
+                            referenceDocIdBuilder.Add(property.Key, property.Value);
+                        }
+                        catch (Exception e)
+                        {
+                            patternPropertiesAddedSuccessfully = false;
+
+                            if (stats != null) // should never be null
+                                stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e}");
+                        }
+                    }
                 }
 
-                if (referenceDocIdBuilder != null)
+                if (referenceDocIdBuilder != null && patternPropertiesAddedSuccessfully)
                 {
                     try
                     {
@@ -163,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     catch (Exception e)
                     {
                         if (stats != null) // should never be null
-                            stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e.Message}");
+                            stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e}");
                     }
                 }
             }
@@ -289,15 +303,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             private readonly MapReduceIndex _index;
             private readonly string _outputReduceToCollection;
+            private readonly string _referencesCollectionName;
             private readonly DocumentDatabase _database;
             private readonly Dictionary<string, HashSet<string>> _referencesOfReduceOutputs = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             private readonly List<string> _deletedReduceOutputs = new List<string>();
             private readonly Dictionary<string, HashSet<string>> _idsToDeleteByReferenceDocumentId = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-            public OutputReduceToCollectionReferencesCommand(MapReduceIndex index, string outputReduceToCollection)
+            public OutputReduceToCollectionReferencesCommand(MapReduceIndex index, string outputReduceToCollection, string referencesCollectionName)
             {
                 _index = index;
                 _outputReduceToCollection = outputReduceToCollection;
+                _referencesCollectionName = referencesCollectionName;
                 _database = index.DocumentDatabase;
             }
 
@@ -325,6 +341,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 foreach (string reduceOutputId in _deletedReduceOutputs)
                 {
                     var referenceId = _index.OutputReduceToCollection.GetPatternGeneratedIdForReduceOutput(indexWriteTransaction, reduceOutputId);
+
+                    if (referenceId == null)
+                        continue;
 
                     if (_idsToDeleteByReferenceDocumentId.TryGetValue(referenceId, out var values) == false)
                     {
@@ -418,12 +437,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                             [nameof(OutputReduceToCollectionReference.ReduceOutputs)] = new DynamicJsonArray(uniqueIds),
                             [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Documents.Metadata.Collection] = $"{_outputReduceToCollection}/References"
+                                [Constants.Documents.Metadata.Collection] = _referencesCollectionName ?? $"{_outputReduceToCollection}/References"
                             }
                         };
 
                         using (var referenceJson = context.ReadObject(referenceDoc, "reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                         {
+                            _database.DocumentsStorage.Delete(context, referencesOfReduceOutput.Key, null);
+
                             _database.DocumentsStorage.Put(context, referencesOfReduceOutput.Key, null, referenceJson,
                                 flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
 

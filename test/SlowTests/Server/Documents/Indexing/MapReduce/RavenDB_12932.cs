@@ -302,7 +302,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
             using (var store = GetDocumentStore())
             {
-                var indexToCreate = new Orders_ProfitByProductAndOrderedAt();
+                var indexToCreate = new Orders_ProfitByProductAndOrderedAt(referencesCollectionName: "CustomCollection");
                 indexToCreate.Execute(store);
 
                 var database = await GetDatabase(store.Database);
@@ -310,6 +310,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 var definition = MapIndexDefinition.Load(index._environment);
                 Assert.NotNull(definition.PatternForOutputReduceToCollectionReferences);
+
+                Assert.Equal("CustomCollection", definition.PatternReferencesCollectionName);
+
             }
         }
 
@@ -468,7 +471,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 public decimal Profit { get; set; }
             }
 
-            public Orders_ProfitByProductAndOrderedAt()
+            public Orders_ProfitByProductAndOrderedAt(string referencesCollectionName = null)
             {
                 Map = orders => from order in orders
                     from line in order.Lines
@@ -482,6 +485,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 OutputReduceToCollection = "Profits";
 
                 PatternForOutputReduceToCollectionReferences = x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
+                
+                if (referencesCollectionName != null)
+                    PatternReferencesCollectionName = referencesCollectionName;
             }
         }
 

@@ -696,12 +696,13 @@ namespace Raven.Server.Documents.ETL
                             ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
                             _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
 
-                        var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
-                        sendToLeaderTask.Wait(CancellationToken);
-                        var (etag, _) = sendToLeaderTask.Result;
-
                         try
                         {
+                            var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
+
+                            sendToLeaderTask.Wait(CancellationToken);
+                            var (etag, _) = sendToLeaderTask.Result;
+
                             Database.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout).Wait(CancellationToken);
                         }
                         catch (OperationCanceledException)

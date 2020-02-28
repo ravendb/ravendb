@@ -280,13 +280,25 @@ namespace Raven.Client.Documents.Operations.ETL
             };
         }
 
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public bool IsEqual(Transformation transformation)
         {
             if (transformation == null)
                 return false;
 
+            var result = Compare(transformation);
+            return result == EtlConfigurationCompareDifferences.None;
+        }
+
+        internal EtlConfigurationCompareDifferences Compare(Transformation transformation)
+        {
+            if (transformation == null)
+                throw new ArgumentNullException(nameof(transformation), "Got null transformation to compare");
+
+            var differences = EtlConfigurationCompareDifferences.None;
+
             if (transformation.Collections.Count != Collections.Count)
-                return false;
+                differences |= EtlConfigurationCompareDifferences.TransformationsCount;
 
             var collections = new List<string>(Collections);
 
@@ -295,11 +307,22 @@ namespace Raven.Client.Documents.Operations.ETL
                 collections.Remove(collection);
             }
 
-            return collections.Count == 0 &&
-                   transformation.Name == Name &&
-                   transformation.Script == Script &&
-                   transformation.ApplyToAllDocuments == ApplyToAllDocuments &&
-                   transformation.Disabled == Disabled;
+            if (collections.Count != 0)
+                differences |= EtlConfigurationCompareDifferences.TransformationCollectionsCount;
+
+            if (transformation.Name != Name)
+                differences |= EtlConfigurationCompareDifferences.TransformationName;
+
+            if (transformation.Script != Script)
+                differences |= EtlConfigurationCompareDifferences.TransformationScript;
+
+            if (transformation.ApplyToAllDocuments != ApplyToAllDocuments)
+                differences |= EtlConfigurationCompareDifferences.TransformationApplyToAllDocuments;
+
+            if (transformation.Disabled != Disabled)
+                differences |= EtlConfigurationCompareDifferences.TransformationDisabled;
+
+            return differences;
         }
 
         public string[] GetCollectionsFromScript()

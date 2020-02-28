@@ -108,7 +108,7 @@ namespace Raven.Server.Commercial
             try
             {
                 const string winString = "Windows ";
-                var idx = osInfo.FullName.IndexOf("Windows ", StringComparison.OrdinalIgnoreCase);
+                var idx = osInfo.FullName.IndexOf(winString, StringComparison.OrdinalIgnoreCase);
                 if (idx < 0)
                     return osInfo;
 
@@ -127,7 +127,7 @@ namespace Raven.Server.Commercial
                 if (decimal.TryParse(osInfo.Version, out var version) == false)
                     return osInfo;
 
-                var isWindowsServer = IsOS(OS_ANYSERVER);
+                var isWindowsServer = IsWindowsServer();
                 switch (version)
                 {
                     case 10.0m:
@@ -151,12 +151,69 @@ namespace Raven.Server.Commercial
             }
 
             return osInfo;
-        }
 
-        const int OS_ANYSERVER = 29;
+            static bool IsWindowsServer()
+            {
+                try
+                {
+                    const int OS_ANYSERVER = 29;
+                    return IsOS(OS_ANYSERVER);
+                }
+                catch
+                {
+                    // isn't supported in nano server
+                }
+
+                try
+                {
+                    const uint VER_PRODUCT_TYPE = 0x0000080;
+                    const byte VER_EQUAL = 1;
+                    const byte VER_NT_WORKSTATION = 0x0000001;
+
+                    var osvi = new OSVERSIONINFOEXW
+                    {
+                        dwOSVersionInfoSize = Marshal.SizeOf(typeof(OSVERSIONINFOEXW)),
+                        wProductType = VER_NT_WORKSTATION
+                    };
+
+                    var dwlConditionMask = VerSetConditionMask(0, VER_PRODUCT_TYPE, VER_EQUAL);
+
+                    var result = VerifyVersionInfoW(ref osvi, VER_PRODUCT_TYPE, dwlConditionMask) == false;
+                    return result;
+                }
+                catch
+                {
+                    // failed to identify if running in Windows Server. assuming that we aren't.
+                    return false;
+                }
+            }
+        }
 
         [DllImport("shlwapi.dll", SetLastError = true, EntryPoint = "#437")]
         private static extern bool IsOS(int os);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool VerifyVersionInfoW(ref OSVERSIONINFOEXW lpVersionInformation, uint dwTypeMask, ulong dwlConditionMask);
+
+        [DllImport("kernel32.dll")]
+        private static extern ulong VerSetConditionMask(ulong dwlConditionMask, uint dwTypeBitMask, byte dwConditionMask);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct OSVERSIONINFOEXW
+        {
+            public int dwOSVersionInfoSize;
+            public int dwMajorVersion;
+            public int dwMinorVersion;
+            public int dwBuildNumber;
+            public int dwPlatformId;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string szCSDVersion;
+            public UInt16 wServicePackMajor;
+            public UInt16 wServicePackMinor;
+            public UInt16 wSuiteMask;
+            public byte wProductType;
+            public byte wReserved;
+        }
 
         private static OsInfo GetMacOsInfo()
         {
@@ -302,7 +359,7 @@ namespace Raven.Server.Commercial
                 version = ReadAllTextWithoutError("/etc/alpine-release");
             }
 
-            version = version ?? ReadAllTextWithoutError("/etc/lsb-release");
+            version ??= ReadAllTextWithoutError("/etc/lsb-release");
 
             if (string.IsNullOrWhiteSpace(version) == false)
             {
@@ -322,7 +379,6 @@ namespace Raven.Server.Commercial
             try
             {
                 return File.ReadAllText(path);
-                ;
             }
             catch (Exception)
             {

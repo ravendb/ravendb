@@ -117,13 +117,25 @@ namespace Raven.Client.Documents.Operations.ETL
             return result;
         }
 
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public virtual bool IsEqual(EtlConfiguration<T> config)
         {
             if (config == null)
                 return false;
 
+            var result = Compare(config);
+            return result == EtlConfigurationCompareDifferences.None;
+        }
+
+        internal EtlConfigurationCompareDifferences Compare(EtlConfiguration<T> config, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
+        {
+            if (config == null)
+                throw new ArgumentNullException(nameof(config), "Got null config to compare");
+
+            var differences = EtlConfigurationCompareDifferences.None;
+
             if (config.Transforms.Count != Transforms.Count)
-                return false;
+                differences |= EtlConfigurationCompareDifferences.TransformationsCount;
 
             var localTransforms = Transforms.OrderBy(x => x.Name);
             var remoteTransforms = config.Transforms.OrderBy(x => x.Name);
@@ -133,15 +145,29 @@ namespace Raven.Client.Documents.Operations.ETL
             {
                 while (localEnum.MoveNext() && remoteEnum.MoveNext())
                 {
-                    if (localEnum.Current.IsEqual(remoteEnum.Current) == false)
-                        return false;
+                    var transformationDiff = localEnum.Current.Compare(remoteEnum.Current);
+                    differences |= transformationDiff;
+
+                    if (transformationDiff != EtlConfigurationCompareDifferences.None)
+                    {
+                        transformationDiffs?.Add((localEnum.Current.Name, transformationDiff));
+                    }
                 }
             }
 
-            return config.ConnectionStringName == ConnectionStringName &&
-                   config.Name == Name &&
-                   config.MentorNode == MentorNode &&
-                   config.Disabled == Disabled;
+            if (config.ConnectionStringName != ConnectionStringName)
+                differences |= EtlConfigurationCompareDifferences.ConnectionStringName;
+
+            if (config.Name != Name)
+                differences |= EtlConfigurationCompareDifferences.ConfigurationName;
+
+            if (config.MentorNode != MentorNode)
+                differences |= EtlConfigurationCompareDifferences.MentorNode;
+
+            if (config.Disabled != Disabled)
+                differences |= EtlConfigurationCompareDifferences.ConfigurationDisabled;
+
+            return differences;
         }
 
         public static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)
