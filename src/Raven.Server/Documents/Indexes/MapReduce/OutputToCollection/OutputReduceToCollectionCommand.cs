@@ -145,16 +145,30 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             using (_patternForReduceOutputReferences?.BuildReferenceDocumentId(out referenceDocIdBuilder))
             {
+                var patternPropertiesAddedSuccessfully = true;
+
                 foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
                 {
                     var value = property.Value;
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
 
                     if (referenceDocIdBuilder?.ContainsField(property.Key) == true)
-                        referenceDocIdBuilder.Add(property.Key, property.Value);
+                    {
+                        try
+                        {
+                            referenceDocIdBuilder.Add(property.Key, property.Value);
+                        }
+                        catch (Exception e)
+                        {
+                            patternPropertiesAddedSuccessfully = false;
+
+                            if (stats != null) // should never be null
+                                stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e.Message}");
+                        }
+                    }
                 }
 
-                if (referenceDocIdBuilder != null)
+                if (referenceDocIdBuilder != null && patternPropertiesAddedSuccessfully)
                 {
                     try
                     {
@@ -327,6 +341,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 foreach (string reduceOutputId in _deletedReduceOutputs)
                 {
                     var referenceId = _index.OutputReduceToCollection.GetPatternGeneratedIdForReduceOutput(indexWriteTransaction, reduceOutputId);
+
+                    if (referenceId == null)
+                        continue;
 
                     if (_idsToDeleteByReferenceDocumentId.TryGetValue(referenceId, out var values) == false)
                     {
