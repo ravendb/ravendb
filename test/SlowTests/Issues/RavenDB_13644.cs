@@ -223,9 +223,21 @@ namespace SlowTests.Issues
         [Fact]
         public void CanLoadCompareExchangeInIndexes_Query()
         {
+            CanLoadCompareExchangeInIndexes_Query<Index_With_CompareExchange>();
+        }
+
+        [Fact]
+        public void CanLoadCompareExchangeInIndexes_Query_JavaScript()
+        {
+            CanLoadCompareExchangeInIndexes_Query<Index_With_CompareExchange_JavaScript>();
+        }
+
+        private void CanLoadCompareExchangeInIndexes_Query<TIndex>()
+            where TIndex : AbstractIndexCreationTask, new()
+        {
             using (var store = GetDocumentStore())
             {
-                var index = new Index_With_CompareExchange();
+                var index = new TIndex();
                 var indexName = index.IndexName;
                 index.Execute(store);
 
@@ -238,7 +250,7 @@ namespace SlowTests.Issues
                 long? previousResultEtag = 0L;
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -261,7 +273,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -280,7 +292,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -305,7 +317,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -324,7 +336,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -351,7 +363,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -371,7 +383,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -401,7 +413,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -422,7 +434,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -450,7 +462,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -471,7 +483,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -497,7 +509,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<Index_With_CompareExchange.Result, Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TIndex>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -730,7 +742,7 @@ namespace SlowTests.Issues
                 long? previousResultEtag = 0L;
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -755,7 +767,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -774,7 +786,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -799,7 +811,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -818,7 +830,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -853,7 +865,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -873,7 +885,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -903,7 +915,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -924,7 +936,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -952,7 +964,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -973,7 +985,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -999,7 +1011,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<TimeSeries_Index_With_CompareExchange.Result, TimeSeries_Index_With_CompareExchange>()
+                    var terms = session.Query<IndexResult, TimeSeries_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1016,13 +1028,13 @@ namespace SlowTests.Issues
             }
         }
 
+        private class IndexResult
+        {
+            public string City { get; set; }
+        }
+
         private class Index_With_CompareExchange : AbstractIndexCreationTask<Company>
         {
-            public class Result
-            {
-                public string City { get; set; }
-            }
-
             public Index_With_CompareExchange()
             {
                 Map = companies => from c in companies
@@ -1038,11 +1050,6 @@ namespace SlowTests.Issues
 
         private class Index_With_CompareExchange_JavaScript : AbstractJavaScriptIndexCreationTask
         {
-            public class Result
-            {
-                public string City { get; set; }
-            }
-
             public Index_With_CompareExchange_JavaScript()
             {
                 Maps = new HashSet<string>
@@ -1056,11 +1063,6 @@ namespace SlowTests.Issues
 
         private class TimeSeries_Index_With_CompareExchange : AbstractTimeSeriesIndexCreationTask<Company>
         {
-            public class Result
-            {
-                public string City { get; set; }
-            }
-
             public TimeSeries_Index_With_CompareExchange()
             {
                 AddMap(
