@@ -47,9 +47,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     Assert.Equal(0, session.Query<object>(collectionName: "Profits/References").Count());
                 }
 
+                var now = DateTime.Now;
+
                 using (var session = store.OpenSession())
                 {
-                    entity.OrderedAt = DateTime.Now;
+                    entity.OrderedAt = now;
 
                     session.Store(entity, "orders/1");
 
@@ -70,7 +72,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index2.IndexName }));
 
-                Assert.Contains("Invalid pattern reference document ID: 'reports/daily/2020-02-28|'. Error: reference ID must not end with '|' character", errors[0].Errors[0].Error);
+                Assert.Contains($"Invalid pattern reference document ID: 'reports/daily/{now:yyyy-MM-dd}|'. Error: reference ID must not end with '|' character", errors[0].Errors[0].Error);
 
                 using (var session = store.OpenSession())
                 {
