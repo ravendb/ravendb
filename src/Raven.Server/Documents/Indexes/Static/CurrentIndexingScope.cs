@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private IndexingStatsScope _stats;
         private IndexingStatsScope _loadDocumentStats;
+        private IndexingStatsScope _loadCompareExchangeValueStats;
         private JavaScriptUtils _javaScriptUtils;
         private readonly DocumentsStorage _documentsStorage;
         private readonly QueryOperationContext _queryContext;
@@ -70,6 +71,7 @@ namespace Raven.Server.Documents.Indexes.Static
             SourceCollection = collection;
             _stats = stats;
             _loadDocumentStats = null;
+            _loadCompareExchangeValueStats = null;
         }
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)
@@ -114,7 +116,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public unsafe dynamic LoadCompareExchangeValue(LazyStringValue keyLazy, string keyString)
         {
-            //using (_loadDocumentStats?.Start() ?? (_loadDocumentStats = _stats?.For(IndexingOperation.LoadDocument))) // TODO [ppekrol]
+            using (_loadCompareExchangeValueStats?.Start() ?? (_loadCompareExchangeValueStats = _stats?.For(IndexingOperation.LoadCompareExchangeValue)))
             {
                 if (keyLazy == null && keyString == null)
                     return DynamicNullObject.Null;
