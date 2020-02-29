@@ -135,10 +135,13 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (value.Value == null || value.Value.TryGetMember("Object", out object result) == false)
                     return DynamicNullObject.Null;
 
+                if (result == null)
+                    return DynamicNullObject.ExplicitNull;
+
                 if (result is BlittableJsonReaderObject bjro)
                     return new DynamicBlittableJson(bjro);
 
-                throw new InvalidOperationException("TODO ppekrol");
+                return result;
             }
         }
 
