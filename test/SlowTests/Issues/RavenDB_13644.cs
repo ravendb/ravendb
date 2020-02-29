@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Orders;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
@@ -21,9 +23,21 @@ namespace SlowTests.Issues
         [Fact]
         public void CanLoadCompareExchangeInIndexes()
         {
+            CanLoadCompareExchangeInIndexes<Index_With_CompareExchange>();
+        }
+
+        [Fact]
+        public void CanLoadCompareExchangeInIndexes_JavaScript()
+        {
+            CanLoadCompareExchangeInIndexes<Index_With_CompareExchange_JavaScript>();
+        }
+
+        private void CanLoadCompareExchangeInIndexes<TIndex>()
+            where TIndex : AbstractIndexCreationTask, new()
+        {
             using (var store = GetDocumentStore())
             {
-                var index = new Index_With_CompareExchange();
+                var index = new TIndex();
                 var indexName = index.IndexName;
                 index.Execute(store);
 
@@ -1019,6 +1033,24 @@ namespace SlowTests.Issues
                                    };
 
                 StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        private class Index_With_CompareExchange_JavaScript : AbstractJavaScriptIndexCreationTask
+        {
+            public class Result
+            {
+                public string City { get; set; }
+            }
+
+            public Index_With_CompareExchange_JavaScript()
+            {
+                Maps = new HashSet<string>
+                {
+                    "map('Companies', function (c) { var address = cmpxchg(c.ExternalId); return { City: address.City };})",
+                };
+
+                Fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions { Storage = FieldStorage.Yes });
             }
         }
 

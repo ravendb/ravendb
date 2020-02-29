@@ -6,6 +6,7 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Function;
 using Jint.Native.Object;
+using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Static
             HasDynamicFields = false;
             foreach (var (key, val) in collectionFunctions)
             {
-                var collections = new Dictionary<string, List<IndexingFunc>> 
+                var collections = new Dictionary<string, List<IndexingFunc>>
                 {
                      { key, val.Select(x => (IndexingFunc)x.IndexingFunction).ToList() }
                 };
@@ -122,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList,
-            List<HashSet<CollectionName>> mapReferencedCollections, out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
+            List<(HashSet<CollectionName> ReferencedCollections, bool HasCompareExchangeReferences)> mapReferencedCollections, out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
         {
             var mapsArray = definitions.GetProperty(MapsProperty).Value;
             if (mapsArray.IsNull() || mapsArray.IsUndefined() || mapsArray.IsArray() == false)
@@ -178,7 +179,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     ReferencedCollections.Add(mapCollection, collectionNames);
                 }
 
-                collectionNames.UnionWith(mapReferencedCollections[i]);
+                collectionNames.UnionWith(mapReferencedCollections[i].ReferencedCollections);
+
+                if (mapReferencedCollections[i].HasCompareExchangeReferences)
+                    CollectionsWithCompareExchangeReferences.Add(mapCollection);
 
                 list.Add(operation);
             }
@@ -200,19 +204,20 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static readonly ParserOptions DefaultParserOptions = new ParserOptions();
 
-        private HashSet<CollectionName> ExecuteCodeAndCollectReferencedCollections(string code)
+        private (HashSet<CollectionName> ReferencedCollections, bool HasCompareExchangeReferences) ExecuteCodeAndCollectReferencedCollections(string code)
         {
             var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
             var program = javascriptParser.ParseProgram();
             _engine.ExecuteWithReset(program);
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
             loadVisitor.Visit(program);
-            return loadVisitor.ReferencedCollection;
+            return (loadVisitor.ReferencedCollection, loadVisitor.HasCompareExchangeReferences);
         }
 
-        private (List<string> Maps, List<HashSet<CollectionName>> MapReferencedCollections) InitializeEngine(IndexDefinition definition)
+        private (List<string> Maps, List<(HashSet<CollectionName> ReferencedCollections, bool HasCompareExchangeReferences)> MapReferencedCollections) InitializeEngine(IndexDefinition definition)
         {
             _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
+            _engine.SetValue("cmpxchg", new ClrFunctionInstance(_engine, "cmpxchg", LoadCompareExchangeValue));
             _engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", GetMetadata));
             _engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
             _engine.ExecuteWithReset(Code);
@@ -226,11 +231,12 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             var maps = definition.Maps.ToList();
-            var mapReferencedCollections = new List<HashSet<CollectionName>>();
+            var mapReferencedCollections = new List<(HashSet<CollectionName> ReferencedCollections, bool HasCompareExchangeReferences)>();
 
-            foreach (var t in maps)
+            foreach (var map in maps)
             {
-                mapReferencedCollections.Add(ExecuteCodeAndCollectReferencedCollections(t));
+                var result = ExecuteCodeAndCollectReferencedCollections(map);
+                mapReferencedCollections.Add(result);
             }
 
             if (definition.Reduce != null)
@@ -259,7 +265,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private void ThrowIndexCreationException(string message)
         {
-            throw new IndexCreationException($"Javascript index {_definitions.Name} {message}");
+            throw new IndexCreationException($"JavaScript index {_definitions.Name} {message}");
         }
 
         private JsValue LoadDocument(JsValue self, JsValue[] args)
@@ -285,6 +291,54 @@ namespace Raven.Server.Documents.Indexes.Static
             return DynamicJsNull.ImplicitNull;
         }
 
+        private JsValue LoadCompareExchangeValue(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1)
+                throw new ArgumentException("The cmpxchg(key) method expects one argument, but got: " + args.Length);
+
+            var keyArgument = args[0];
+            if (keyArgument.IsNull() || keyArgument.IsUndefined())
+                return JsValue.Undefined;
+
+            if (keyArgument.IsString())
+            {
+                object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, keyArgument.AsString());
+                if (JavaScriptIndexUtils.GetValue(_engine, value, out var item))
+                    return item;
+            }
+            else if (keyArgument.IsArray())
+            {
+                var keys = keyArgument.AsArray();
+
+                var values = _engine.Array.Construct(keys.Length);
+                var arrayArgs = new JsValue[1];
+                for (uint i = 0; i < keys.Length; i++)
+                {
+                    var key = keys[i];
+                    if (key.IsString() == false)
+                        ThrowInvalidType(key, Types.String);
+
+                    object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString());
+                    if (JavaScriptIndexUtils.GetValue(_engine, value, out arrayArgs[0]) == false)
+                        arrayArgs[0] = JsValue.Undefined;
+
+                    _engine.Array.PrototypeObject.Push(values, args);
+                }
+
+                return values;
+            }
+            else
+            {
+                throw new InvalidOperationException($"Argument '{keyArgument}' was of type '{keyArgument.Type}', but either string or array of strings was expected.");
+            }
+
+            return JsValue.Undefined;
+
+            static void ThrowInvalidType(JsValue value, Types expectedType)
+            {
+                throw new InvalidOperationException($"Argument '{value}' was of type '{value.Type}', but '{expectedType}' was expected.");
+            }
+        }
 
         private const string Code = @"
 var globalDefinition =
@@ -294,31 +348,30 @@ var globalDefinition =
 }
 
 function map(name, lambda) {
-
     var map = {
         collection: name,
         method: lambda,
         moreArgs: Array.prototype.slice.call(arguments, 2)
-    };    
+    };
     globalDefinition.maps.push(map);
 }
 
 function groupBy(lambda) {
     var reduce = globalDefinition.reduce = { };
     reduce.key = lambda;
- 
+
     reduce.aggregate = function(reduceFunction){
         reduce.aggregateBy = reduceFunction;
     }
     return reduce;
 }
 
-function createSpatialField(wkt) {    
-    return { $spatial: wkt }   
+function createSpatialField(wkt) {
+    return { $spatial: wkt }
 }
 
-function createSpatialField(lat, lng) {    
-    return { $spatial: {Lng:lng, Lat:lat} }   
+function createSpatialField(lat, lng) {
+    return { $spatial: {Lng:lng, Lat:lat} }
 }
 ";
 
