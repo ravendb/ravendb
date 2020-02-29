@@ -343,7 +343,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     case DynamicBlittableJson dbj:
                         return new BlittableObjectInstance(_engine, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
                     default:
-                        throw new InvalidOperationException($"Invalid object type: '{value.GetType()}'");
+                        return _javaScriptUtils.TranslateToJs(_engine, context: null, value);
                 }
             }
 

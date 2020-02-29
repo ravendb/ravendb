@@ -1676,7 +1676,10 @@ namespace Raven.Client.Documents.Indexes
                         Out("Where");
                         break;
                     case nameof(AbstractIndexCreationTask.LoadDocument):
-                        Out("LoadDocument");
+                        Out(nameof(AbstractIndexCreationTask.LoadDocument));
+                        break;
+                    case nameof(AbstractIndexCreationTask.LoadCompareExchangeValue):
+                        Out(nameof(AbstractIndexCreationTask.LoadCompareExchangeValue));
                         break;
                     default:
                         Out(node.Method.Name);
