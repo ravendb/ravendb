@@ -194,7 +194,6 @@ namespace Raven.Server.Documents.Indexes.Static
             return (functionObject, functionExp);
         }
 
-        public HashSet<CollectionName> ReferencedCollections { get; set; } = new HashSet<CollectionName>();
         public ArrayInstance MoreArguments { get; set; }
         public string MapString { get; internal set; }
 

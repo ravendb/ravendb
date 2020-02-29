@@ -23,7 +23,7 @@ namespace RachisTests
             var leader = await CreateNetworkAndGetLeader(3);
             var nonLeader = GetRandomFollower();
             long lastIndex;
-            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 var cmd = new TestCommandWithRaftId("test", RaftIdGenerator.NewId())
                 {
