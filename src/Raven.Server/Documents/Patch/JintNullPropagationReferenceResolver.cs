@@ -33,6 +33,12 @@ namespace Raven.Server.Documents.Patch
                 return true;
             }
 
+            if (value is DynamicJsNull)
+            {
+                value = DynamicJsNull.ImplicitNull;
+                return true;
+            }
+
             return value.IsNull() || value.IsUndefined();
         }
 

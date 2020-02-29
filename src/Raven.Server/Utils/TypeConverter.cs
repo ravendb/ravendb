@@ -166,7 +166,14 @@ namespace Raven.Server.Utils
 
             if (value is JsValue js)
             {
-                if (js.IsNull() || js.IsUndefined())
+                if (js.IsNull())
+                {
+                    if (js is DynamicJsNull dynamicJsNull)
+                        return dynamicJsNull.IsExplicitNull ? DynamicNullObject.ExplicitNull : DynamicNullObject.Null;
+
+                    return null;
+                }
+                if (js.IsUndefined())
                     return null;
                 if (js.IsString())
                     return js.AsString();
