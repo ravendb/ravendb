@@ -298,17 +298,18 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var keyArgument = args[0];
             if (keyArgument.IsNull() || keyArgument.IsUndefined())
-                return JsValue.Undefined;
+                return DynamicJsNull.ImplicitNull;
 
             if (keyArgument.IsString())
             {
                 object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, keyArgument.AsString());
-                if (JavaScriptIndexUtils.GetValue(_engine, value, out var item))
-                    return item;
+                return ConvertToJsValue(value);
             }
             else if (keyArgument.IsArray())
             {
                 var keys = keyArgument.AsArray();
+                if (keys.Length == 0)
+                    return DynamicJsNull.ImplicitNull;
 
                 var values = _engine.Array.Construct(keys.Length);
                 var arrayArgs = new JsValue[1];
@@ -319,8 +320,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         ThrowInvalidType(key, Types.String);
 
                     object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString());
-                    if (JavaScriptIndexUtils.GetValue(_engine, value, out arrayArgs[0]) == false)
-                        arrayArgs[0] = JsValue.Undefined;
+                    arrayArgs[0] = ConvertToJsValue(value);
 
                     _engine.Array.PrototypeObject.Push(values, args);
                 }
@@ -332,7 +332,20 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException($"Argument '{keyArgument}' was of type '{keyArgument.Type}', but either string or array of strings was expected.");
             }
 
-            return JsValue.Undefined;
+            JsValue ConvertToJsValue(object value)
+            {
+                switch (value)
+                {
+                    case null:
+                        return DynamicJsNull.ImplicitNull;
+                    case DynamicNullObject dno:
+                        return dno.IsExplicitNull ? DynamicJsNull.ExplicitNull : DynamicJsNull.ImplicitNull;
+                    case DynamicBlittableJson dbj:
+                        return new BlittableObjectInstance(_engine, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
+                    default:
+                        throw new InvalidOperationException($"Invalid object type: '{value.GetType()}'");
+                }
+            }
 
             static void ThrowInvalidType(JsValue value, Types expectedType)
             {
