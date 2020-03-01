@@ -111,6 +111,7 @@ namespace Raven.Server.ServerWide
             [nameof(EditRefreshCommand)] = 42_003,
 
             [nameof(EditRevisionsForConflictsConfigurationCommand)] = 42_004,
+            [nameof(EditTimeSeriesConfigurationCommand)] = 50_000,
         };
 
         public static bool CanPutCommand(string command)
