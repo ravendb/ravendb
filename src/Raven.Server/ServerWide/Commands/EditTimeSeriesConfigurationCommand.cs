@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.ServerWide;
@@ -24,13 +25,21 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            if (Configuration?.Collections != null)
+            {
+                foreach (var config in Configuration.Collections.Values)
+                {
+                    config.Validate();
+                }
+            }
+
             record.TimeSeries = Configuration;
             return null;
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
+            json[nameof(Configuration)] = Configuration.ToJson();
         }
     }
 }

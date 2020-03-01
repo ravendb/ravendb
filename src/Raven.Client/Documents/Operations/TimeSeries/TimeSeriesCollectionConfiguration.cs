@@ -1,57 +1,80 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesCollectionConfiguration
+    public class TimeSeriesCollectionConfiguration : IDynamicJson
     {
-        public SortedSet<TimeSeriesDownSamplePolicy> DownSamplePolicies = new SortedSet<TimeSeriesDownSamplePolicy>(TimeSeriesDownSamplePolicyComparer.Instance);
-
         public TimeSpan? DeleteAfter;
 
         public bool Disabled;
+
+        public List<TimeSeriesDownSamplePolicy> DownSamplePolicies;
+
+        public void Validate()
+        {
+            if (DownSamplePolicies.Count == 0)
+                return;
+
+            DownSamplePolicies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
+
+            if (DeleteAfter.HasValue == false)
+                return;
+
+            var last = DownSamplePolicies.Last();
+            if (last.TimeFromNow >= DeleteAfter.Value)
+            {
+                throw new InvalidOperationException($"Values will be deleted before processed by the policy {last.Name}, " +
+                                                    $"since {nameof(TimeSeriesDownSamplePolicy.TimeFromNow)} is after {last.TimeFromNow} while {nameof(DeleteAfter)} is {DeleteAfter}");
+            }
+
+        }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(DownSamplePolicies)] = new DynamicJsonArray(DownSamplePolicies),
+                [nameof(DownSamplePolicies)] = new DynamicJsonArray(DownSamplePolicies.Select(p=>p.ToJson())),
                 [nameof(DeleteAfter)] = DeleteAfter,
                 [nameof(Disabled)] = Disabled
             };
         }
     }
 
-    public class TimeSeriesDownSamplePolicy
+    public class TimeSeriesDownSamplePolicy : IDynamicJson, IComparable<TimeSeriesDownSamplePolicy>
     {
         /// <summary>
         /// Name of the time series policy, defined by the convention "Per{Amplitude}{DownSampleFrequency} (e.g. Per1Hour)"
         /// </summary>
-        public string Name { get; } // defined by convention
+        public string Name; // defined by convention
 
         /// <summary>
         /// How far from UTC.Now this policy should be applied
         /// </summary>
-        public TimeSpan TimeFromNow { get; }
+        public TimeSpan TimeFromNow;
 
         /// <summary>
         /// Define the down sample frequency of this policy
         /// </summary>
-        public DownSampleFrequency DownSampleFrequency { get; }
+        public DownSampleFrequency DownSampleFrequency;
 
         /// <summary>
         /// Define the magnitude of the down-sample frequency
         /// e.g. If the frequency is per minute, so setting amplitude to 5 will we be resulted to per 5 minutes policy  
         /// </summary>
-        public int Amplitude { get; }
+        public int Amplitude;
 
         /// <summary>
         /// Disable this policy
         /// </summary>
         public bool Disabled;
 
+        private TimeSeriesDownSamplePolicy()
+        {
+            
+        }
 
         public TimeSeriesDownSamplePolicy(TimeSpan timeFromNow, DownSampleFrequency downSampleFrequency, int amplitude = 1)
         {
@@ -98,6 +121,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             return Name == other.Name &&
                    TimeFromNow == other.TimeFromNow;
+        }
+
+        public int CompareTo(TimeSeriesDownSamplePolicy other)
+        {
+            return TimeSeriesDownSamplePolicyComparer.Instance.Compare(this, other);
         }
 
         public override bool Equals(object obj)
