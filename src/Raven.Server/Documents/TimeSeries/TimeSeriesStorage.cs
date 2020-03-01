@@ -482,7 +482,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (tsNamesList.Count == 0)
                     {
                         metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
-                        flags.Strip(DocumentFlags.HasTimeSeries);
+                        flags = flags.Strip(DocumentFlags.HasTimeSeries);
                     }
                     else
                     {
