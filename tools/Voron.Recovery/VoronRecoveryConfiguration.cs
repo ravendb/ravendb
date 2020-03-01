@@ -7,7 +7,7 @@ namespace Voron.Recovery
     {
         public string PathToDataFile { get; set; }
         public string DataFileDirectory { get; set; }
-        public string OutputFileName { get; set; }
+        public string LoggingOutputPath { get; set; }
         public int PageSizeInKB { get; set; } = 8;
         public int InitialContextSizeInMB { get; set; } = 1;
         public int InitialContextLongLivedSizeInKB { get; set; } = 16;

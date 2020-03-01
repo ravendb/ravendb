@@ -30,32 +30,34 @@ namespace SlowTests.Issues
             DatabaseStatistics databaseStatistics;
 
             string recoverDbName = $"RecoverDB_{Guid.NewGuid().ToString()}";
+            FileInfo[] journals = null;
             // create db with sample data
             using (var store = GetDocumentStore(new Options()
             {
                 Path = dbPath
             }))
+            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 
                 var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
-            }
 
-            var journals = new DirectoryInfo(Path.Combine(dbPath, "Journals")).GetFiles();
+                journals = new DirectoryInfo(Path.Combine(dbPath, "Journals")).GetFiles();
 
-            // run recovery
-            var recoveredDatabase = await GetDatabase(recoverDbName);
-            using (var recovery = new Recovery(new VoronRecoveryConfiguration()
-            {
-                LoggingMode = Sparrow.Logging.LogMode.None,
-                DataFileDirectory = dbPath,
-                PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
-                OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
-                RecoveredDatabase = recoveredDatabase
-            }))
-            {
-                recovery.Execute(TextWriter.Null, CancellationToken.None);
+                // run recovery
+                var recoveredDatabase = await GetDatabase(recoverDbName);
+                using (var recovery = new Recovery(new VoronRecoveryConfiguration()
+                {
+                    LoggingMode = Sparrow.Logging.LogMode.None,
+                    DataFileDirectory = dbPath,
+                    PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
+                    LoggingOutputPath = Path.Combine(recoveryExportPath, "recovery.ravendump"),
+                    RecoveredDatabase = recoveredDatabase
+                }))
+                {
+                    recovery.Execute(TextWriter.Null, CancellationToken.None);
+                }
             }
 
             // make sure no journal file was lost during the process - by default we use copy on write mode

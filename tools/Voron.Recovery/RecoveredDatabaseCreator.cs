@@ -94,9 +94,9 @@ namespace Voron.Recovery
             WriteDocumentInternal(document, actions);
         }
 
-        public void WriteCounterItem(CounterGroupDetail counterGroupDetail, bool skipDocExistance = false)
+        public void WriteCounterItem(CounterGroupDetail counterGroupDetail, bool skipDocExistence = false)
         {
-            if (skipDocExistance == false)
+            if (skipDocExistence == false)
             {
                 using (var tx = _context.OpenWriteTransaction())
                 {
@@ -130,7 +130,7 @@ namespace Voron.Recovery
             actions.WriteCounter(counterGroupDetail);
         }
 
-        public void WriteAttachment(string hash, string name, string contentType, Stream attachmentStream)
+        public void WriteAttachment(string hash, string name, string contentType, Stream attachmentStream, long totalSize)
         {
             // store this attachment either under relevant orphan doc, or under already seen doc
             using (var tx = _context.OpenWriteTransaction())
@@ -158,8 +158,12 @@ namespace Voron.Recovery
                             if (attachmentData.TryGet("ContentType", out string originalContentType) == false)
                                 originalContentType = contentType;
                             orphanAttachmentDoc.Data.Modifications.Remove(docId);
-                            _database.DocumentsStorage.AttachmentsStorage.PutAttachment(_context, docId, originalName, originalContentType, hash, null,
+                            var attachmentDetails = _database.DocumentsStorage.AttachmentsStorage.PutAttachment(_context, docId, originalName, originalContentType, hash, null,
                                 attachmentStream);
+                            if (attachmentDetails.Size != totalSize)
+                            {
+                                Log("Attachment " + originalName + " of doc " + docId + " stream size is " + attachmentDetails.Size + " which is not as reported in datafile: " + totalSize);
+                            }
                         }
                     }
 
@@ -214,27 +218,17 @@ namespace Voron.Recovery
 
         private void WriteDocumentInternal(Document document, IDocumentActions actions)
         {
-            BlittableJsonReaderObject metadata = null;
+            BlittableJsonReaderObject metadata = document.Data.GetMetadata();
 
             bool hadCountersFlag = false;
             if (document.Flags.HasFlag(DocumentFlags.Revision) == false && // revisions contain _snapshot_ of counter, only the current doc will have counter
                 document.Flags.HasFlag(DocumentFlags.HasCounters))
             {
-                metadata = document.Data.GetMetadata();
-                if (metadata == null)
-                {
-                    Log($"Document {document.Id} has counters flag set but was unable to read its metadata and remove the counter names from it");
-                    // Logging and storing without counters
-                }
-                else
-                {
-                    // remove all counter names, and later on search if we saw orphan counters - and add them to this doc
-                    // after that if counter is discovered it will be written to this existing doc
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                    document.Data.Modifications = new DynamicJsonValue(document.Data) {[Constants.Documents.Metadata.Key] = metadata};
-                }
-
+                // remove all counter names, and later on search if we saw orphan counters - and add them to this doc
+                // after that if counter is discovered it will be written to this existing doc
+                metadata.Modifications = new DynamicJsonValue(metadata);
+                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                document.Data.Modifications = new DynamicJsonValue(document.Data) {[Constants.Documents.Metadata.Key] = metadata};
                 document.Flags = document.Flags.Strip(DocumentFlags.HasCounters); // later on counters will add back this flag
                 hadCountersFlag = true;
             }
@@ -243,34 +237,19 @@ namespace Voron.Recovery
             IMetadataDictionary[] attachments = null;
             if (document.Flags.HasFlag(DocumentFlags.HasAttachments))
             {
-                metadata ??= document.Data.GetMetadata();
-                if (metadata == null)
-                {
-                    Log($"Document {document.Id} has attachment flag set but was unable to read its metadata and retrieve the attachments hashes");
-                    // Logging and storing without attachments
-                }
-                else
-                {
-                    var metadataDictionary = new MetadataAsDictionary(metadata);
-                    attachments = metadataDictionary.GetObjects(Constants.Documents.Metadata.Attachments);
-
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
-                    document.Data.Modifications = new DynamicJsonValue(document.Data) {[Constants.Documents.Metadata.Key] = metadata};
-                }
+                var metadataDictionary = new MetadataAsDictionary(metadata);
+                attachments = metadataDictionary.GetObjects(Constants.Documents.Metadata.Attachments);
+                metadata.Modifications = new DynamicJsonValue(metadata);
+                metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                document.Data.Modifications = new DynamicJsonValue(document.Data) {[Constants.Documents.Metadata.Key] = metadata};
 
                 // Part of the recovery process is stripping DocumentFlags.HasAttachments, writing the doc and then adding the attachments.
                 // This _might_ add additional revisions to the recovered database (it will start adding after discovering the first revision..)
                 document.Flags = document.Flags.Strip(DocumentFlags.HasAttachments);
             }
 
-            if (metadata != null)
-            {
-                using (document.Data)
-                {
-                    document.Data = _context.ReadObject(document.Data, document.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                }
-            }
+            using (document.Data)
+                document.Data = _context.ReadObject(document.Data, document.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
             var item = new DocumentItem {Document = document};
             actions.WriteDocument(item, _results.Documents);

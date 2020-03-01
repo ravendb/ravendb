@@ -7,11 +7,14 @@ using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Sparrow.Logging;
+using Sparrow.Server.Platform;
+using Sparrow.Utils;
 
 namespace Voron.Recovery
 {
@@ -96,7 +99,11 @@ namespace Voron.Recovery
                     serverConfig.Core.DataDirectory = new PathSetting(recoveredServerPath.Value());
                     serverConfig.Initialize();
 
+                    LicenseManager.IgnoreProcessorAffinityChanges = true;
+                    NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
+
                     using var server = new RavenServer(serverConfig);
+
                     server.Initialize();
 
                     Console.WriteLine($"Server started at {server.WebUrl} with database : {recoveredDatabaseName}");
@@ -134,13 +141,13 @@ namespace Voron.Recovery
                         return ExitWithError("Missing RecoverDirectory argument", cmd);
                     }
                     
-                    config.OutputFileName = Path.Combine(recoverDirectory, outputFileNameArg.HasValue() ? outputFileNameArg.Value() : RecoveryFileName);
+                    config.LoggingOutputPath = Path.Combine(recoverDirectory, outputFileNameArg.HasValue() ? outputFileNameArg.Value() : RecoveryFileName);
                     try
                     {
                         if (!Directory.Exists(recoverDirectory))
                             Directory.CreateDirectory(recoverDirectory);
-                        File.WriteAllText(config.OutputFileName, "I have write permission!");
-                        File.Delete(config.OutputFileName);
+                        File.WriteAllText(config.LoggingOutputPath, "I have write permission!");
+                        File.Delete(config.LoggingOutputPath);
                     }
                     catch
                     {

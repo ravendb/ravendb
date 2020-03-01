@@ -182,6 +182,7 @@ namespace SlowTests.Voron
 
             string recoverDbName = $"RecoverDB_{Guid.NewGuid().ToString()}";
             var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
+            using var x = EnsureDatabaseDeletion(recoverDbName, store);
             using var recoveredDatabase = await GetDatabase(recoverDbName);
 
             // run recovery
@@ -191,12 +192,14 @@ namespace SlowTests.Voron
                 LoggingMode = LogMode.None,
                 DataFileDirectory = dbPath,
                 PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
-                OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
+                LoggingOutputPath = recoveryExportPath,
                 RecoveredDatabase = recoveredDatabase
             }))
             {
                 var result = recovery.Execute(TextWriter.Null, CancellationToken.None);
             }
+
+            WaitForUserToContinueTheTest(store);
 
             using (var recoveredSession = store.OpenSession(recoverDbName))
             {
@@ -263,7 +266,7 @@ namespace SlowTests.Voron
                 LoggingMode = LogMode.None,
                 DataFileDirectory = dbPath,
                 PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
-                OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
+                LoggingOutputPath = recoveryExportPath,
                 RecoveredDatabase = recoveredDatabase2
             }))
             {

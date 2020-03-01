@@ -65,28 +65,29 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = dbPath
             }))
+            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 
                 var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
-            }
 
-            var recoveredDatabase = await GetDatabase(recoverDbName);
-            using (var recovery = new Recovery(new VoronRecoveryConfiguration()
-            {
-                LoggingMode = Sparrow.Logging.LogMode.None,
-                DataFileDirectory = dbPath,
-                PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
-                OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
-                MasterKey = masterKey,
-                DisableCopyOnWriteMode = nullifyMasterKey,
-                RecoveredDatabase = recoveredDatabase
-            }))
-            {
-                recovery.Execute(TextWriter.Null, CancellationToken.None);
-            }
 
+                var recoveredDatabase = await GetDatabase(recoverDbName);
+                using (var recovery = new Recovery(new VoronRecoveryConfiguration()
+                {
+                    LoggingMode = Sparrow.Logging.LogMode.None,
+                    DataFileDirectory = dbPath,
+                    PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
+                    LoggingOutputPath = Path.Combine(recoveryExportPath, "recovery.ravendump"),
+                    MasterKey = masterKey,
+                    DisableCopyOnWriteMode = nullifyMasterKey,
+                    RecoveredDatabase = recoveredDatabase
+                }))
+                {
+                    recovery.Execute(TextWriter.Null, CancellationToken.None);
+                }
+            }
 
             using (var store = GetDocumentStore(new Options()
             {
