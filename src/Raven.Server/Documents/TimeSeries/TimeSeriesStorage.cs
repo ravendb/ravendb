@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.TimeSeries
                     using (data)
                     {
                         var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        _documentDatabase.DocumentsStorage.Put(ctx, docId, null, newDocumentData, flags: flags);
+                        _documentDatabase.DocumentsStorage.Put(ctx, docId, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
                     }
                 }
             }
@@ -1672,7 +1672,7 @@ namespace Raven.Server.Documents.TimeSeries
             using (data)
             {
                 var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                _documentDatabase.DocumentsStorage.Put(ctx, docId, null, newDocumentData, flags: flags);
+                _documentDatabase.DocumentsStorage.Put(ctx, docId, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
             }
         }
 
