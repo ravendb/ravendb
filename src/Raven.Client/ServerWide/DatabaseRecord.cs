@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -64,6 +65,8 @@ namespace Raven.Client.ServerWide
         public Dictionary<string, string> Settings = new Dictionary<string, string>();
 
         public RevisionsConfiguration Revisions;
+
+        public TimeSeriesConfiguration TimeSeries;
 
         public RevisionsCollectionConfiguration RevisionsForConflicts;
 
