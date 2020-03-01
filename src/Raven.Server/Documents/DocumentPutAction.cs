@@ -409,7 +409,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, IRecreationType type)
         {
             BlittableJsonReaderObject metadata;
-            BlittableJsonReaderArray current = null;
+            BlittableJsonReaderArray current = null, old = null;
 
             if (nonPersistentFlags.Contain(type.ResolveConflictFlag))
             {
@@ -427,7 +427,7 @@ namespace Raven.Server.Documents
 
             if (oldDoc == null || 
                 oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) == false ||
-                oldMetadata.TryGet(type.MetadataProperty, out BlittableJsonReaderArray old) == false) 
+                oldMetadata.TryGet(type.MetadataProperty, out old) == false) 
                 return false;
 
             // Make sure the user did not changed the value of @attachments in the @metadata
@@ -445,6 +445,35 @@ namespace Raven.Server.Documents
 
             bool RecreatePreserveCasing(BlittableJsonReaderArray currentMetadata, ref DocumentFlags documentFlags)
             {
+                if (type is RecreateTimeSeries && currentMetadata == null && old != null)
+                {
+                    // use the '@timeseries' from old document's metadata
+
+                    if (metadata == null)
+                    {
+                        document.Modifications = new DynamicJsonValue(document)
+                        {
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                            {
+                                [type.MetadataProperty] = old
+                            }
+                        };
+                    }
+                    else
+                    {
+                        metadata.Modifications = new DynamicJsonValue(metadata)
+                        {
+                            [type.MetadataProperty] = old
+                        };
+                        document.Modifications = new DynamicJsonValue(document)
+                        {
+                            [Constants.Documents.Metadata.Key] = metadata
+                        };
+                    }
+
+                    return true;
+                }
+
                 var values = type.GetMetadata(context, docId);
 
                 if (values.Count == 0)
