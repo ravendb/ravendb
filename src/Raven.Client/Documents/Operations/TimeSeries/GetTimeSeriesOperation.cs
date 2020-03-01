@@ -74,11 +74,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     .Append(node.Database)
                     .Append("/timeseries");
 
-                if (_ranges != null)
-                {
-                    pathBuilder.Append("/get-ranges");
-                }
-
                 pathBuilder.Append("?id=")
                     .Append(Uri.EscapeDataString(_docId))
                     .Append("&name=")
