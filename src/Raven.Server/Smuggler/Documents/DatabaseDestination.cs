@@ -741,6 +741,24 @@ namespace Raven.Server.Smuggler.Documents
                     progress.SqlEtlsUpdated = true;
                 }
 
+                if (databaseRecord?.TimeSeries != null)
+                {
+                    if (currentDatabaseRecord?.TimeSeries != null)
+                    {
+                        foreach (var collection in currentDatabaseRecord.TimeSeries.Collections)
+                        {
+                            if ((databaseRecord.TimeSeries.Collections.ContainsKey(collection.Key)) == false)
+                            {
+                                databaseRecord.TimeSeries.Collections.Add(collection.Key, collection.Value);
+                            }
+                        }
+                    }
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring time-series from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditTimeSeriesConfigurationCommand(databaseRecord.TimeSeries, _database.Name, RaftIdGenerator.DontCareId)));
+                    progress.TimeSeriesConfigurationUpdated = true;
+                }
+
                 if (databaseRecord?.Revisions != null)
                 {
                     if (currentDatabaseRecord?.Revisions != null)

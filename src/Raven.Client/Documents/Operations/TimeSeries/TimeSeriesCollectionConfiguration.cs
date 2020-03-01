@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
@@ -11,6 +12,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public TimeSpan? DeleteAfter;
 
         public bool Disabled;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(DownSamplePolicies)] = new DynamicJsonArray(DownSamplePolicies),
+                [nameof(DeleteAfter)] = DeleteAfter,
+                [nameof(Disabled)] = Disabled
+            };
+        }
     }
 
     public class TimeSeriesDownSamplePolicy
@@ -69,6 +80,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(TimeFromNow)] = TimeFromNow,
+                [nameof(DownSampleFrequency)] = DownSampleFrequency,
+                [nameof(Amplitude)] = Amplitude,
+                [nameof(Disabled)] = Disabled
+            };
         }
 
         protected bool Equals(TimeSeriesDownSamplePolicy other)

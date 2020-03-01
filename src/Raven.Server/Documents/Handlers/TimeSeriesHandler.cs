@@ -380,6 +380,35 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/admin/timeseries/config", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ConfigTimeSeries()
+        {
+            await DatabaseConfigurations(
+                ServerStore.ModifyTimeSeriesConfiguration,
+                "read-timeseries-config", 
+                GetRaftRequestIdFromQuery(),
+                beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
+                {
+                    if (configuration == null || 
+                        configuration.TryGet(nameof(TimeSeriesConfiguration.Collections), out BlittableJsonReaderObject collections) == false ||
+                        collections?.Count > 0 == false)
+                        return;
+
+                    var uniqueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+                    for (var i = 0; i < collections.Count; i++)
+                    {
+                        collections.GetPropertyByIndex(i, ref prop);
+
+                        if (uniqueKeys.Add(prop.Name) == false)
+                        {
+                            throw new InvalidOperationException("Cannot have two different revision configurations on the same collection. " +
+                                                                $"Collection name : '{prop.Name}'");
+                        }
+                    }
+                });
+        }
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;

@@ -1838,6 +1838,12 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editRevisions);
         }
 
+        public Task<(long, object)> ModifyTimeSeriesConfiguration(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var editRevisions = new EditTimeSeriesConfigurationCommand(JsonDeserializationCluster.TimeSeriesConfiguration(configurationJson), name, raftRequestId);
+            return SendToLeaderAsync(editRevisions);
+        }
+
         public async Task<(long, object)> PutConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString, string raftRequestId)
         {
             if (connectionString.TryGet(nameof(ConnectionString.Type), out string type) == false)

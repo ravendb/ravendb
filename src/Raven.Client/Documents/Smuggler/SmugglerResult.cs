@@ -226,6 +226,8 @@ namespace Raven.Client.Documents.Smuggler
 
             public bool ConflictSolverConfigUpdated { get; set; }
 
+            public bool TimeSeriesConfigurationUpdated { get; set; }
+
             public bool RevisionsConfigurationUpdated { get; set; }
 
             public bool ExpirationConfigurationUpdated { get; set; }
@@ -241,6 +243,9 @@ namespace Raven.Client.Documents.Smuggler
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
+
+                if (TimeSeriesConfigurationUpdated)
+                    json[nameof(TimeSeriesConfigurationUpdated)] = TimeSeriesConfigurationUpdated;
 
                 if (RevisionsConfigurationUpdated)
                     json[nameof(RevisionsConfigurationUpdated)] = RevisionsConfigurationUpdated;

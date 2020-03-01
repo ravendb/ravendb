@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
@@ -71,6 +72,10 @@ namespace Raven.Server.ServerWide
        
         public static readonly Func<BlittableJsonReaderObject, RestoreFromGoogleCloudConfiguration> RestoreGoogleCloudBackupConfiguration = GenerateJsonDeserializationRoutine<RestoreFromGoogleCloudConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, TimeSeriesConfiguration> TimeSeriesConfiguration = GenerateJsonDeserializationRoutine<TimeSeriesConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, TimeSeriesCollectionConfiguration> TimeSeriesCollectionConfiguration = GenerateJsonDeserializationRoutine<TimeSeriesCollectionConfiguration>();
+
         public static readonly Func<BlittableJsonReaderObject, RevisionsConfiguration> RevisionsConfiguration = GenerateJsonDeserializationRoutine<RevisionsConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, RevisionsCollectionConfiguration> RevisionsCollectionConfiguration = GenerateJsonDeserializationRoutine<RevisionsCollectionConfiguration>();
@@ -124,6 +129,7 @@ namespace Raven.Server.ServerWide
             [nameof(RecheckStatusOfServerCertificateReplacementCommand)] = GenerateJsonDeserializationRoutine<RecheckStatusOfServerCertificateReplacementCommand>(),
             [nameof(AddOrUpdateCompareExchangeCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeCommand>(),
             [nameof(RemoveCompareExchangeCommand)] = GenerateJsonDeserializationRoutine<RemoveCompareExchangeCommand>(),
+            [nameof(EditTimeSeriesConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditTimeSeriesConfigurationCommand>(),
             [nameof(EditRevisionsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsConfigurationCommand>(),
             [nameof(EditRevisionsForConflictsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsForConflictsConfigurationCommand>(),
             [nameof(EditDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditDatabaseClientConfigurationCommand>(),
