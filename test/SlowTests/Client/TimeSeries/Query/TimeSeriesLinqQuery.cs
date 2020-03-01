@@ -2316,7 +2316,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(159, rangeAggregation.Min[0]);
                     Assert.Equal(179, rangeAggregation.Max[0]);
 
-                    expectedFrom = baseline.Add(offset).AddHours(1);
+                    expectedFrom = baseline.AddHours(1).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
@@ -2329,7 +2329,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(259, rangeAggregation.Min[0]);
                     Assert.Equal(279, rangeAggregation.Max[0]);
 
-                    expectedFrom = baseline.Add(offset).AddHours(2);
+                    expectedFrom = baseline.AddHours(2).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
@@ -2342,7 +2342,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(359, rangeAggregation.Min[0]);
                     Assert.Equal(379, rangeAggregation.Max[0]);
 
-                    expectedFrom = baseline.Add(offset).AddMonths(1);
+                    expectedFrom = baseline.AddMonths(1).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
@@ -2434,7 +2434,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(359, rangeAggregation.Min[0]);
                     Assert.Equal(379, rangeAggregation.Max[0]);
 
-                    expectedFrom = baseline.Add(offset).AddMonths(1);
+                    expectedFrom = baseline.AddMonths(1).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
@@ -2449,7 +2449,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
-                    expectedFrom = baseline.Add(offset).AddMonths(6).AddHours(-3);
+                    expectedFrom = baseline.AddMonths(6).AddHours(-3).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
                     Assert.Equal(expectedFrom, rangeAggregation.From);
