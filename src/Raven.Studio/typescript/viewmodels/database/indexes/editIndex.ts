@@ -157,26 +157,55 @@ class editIndex extends viewModelBase {
         
         popoverUtils.longWithHover($("#reduce-output-info"),
             {
-                content: "<small>Reduce results will be saved into documents <br> created under the provided collection name.</small>"
+                content: 
+                    "<small>" +
+                        "Reduce results will be saved into documents that will be created under the provided collection name." +
+                    "</small>"
             });
 
         popoverUtils.longWithHover($("#reference-docs-info"),
-            {
-                content: 
+            {               
+                content:
                     "<small>" +
-                            "<ul>" +
-                                "<li>" +
-                                  "A <i>Reference Collection</i> with documents that reference the above <i>Reduce Results Collection</i> will be created.<br>" +
-                                  "The Reference Collection name will be: <strong>'{reduce-results-collection-name} / References.'</strong><br><br>" +
-                                "</li>" +
-                                "<li>" +
-                                   "<strong>The pattern</strong> entered is used to create the IDs for the Reference Collection documents.<br><br>" +
-                                "</li>" +
-                                "<li>" +
-                                   "Use any combination of index-field(s) and fixed text in the pattern.<br>" + 
-                                   "i.e. <strong>{fixed-text} / {index-field-1} / {index-field-2}'</strong>" +                    
-                                "</li>" +
-                            "</ul> " +
+                       "<ul>" +
+                           "<li>" +
+                                "A <i>Reference Collection</i> with documents that reference the above <i>Reduce Results Collection</i> will be created.<br>" +
+                            "</li>" +
+                            "<li>" +
+                                "The collection name and the referencing document IDs pattern can be customized here below." +
+                            "</li>" +
+                        "</ul> " +
+                    "</small>"
+            });
+        
+        popoverUtils.longWithHover($("#reference-docs-pattern-info"),
+            {
+                content:
+                    "<small>" +
+                        "<ul>" +
+                            "<li>" +
+                                "<strong>The pattern</strong> entered is used to create the IDs for the Reference Collection documents.<br>" +
+                            "</li>" +
+                            "<li>" +
+                                "Use any combination of index-field(s) and fixed text in the pattern.<br>" +
+                                "i.e. <strong>fixed-text / {index-field-1} / {index-field-2}'</strong>" +
+                            "</li>" +
+                        "</ul> " +
+                    "</small>"
+            });
+
+        popoverUtils.longWithHover($("#reference-docs-collection-name-info"),
+            {
+                content:
+                    "<small>" +
+                        "<ul>" +
+                            "<li>" +
+                                "Enter a name for the Referencing Documents Collection." +
+                            "</li>" +
+                            "<li>" +
+                                "<strong>Default name</strong> is: <strong>'{reduce-results-collection-name} / References.'</strong>" +
+                            "</li>" +                    
+                        "</ul> " +
                     "</small>"
             });
     }
@@ -263,7 +292,7 @@ class editIndex extends viewModelBase {
             indexDef.outputReduceToCollection,
             indexDef.reduceOutputCollectionName,
             indexDef.patternForReferencesToReduceOutputCollection,
-            indexDef.hasPatternForReduceOutputCollection,
+            indexDef.collectionNameForReferenceDocuments,
             indexDef.numberOfAdditionalSources,
             hasAnyDirtyField,
             hasAnyDirtyConfiguration,
@@ -583,6 +612,9 @@ class editIndex extends viewModelBase {
     cloneIndex() {
         this.isEditingExistingIndex(false);
         this.editedIndex().name(null);
+        this.editedIndex().reduceOutputCollectionName(null);
+        this.editedIndex().patternForReferencesToReduceOutputCollection(null);
+        this.editedIndex().collectionNameForReferenceDocuments(null);
         this.editedIndex().validationGroup.errors.showAllMessages(false);
     }
 

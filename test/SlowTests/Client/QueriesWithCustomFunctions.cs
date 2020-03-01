@@ -2383,7 +2383,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
         }
 
         [Fact]
-        public async Task QueryCompareExchangeWithNullValue()
+        public void QueryCompareExchangeWithNullValue()
         {
             using (var store = GetDocumentStore())
             {

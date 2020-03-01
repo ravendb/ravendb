@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Esprima;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -1080,7 +1081,14 @@ namespace Raven.Server.Documents.TcpHandlers
             var script = writer.GetStringBuilder().ToString();
 
             // verify that the JS code parses
-            new Esprima.JavaScriptParser(script).ParseProgram();
+            try
+            {
+                new JavaScriptParser(script).ParseProgram();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidDataException("Unable to parse: " + script, e);
+            }
             return new ParsedSubscription
             {
                 Collection = collectionName,

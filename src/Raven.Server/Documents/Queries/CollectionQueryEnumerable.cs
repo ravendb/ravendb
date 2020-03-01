@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Queries
                     _innerCount++;
 
                     var doc = _fieldsToFetch.IsProjection
-                        ? _resultsRetriever.GetProjectionFromDocument(_inner.Current, null, QueryResultRetrieverBase.ZeroScore,  _fieldsToFetch, _context, null)
+                        ? _resultsRetriever.GetProjectionFromDocument(_inner.Current, null, QueryResultRetrieverBase.ZeroScore, _fieldsToFetch, _context, null)
                         : _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
@@ -435,7 +435,12 @@ namespace Raven.Server.Documents.Queries
                         _allocator.ToLowerCase(ref key.Content);
                     }
                     else
-                        key = Slices.Empty;
+                    {
+                        // this is a rare case
+                        // we are allocating here, because we are releasing all of the ids later on
+                        // if we will use Slices.Empty, then we will release that on a different context
+                        Slice.From(_allocator, string.Empty, out key);
+                    }
 
                     if (Ids == null)
                         Ids = new HashSet<Slice>(SliceComparer.Instance);

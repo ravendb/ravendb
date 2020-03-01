@@ -231,11 +231,10 @@ namespace Raven.Server.Documents.Expiration
             return false;
         }
 
-        public int DeleteDocumentsExpiration(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired)
+        public int DeleteDocumentsExpiration(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DateTime currentTime)
         {
             var deletionCount = 0;
             var expirationTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByExpiration);
-            var currentTime = _database.Time.GetUtcNow();
 
             foreach (var pair in expired)
             {
@@ -272,11 +271,10 @@ namespace Raven.Server.Documents.Expiration
             return deletionCount;
         }
 
-        public int RefreshDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired)
+        public int RefreshDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DateTime currentTime)
         {
             var refreshCount = 0;
             var refreshTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByRefresh);
-            var currentTime = _database.Time.GetUtcNow();
 
             foreach (var pair in expired)
             {

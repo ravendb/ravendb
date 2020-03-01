@@ -1,20 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class OutputReferencesPattern
     {
+        public string ReferencesCollectionName { get; }
         public string Pattern => _builder?.Pattern; 
         
         private static readonly Regex FieldsRegex = new Regex(@"\{([^\:}]*)\:?([^}]*)\}", RegexOptions.Compiled);
 
         private readonly DocumentIdBuilder _builder;
 
-        public OutputReferencesPattern(string pattern)
+        public OutputReferencesPattern(string pattern, string referencesCollectionName = null)
         {
+            ReferencesCollectionName = referencesCollectionName;
             var matches = FieldsRegex.Matches(pattern);
 
             if (matches.Count == 0)
@@ -103,7 +107,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 if (_addedFields != _countOfFields)
                     ThrowNumberOfProcessedFieldsMismatch();
 
-                return _id.AppendFormat(_formattedPattern, _values).ToString();
+                var id = _id.AppendFormat(_formattedPattern, _values).ToString();
+                
+                ValidateId(id);
+
+                return id;
+            }
+
+            public static void ValidateId(string id)
+            {
+                if (id.EndsWith('/'))
+                    ThrowInvalidId(id, "reference ID must not end with '/' character");
+
+                if (id.EndsWith('|'))
+                    ThrowInvalidId(id, "reference ID must not end with '|' character");
             }
 
             public void Dispose()
@@ -114,6 +131,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             public void Add(string fieldName, object fieldValue)
             {
+                if (fieldValue == null || fieldValue is DynamicNullObject)
+                     ThrowEncounteredNullValueInPattern(fieldName);
+
                 var pos = _fieldToFormatPosition[fieldName];
 
                 _values[pos] = fieldValue;
@@ -125,6 +145,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 throw new InvalidOperationException(
                     $"Cannot create identifier for reference document of reduce outputs. Expected to process {_countOfFields} fields while it got {_addedFields}. Pattern: '{_pattern}'");
+            }
+
+            private static void ThrowInvalidId(string id, string message)
+            {
+                throw new InvalidOperationException($"Invalid pattern reference document ID: '{id}'. Error: {message}");
+            }
+
+            private static void ThrowEncounteredNullValueInPattern(string fieldName)
+            {
+                throw new InvalidOperationException($"Invalid pattern reference document ID. Field '{fieldName}' was null");
             }
         }
     }

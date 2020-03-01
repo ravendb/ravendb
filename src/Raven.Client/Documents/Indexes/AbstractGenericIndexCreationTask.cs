@@ -102,6 +102,11 @@ namespace Raven.Client.Documents.Indexes
         protected Expression<Func<TReduceResult, string>> PatternForOutputReduceToCollectionReferences { get; set; }
 
         /// <summary>
+        /// Defines a collection name for reference documents created based on provided pattern
+        /// </summary>
+        protected string PatternReferencesCollectionName { get; set; }
+
+        /// <summary>
         /// Register a field to be indexed
         /// </summary>
         protected void Index(Expression<Func<TReduceResult, object>> field, FieldIndexing indexing)
