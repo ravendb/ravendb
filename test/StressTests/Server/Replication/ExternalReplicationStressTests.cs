@@ -251,7 +251,7 @@ namespace StressTests.Server.Replication
 
             var cluster = await CreateRaftCluster(numberOfNodes: clusterSize, shouldRunInMemory: false, customSettings: new Dictionary<string, string>()
             {
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "10",
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "300",
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
@@ -293,25 +293,25 @@ namespace StressTests.Server.Replication
                     using (var store2 = new DocumentStore { Urls = new[] { _nodes[index].WebUrl }, Conventions = { DisableTopologyUpdates = true }, Database = databaseName }.Initialize())
                     {
                         await store2.Maintenance.SendAsync(new GetStatisticsOperation());
-                    }
 
-                    Assert.Equal(2, GetIdleCount());
+                        Assert.Equal(2, GetIdleCount());
 
-                    using (var s = store.OpenAsyncSession())
-                    {
-                        await s.StoreAsync(new User() { Name = "Egor" }, "foo/bar");
-                        await s.SaveChangesAsync();
+                        using (var s = store2.OpenAsyncSession())
+                        {
+                            await s.StoreAsync(new User() { Name = "Egor" }, "foo/bar");
+                            await s.SaveChangesAsync();
+                        }
                     }
 
                     count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), 0, GetIdleCount);
                     Assert.Equal(0, count);
 
+                    var timeout = 5000;
                     foreach (var server in _nodes)
                     {
                         using (var store2 = new DocumentStore { Urls = new[] { server.WebUrl }, Conventions = { DisableTopologyUpdates = true }, Database = databaseName }.Initialize())
                         {
-                            var docs = (await store.Maintenance.SendAsync(new GetStatisticsOperation())).CountOfDocuments;
-                            Assert.Equal(1, docs);
+                            Assert.True(WaitForDocument(store2, "foo/bar", timeout, databaseName), $"WaitForDocument for {server.ServerStore.NodeTag} returned false, after {timeout}, leader: {cluster.Leader}");
                         }
                     }
 
