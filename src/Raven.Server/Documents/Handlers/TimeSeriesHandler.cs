@@ -116,12 +116,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
         public Task Read()
         {
-            return GetRanges();
-        }
-
-        [RavenAction("/databases/*/timeseries/get-ranges", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetRanges()
-        {
             var documentId = GetStringQueryString("id");
             var name = GetStringQueryString("name");
             var fromList = GetStringValuesQueryString("from", required: false);
@@ -313,7 +307,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        private void WriteResponse(DocumentsOperationContext context, string documentId, string name, List<TimeSeriesRangeResult> ranges, bool addTotalCount = false)
+        private void WriteResponse(DocumentsOperationContext context, string documentId, string name, List<TimeSeriesRangeResult> ranges, bool addTotalCount)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -339,17 +333,18 @@ namespace Raven.Server.Documents.Handlers
                     }
                     writer.WriteEndObject();
 
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TimeSeriesDetails.TotalResults));
+
                     if (addTotalCount)
                     {
                         // add total entries count to the response 
-
                         var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetStatsFor(context, documentId, name);
-
-                        writer.WriteComma();
-                        writer.WritePropertyName(nameof(TimeSeriesDetails.TotalResults));
                         writer.WriteInteger(stats.Count);
-
-
+                    }
+                    else
+                    {
+                        writer.WriteInteger(-1);
                     }
                 }
                 writer.WriteEndObject();

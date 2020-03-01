@@ -373,6 +373,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     Assert.Equal(1, timesSeriesDetails.Values.Count);
                     Assert.Equal(3, timesSeriesDetails.Values["Heartrate"].Count);
 
+                    Assert.Equal(-1, timesSeriesDetails.TotalResults);
+
                     var range = timesSeriesDetails.Values["Heartrate"][0];
 
                     Assert.Equal(baseline.AddMinutes(5), range.From);
@@ -454,6 +456,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     Assert.Equal("users/ayende", timesSeriesDetails.Id);
                     Assert.Equal(1, timesSeriesDetails.Values.Count);
                     Assert.Equal(3, timesSeriesDetails.Values["Heartrate"].Count);
+
+                    Assert.Equal(-1, timesSeriesDetails.TotalResults);
 
                     var range = timesSeriesDetails.Values["Heartrate"][0];
 
@@ -752,11 +756,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 pathBuilder.Append("/databases/")
                     .Append(node.Database)
                     .Append("/timeseries");
-
-                if (_ranges != null)
-                {
-                    pathBuilder.Append("/get-ranges");
-                }
 
                 pathBuilder.Append("?id=")
                     .Append(Uri.EscapeDataString(_docId))
