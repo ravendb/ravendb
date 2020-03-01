@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesConfiguration
+    public class TimeSeriesConfiguration : IDynamicJson
     {
         public Dictionary<string, TimeSeriesCollectionConfiguration> Collections { get; set; }
 

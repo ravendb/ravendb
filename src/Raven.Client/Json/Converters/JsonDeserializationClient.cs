@@ -166,6 +166,8 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureRevisionsOperationResult> ConfigureRevisionsOperationResult = GenerateJsonDeserializationRoutine<ConfigureRevisionsOperationResult>();
 
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureTimeSeriesOperationResult> ConfigureTimeSeriesOperationResult = GenerateJsonDeserializationRoutine<ConfigureTimeSeriesOperationResult>();
+
         internal static readonly Func<BlittableJsonReaderObject, ExternalReplication> ExternalReplication = GenerateJsonDeserializationRoutine<ExternalReplication>();
 
         internal static readonly Func<BlittableJsonReaderObject, PullReplicationAsSink> PullReplicationAsSink = GenerateJsonDeserializationRoutine<PullReplicationAsSink>();

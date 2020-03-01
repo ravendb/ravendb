@@ -73,7 +73,7 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, RestoreFromGoogleCloudConfiguration> RestoreGoogleCloudBackupConfiguration = GenerateJsonDeserializationRoutine<RestoreFromGoogleCloudConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, TimeSeriesConfiguration> TimeSeriesConfiguration = GenerateJsonDeserializationRoutine<TimeSeriesConfiguration>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, TimeSeriesCollectionConfiguration> TimeSeriesCollectionConfiguration = GenerateJsonDeserializationRoutine<TimeSeriesCollectionConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, RevisionsConfiguration> RevisionsConfiguration = GenerateJsonDeserializationRoutine<RevisionsConfiguration>();
