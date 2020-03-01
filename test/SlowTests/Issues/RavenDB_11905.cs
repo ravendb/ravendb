@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                 LoggingMode = Sparrow.Logging.LogMode.None,
                 DataFileDirectory = dbPath,
                 PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
-                LoggingOutputPath = Path.Combine(recoveryExportPath, "recovery.ravendump"),
+                LoggingOutputPath = Path.Combine(recoveryExportPath),
                 RecoveredDatabase = recoveredDatabase
             }))
             {
@@ -49,14 +49,8 @@ namespace SlowTests.Issues
             }
             
             using (var store = GetDocumentStore())
+            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
             {
-                var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
-                {
-
-                }, Path.Combine(recoveryExportPath, "recovery-2-Documents.ravendump"));
-
-                op.WaitForCompletion(TimeSpan.FromMinutes(2));
-
                 var databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(0, databaseStatistics.CountOfAttachments);

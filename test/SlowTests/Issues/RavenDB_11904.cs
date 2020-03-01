@@ -36,7 +36,6 @@ namespace SlowTests.Issues
             {
                 Path = dbPath
             }))
-            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
@@ -52,7 +51,7 @@ namespace SlowTests.Issues
                     LoggingMode = Sparrow.Logging.LogMode.None,
                     DataFileDirectory = dbPath,
                     PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
-                    LoggingOutputPath = Path.Combine(recoveryExportPath, "recovery.ravendump"),
+                    LoggingOutputPath = Path.Combine(recoveryExportPath),
                     RecoveredDatabase = recoveredDatabase
                 }))
                 {
@@ -81,19 +80,12 @@ namespace SlowTests.Issues
             // let's import the recovery files
 
             using (var store = GetDocumentStore())
+            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
             {
-                var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
-                {
+                var currentStats = store.Maintenance.ForDatabase(recoverDbName).Send(new GetStatisticsOperation());
 
-                }, Path.Combine(recoveryExportPath, "recovery-2-Documents.ravendump"));
-
-                op.WaitForCompletion(TimeSpan.FromMinutes(2));
-
-                var currentStats = store.Maintenance.Send(new GetStatisticsOperation());
-
-                // + 1 as recovery adds some artificial items
-                Assert.Equal(databaseStatistics.CountOfAttachments + 1, currentStats.CountOfAttachments);
-                Assert.Equal(databaseStatistics.CountOfDocuments + 1, currentStats.CountOfDocuments);
+                Assert.Equal(databaseStatistics.CountOfAttachments, currentStats.CountOfAttachments);
+                Assert.Equal(databaseStatistics.CountOfDocuments + 1, currentStats.CountOfDocuments);  // + 1 as recovery adds RecoverLog document
             }
         }
     }

@@ -65,7 +65,6 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = dbPath
             }))
-            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
@@ -79,7 +78,7 @@ namespace SlowTests.Issues
                     LoggingMode = Sparrow.Logging.LogMode.None,
                     DataFileDirectory = dbPath,
                     PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
-                    LoggingOutputPath = Path.Combine(recoveryExportPath, "recovery.ravendump"),
+                    LoggingOutputPath = Path.Combine(recoveryExportPath),
                     MasterKey = masterKey,
                     DisableCopyOnWriteMode = nullifyMasterKey,
                     RecoveredDatabase = recoveredDatabase
@@ -94,69 +93,12 @@ namespace SlowTests.Issues
                 AdminCertificate = certificates.ServerCertificate.Value,
                 ClientCertificate = certificates.ServerCertificate.Value,
             }))
+            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
             {
-                var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
-                {
+                var currentStats = store.Maintenance.ForDatabase(recoverDbName).Send(new GetStatisticsOperation());
 
-                }, Path.Combine(recoveryExportPath, "recovery-2-Documents.ravendump"));
-
-                op.WaitForCompletion(TimeSpan.FromMinutes(2));
-
-                var currentStats = store.Maintenance.Send(new GetStatisticsOperation());
-
-                // Temporary dump: RavenDB-13765
-                var msg = new StringBuilder();
-                if (databaseStatistics.CountOfAttachments + 1 != currentStats.CountOfAttachments ||
-                    databaseStatistics.CountOfDocuments + 1 != currentStats.CountOfDocuments)
-                {
-                    using (var session = store.OpenSession())
-                    {
-                        var list1 = session.Query<Employee>().ToList();
-                        var list2 = session.Query<Category>().ToList();
-                        
-                        foreach (Employee l1 in list1)
-                        {
-                            var opGetAttach = session.Advanced.Attachments.Get(l1, "photo.jpg");
-                            var revCnt = session.Advanced.Revisions.GetFor<Employee>(l1.Id).Count;
-                            msg.AppendLine($"Employee {l1.Id} Attachment = {opGetAttach?.Details?.DocumentId}, RevCount=" + revCnt);
-                        }
-                        foreach (Category l2 in list2)
-                        {
-                            var opGetAttach = session.Advanced.Attachments.Get(l2, "image.jpg");
-                            var revCnt = session.Advanced.Revisions.GetFor<Employee>(l2.Id).Count;
-                            msg.AppendLine($"Category {l2.Id} Attachment = {opGetAttach?.Details?.DocumentId}, RevCount=" + revCnt);
-                        }
-                        
-                        var documentDatabase = await GetDatabase(store.Database);
-                        using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                        using (context.OpenReadTransaction())
-                        {
-                            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsStorage.AttachmentsSchema, AttachmentsStorage.AttachmentsMetadataSlice);
-                            var count = table.NumberOfEntries;
-                            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsStorage.AttachmentsSlice);
-                            var streamsCount = tree.State.NumberOfEntries;
-                            msg.AppendLine($"count={count}, streamsCount={streamsCount}");
-
-                            using (var it = tree.Iterate(false))
-                            {
-                                if (it.Seek(Slices.BeforeAllKeys))
-                                {
-                                    do
-                                    {
-                                        msg.AppendLine("tree key=" + it.CurrentKey.Content);
-                                    } while (it.MoveNext());
-                                }
-                            }
-                        }
-                    }
-                    var currentStats2 = store.Maintenance.Send(new GetStatisticsOperation());
-                    msg.AppendLine("Get again currentStats.CountOfAttachments=" + currentStats2.CountOfAttachments);
-                    throw new Exception(msg.ToString());
-                }
-                
-                // + 1 as recovery adds some artificial items
-                Assert.Equal(databaseStatistics.CountOfAttachments + 1, currentStats.CountOfAttachments);
-                Assert.Equal(databaseStatistics.CountOfDocuments + 1, currentStats.CountOfDocuments);
+                Assert.Equal(databaseStatistics.CountOfAttachments, currentStats.CountOfAttachments);
+                Assert.Equal(databaseStatistics.CountOfDocuments + 1, currentStats.CountOfDocuments); // + 1 as recovery adds RecoverLog document
             }
         }
     }
