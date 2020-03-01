@@ -22,6 +22,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron.Data;
+using Document = Raven.Server.Documents.Document;
 
 namespace Voron.Recovery
 {
@@ -42,6 +43,13 @@ namespace Voron.Recovery
         private readonly ByteStringContext _byteStringContext;
         private readonly string _recoveryLogCollection;
         private string GetOrphanAttachmentDocId(string hash) => $"{_orphanAttachmentsDocIdPrefix}/{hash}";
+
+        private static class Constants
+        {
+            public static string Name;
+            public static string ContentType;
+            public static string OriginalDocId;
+        }
 
         private RecoveredDatabaseCreator(DocumentDatabase documentDatabase, string recoverySession, Logger logger)
         {
@@ -65,7 +73,7 @@ namespace Voron.Recovery
                     {
                         ["RecoverySession"] = recoverySession,
                         ["RecoveryStarted"] = DateTime.Now,
-                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Collection] = _recoveryLogCollection}
+                        [Raven.Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Raven.Client.Constants.Documents.Metadata.Collection] = _recoveryLogCollection}
                     }, _logDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk)
                 )
                 {
@@ -100,28 +108,35 @@ namespace Voron.Recovery
             {
                 using (var tx = _context.OpenWriteTransaction())
                 {
-                    Document originalDoc = _database.DocumentsStorage.Get(_context, counterGroupDetail.DocumentId);
-                    if (originalDoc == null)
+                    using (var originalDoc = _database.DocumentsStorage.Get(_context, counterGroupDetail.DocumentId))
                     {
-                        var orphanDocId = $"{_orphanCountersDocIdPrefix}/{counterGroupDetail.DocumentId}";
-                        var orphanDoc = _database.DocumentsStorage.Get(_context, orphanDocId);
-                        if (orphanDoc == null)
+                        if (originalDoc == null)
                         {
-                            using (var doc = _context.ReadObject(
-                                new DynamicJsonValue
-                                {
-                                    ["OriginalDocId"] = counterGroupDetail.DocumentId.ToString(),
-                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Collection] = _recoveryLogCollection}
-                                }, orphanDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                            var orphanDocId = $"{_orphanCountersDocIdPrefix}/{counterGroupDetail.DocumentId}";
+                            using (var orphanDoc = _database.DocumentsStorage.Get(_context, orphanDocId))
                             {
-                                var _ = _database.DocumentsStorage.Put(_context, orphanDocId, null, doc);
+                                if (orphanDoc == null)
+                                {
+                                    using (var doc = _context.ReadObject(
+                                        new DynamicJsonValue
+                                        {
+                                            [nameof(Constants.OriginalDocId)] = counterGroupDetail.DocumentId.ToString(),
+                                            [Raven.Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                                            {
+                                                [Raven.Client.Constants.Documents.Metadata.Collection] = _recoveryLogCollection
+                                            }
+                                        }, orphanDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                                    {
+                                        var _ = _database.DocumentsStorage.Put(_context, orphanDocId, null, doc);
+                                    }
+                                }
+
+                                counterGroupDetail.DocumentId.Dispose();
+                                counterGroupDetail.DocumentId = _context.GetLazyString(orphanDocId);
+
+                                tx.Commit();
                             }
                         }
-
-                        counterGroupDetail.DocumentId.Dispose();
-                        counterGroupDetail.DocumentId = _context.GetLazyString(orphanDocId);
-
-                        tx.Commit();
                     }
                 }
             }
@@ -143,7 +158,7 @@ namespace Voron.Recovery
                     orphanAttachmentDoc.Data.Modifications = new DynamicJsonValue(orphanAttachmentDoc.Data);
                     foreach (var docId in orphanAttachmentDoc.Data.GetPropertyNames())
                     {
-                        if (docId.Equals(Constants.Documents.Metadata.Key) || docId.Equals(Constants.Documents.Metadata.Collection))
+                        if (docId.Equals(Raven.Client.Constants.Documents.Metadata.Key) || docId.Equals(Raven.Client.Constants.Documents.Metadata.Collection))
                             continue;
                         if (orphanAttachmentDoc.Data.TryGetMember(docId, out var attachmentDataObj) == false)
                             continue;
@@ -153,9 +168,9 @@ namespace Voron.Recovery
                         var seenDoc = _database.DocumentsStorage.Get(_context, docId);
                         if (seenDoc != null)
                         {
-                            if (attachmentData.TryGet("Name", out string originalName) == false)
+                            if (attachmentData.TryGet(nameof(Constants.Name), out string originalName) == false)
                                 originalName = name;
-                            if (attachmentData.TryGet("ContentType", out string originalContentType) == false)
+                            if (attachmentData.TryGet(nameof(Constants.ContentType), out string originalContentType) == false)
                                 originalContentType = contentType;
                             orphanAttachmentDoc.Data.Modifications.Remove(docId);
                             var attachmentDetails = _database.DocumentsStorage.AttachmentsStorage.PutAttachment(_context, docId, originalName, originalContentType, hash, null,
@@ -171,7 +186,7 @@ namespace Voron.Recovery
                         BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                     {
 
-                        if (newDocument.GetPropertyNames().Length == 1) // 1 for @metadata and @collection
+                        if (newDocument.GetPropertyNames().Length == 1) // 1 for @metadata
                         {
                             _database.DocumentsStorage.Delete(_context, orphanAttachmentDoc.Id, null);
                         }
@@ -179,7 +194,7 @@ namespace Voron.Recovery
                         {
                             var metadata = orphanAttachmentDoc.Data.GetMetadata();
                             if (metadata != null)
-                                metadata.Modifications = new DynamicJsonValue(metadata) {[Constants.Documents.Metadata.Collection] = _recoveryLogCollection};
+                                metadata.Modifications = new DynamicJsonValue(metadata) {[Raven.Client.Constants.Documents.Metadata.Collection] = _recoveryLogCollection};
                             _database.DocumentsStorage.Put(_context, orphanAttachmentDoc.Id, null, newDocument);
                         }
                     }
@@ -191,13 +206,13 @@ namespace Voron.Recovery
                     {
                         existingStream = tree.ReadStream(hash);
                     }
-                    // although no previous doc asked for this attachment, it still might appear from previous recovery sessions. If so - ignore this WriteAttachment call
+                    // although no previous doc asked for this attachment, it still might appear from previous recovery sessions on the same recovered database. If so - ignore this WriteAttachment call
                     if (existingStream == null)
                     {
                         using (var newDocument = _context.ReadObject(
                             new DynamicJsonValue
                             {
-                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Collection] = _recoveryLogCollection}
+                                [Raven.Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Raven.Client.Constants.Documents.Metadata.Collection] = _recoveryLogCollection}
                             },
                             orphanAttachmentDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                         {
@@ -227,8 +242,8 @@ namespace Voron.Recovery
                 // remove all counter names, and later on search if we saw orphan counters - and add them to this doc
                 // after that if counter is discovered it will be written to this existing doc
                 metadata.Modifications = new DynamicJsonValue(metadata);
-                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                document.Data.Modifications = new DynamicJsonValue(document.Data) {[Constants.Documents.Metadata.Key] = metadata};
+                metadata.Modifications.Remove(Raven.Client.Constants.Documents.Metadata.Counters);
+                document.Data.Modifications = new DynamicJsonValue(document.Data) {[Raven.Client.Constants.Documents.Metadata.Key] = metadata};
                 document.Flags = document.Flags.Strip(DocumentFlags.HasCounters); // later on counters will add back this flag
                 hadCountersFlag = true;
             }
@@ -238,10 +253,10 @@ namespace Voron.Recovery
             if (document.Flags.HasFlag(DocumentFlags.HasAttachments))
             {
                 var metadataDictionary = new MetadataAsDictionary(metadata);
-                attachments = metadataDictionary.GetObjects(Constants.Documents.Metadata.Attachments);
+                attachments = metadataDictionary.GetObjects(Raven.Client.Constants.Documents.Metadata.Attachments);
                 metadata.Modifications = new DynamicJsonValue(metadata);
-                metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
-                document.Data.Modifications = new DynamicJsonValue(document.Data) {[Constants.Documents.Metadata.Key] = metadata};
+                metadata.Modifications.Remove(Raven.Client.Constants.Documents.Metadata.Attachments);
+                document.Data.Modifications = new DynamicJsonValue(document.Data) {[Raven.Client.Constants.Documents.Metadata.Key] = metadata};
 
                 // Part of the recovery process is stripping DocumentFlags.HasAttachments, writing the doc and then adding the attachments.
                 // This _might_ add additional revisions to the recovered database (it will start adding after discovering the first revision..)
@@ -341,8 +356,8 @@ namespace Voron.Recovery
                                     using (var doc = _context.ReadObject(
                                         new DynamicJsonValue
                                         {
-                                            [document.Id] = new DynamicJsonValue {["Name"] = name, ["ContentType"] = contentType},
-                                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Collection] = _recoveryLogCollection}
+                                            [document.Id] = new DynamicJsonValue {[nameof(Constants.Name)] = name, [nameof(Constants.ContentType)] = contentType},
+                                            [Raven.Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Raven.Client.Constants.Documents.Metadata.Collection] = _recoveryLogCollection}
                                         }, orphanAttachmentDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk)
                                     )
                                     {
@@ -353,7 +368,7 @@ namespace Voron.Recovery
                                 {
                                     orphanAttachmentDoc.Data.Modifications = new DynamicJsonValue(orphanAttachmentDoc.Data)
                                     {
-                                        [document.Id] = new DynamicJsonValue {["Name"] = name, ["ContentType"] = contentType}
+                                        [document.Id] = new DynamicJsonValue {[nameof(Constants.Name)] = name, [nameof(Constants.ContentType)] = contentType}
                                     };
                                     var newDocument = _context.ReadObject(orphanAttachmentDoc.Data, orphanAttachmentDoc.Id,
                                         BlittableJsonDocumentBuilder.UsageMode.ToDisk);

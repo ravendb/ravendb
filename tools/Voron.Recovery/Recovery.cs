@@ -69,6 +69,12 @@ namespace Voron.Recovery
         private StorageEnvironmentOptions _option;
         private readonly DocumentDatabase _recoveredDatabase;
         private bool _shouldIgnoreInvalidPagesInARaw;
+        private long _numberOfDocumentsRetrieved;
+        private long _numberOfAttachmentsRetrieved;
+        private long _numberOfCountersRetrieved;
+        private long _numberOfRevisionsRetrieved;
+        private long _numberOfConflictsRetrieved;
+        private string _lastRecoveredKey = "(Nothing discovered yet)";
 
         public Recovery(VoronRecoveryConfiguration config)
         {
@@ -124,13 +130,13 @@ namespace Voron.Recovery
 
         public RecoveryStatus Execute(TextWriter writer, CancellationToken ct)
         {
-            // void PrintRecoveryProgress(long startOffset, byte* mem, byte* eof, DateTime now)
-            // {
-            //     var currPos = GetFilePosition(startOffset, mem);
-            //     var eofPos = GetFilePosition(startOffset, eof);
-            //     writer.WriteLine(
-            //         $"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos / eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
-            // }
+            void PrintRecoveryProgress(long startOffset, byte* mem, byte* eof, DateTime now)
+            {
+                var currPos = GetFilePosition(startOffset, mem);
+                var eofPos = GetFilePosition(startOffset, eof);
+                writer.WriteLine(
+                    $"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos / eofPos:p}) - Last recovered {_lastRecoveredKey}");
+            }
 
             StorageEnvironment se = null;
             TempPagerTransaction tx = null;
@@ -240,14 +246,13 @@ namespace Voron.Recovery
                                 break;
                             }
 
-                            // ADIADI TODO: Remove and replace report with something else
                             var now = DateTime.UtcNow;
                             if ((now - lastProgressReport).TotalSeconds >= _progressIntervalInSec)
                             {
                                 if (lastProgressReport != DateTime.MinValue) writer.WriteLine("Press 'q' to quit the recovery process");
 
                                 lastProgressReport = now;
-                                // PrintRecoveryProgress(startOffset, mem, eof, now);
+                                PrintRecoveryProgress(startOffset, mem, eof, now);
                             }
 
                             var pageHeader = (PageHeader*)page;
@@ -392,6 +397,8 @@ namespace Voron.Recovery
                                             }
 
                                             fs.Position = 0;
+                                            _numberOfAttachmentsRetrieved++;
+                                            _lastRecoveredKey = $"Attachment with hash '{hash}'";
                                             recoveredTool.WriteAttachment(hash, "Recovered_" + Guid.NewGuid(), "", fs, totalSize);
                                             fs.Close();
                                         }
@@ -515,16 +522,17 @@ namespace Voron.Recovery
                             }
                         }
 
-                    // ADIADI TODO: Remove: PrintRecoveryProgress(startOffset, mem, eof, DateTime.UtcNow);
+                    PrintRecoveryProgress(startOffset, mem, eof, DateTime.UtcNow);
 
-                    // if (_logger.IsOperationsEnabled)
-                    //     _logger.Operations(Environment.NewLine +
-                    //                        $"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds." +
-                    //                        Environment.NewLine +
-                    //                        $"Discovered a total of {_attachmentsHashs.Count:#,#;00} attachments. " + Environment.NewLine +
-                    //                        $"Discovered a total of {_numberOfCountersRetrieved:#,#;00} counters. " + Environment.NewLine +
-                    //                        $"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
-                    // ADIADI TODO: Print summary
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations(Environment.NewLine +
+                                           $"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds." +
+                                           Environment.NewLine +
+                                           $"Discovered a total of {_numberOfAttachmentsRetrieved:#,#;00} attachments. " + Environment.NewLine +
+                                           $"Discovered a total of {_numberOfRevisionsRetrieved:#,#;00} revisions. " + Environment.NewLine +
+                                           $"Discovered a total of {_numberOfConflictsRetrieved:#,#;00} conflicts. " + Environment.NewLine +
+                                           $"Discovered a total of {_numberOfCountersRetrieved:#,#;00} counters. " + Environment.NewLine +
+                                           $"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
                 }
 
                 if (_cancellationRequested)
@@ -641,12 +649,16 @@ namespace Voron.Recovery
                 case TableType.None:
                     return false;
                 case TableType.Documents:
+                    _numberOfDocumentsRetrieved++;
                     return WriteDocument(recoveryTool, mem, sizeInBytes, context, startOffset);
                 case TableType.Revisions:
+                    _numberOfRevisionsRetrieved++;
                     return WriteRevision(recoveryTool, mem, sizeInBytes, context, startOffset);
                 case TableType.Conflicts:
+                    _numberOfConflictsRetrieved++;
                     return WriteConflict(recoveryTool, mem, sizeInBytes, context, startOffset);
                 case TableType.Counters:
+                    _numberOfCountersRetrieved++;
                     return WriteCounter(recoveryTool, mem, sizeInBytes, context, startOffset);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(tableType), tableType, null);
@@ -679,6 +691,7 @@ namespace Voron.Recovery
                     return false;
                 }
 
+                _lastRecoveredKey = $"Counter of '{counterGroup.DocumentId}'";
                 recoveryTool.WriteCounterItem(counterGroup);
 
                 if (_logger.IsInfoEnabled)
@@ -735,6 +748,7 @@ namespace Voron.Recovery
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Found document with key={document.Id}");
 
+                _lastRecoveredKey = $"Document '{document.Id}'";
                 recoveryTool.WriteDocument(document);
                 document.Dispose();
 
@@ -777,6 +791,7 @@ namespace Voron.Recovery
                     return false;
                 }
 
+                _lastRecoveredKey = $"Revision '{revision.Id}'";
                 recoveryTool.WriteRevision(revision);
 
                 if (_logger.IsInfoEnabled)
@@ -819,6 +834,7 @@ namespace Voron.Recovery
                     return false;
                 }
 
+                _lastRecoveredKey = $"Conflict '{conflict.Id}'";
                 recoveryTool.WriteConflict(conflict);
 
                 if (_logger.IsInfoEnabled)

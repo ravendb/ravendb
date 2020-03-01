@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Sparrow.Logging;
 using Sparrow.Server.Platform;
@@ -80,46 +82,35 @@ namespace Voron.Recovery
                 var ignoreInvalidPagesInARowArg = cmd.Option("--IgnoreInvalidPagesInARow", "Default is false.", CommandOptionType.SingleValue);
                 var loggingModeArg = cmd.Option("--LoggingMode", "Logging mode: Operations or Information.", CommandOptionType.SingleValue);
                 var masterKey = cmd.Option("--MasterKey", "Encryption key: base64 string of the encryption master key", CommandOptionType.SingleValue);
-                var recoveredServerPath = cmd.Option("--RecoveredServerPath", "Recovered database server destination", CommandOptionType.SingleValue);
 
                 cmd.OnExecute(() =>
                 {
-                    if (recoveredServerPath.HasValue() == false)
-                        ExitWithError("Must have 'RecoveredServerPath' options set", cmd);
-
-                    Console.WriteLine("Starting server for recovery results...");
                     var recoveredDatabaseName = "RecoveredDB-" + Guid.NewGuid();
-                    var emptySettingsFile = "settings-" + Guid.NewGuid() + ".json";
-                    using (var f = File.CreateText(emptySettingsFile))
-                        f.Write("{}");
-                    var serverConfig = RavenConfiguration.CreateForServer(null, Path.Combine(Directory.GetCurrentDirectory(), emptySettingsFile));
-                    serverConfig.Core.ServerUrls = new[] {"http://127.0.0.1:0"};
+                    var serverConfig = RavenConfiguration.CreateForServer("RecoveryConfiguration");
                     serverConfig.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
                     serverConfig.Licensing.EulaAccepted = true;
-                    serverConfig.Core.DataDirectory = new PathSetting(recoveredServerPath.Value());
+                    serverConfig.Core.DataDirectory = new PathSetting(recoverDirectoryArg.Value);
                     serverConfig.Initialize();
 
                     LicenseManager.IgnoreProcessorAffinityChanges = true;
                     NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
 
-                    using var server = new RavenServer(serverConfig);
+                    Console.WriteLine("Recovered data file path: " + recoverDirectoryArg.Value);
 
+                    using var server = new RavenServer(serverConfig);
                     server.Initialize();
 
-                    Console.WriteLine($"Server started at {server.WebUrl} with database : {recoveredDatabaseName}");
+                    var doc = new DatabaseRecord(recoveredDatabaseName);
+                    var configuration = new Dictionary<string, string>();
+                    configuration.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), recoverDirectoryArg.Value);
+                    doc.Settings = configuration;
+                    using var store = new DocumentStore {Urls = new[] {server.WebUrl}, Database = recoveredDatabaseName};
+                    store.Initialize();
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
-                    using var store = new DocumentStore
-                    {
-                        Urls = new [] {server.WebUrl},
-                        Database = recoveredDatabaseName
-                    }.Initialize();
-                    var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord
-                    {
-                        DatabaseName = recoveredDatabaseName,
-                    }));
-                    var recoveredDatabase = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(recoveredDatabaseName).Result;
-
-                    Console.WriteLine("Recovered data file path: " + recoveredServerPath.Value());
+                    var recoveredDatabase = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(recoveredDatabaseName, null,
+                        true, true, true).Result;
+                    Console.WriteLine($"Got recoveredDatabase: {recoveredDatabase?.Name}");
 
                     VoronRecoveryConfiguration config = new VoronRecoveryConfiguration
                     {
