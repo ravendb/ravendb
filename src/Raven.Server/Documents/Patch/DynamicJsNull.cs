@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Jint.Native;
 using Jint.Runtime;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class DynamicJsNull : JsValue, IEquatable<JsNull>, IEquatable<DynamicJsNull>
+    public sealed class DynamicJsNull : JsValue, IEquatable<JsNull>, IEquatable<DynamicJsNull>
     {
         public static DynamicJsNull ImplicitNull = new DynamicJsNull(isExplicitNull: false);
 
