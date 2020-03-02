@@ -306,9 +306,10 @@ namespace Raven.Server.Documents.Patch
                     case 4: signature = signature4Args;
                         break;
                     case 5: signature = signature5Args;
-                        if (args[3] != JsValue.Null)
+                        var tagArgument = args[3];
+                        if (tagArgument != null && tagArgument.IsNull() == false && tagArgument.IsUndefined() == false)
                         {
-                            var tag = GetStringArg(args[3], signature, "tag");
+                            var tag = GetStringArg(tagArgument, signature, "tag");
                             lsTag = _jsonCtx.GetLazyString(tag);
                         }
                         break;

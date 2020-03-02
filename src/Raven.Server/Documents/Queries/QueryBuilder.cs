@@ -653,7 +653,18 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleBoost(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact)
         {
-            var boost = float.Parse(((ValueExpression)expression.Arguments[1]).Token.Value);
+            if(expression.Arguments.Count != 2)
+            {
+                throw new InvalidQueryException($"Boost(expression, boostVal) requires two arguments, but was called with {expression.Arguments.Count}",
+                    metadata.QueryText, parameters);
+            }
+
+            string value = ((ValueExpression)expression.Arguments[1]).Token.Value;
+            if (float.TryParse(value, out var boost) == false)
+            {
+                throw new InvalidQueryException($"The boost value must be a valid float, but was called with {value}",
+                    metadata.QueryText, parameters);
+            }
 
             var q = ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, indexDef: null, parameters, analyzer, factories, exact);
             q.Boost = boost;

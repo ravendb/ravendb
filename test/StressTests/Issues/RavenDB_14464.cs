@@ -42,10 +42,11 @@ namespace StressTests.Issues
                 RunInMemory = false
             });
 
-            using (var store = GetDocumentStore(new Options
+            using (IDocumentStore store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = documentStore =>
+                ModifyDocumentStore = s =>
                 {
+                    var documentStore = (IDocumentStore)s;
                     documentStore.Conventions.OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;
                     documentStore.OnFailedRequest += (sender, args) => { };
                 },
@@ -108,7 +109,7 @@ namespace StressTests.Issues
             }
         }
 
-        private static void put_1500_companies(DocumentStore store)
+        private static void put_1500_companies(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Runtime.Serialization;
 using CsvHelper;
@@ -30,7 +31,7 @@ namespace Tests.Infrastructure
                 file.Position = 0;
                 file.SetLength(0);
 
-                _csvWriter = new CsvWriter(new StreamWriter(file));
+                _csvWriter = new CsvWriter(new StreamWriter(file), CultureInfo.InvariantCulture);
                 _csvWriter.WriteHeader(typeof(TestResourceSnapshot));
             }
         }
