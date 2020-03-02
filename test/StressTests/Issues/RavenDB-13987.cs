@@ -39,7 +39,7 @@ namespace StressTests.Issues
 
             var cluster = await CreateRaftCluster(numberOfNodes: clusterSize, shouldRunInMemory: false, customSettings: new Dictionary<string, string>()
             {
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "10",
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "300",
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
