@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         private readonly DocumentIdBuilder _builder;
 
-        public OutputReferencesPattern(string pattern, string referencesCollectionName = null)
+        public OutputReferencesPattern(DocumentDatabase database, string pattern, string referencesCollectionName = null)
         {
             ReferencesCollectionName = referencesCollectionName;
             var matches = FieldsRegex.Matches(pattern);
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             var formattedPattern = FieldsRegex.Replace(pattern, StringFormatEvaluator);
 
-            _builder = new DocumentIdBuilder(pattern, formattedPattern, fieldToFormatPosition);
+            _builder = new DocumentIdBuilder(database, pattern, formattedPattern, fieldToFormatPosition);
 
             string StringFormatEvaluator(Match m)
             {
@@ -75,6 +75,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public class DocumentIdBuilder : IDisposable
         {
+            private readonly DocumentDatabase _database;
             private readonly string _pattern;
             private readonly string _formattedPattern;
             private readonly Dictionary<string, int> _fieldToFormatPosition;
@@ -87,8 +88,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             public Dictionary<string, int>.KeyCollection PatternFields => _fieldToFormatPosition.Keys;
             
-            public DocumentIdBuilder(string pattern, string formattedPattern, Dictionary<string, int> fieldToFormatPosition)
+            public DocumentIdBuilder(DocumentDatabase database, string pattern, string formattedPattern, Dictionary<string, int> fieldToFormatPosition)
             {
+                _database = database;
                 _pattern = pattern;
                 _formattedPattern = formattedPattern;
                 _fieldToFormatPosition = fieldToFormatPosition;
@@ -114,10 +116,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 return id;
             }
 
-            public static void ValidateId(string id)
+            public void ValidateId(string id)
             {
-                if (id.EndsWith('/'))
-                    ThrowInvalidId(id, "reference ID must not end with '/' character");
+                var identityPartsSeparator = _database?.IdentityPartsSeparator ?? '/';
+
+                if (id.EndsWith(identityPartsSeparator))
+                    ThrowInvalidId(id, $"reference ID must not end with '{identityPartsSeparator}' character");
 
                 if (id.EndsWith('|'))
                     ThrowInvalidId(id, "reference ID must not end with '|' character");

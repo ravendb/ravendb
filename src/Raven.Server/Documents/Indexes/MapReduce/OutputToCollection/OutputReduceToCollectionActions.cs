@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             _referenceDocumentsCollectionName = index.Definition.PatternReferencesCollectionName;
 
             if (string.IsNullOrEmpty(index.Definition.PatternForOutputReduceToCollectionReferences) == false)
-                _patternForOutputReduceToCollectionReferences = new OutputReferencesPattern(index.Definition.PatternForOutputReduceToCollectionReferences, index.Definition.PatternReferencesCollectionName);
+                _patternForOutputReduceToCollectionReferences = new OutputReferencesPattern(index.DocumentDatabase, index.Definition.PatternForOutputReduceToCollectionReferences, index.Definition.PatternReferencesCollectionName);
         }
 
         public void Initialize(RavenTransaction tx)

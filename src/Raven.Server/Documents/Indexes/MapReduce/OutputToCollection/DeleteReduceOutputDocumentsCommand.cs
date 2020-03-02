@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             if (string.IsNullOrEmpty(originalPattern) == false)
             {
                 _originalPattern = originalPattern;
-                _originalPatternForReduceOutputReferences = new OutputReferencesPattern(originalPattern);
+                _originalPatternForReduceOutputReferences = new OutputReferencesPattern(database, originalPattern);
             }
         }
 

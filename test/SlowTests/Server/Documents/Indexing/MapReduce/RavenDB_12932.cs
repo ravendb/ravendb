@@ -442,7 +442,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         [Fact]
         public void OutputReferencesPatternTests()
         {
-            var sut = new OutputReferencesPattern("reports/daily/{OrderedAt:yyyy-MM-dd}");
+            var sut = new OutputReferencesPattern(null, "reports/daily/{OrderedAt:yyyy-MM-dd}");
 
             using (sut.BuildReferenceDocumentId(out var builder))
             {
@@ -451,7 +451,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 Assert.Equal("reports/daily/2019-10-26", builder.GetId());
             }
 
-            sut = new OutputReferencesPattern("output/{UserId}/{Date:yyyy-MM-dd}");
+            sut = new OutputReferencesPattern(null, "output/{UserId}/{Date:yyyy-MM-dd}");
 
             using (sut.BuildReferenceDocumentId(out var builder))
             {
