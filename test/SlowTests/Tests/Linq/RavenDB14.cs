@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +26,7 @@ namespace SlowTests.Tests.Linq
         {
             var queries = new List<string>();
 
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 void RecordQueries(object sender, BeforeQueryEventArgs args)
                 {
@@ -48,7 +49,7 @@ namespace SlowTests.Tests.Linq
         {
             var queries = new List<string>();
 
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 void RecordQueries(object sender, BeforeQueryEventArgs args)
                 {

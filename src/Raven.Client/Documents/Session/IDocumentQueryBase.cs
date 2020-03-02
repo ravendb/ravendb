@@ -740,7 +740,17 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
+        TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
         TSelf OrderByDistance(string fieldName, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor);
 
         /// <summary>
         /// Sorts the query results by distance.
@@ -750,7 +760,17 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
+        TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
         TSelf OrderByDistance(string fieldName, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistance(string fieldName, string shapeWkt, double roundFactor);
 
         /// <summary>
         /// Sorts the query results by distance.
@@ -780,7 +800,17 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
+        TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
         TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor);
 
         /// <summary>
         /// Sorts the query results by distance.
@@ -790,6 +820,16 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
+        TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
         TSelf OrderByDistanceDescending(string fieldName, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor);
     }
 }

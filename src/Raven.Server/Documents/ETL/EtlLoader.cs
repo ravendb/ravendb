@@ -358,12 +358,15 @@ namespace Raven.Server.Documents.ETL
             ea.ThrowIfNeeded();
         }
 
-        private bool IsMyEtlTask<T, TConnectionString>(DatabaseRecord record, T etlTask)
+        private bool IsMyEtlTask<T, TConnectionString>(DatabaseRecord record, T etlTask, ref Dictionary<string, string> responsibleNodes)
             where TConnectionString : ConnectionString
             where T : EtlConfiguration<TConnectionString>
         {
             var processState = GetProcessState(etlTask.Transforms, _database, etlTask.Name);
             var whoseTaskIsIt = _database.WhoseTaskIsIt(record.Topology, etlTask, processState);
+
+            responsibleNodes[etlTask.Name] = whoseTaskIsIt;
+
             return whoseTaskIsIt == _serverStore.NodeTag;
         }
 
@@ -375,9 +378,11 @@ namespace Raven.Server.Documents.ETL
             var myRavenEtl = new List<RavenEtlConfiguration>();
             var mySqlEtl = new List<SqlEtlConfiguration>();
 
+            var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var config in record.RavenEtls)
             {
-                if (IsMyEtlTask<RavenEtlConfiguration, RavenConnectionString>(record, config))
+                if (IsMyEtlTask<RavenEtlConfiguration, RavenConnectionString>(record, config, ref responsibleNodes))
                 {
                     myRavenEtl.Add(config);
                 }
@@ -385,7 +390,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in record.SqlEtls)
             {
-                if (IsMyEtlTask<SqlEtlConfiguration, SqlConnectionString>(record, config))
+                if (IsMyEtlTask<SqlEtlConfiguration, SqlConnectionString>(record, config, ref responsibleNodes))
                 {
                     mySqlEtl.Add(config);
                 }
@@ -451,7 +456,7 @@ namespace Raven.Server.Documents.ETL
                 {
                     try
                     {
-                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl);
+                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, responsibleNodes);
 
                         process.Stop(reason);
                     }
@@ -482,28 +487,31 @@ namespace Raven.Server.Documents.ETL
             });
         }
 
-        private static string GetStopReason(EtlProcess process, List<RavenEtlConfiguration> myRavenEtl, List<SqlEtlConfiguration> mySqlEtl)
+        private static string GetStopReason(EtlProcess process, List<RavenEtlConfiguration> myRavenEtl, List<SqlEtlConfiguration> mySqlEtl, Dictionary<string, string> responsibleNodes)
         {
             EtlConfigurationCompareDifferences? differences = null;
             var transformationDiffs = new List<(string TransformationName, EtlConfigurationCompareDifferences Difference)>();
 
+            var reason = "Database record change. ";
+
             if (process is RavenEtl ravenEtl)
             {
-                var existing = myRavenEtl.FirstOrDefault(x => x.Name == ravenEtl.ConfigurationName);
+                var existing = myRavenEtl.FirstOrDefault(x => x.Name.Equals(ravenEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
 
                 if (existing != null)
                     differences = ravenEtl.Configuration.Compare(existing, transformationDiffs);
             }
-
-            if (process is SqlEtl sqlEtl)
+            else if (process is SqlEtl sqlEtl)
             {
-                var existing = mySqlEtl.FirstOrDefault(x => x.Name == sqlEtl.ConfigurationName);
+                var existing = mySqlEtl.FirstOrDefault(x => x.Name.Equals(sqlEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
 
                 if (existing != null)
                     differences = sqlEtl.Configuration.Compare(existing, transformationDiffs);
             }
-
-            var reason = "Database record change. ";
+            else
+            {
+                throw new InvalidOperationException($"Unknown ETL process type: " + process.GetType().FullName);
+            }
 
             if (differences != null)
             {
@@ -516,7 +524,14 @@ namespace Raven.Server.Documents.ETL
             }
             else
             {
-                reason += $"ETL was deleted (no configuration named '{process.ConfigurationName}' was found)";
+                if (responsibleNodes.TryGetValue(process.ConfigurationName, out var responsibleNode))
+                {
+                    reason += $"ETL was moved to another node. Responsible node is: {responsibleNode}";
+                }
+                else
+                {
+                    reason += $"ETL was deleted or moved to another node (no configuration named '{process.ConfigurationName}' was found). ";
+                }
             }
 
             return reason;

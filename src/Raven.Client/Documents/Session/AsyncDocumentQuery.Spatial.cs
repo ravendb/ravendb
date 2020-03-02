@@ -194,5 +194,61 @@ namespace Raven.Client.Documents.Session
             OrderByDistanceDescending(fieldName, shapeWkt);
             return this;
         }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor)
+        {
+            OrderByDistance(propertySelector.ToPropertyPath(), latitude, longitude, roundFactor);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor)
+        {
+            OrderByDistance(fieldName, latitude, longitude, roundFactor);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor)
+        {
+            OrderByDistance(propertySelector.ToPropertyPath(), shapeWkt, roundFactor);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(string fieldName, string shapeWkt, double roundFactor)
+        {
+            OrderByDistance(fieldName, shapeWkt, roundFactor);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor)
+        {
+            OrderByDistanceDescending(propertySelector.ToPropertyPath(), latitude, longitude, roundFactor);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor)
+        {
+            OrderByDistanceDescending(fieldName, latitude, longitude, roundFactor);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor)
+        {
+            OrderByDistanceDescending(propertySelector.ToPropertyPath(), shapeWkt, roundFactor);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor)
+        {
+            OrderByDistanceDescending(fieldName, shapeWkt, roundFactor);
+            return this;
+        }
     }
 }

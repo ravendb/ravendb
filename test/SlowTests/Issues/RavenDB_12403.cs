@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -68,7 +69,7 @@ namespace SlowTests.Issues
                 var stream = await client.GetStreamAsync(
                     $"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Users/CoolCount\'&format=csv&debug=entries");
                 TextReader tr = new StreamReader(stream);
-                var csv = new CsvReader(tr);
+                var csv = new CsvReader(tr, CultureInfo.InvariantCulture);
 
                 csv.Read();
                 csv.TryGetField(0, out string value);
@@ -155,7 +156,7 @@ namespace SlowTests.Issues
                 var stream = await client.GetStreamAsync(
                     $"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Users/CoolCount\' select __all_stored_fields&format=csv");
                 TextReader tr = new StreamReader(stream);
-                var csv = new CsvReader(tr);
+                var csv = new CsvReader(tr, CultureInfo.InvariantCulture);
                 csv.Read();
                 csv.TryGetField(0, out string value);
                 Assert.Equal("@id", value);

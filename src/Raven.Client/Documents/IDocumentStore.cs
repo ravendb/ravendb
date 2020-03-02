@@ -30,21 +30,25 @@ namespace Raven.Client.Documents
     {
         X509Certificate2 Certificate { get; }
 
-        /// <summary>
-        /// Store events
-        /// </summary>
         event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
+
         event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
 
-        /// <summary>
-        /// Delete event
-        /// </summary>
         event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
 
-        /// <summary>
-        /// Query event
-        /// </summary>
         event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
+
+        event EventHandler<SessionCreatedEventArgs> OnSessionCreated;
+
+        event EventHandler<BeforeConversionToDocumentEventArgs> OnBeforeConversionToDocument;
+
+        event EventHandler<AfterConversionToDocumentEventArgs> OnAfterConversionToDocument;
+
+        event EventHandler<BeforeConversionToEntityEventArgs> OnBeforeConversionToEntity;
+
+        event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
+
+        event EventHandler<FailedRequestEventArgs> OnFailedRequest;
 
         /// <summary>
         /// Subscribe to change notifications from the server

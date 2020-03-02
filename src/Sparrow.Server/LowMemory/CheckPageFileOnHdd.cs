@@ -421,6 +421,8 @@ namespace Sparrow.Server.LowMemory
                     HashSet<string> disks = KernelVirtualFileSystemUtils.GetAllDisksFromPartitionsFile();
                     foreach (var disk in disks)
                     {
+                        //ignore ramdisks (ram0..ram15 etc)
+                        if (disk.Equals("ram", StringComparison.OrdinalIgnoreCase)) continue;
                         var filename = $"/sys/block/{disk}/queue/rotational";
                         var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
                         if (isHdd == 0)

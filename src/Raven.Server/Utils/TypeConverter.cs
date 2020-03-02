@@ -155,19 +155,26 @@ namespace Raven.Server.Utils
             return hasProperties & isSupported;
         }
 
-        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, Engine engine = null, JsonOperationContext context = null)
+        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, bool forIndexing = false, Engine engine = null, JsonOperationContext context = null)
         {
-            return ToBlittableSupportedType(value, value, flattenArrays, 0, engine, context);
+            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context);
         }
 
-        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, int recursiveLevel, Engine engine, JsonOperationContext context)
+        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
             if (recursiveLevel > MaxAllowedRecursiveLevelForType)
                 NestingLevelTooDeep(root);
 
             if (value is JsValue js)
             {
-                if (js.IsNull() || js.IsUndefined())
+                if (js.IsNull())
+                {
+                    if (forIndexing && js is DynamicJsNull dynamicJsNull)
+                        return dynamicJsNull.IsExplicitNull ? DynamicNullObject.ExplicitNull : DynamicNullObject.Null;
+
+                    return null;
+                }
+                if (js.IsUndefined())
                     return null;
                 if (js.IsString())
                     return js.AsString();
@@ -196,7 +203,7 @@ namespace Raven.Server.Utils
                 else if (js.IsArray())
                 {
                     var arr = js.AsArray();
-                    var convertedArray = EnumerateArray(root, arr, flattenArrays, recursiveLevel + 1, engine, context);
+                    var convertedArray = EnumerateArray(root, arr, flattenArrays, forIndexing, recursiveLevel + 1, engine, context);
                     return new DynamicJsonArray(flattenArrays ? Flatten(convertedArray) : convertedArray);
                 }
                 else if (js.IsObject())
@@ -246,8 +253,8 @@ namespace Raven.Server.Utils
 
                 foreach (var key in dictionary.Keys)
                 {
-                    var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context));
-                    @object[keyAsString] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
+                    var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context));
+                    @object[keyAsString] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
                 }
 
                 return @object;
@@ -259,8 +266,8 @@ namespace Raven.Server.Utils
 
                 foreach (var key in dDictionary.Keys)
                 {
-                    var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context));
-                    @object[keyAsString] = ToBlittableSupportedType(root, dDictionary[key], flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
+                    var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context));
+                    @object[keyAsString] = ToBlittableSupportedType(root, dDictionary[key], flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
                 }
 
                 return @object;
@@ -278,7 +285,7 @@ namespace Raven.Server.Utils
             if (value is IEnumerable enumerable)
             {
                 if (ShouldTreatAsEnumerable(enumerable))
-                    return EnumerableToJsonArray(flattenArrays ? Flatten(enumerable) : enumerable, root, flattenArrays, recursiveLevel, engine, context);
+                    return EnumerableToJsonArray(flattenArrays ? Flatten(enumerable) : enumerable, root, flattenArrays, forIndexing, recursiveLevel, engine, context);
             }
 
             var inner = new DynamicJsonValue();
@@ -289,11 +296,11 @@ namespace Raven.Server.Utils
                 var propertyValue = property.Value;
                 if (propertyValue is IEnumerable<object> propertyValueAsEnumerable && ShouldTreatAsEnumerable(propertyValue))
                 {
-                    inner[property.Key] = EnumerableToJsonArray(propertyValueAsEnumerable, root, flattenArrays, recursiveLevel, engine, context);
+                    inner[property.Key] = EnumerableToJsonArray(propertyValueAsEnumerable, root, flattenArrays, forIndexing, recursiveLevel, engine, context);
                     continue;
                 }
 
-                inner[property.Key] = ToBlittableSupportedType(root, propertyValue, flattenArrays, recursiveLevel + 1, engine, context);
+                inner[property.Key] = ToBlittableSupportedType(root, propertyValue, flattenArrays, forIndexing, recursiveLevel + 1, engine, context);
             }
 
             return inner;
@@ -335,24 +342,24 @@ namespace Raven.Server.Utils
             throw new InvalidOperationException("Invalid type " + jsValue);
         }
 
-        private static IEnumerable<object> EnumerateArray(object root, ArrayInstance arr, bool flattenArrays, int recursiveLevel, Engine engine, JsonOperationContext context)
+        private static IEnumerable<object> EnumerateArray(object root, ArrayInstance arr, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
             foreach (var (key, val) in arr.GetOwnProperties())
             {
                 if (key == "length")
                     continue;
 
-                yield return ToBlittableSupportedType(root, val.Value, flattenArrays, recursiveLevel, engine, context);
+                yield return ToBlittableSupportedType(root, val.Value, flattenArrays, forIndexing, recursiveLevel, engine, context);
             }
         }
 
-        private static DynamicJsonArray EnumerableToJsonArray(IEnumerable propertyEnumerable, object root, bool flattenArrays, int recursiveLevel, Engine engine, JsonOperationContext context)
+        private static DynamicJsonArray EnumerableToJsonArray(IEnumerable propertyEnumerable, object root, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
             var dja = new DynamicJsonArray();
 
             foreach (var x in propertyEnumerable)
             {
-                dja.Add(ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel + 1, engine, context));
+                dja.Add(ToBlittableSupportedType(root, x, flattenArrays, forIndexing, recursiveLevel + 1, engine, context));
             }
 
             return dja;

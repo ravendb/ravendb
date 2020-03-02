@@ -310,7 +310,7 @@ namespace Raven.Client.Documents.Operations.ETL
             if (collections.Count != 0)
                 differences |= EtlConfigurationCompareDifferences.TransformationCollectionsCount;
 
-            if (transformation.Name != Name)
+            if (transformation.Name.Equals(Name, StringComparison.OrdinalIgnoreCase) == false)
                 differences |= EtlConfigurationCompareDifferences.TransformationName;
 
             if (transformation.Script != Script)

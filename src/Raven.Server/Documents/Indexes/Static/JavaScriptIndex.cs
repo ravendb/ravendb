@@ -270,7 +270,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             if (args[0].IsNull() || args[0].IsUndefined())
-                return JsValue.Undefined;
+                return DynamicJsNull.ImplicitNull;
 
             if (args[0].IsString() == false ||
                 args[1].IsString() == false)
@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (JavaScriptIndexUtils.GetValue(_engine, doc, out var item))
                 return item;
 
-            return JsValue.Undefined;
+            return DynamicJsNull.ImplicitNull;
         }
 
 

@@ -158,7 +158,7 @@ namespace Raven.Client.Documents.Operations.ETL
             if (config.ConnectionStringName != ConnectionStringName)
                 differences |= EtlConfigurationCompareDifferences.ConnectionStringName;
 
-            if (config.Name != Name)
+            if (config.Name.Equals(Name, StringComparison.OrdinalIgnoreCase) == false)
                 differences |= EtlConfigurationCompareDifferences.ConfigurationName;
 
             if (config.MentorNode != MentorNode)

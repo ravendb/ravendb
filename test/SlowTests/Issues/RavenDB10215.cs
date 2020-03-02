@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,8 @@ namespace SlowTests.Issues
                 {
                     ModifyDocumentStore = s =>
                     {
-                        s.OnBeforeStore += (sender, eventArgs) =>
+                        var documentStore = (IDocumentStore)s;
+                        documentStore.OnBeforeStore += (sender, eventArgs) =>
                         {
                             if (eventArgs.Entity is MyEntity entity)
                                 entity.Description = DateTime.UtcNow.ToString();
@@ -57,7 +59,8 @@ namespace SlowTests.Issues
                 {
                     ModifyDocumentStore = s =>
                     {
-                        s.OnBeforeStore += (sender, eventArgs) =>
+                        var documentStore = (IDocumentStore)s;
+                        documentStore.OnBeforeStore += (sender, eventArgs) =>
                         {
                             if (eventArgs.Entity is MyEntity entity)
                                 entity.Description = DateTime.UtcNow.ToString();

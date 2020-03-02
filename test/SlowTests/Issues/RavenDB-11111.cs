@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,11 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s => s.OnBeforeQuery += (_, e) => e.QueryCustomization.WaitForNonStaleResults()
+                ModifyDocumentStore = s =>
+                {
+                    var documentStore = (IDocumentStore)s;
+                    documentStore.OnBeforeQuery += (_, e) => e.QueryCustomization.WaitForNonStaleResults();
+                }
             }))
             {
                 using (var session = store.OpenSession())
