@@ -9,12 +9,13 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class DynamicNullObject : DynamicObject, IEnumerable<object>, IComparable
     {
-        public static DynamicNullObject Null = new DynamicNullObject();
+        public static DynamicNullObject Null = new DynamicNullObject(isExplicitNull: false);
 
-        public static DynamicNullObject ExplicitNull = new DynamicNullObject { IsExplicitNull = true };
+        public static DynamicNullObject ExplicitNull = new DynamicNullObject(isExplicitNull: true);
 
-        private DynamicNullObject()
+        private DynamicNullObject(bool isExplicitNull)
         {
+            IsExplicitNull = isExplicitNull;
         }
 
         public override string ToString()
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return string.Empty;
         }
 
-        public bool IsExplicitNull { get; private set; }
+        public readonly bool IsExplicitNull;
 
         public override bool TryConvert(ConvertBinder binder, out object result)
         {
@@ -203,22 +204,60 @@ namespace Raven.Server.Documents.Indexes.Static
             return right != null && (right is DynamicNullObject) == false;
         }
 
-        public static implicit operator double(DynamicNullObject o) { return double.NaN; }
-        public static implicit operator double? (DynamicNullObject o) { return null; }
+        public static implicit operator double(DynamicNullObject o)
+        {
+            return double.NaN;
+        }
 
-        public static implicit operator int(DynamicNullObject o) { return 0; }
-        public static implicit operator int? (DynamicNullObject o) { return null; }
+        public static implicit operator double?(DynamicNullObject o)
+        {
+            return null;
+        }
 
-        public static implicit operator long(DynamicNullObject o) { return 0; }
-        public static implicit operator long? (DynamicNullObject o) { return null; }
+        public static implicit operator int(DynamicNullObject o)
+        {
+            return 0;
+        }
 
-        public static implicit operator decimal(DynamicNullObject o) { return 0; }
-        public static implicit operator decimal? (DynamicNullObject o) { return null; }
+        public static implicit operator int?(DynamicNullObject o)
+        {
+            return null;
+        }
 
-        public static implicit operator float(DynamicNullObject o) { return float.NaN; }
-        public static implicit operator float? (DynamicNullObject o) { return null; }
+        public static implicit operator long(DynamicNullObject o)
+        {
+            return 0;
+        }
 
-        public static implicit operator string(DynamicNullObject self) { return null; }
+        public static implicit operator long?(DynamicNullObject o)
+        {
+            return null;
+        }
+
+        public static implicit operator decimal(DynamicNullObject o)
+        {
+            return 0;
+        }
+
+        public static implicit operator decimal?(DynamicNullObject o)
+        {
+            return null;
+        }
+
+        public static implicit operator float(DynamicNullObject o)
+        {
+            return float.NaN;
+        }
+
+        public static implicit operator float?(DynamicNullObject o)
+        {
+            return null;
+        }
+
+        public static implicit operator string(DynamicNullObject self)
+        {
+            return null;
+        }
 
         public override bool Equals(object obj)
         {
