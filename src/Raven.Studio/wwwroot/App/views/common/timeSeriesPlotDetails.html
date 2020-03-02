@@ -10,13 +10,12 @@
                     
                     <div data-bind="text: sectionName" class="section-name"></div>
                     
-                    
                     <div class="legend" data-bind="foreach: series">
                         <div class="checkbox">
                             <input type="checkbox" data-bind="attr: { id: uniqueId }, checked: visible" />
                             <label data-bind="attr: { for: uniqueId }">
                                 <span data-bind="attr: { class: $root.getColorClass($data) + ' ' + $parent.type }">
-                                    <i class="icon-graph"></i>
+                                    <i data-bind="attr: { class: $root.getIcon($parent.type) }" class="icon-graph"></i>
                                 </span>
                                 <span data-bind="text: name"></span>
                             </label>

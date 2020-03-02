@@ -279,6 +279,15 @@ class timeSeriesPlotDetails extends viewModelBase {
         return this.colorClassScale(series.uniqueId);
     }
     
+    getIcon(type: timeSeriesResultType) {
+        switch (type) {
+            case "raw":
+                return "icon-graph";
+            case "grouped":
+                return "icon-graph-range";
+        }
+    }
+    
     getColor(series: graphSeries<any>) {
         return this.colors[this.getColorClass(series)];
     }
