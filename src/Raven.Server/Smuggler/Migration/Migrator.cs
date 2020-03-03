@@ -330,7 +330,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 if (rawRecord != null)
                 {
-                    if (rawRecord.GetTopology().AllNodes.Contains(_serverStore.NodeTag) == false)
+                    if (rawRecord.Topology.AllNodes.Contains(_serverStore.NodeTag) == false)
                         throw new InvalidOperationException(
                             "Cannot migrate database because " +
                             $"database doesn't exist on the current node ({_serverStore.NodeTag})");

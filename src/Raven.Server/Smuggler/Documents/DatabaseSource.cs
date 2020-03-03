@@ -90,7 +90,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 using (var rawRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(_serverContext, _database.Name))
                 {
-                    LastRaftIndex = rawRecord.GetEtagForBackup();
+                    LastRaftIndex = rawRecord.EtagForBackup;
                 }
             }
 

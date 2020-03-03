@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Replication
                     if (rawRecord == null)
                         throw new InvalidOperationException($"The database record for {_parent.Database.Name} does not exist?!");
 
-                    if (rawRecord.IsEncrypted() && Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                    if (rawRecord.IsEncrypted&& Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                         throw new InvalidOperationException(
                             $"{_parent.Database.Name} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
                 }

@@ -330,13 +330,13 @@ namespace Raven.Server.Monitoring.Snmp
 
                 public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context, RawDatabaseRecord record, long databaseIndex)
                 {
-                    var mapping = SnmpDatabase.GetIndexMapping(context, serverStore, record.GetDatabaseName());
+                    var mapping = SnmpDatabase.GetIndexMapping(context, serverStore, record.DatabaseName);
 
                     var djv = new DynamicJsonValue();
                     if (mapping.Count == 0)
                         return djv;
 
-                    foreach (var indexName in record.GetIndexes().Keys)
+                    foreach (var indexName in record.Indexes.Keys)
                     {
                         if (mapping.TryGetValue(indexName, out var index) == false)
                             continue;

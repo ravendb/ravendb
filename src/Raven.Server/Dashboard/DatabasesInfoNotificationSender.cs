@@ -331,7 +331,7 @@ namespace Raven.Server.Dashboard
                     return;
                 }
 
-                var databaseTopology = databaseRecord.GetTopology();
+                var databaseTopology = databaseRecord.Topology;
 
                 var irrelevant = databaseTopology == null ||
                                  databaseTopology.AllNodes.Contains(serverStore.NodeTag) == false;
@@ -362,8 +362,8 @@ namespace Raven.Server.Dashboard
                 return;
 
             Debug.Assert(databaseInfo != null);
-            var databaseTopology = databaseRecord.GetTopology();
-            var indexesCount = databaseRecord.GetIndexesCount();
+            var databaseTopology = databaseRecord.Topology;
+            var indexesCount = databaseRecord.CountOfIndexes;
 
             databaseInfoItem.DocumentsCount = databaseInfo.DocumentsCount ?? 0;
             databaseInfoItem.IndexesCount = databaseInfo.IndexesCount ?? indexesCount;

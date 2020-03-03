@@ -687,7 +687,7 @@ namespace Raven.Server.ServerWide
                             if (databaseRecord == null)
                                 continue;
 
-                            var databaseRecordJson = databaseRecord.GetRecord();
+                            var databaseRecordJson = databaseRecord.Raw;
                             databaseRecordJson.Modifications = new DynamicJsonValue
                             {
                                 [nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount)] = tuple.Value
@@ -758,11 +758,11 @@ namespace Raven.Server.ServerWide
             if (rawRecord == null)
                 throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
 
-            var topology = rawRecord.GetTopology();
+            var topology = rawRecord.Topology;
             if (topology.DatabaseTopologyIdBase64 == null)
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                var databaseRecordJson = rawRecord.GetRecord();
+                var databaseRecordJson = rawRecord.Raw;
                 topology.DatabaseTopologyIdBase64 = clusterTransaction.DatabaseRecordId;
                 var dbKey = $"db/{clusterTransaction.DatabaseName}";
                 using (Slice.From(context.Allocator, dbKey, out var valueName))
@@ -2061,7 +2061,7 @@ namespace Raven.Server.ServerWide
             {
                 using (var rawRecord = ReadRawDatabaseRecord(context, name))
                 {
-                    var topology = rawRecord.GetTopology();
+                    var topology = rawRecord.Topology;
                     if (topology.RelevantFor(oldTag) == false)
                     {
                         toDelete.Add(name);
@@ -2071,7 +2071,7 @@ namespace Raven.Server.ServerWide
                         if (topology.RelevantFor(newTag) && topology.Count == 1)
                             continue;
 
-                        var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
+                        var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
                         record.Topology = new DatabaseTopology();
                         record.Topology.Members.Add(newTag);
                         toShrink.Add(record);
@@ -2613,7 +2613,7 @@ namespace Raven.Server.ServerWide
         {
             using (var databaseRecord = ReadRawDatabaseRecord(context, name))
             {
-                var topology = databaseRecord.GetTopology();
+                var topology = databaseRecord.Topology;
                 if (topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
 
@@ -2644,7 +2644,7 @@ namespace Raven.Server.ServerWide
                     throw new DatabaseDoesNotExistException($"The database '{database}' doesn't exists.");
                 }
 
-                var hubPullReplications = databaseRecord.GetHubPullReplications();
+                var hubPullReplications = databaseRecord.HubPullReplications;
                 if (hubPullReplications == null)
                 {
                     throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");

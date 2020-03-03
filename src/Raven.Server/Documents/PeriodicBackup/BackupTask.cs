@@ -387,7 +387,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name);
 
-                return rawRecord.GetEtagForBackup();
+                return rawRecord.EtagForBackup;
             }
         }
 
