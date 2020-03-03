@@ -551,15 +551,7 @@ class editIndex extends viewModelBase {
                     .execute()
                     .done((savedIndexName) => {
                         this.resetDirtyFlag();
-
-                        this.editedIndex().name.valueHasMutated();
-
-                        if (!this.isEditingExistingIndex()) {
-                            this.isEditingExistingIndex(true);
-                            this.editExistingIndex(savedIndexName);
-                        }
-
-                        this.updateUrl(savedIndexName);
+                        router.navigate(appUrl.forIndexes(db));
                     });
             });
     }
@@ -585,11 +577,6 @@ class editIndex extends viewModelBase {
         });
         
         this.dirtyFlag().reset();
-    }
-    
-    updateUrl(indexName: string) {
-        const url = appUrl.forEditIndex(indexName, this.activeDatabase());
-        this.navigate(url);
     }
 
     deleteIndex() {
