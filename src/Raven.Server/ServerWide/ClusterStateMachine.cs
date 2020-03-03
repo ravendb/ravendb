@@ -220,11 +220,11 @@ namespace Raven.Server.ServerWide
         {
             add
             {
-                _onDatabaseChanged = _onDatabaseChanged.Concat(new[] {value}).ToArray();
+                _onDatabaseChanged = _onDatabaseChanged.Concat(new[] { value }).ToArray();
             }
             remove
             {
-                _onDatabaseChanged = _onDatabaseChanged.Where(x=> x != value).ToArray();
+                _onDatabaseChanged = _onDatabaseChanged.Where(x => x != value).ToArray();
             }
         }
 
@@ -997,7 +997,7 @@ namespace Raven.Server.ServerWide
                             if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
-                                tasks.Add(()=>OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
+                                tasks.Add(() => OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
                                     DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
 
                                 continue;
@@ -1021,7 +1021,7 @@ namespace Raven.Server.ServerWide
                         UpdateValue(index, items, lowerKey, key, updated);
                     }
 
-                    tasks.Add(()=>OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                    tasks.Add(() => OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
                 }
 
                 ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), tasks);
@@ -1138,12 +1138,13 @@ namespace Raven.Server.ServerWide
 
                 updateCommand = (UpdateValueForDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
 
-                var record = ReadDatabase(context, updateCommand.DatabaseName);
-                if (record == null)
-                    throw new DatabaseDoesNotExistException(
-                        $"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist");
+                using (var databaseRecord = ReadRawDatabaseRecord(context, updateCommand.DatabaseName))
+                {
+                    if (databaseRecord == null)
+                        throw new DatabaseDoesNotExistException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist");
 
-                updateCommand.Execute(context, items, index, record, _parent.CurrentState, out result);
+                    updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
+                }
             }
             catch (Exception e)
             {
@@ -2340,13 +2341,13 @@ namespace Raven.Server.ServerWide
             using (last.Scope)
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-               
+
                 var tvh = table.SeekOneBackwardFrom(CompareExchangeSchema.Indexes[CompareExchangeIndex], prefix.Slice, last.Slice);
 
                 if (tvh == null)
                     return 0;
 
-                return ReadCompareExchangeOrTombstoneIndex(tvh.Reader);             
+                return ReadCompareExchangeOrTombstoneIndex(tvh.Reader);
             }
         }
 
@@ -2593,7 +2594,7 @@ namespace Raven.Server.ServerWide
             using (Slice.From(context.Allocator, dbKey, out var key))
                 return items.VerifyKeyExists(key);
         }
-         
+
         public DatabaseRecord ReadDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
             where T : RavenTransaction
         {
@@ -3128,7 +3129,7 @@ namespace Raven.Server.ServerWide
                         }, token);
                     }
                 };
-               
+
                 context.Transaction.Commit();
             }
             token.ThrowIfCancellationRequested();
@@ -3195,7 +3196,7 @@ namespace Raven.Server.ServerWide
 
             ThrowCanceledException(index, LastModifiedIndex, isExecution: true);
         }
-        
+
         public async Task WaitForIndexNotification(long index, TimeSpan timeout)
         {
             while (true)

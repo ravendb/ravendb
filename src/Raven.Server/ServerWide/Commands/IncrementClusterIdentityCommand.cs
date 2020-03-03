@@ -35,12 +35,12 @@ namespace Raven.Server.ServerWide.Commands
             return $"{databaseName.ToLowerInvariant()}/{prefix?.ToLowerInvariant()}";
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             throw new NotImplementedException();
         }
 
-        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
+        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
         {
             var identitiesItems = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.IdentitiesSchema, ClusterStateMachine.Identities);
 
