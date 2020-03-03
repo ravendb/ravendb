@@ -45,7 +45,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         private IDatabaseTask GetMatchingConfiguration(RawDatabaseRecord record)
         {
-            var ravenEtls = record.GetRavenEtls();
+            var ravenEtls = record.RavenEtls;
             if (ravenEtls != null)
             {
                 for (var i = 0; i < ravenEtls.Count; i++)
@@ -57,7 +57,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 }
             }
 
-            var sqlEtls = record.GetSqlEtls();
+            var sqlEtls = record.SqlEtls;
             if (sqlEtls != null)
             {
                 for (var i = 0; i < sqlEtls.Count; i++)
@@ -85,7 +85,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 if (databaseTask == null)
                     throw new RachisApplyException($"Can't update progress of ETL {ConfigurationName} by node {NodeTag}, because it's configuration can't be found");
 
-                var topology = record.GetTopology();
+                var topology = record.Topology;
                 var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
                 if (topology.WhoseTaskIsIt(RachisState.Follower, databaseTask, lastResponsibleNode) != NodeTag)
                     throw new RachisApplyException($"Can't update progress of ETL {ConfigurationName} by node {NodeTag}, because it's not its task to update this ETL");

@@ -107,11 +107,11 @@ namespace Raven.Server.Documents
                         if (ShouldDeleteDatabase(context, databaseName, rawRecord))
                             return;
 
-                        topology = rawRecord.GetTopology();
+                        topology = rawRecord.Topology;
                         if (topology.RelevantFor(_serverStore.NodeTag) == false)
                             return;
 
-                        if (rawRecord.IsDisabled() || rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress)
+                        if (rawRecord.IsDisabled|| rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
                         {
                             UnloadDatabase(databaseName);
                             return;
@@ -244,7 +244,7 @@ namespace Raven.Server.Documents
                         using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                         {
                             // unload only if DB is still disabled
-                            if (IsDatabaseDisabled(databaseRecord.GetRecord()))
+                            if (IsDatabaseDisabled(databaseRecord.Raw))
                                 UnloadDatabaseInternal(databaseName);
                         }
                     }
@@ -278,18 +278,18 @@ namespace Raven.Server.Documents
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
         {
             var deletionInProgress = DeletionInProgressStatus.No;
-            var directDelete = rawRecord.GetDeletionInProgressStatus()?.TryGetValue(_serverStore.NodeTag, out deletionInProgress) == true &&
+            var directDelete = rawRecord.DeletionInProgress?.TryGetValue(_serverStore.NodeTag, out deletionInProgress) == true &&
                                deletionInProgress != DeletionInProgressStatus.No;
 
             if (directDelete == false)
                 return false;
 
-            if (rawRecord.GetTopology().Rehabs.Contains(_serverStore.NodeTag))
+            if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag))
                 // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
                 // that all the documents were replicated from this node, therefor the deletion will be called from the replication code.
                 return false;
 
-            var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
+            var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
             context.CloseTransaction();
 
             DeleteDatabase(dbName, deletionInProgress, record);

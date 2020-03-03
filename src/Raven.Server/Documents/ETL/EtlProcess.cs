@@ -908,7 +908,7 @@ namespace Raven.Server.Documents.ETL
                         using (ctx.OpenReadTransaction())
                         using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(ctx, database.Name))
                         {
-                            sqlConnectionStrings = rawRecord.GetSqlConnectionStrings();
+                            sqlConnectionStrings = rawRecord.SqlConnectionStrings;
                             if (sqlConnectionStrings == null)
                                 throw new InvalidOperationException($"{nameof(DatabaseRecord.SqlConnectionStrings)} was not found in the database record");
                         }

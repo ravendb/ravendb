@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Replication
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var externals = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name).GetExternalReplications();
+                var externals = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name).ExternalReplications;
                 if (externals != null)
                 {
                     foreach (var external in externals)
@@ -785,7 +785,7 @@ namespace Raven.Server.Documents.Replication
             {
                 using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
                 {
-                    if (rawRecord != null && rawRecord.GetDeletionInProgressStatus().ContainsKey(node))
+                    if (rawRecord != null && rawRecord.DeletionInProgress.ContainsKey(node))
                     {
                         throw new OperationCanceledException($"The database '{Database.Name}' on node '{node}' is being deleted, so it will not handle replications.");
                     }
@@ -803,7 +803,7 @@ namespace Raven.Server.Documents.Replication
                     if (rawRecord == null)
                         return;
 
-                    var deletionInProgress = rawRecord.GetDeletionInProgressStatus();
+                    var deletionInProgress = rawRecord.DeletionInProgress;
                     if (deletionInProgress.ContainsKey(_server.NodeTag) == false)
                         return;
 
@@ -818,7 +818,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     finally
                     {
-                        var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
+                        var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
                         TaskExecutor.Execute(state =>
                         {
                             _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record);

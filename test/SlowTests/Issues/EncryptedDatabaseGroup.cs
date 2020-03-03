@@ -124,7 +124,7 @@ namespace SlowTests.Issues
                     using (ctx.OpenReadTransaction())
                     {
                         var databaseRecord = serverStore.Cluster.ReadRawDatabaseRecord(ctx, store.Database);
-                        return databaseRecord.GetTopology();
+                        return databaseRecord.Topology;
                     }
                 }
             }

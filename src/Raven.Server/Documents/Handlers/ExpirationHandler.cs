@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers
                 ExpirationConfiguration expirationConfig;
                 using (var recordRaw = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    expirationConfig = recordRaw?.GetExpirationConfiguration();
+                    expirationConfig = recordRaw?.ExpirationConfiguration;
                 }
 
                 if (expirationConfig != null)

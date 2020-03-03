@@ -318,9 +318,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(transactionOperationContext, databaseName))
                     {
                         if (rawRecord == null ||
-                            rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false ||
-                            rawRecord.IsDisabled() ||
-                            rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress ||
+                            rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false ||
+                            rawRecord.IsDisabled||
+                            rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
                             IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))
                             continue;
                     }
@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (databaseRecord == null)
                 return false;
 
-            var deletionInProgress = databaseRecord.GetDeletionInProgressStatus();
+            var deletionInProgress = databaseRecord.DeletionInProgress;
 
             return deletionInProgress != null && deletionInProgress.TryGetValue(tag, out var delInProgress) && delInProgress != DeletionInProgressStatus.No;
         }

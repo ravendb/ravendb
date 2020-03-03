@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Handlers
             using (ctx.OpenReadTransaction())
             using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
             {
-                var indexesHistory = rawRecord.GetIndexesHistory();
+                var indexesHistory = rawRecord.IndexesHistory;
                 if (indexesHistory.TryGetValue(name, out history) == false)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
