@@ -172,6 +172,8 @@ namespace Raven.Server
                     if (Configuration.Http.MaxRequestBufferSize.HasValue)
                         options.Limits.MaxRequestBufferSize = Configuration.Http.MaxRequestBufferSize.Value.GetValue(SizeUnit.Bytes);
 
+                    options.ConfigureEndpointDefaults(listenOptions => listenOptions.Protocols = Configuration.Http.Protocols);
+
                     if (Certificate.Certificate != null)
                     {
                         _httpsConnectionMiddleware = new HttpsConnectionMiddleware(this, options);
