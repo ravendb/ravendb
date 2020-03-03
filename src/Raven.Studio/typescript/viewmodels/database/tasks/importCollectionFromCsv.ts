@@ -13,25 +13,18 @@ type trimOptions = "No trimming" | "Trim whitespace around fields" | "Trim white
 
 class csvConfiguration {
    
-    possibleDelimiters = ko.observableArray<delimiters>(["Comma", "Semicolon", "Tab", "Space"]);
-    possibleQuoteChars = ko.observableArray<quoteChars>(["Double quote", "Single quote"]);
-    possibleTrimOptions = ko.observableArray<trimOptions>(["No trimming", "Trim whitespace around fields", "Trim whitespace inside strings"]);        
-    
-    selectedDelimiter = ko.observable<delimiters>();
-    selectedQuote = ko.observable<quoteChars>();
-    selectedTrimOption = ko.observable<trimOptions>();
-    
-    allowComments = ko.observable<boolean>();
-    commentCharacter = ko.observable<string>();  
+    static readonly possibleDelimiters: Array<delimiters> = ["Comma", "Semicolon", "Tab", "Space"];
+    static readonly possibleQuoteChars: Array<quoteChars> = ["Double quote", "Single quote"];
+    static readonly possibleTrimOptions: Array<trimOptions> = ["No trimming", "Trim whitespace around fields", "Trim whitespace inside strings"];
 
-    constructor() {
-        this.selectedDelimiter("Comma");
-        this.selectedQuote("Double quote");
-        this.selectedTrimOption("No trimming");
-        this.allowComments(false);
-    }   
+    delimiter = ko.observable<delimiters>("Comma");
+    quote = ko.observable<quoteChars>("Double quote");
+    trimOption = ko.observable<trimOptions>("No trimming");
     
-    toDto() : Raven.Server.Smuggler.Documents.CsvConfiguration {
+    allowComments = ko.observable<boolean>(false);
+    commentCharacter = ko.observable<string>();
+    
+    toDto() : Raven.Server.Smuggler.Documents.CsvImportOptions  {
         return {
             Delimiter: this.getDelimiter(),            
             Quote: this.getQuote(),
@@ -42,26 +35,35 @@ class csvConfiguration {
     }
 
     getDelimiter() : string {
-        switch (this.selectedDelimiter()) {
-            case "Comma": return ",";
-            case "Semicolon": return ";";
-            case "Tab": return "\t";
-            case "Space": return " ";
+        switch (this.delimiter()) {
+            case "Comma": 
+                return ",";
+            case "Semicolon": 
+                return ";";
+            case "Tab": 
+                return "\t";
+            case "Space": 
+                return " ";
         }
     }
 
     getQuote(): string {
-        switch (this.selectedQuote()) {
-            case "Double quote": return '"';
-            case "Single quote": return "'";
+        switch (this.quote()) {
+            case "Double quote": 
+                return '"';
+            case "Single quote": 
+                return "'";
         }
     }
 
     getTrimOption(): CsvHelper.Configuration.TrimOptions {
-        switch (this.selectedTrimOption()) {
-            case "No trimming": return "None";
-            case "Trim whitespace around fields": return "Trim";
-            case "Trim whitespace inside strings": return "InsideQuotes";
+        switch (this.trimOption()) {
+            case "No trimming": 
+                return "None";
+            case "Trim whitespace around fields": 
+                return "Trim";
+            case "Trim whitespace inside strings": 
+                return "InsideQuotes";
         }
     }
 }
@@ -69,7 +71,7 @@ class csvConfiguration {
 class importCollectionFromCsv extends viewModelBase {  
    
     private static readonly filePickerTag = "#importCsvFilePicker";
-    csvConfig =  ko.observable<csvConfiguration>(new csvConfiguration());
+    csvConfig: csvConfiguration = new csvConfiguration();
 
     static isImporting = ko.observable(false);
     isImporting = importCollectionFromCsv.isImporting;
@@ -84,7 +86,7 @@ class importCollectionFromCsv extends viewModelBase {
 
     validationGroup = ko.validatedObservable({
         importedFileName: this.importedFileName,
-        commentCharacter: this.csvConfig().commentCharacter
+        commentCharacter: this.csvConfig.commentCharacter
     });
 
     constructor() {
@@ -106,14 +108,14 @@ class importCollectionFromCsv extends viewModelBase {
             required: true
         });
         
-        this.csvConfig().commentCharacter.extend({
+        this.csvConfig.commentCharacter.extend({
             required: {
-                onlyIf: (val: string) => this.csvConfig().allowComments() &&  _.trim(val) === ""
+                onlyIf: (val: string) => this.csvConfig.allowComments() &&  _.trim(val) === ""
             },
             
             validation: [
                 {
-                    validator: (val: string) => !this.csvConfig().allowComments() || (this.csvConfig().allowComments() && val && _.trim(val).length === 1),
+                    validator: (val: string) => !this.csvConfig.allowComments() || (val && _.trim(val).length === 1),
                     message: 'Please enter only one character for the comment character'
                 }
             ]
@@ -150,7 +152,7 @@ class importCollectionFromCsv extends viewModelBase {
             .done((operationId: number) => {
                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
 
-                new importFromCsvCommand(db, operationId, fileInput.files[0], this.customCollectionName(), this.isUploading, this.uploadStatus, this.csvConfig().toDto())
+                new importFromCsvCommand(db, operationId, fileInput.files[0], this.customCollectionName(), this.isUploading, this.uploadStatus, this.csvConfig.toDto())
                     .execute()
                     .always(() => this.isUploading(false));
             });
