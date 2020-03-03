@@ -512,14 +512,7 @@ namespace Voron.Recovery
                             var message =
                                 $"Unexpected exception at position {GetFilePosition(startOffset, mem)}:{Environment.NewLine} {e}";
                             mem = PrintErrorAndAdvanceMem(message, mem);
-                            try
-                            {
-                                recoveredTool.Log(message, e);
-                            }
-                            catch (Exception)
-                            {
-                                // ignore
-                            }
+                            recoveredTool.LogWithException(message, e);
                         }
 
                     PrintRecoveryProgress(startOffset, mem, eof, DateTime.UtcNow);
