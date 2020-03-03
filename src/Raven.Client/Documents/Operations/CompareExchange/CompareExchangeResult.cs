@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             T result;
             object val = null;
-            raw?.TryGet("Object", out val);
+            raw?.TryGet(Constants.CompareExchange.ObjectFieldName, out val);
 
             if (val == null)
             {
@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             }
             else
             {
-                raw.TryGet("Object", out result);
+                raw.TryGet(Constants.CompareExchange.ObjectFieldName, out result);
             }
 
             return new CompareExchangeResult<T>

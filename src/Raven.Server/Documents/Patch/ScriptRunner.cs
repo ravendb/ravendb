@@ -14,6 +14,7 @@ using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
+using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
@@ -27,7 +28,6 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Extensions;
@@ -1430,7 +1430,7 @@ namespace Raven.Server.Documents.Patch
                         return JsValue.Null;
 
                     var jsValue = JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, value.Clone(_jsonCtx));
-                    return jsValue.AsObject().Get("Object");
+                    return jsValue.AsObject().Get(Constants.CompareExchange.ObjectFieldName);
                 }
             }
 

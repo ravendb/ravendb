@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -96,6 +95,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (TryGetKeySlice(keyLazy, keyString, out var keySlice) == false)
                     return DynamicNullObject.Null;
 
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
                 Slice.From(_queryContext.Documents.Allocator, id, out var idSlice);
                 var references = GetReferencesForItem(idSlice);
 
@@ -127,6 +128,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (TryGetCompareExchangeKeySlice(keyLazy, keyString, out var keySlice) == false)
                     return DynamicNullObject.Null;
 
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
                 Slice.From(_queryContext.Documents.Allocator, id, out var idSlice);
                 var references = GetCompareExchangeReferencesForItem(idSlice);
 
@@ -134,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(_queryContext.Server, keySlice);
 
-                if (value.Value == null || value.Value.TryGetMember("Object", out object result) == false)
+                if (value.Value == null || value.Value.TryGetMember(Constants.CompareExchange.ObjectFieldName, out object result) == false)
                     return DynamicNullObject.Null;
 
                 if (result == null)
@@ -198,6 +201,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var key = CompareExchangeKey.GetStorageKey(_documentsStorage.DocumentDatabase.Name, keyLazy);
 
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
                 Slice.From(_queryContext.Server.Allocator, key, out keySlice);
             }
             else
@@ -207,6 +212,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var key = CompareExchangeKey.GetStorageKey(_documentsStorage.DocumentDatabase.Name, keyString);
 
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
                 Slice.From(_queryContext.Server.Allocator, key, out keySlice);
             }
 
