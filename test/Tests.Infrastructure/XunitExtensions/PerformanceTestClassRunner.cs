@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
+using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
@@ -34,46 +36,66 @@ namespace Tests.Infrastructure.XunitExtensions
 
         protected override Task AfterTestClassStartingAsync()
         {
-            if(_resourceSnapshotEnabled)
-                _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestClassStarted, _testClass.Class.Name);
+            if (_resourceSnapshotEnabled)
+                _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestClassStarted, _testClass);
             
             return base.AfterTestClassStartingAsync();
         }
 
         protected override Task BeforeTestClassFinishedAsync()
         {
-            if(_resourceSnapshotEnabled)
-                _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestClassEnded, _testClass.Class.Name);
+            if (_resourceSnapshotEnabled)
+                _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestClassEnded, _testClass);
 
             return base.BeforeTestClassFinishedAsync();
         }
 
-        private static string GetDisplayName(ITestMethod testMethod)
-            => $"{testMethod.TestClass.Class.Name}::{testMethod.Method.Name}()";
-
         protected override Task<RunSummary> RunTestMethodAsync(ITestMethod testMethod, IReflectionMethodInfo method, IEnumerable<IXunitTestCase> testCases, object[] constructorArguments)
         {
-            if(_resourceSnapshotEnabled)
-                _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestStarted, GetDisplayName(testMethod));
+            var skipTestResourceSnapshot = _resourceSnapshotEnabled == false || IsTheory(testMethod);
+
+            if (skipTestResourceSnapshot == false)
+                _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestStarted, testMethod);
 
             return base.RunTestMethodAsync(testMethod, method, testCases, constructorArguments)
                 .ContinueWith(t =>
                 {
-                    if (_resourceSnapshotEnabled)
-                    {
-                        _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestEndedBeforeGc, GetDisplayName(testMethod));
-                    
-                        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                        GC.WaitForPendingFinalizers();
-                    
-                        _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestEndedAfterGc, GetDisplayName(testMethod));
-                    }
+                    var runSummary = t.Result;
 
-                    return t.Result;
+                    if (skipTestResourceSnapshot)
+                        return runSummary;
+                    
+                    var testResult = GetTestResult(runSummary);
+                    _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestEndedBeforeGc, testMethod, testResult);
+                
+                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    GC.WaitForPendingFinalizers();
+                
+                    _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestEndedAfterGc, testMethod, testResult);
+
+                    return runSummary;
                 });
         }
 
+        private static readonly Type TheoryType = typeof(TheoryAttribute);
 
+        private static bool IsTheory(ITestMethod testMethod)
+        {
+            var theoryAttributes = testMethod.Method.GetCustomAttributes(TheoryType); //this will also return all attributes assignable to TheoryAttribute
+            return theoryAttributes.Any();
+        }
+
+        private static TestResult GetTestResult(RunSummary runSummary)
+        {
+            if (runSummary.Failed > 0)
+                return TestResult.Fail;
+
+            return AllTestsWereSkipped(runSummary)
+                ? TestResult.Skipped
+                : TestResult.Success;
+        }
+        
+        private static bool AllTestsWereSkipped(RunSummary runSummary) => runSummary.Skipped == runSummary.Total;
     }
 }

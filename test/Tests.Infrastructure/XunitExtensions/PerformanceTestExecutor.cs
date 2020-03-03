@@ -19,7 +19,7 @@ namespace Tests.Infrastructure.XunitExtensions
             using (var testResourceSnapshotWriter = new TestResourceSnapshotWriter())
             {
                 if (resourceSnapshotEnabled)
-                    testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestAssemblyStarted, TestAssembly.Assembly.Name);
+                    testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestAssemblyStarted, TestAssembly);
 
                 try
                 {
@@ -37,7 +37,7 @@ namespace Tests.Infrastructure.XunitExtensions
                 finally
                 {
                     if (resourceSnapshotEnabled)
-                        testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestAssemblyEnded, TestAssembly.Assembly.Name);
+                        testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestAssemblyEnded, TestAssembly);
                 }
             }
         }
