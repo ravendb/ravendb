@@ -27,15 +27,16 @@ namespace SlowTests.Client.TimeSeries.Policies
                     {
                         ["Users"] = new TimeSeriesCollectionConfiguration
                         {
-                            DownSamplePolicies = new List<TimeSeriesDownSamplePolicy>
+                            RollupPolicies = new List<RollupPolicy>
                             {
-                                new TimeSeriesDownSamplePolicy(TimeSpan.FromHours(12), DownSampleFrequency.Hour),
-                                new TimeSeriesDownSamplePolicy(TimeSpan.FromMinutes(180), DownSampleFrequency.Minute),
-                                new TimeSeriesDownSamplePolicy(TimeSpan.FromSeconds(60), DownSampleFrequency.Second),
-                                new TimeSeriesDownSamplePolicy(TimeSpan.FromDays(2), DownSampleFrequency.Day),
+                                new RollupPolicy(TimeSpan.FromHours(12), TimeSpan.FromHours(1)),
+                                new RollupPolicy(TimeSpan.FromMinutes(180), TimeSpan.FromMinutes(1)),
+                                new RollupPolicy(TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(1)),
+                                new RollupPolicy(TimeSpan.FromDays(2), TimeSpan.FromDays(1)),
                             },
-                            DeleteAfter = TimeSpan.FromDays(365)
-                        }
+                            RawDataRetentionTime = TimeSpan.FromHours(96)
+                        },
+                        
                     }
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
@@ -43,23 +44,20 @@ namespace SlowTests.Client.TimeSeries.Policies
                 var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
                 var collection = updated.Collections["Users"];
 
-                Assert.Equal(collection.DeleteAfter, TimeSpan.FromDays(365));
-                var policies = collection.DownSamplePolicies;
+                var policies = collection.RollupPolicies;
                 Assert.Equal(4, policies.Count);
 
-                Assert.Equal(TimeSpan.FromSeconds(60), policies[0].TimeFromNow);
-                Assert.Equal(DownSampleFrequency.Second, policies[0].DownSampleFrequency);
+                Assert.Equal(TimeSpan.FromSeconds(60), policies[0].RetentionTime);
+                Assert.Equal(TimeSpan.FromSeconds(1), policies[0].AggregateBy);
 
-                Assert.Equal(TimeSpan.FromMinutes(180), policies[1].TimeFromNow);
-                Assert.Equal(DownSampleFrequency.Minute, policies[1].DownSampleFrequency);
+                Assert.Equal(TimeSpan.FromMinutes(180), policies[1].RetentionTime);
+                Assert.Equal(TimeSpan.FromMinutes(1), policies[1].AggregateBy);
 
-                Assert.Equal(TimeSpan.FromHours(12), policies[2].TimeFromNow);
-                Assert.Equal(DownSampleFrequency.Hour, policies[2].DownSampleFrequency);
+                Assert.Equal(TimeSpan.FromHours(12), policies[2].RetentionTime);
+                Assert.Equal(TimeSpan.FromHours(1), policies[2].AggregateBy);
 
-                Assert.Equal(TimeSpan.FromDays(2), policies[3].TimeFromNow);
-                Assert.Equal(DownSampleFrequency.Day, policies[3].DownSampleFrequency);
-
-
+                Assert.Equal(TimeSpan.FromDays(2), policies[3].RetentionTime);
+                Assert.Equal(TimeSpan.FromDays(1), policies[3].AggregateBy);
             }
         }
     }
