@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.IO.Compression;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
@@ -61,5 +62,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Http.UseLibuv", ConfigurationEntryScope.ServerWideOnly)]
         public bool UseLibuv { get; set; }
+
+        [Description("Sets HTTP protocols that should be supported by the server")]
+        [DefaultValue(HttpProtocols.Http1AndHttp2)]
+        [ConfigurationEntry("Http.Protocols", ConfigurationEntryScope.ServerWideOnly)]
+        public HttpProtocols Protocols { get; set; }
     }
 }
