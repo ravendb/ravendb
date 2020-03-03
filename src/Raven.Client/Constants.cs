@@ -323,12 +323,8 @@ namespace Raven.Client
             }
         }
 
-        public class Smuggler
+        public static class Smuggler
         {
-            private Smuggler()
-            {
-            }
-
             public const string ImportOptions = "importOptions";
             
             public const string CsvImportOptions  = "csvImportOptions";
