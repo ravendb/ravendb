@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
@@ -16,11 +17,13 @@ namespace Raven.Server.ServerWide
 {
     public class RawDatabaseRecord : IDisposable
     {
-        private readonly BlittableJsonReaderObject _record;
+        private BlittableJsonReaderObject _record;
+
+        private DatabaseRecord _materializedRecord;
 
         public RawDatabaseRecord(BlittableJsonReaderObject record)
         {
-            _record = record;
+            _record = record ?? throw new ArgumentNullException(nameof(record));
         }
 
         public BlittableJsonReaderObject GetRecord()
@@ -30,6 +33,9 @@ namespace Raven.Server.ServerWide
 
         public bool IsDisabled()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Disabled;
+
             if (_record.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false)
                 return false;
 
@@ -38,6 +44,9 @@ namespace Raven.Server.ServerWide
 
         public bool IsEncrypted()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Encrypted;
+
             if (_record.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted) == false)
                 return false;
 
@@ -46,6 +55,9 @@ namespace Raven.Server.ServerWide
 
         public long GetEtagForBackup()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.EtagForBackup;
+
             if (_record.TryGet(nameof(DatabaseRecord.EtagForBackup), out long etagForBackup) == false)
                 return 0;
 
@@ -54,12 +66,18 @@ namespace Raven.Server.ServerWide
 
         public string GetDatabaseName()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.DatabaseName;
+
             _record.TryGet(nameof(DatabaseRecord.DatabaseName), out string databaseName);
             return databaseName;
         }
 
         public DatabaseTopology GetTopology()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Topology;
+
             if (_record.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject rawTopology) == false)
                 return null;
 
@@ -68,6 +86,9 @@ namespace Raven.Server.ServerWide
 
         public DatabaseStateStatus GetDatabaseStateStatus()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.DatabaseState;
+
             if (_record.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus rawDatabaseStateStatus) == false)
             {
                 return DatabaseStateStatus.Normal;
@@ -78,6 +99,9 @@ namespace Raven.Server.ServerWide
 
         public RevisionsConfiguration GetRevisionsConfiguration()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Revisions;
+
             if (_record.TryGet(nameof(DatabaseRecord.Revisions), out BlittableJsonReaderObject config) == false || config == null)
             {
                 return null;
@@ -88,6 +112,9 @@ namespace Raven.Server.ServerWide
 
         public ConflictSolver GetConflictSolverConfiguration()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.ConflictSolverConfig;
+
             if (_record.TryGet(nameof(DatabaseRecord.ConflictSolverConfig), out BlittableJsonReaderObject config) == false || config == null)
             {
                 return null;
@@ -98,6 +125,9 @@ namespace Raven.Server.ServerWide
 
         public ExpirationConfiguration GetExpirationConfiguration()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Expiration;
+
             if (_record.TryGet(nameof(DatabaseRecord.Expiration), out BlittableJsonReaderObject config) == false || config == null)
             {
                 return null;
@@ -105,9 +135,12 @@ namespace Raven.Server.ServerWide
 
             return JsonDeserializationCluster.ExpirationConfiguration(config);
         }
-        
+
         public RefreshConfiguration GetRefreshConfiguration()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Refresh;
+
             if (_record.TryGet(nameof(DatabaseRecord.Refresh), out BlittableJsonReaderObject config) == false || config == null)
             {
                 return null;
@@ -118,6 +151,9 @@ namespace Raven.Server.ServerWide
 
         public List<ExternalReplication> GetExternalReplications()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.ExternalReplications;
+
             if (_record.TryGet(nameof(DatabaseRecord.ExternalReplications), out BlittableJsonReaderArray bjra) == false || bjra == null)
             {
                 return null;
@@ -135,6 +171,9 @@ namespace Raven.Server.ServerWide
 
         public List<PullReplicationDefinition> GetHubPullReplications()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.HubPullReplications;
+
             if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) == false || bjra == null)
             {
                 return null;
@@ -152,6 +191,14 @@ namespace Raven.Server.ServerWide
 
         public List<long> GetPeriodicBackupsTaskIds()
         {
+            if (_materializedRecord != null)
+            {
+                return _materializedRecord
+                    .PeriodicBackups
+                    .Select(x => x.TaskId)
+                    .ToList();
+            }
+
             if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray bjra) == false || bjra == null)
                 return null;
 
@@ -170,6 +217,9 @@ namespace Raven.Server.ServerWide
 
         public PeriodicBackupConfiguration GetPeriodicBackupConfiguration(long taskId)
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.PeriodicBackups.Find(x => x.TaskId == taskId);
+
             if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray bjra) == false || bjra == null)
                 return null;
 
@@ -187,6 +237,9 @@ namespace Raven.Server.ServerWide
 
         public List<RavenEtlConfiguration> GetRavenEtls()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.RavenEtls;
+
             if (_record.TryGet(nameof(DatabaseRecord.RavenEtls), out BlittableJsonReaderArray bjra) == false || bjra == null)
             {
                 return null;
@@ -204,6 +257,9 @@ namespace Raven.Server.ServerWide
 
         public List<SqlEtlConfiguration> GetSqlEtls()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.SqlEtls;
+
             if (_record.TryGet(nameof(DatabaseRecord.SqlEtls), out BlittableJsonReaderArray bjra) == false || bjra == null)
             {
                 return null;
@@ -221,6 +277,9 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, string> GetSettings()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Settings;
+
             if (_record.TryGet(nameof(DatabaseRecord.Settings), out BlittableJsonReaderObject obj) == false || obj == null)
                 return null;
 
@@ -245,6 +304,9 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, DeletionInProgressStatus> GetDeletionInProgressStatus()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.DeletionInProgress;
+
             if (_record.TryGet(nameof(DatabaseRecord.DeletionInProgress), out BlittableJsonReaderObject obj) == false || obj == null)
                 return null;
 
@@ -267,6 +329,9 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, List<IndexHistoryEntry>> GetIndexesHistory()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.IndexesHistory;
+
             if (_record.TryGet(nameof(DatabaseRecord.IndexesHistory), out BlittableJsonReaderObject obj) == false || obj == null)
             {
                 return null;
@@ -296,8 +361,37 @@ namespace Raven.Server.ServerWide
             return dictionary;
         }
 
+        public int GetIndexesCount()
+        {
+            if (_materializedRecord != null)
+                return _materializedRecord.Indexes?.Count ?? 0;
+
+            if (_record.TryGet(nameof(DatabaseRecord.Indexes), out BlittableJsonReaderObject obj) == false || obj == null)
+            {
+                return 0;
+            }
+
+            var count = 0;
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            for (var i = 0; i < obj.Count; i++)
+            {
+                obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                if (propertyDetails.Value == null)
+                    continue;
+
+                if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                    count++;
+            }
+
+            return count;
+        }
+
         public Dictionary<string, IndexDefinition> GetIndexes()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Indexes;
+
             if (_record.TryGet(nameof(DatabaseRecord.Indexes), out BlittableJsonReaderObject obj) == false || obj == null)
             {
                 return null;
@@ -314,9 +408,7 @@ namespace Raven.Server.ServerWide
                     continue;
 
                 if (propertyDetails.Value is BlittableJsonReaderObject bjro)
-                {
                     dictionary[propertyDetails.Name] = JsonDeserializationCluster.IndexDefinition(bjro);
-                }
             }
 
             return dictionary;
@@ -324,6 +416,9 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, AutoIndexDefinition> GetAutoIndexes()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.AutoIndexes;
+
             if (_record.TryGet(nameof(DatabaseRecord.AutoIndexes), out BlittableJsonReaderObject obj) == false || obj == null)
             {
                 return null;
@@ -350,6 +445,9 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, SorterDefinition> GetSorters()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Sorters;
+
             if (_record.TryGet(nameof(DatabaseRecord.Sorters), out BlittableJsonReaderObject obj) == false || obj == null)
             {
                 return null;
@@ -376,6 +474,9 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, SqlConnectionString> GetSqlConnectionStrings()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.SqlConnectionStrings;
+
             if (_record.TryGet(nameof(DatabaseRecord.SqlConnectionStrings), out BlittableJsonReaderObject obj) == false || obj == null)
             {
                 return null;
@@ -402,6 +503,9 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, RavenConnectionString> GetRavenConnectionStrings()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.RavenConnectionStrings;
+
             if (_record.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject obj) == false || obj == null)
             {
                 return null;
@@ -429,6 +533,18 @@ namespace Raven.Server.ServerWide
         public void Dispose()
         {
             _record?.Dispose();
+            _record = null;
+        }
+
+        public DatabaseRecord GetMaterializedRecord()
+        {
+            if (_materializedRecord == null)
+            {
+                _materializedRecord = JsonDeserializationCluster.DatabaseRecord(_record);
+                Dispose();
+            }
+
+            return _materializedRecord;
         }
     }
 }

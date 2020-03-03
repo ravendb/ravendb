@@ -1029,9 +1029,9 @@ namespace Raven.Server.Documents
                         // read and save the database record
                         writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
                         using (serverContext.OpenReadTransaction())
-                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabase(serverContext, Name, out _))
+                        using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(serverContext, Name, out _))
                         {
-                            serverContext.Write(writer, rawRecord);
+                            serverContext.Write(writer, databaseRecord.GetRecord());
                         }
 
                         // save the database values (subscriptions, periodic backups statuses, etl states...)

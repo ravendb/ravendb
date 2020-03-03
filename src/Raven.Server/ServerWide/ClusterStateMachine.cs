@@ -47,7 +47,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -211,6 +210,7 @@ namespace Raven.Server.ServerWide
         }
 
         public delegate Task DatabaseChangedDelegate(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType);
+
         public delegate Task ValueChangedDelegate(long index, string type);
 
         private DatabaseChangedDelegate[] _onDatabaseChanged = Array.Empty<DatabaseChangedDelegate>();
@@ -293,8 +293,8 @@ namespace Raven.Server.ServerWide
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
                         ExecuteCompareExchangeBatch(context, cmd, index, type);
                         break;
-                    //The reason we have a separate case for removing node from database is because we must 
-                    //actually delete the database before we notify about changes to the record otherwise we 
+                    //The reason we have a separate case for removing node from database is because we must
+                    //actually delete the database before we notify about changes to the record otherwise we
                     //don't know that it was us who needed to delete the database.
                     case nameof(RemoveNodeFromDatabaseCommand):
                         RemoveNodeFromDatabase(context, cmd, index, leader, serverStore);
@@ -682,17 +682,20 @@ namespace Raven.Server.ServerWide
                     using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                     using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                     {
-                        var databaseRecordJson = ReadRawDatabase(context, tuple.Key, out _);
-                        if (databaseRecordJson == null)
-                            continue;
-
-                        databaseRecordJson.Modifications = new DynamicJsonValue { [nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount)] = tuple.Value };
-                        using (var old = databaseRecordJson)
+                        using (var databaseRecord = ReadRawDatabaseRecord(context, tuple.Key))
                         {
-                            databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
-                        }
+                            if (databaseRecord == null)
+                                continue;
 
-                        UpdateValue(index, items, valueNameLowered, valueName, databaseRecordJson);
+                            var databaseRecordJson = databaseRecord.GetRecord();
+                            databaseRecordJson.Modifications = new DynamicJsonValue
+                            {
+                                [nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount)] = tuple.Value
+                            };
+                            var newDatabaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
+
+                            UpdateValue(index, items, valueNameLowered, valueName, newDatabaseRecordJson);
+                        }
                     }
 
                     // we simply update the value without invoking the OnChange function
@@ -795,7 +798,7 @@ namespace Raven.Server.ServerWide
                     }
                     var certInstallation = GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                     if (certInstallation == null)
-                        return; // already applied? 
+                        return; // already applied?
 
                     if (certInstallation.TryGet(nameof(CertificateReplacement.Thumbprint), out string storedThumbprint) == false)
                         throw new RachisApplyException($"{nameof(CertificateReplacement.Thumbprint)} property didn't exist in 'server/cert' value");
@@ -817,7 +820,7 @@ namespace Raven.Server.ServerWide
                     if (_parent.Log.IsOperationsEnabled)
                         _parent.Log.Operations("Confirming to replace the server certificate.");
 
-                    // this will trigger the handling of the certificate update 
+                    // this will trigger the handling of the certificate update
                     NotifyValueChanged(context, nameof(ConfirmReceiptServerCertificateCommand), index);
                 }
             }
@@ -917,7 +920,7 @@ namespace Raven.Server.ServerWide
 
                     var certInstallation = GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                     if (certInstallation == null)
-                        return; // already applied? 
+                        return; // already applied?
 
                     if (certInstallation.TryGet(nameof(CertificateReplacement.Thumbprint), out string storedThumbprint) == false)
                         throw new RachisApplyException($"'{nameof(CertificateReplacement.Thumbprint)}' property didn't exist in 'server/cert' value");
@@ -1217,7 +1220,6 @@ namespace Raven.Server.ServerWide
             {
                 LogCommand(nameof(RemoveNodeFromDatabaseCommand), index, exception, remove?.AdditionalDebugInformation(exception));
             }
-
         }
 
         private static void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName, ServerStore serverStore)
@@ -1675,6 +1677,7 @@ namespace Raven.Server.ServerWide
                 NotifyValueChanged(context, type, index);
             }
         }
+
         private void PutValueDirectly(TransactionOperationContext context, string key, BlittableJsonReaderObject value, long index)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -2574,7 +2577,7 @@ namespace Raven.Server.ServerWide
 
         public RawDatabaseRecord ReadRawDatabaseRecord(TransactionOperationContext context, string name, out long etag)
         {
-            var rawRecord = ReadRawDatabase(context, name, out etag);
+            var rawRecord = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (rawRecord == null)
                 return null;
 
@@ -2595,29 +2598,26 @@ namespace Raven.Server.ServerWide
                 return items.VerifyKeyExists(key);
         }
 
-        public DatabaseRecord ReadDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
-            where T : RavenTransaction
+        public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name, out long etag)
         {
-            var doc = ReadRawDatabase(context, name, out etag);
-            if (doc == null)
-                return null;
+            using (var databaseRecord = ReadRawDatabaseRecord(context, name, out etag))
+            {
+                if (databaseRecord == null)
+                    return null;
 
-            return JsonDeserializationCluster.DatabaseRecord(doc);
-        }
-
-        public BlittableJsonReaderObject ReadRawDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
-            where T : RavenTransaction
-        {
-            return Read(context, "db/" + name.ToLowerInvariant(), out etag);
+                return databaseRecord.GetMaterializedRecord();
+            }
         }
 
         public DatabaseTopology ReadDatabaseTopology(TransactionOperationContext context, string name)
         {
-            using (var rawDatabaseRecord = ReadRawDatabase(context, name, out _))
+            using (var databaseRecord = ReadRawDatabaseRecord(context, name))
             {
-                if (rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false)
+                var topology = databaseRecord.GetTopology();
+                if (topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
-                return JsonDeserializationCluster.DatabaseTopology(topology);
+
+                return topology;
             }
         }
 
@@ -2637,33 +2637,27 @@ namespace Raven.Server.ServerWide
 
         public PullReplicationDefinition ReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context)
         {
-            using (var databaseRecord = ReadRawDatabase(context, database, out _))
+            using (var databaseRecord = ReadRawDatabaseRecord(context, database))
             {
                 if (databaseRecord == null)
                 {
                     throw new DatabaseDoesNotExistException($"The database '{database}' doesn't exists.");
                 }
 
-                if (databaseRecord.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray pullReplicationDefinitions) == false)
+                var hubPullReplications = databaseRecord.GetHubPullReplications();
+                if (hubPullReplications == null)
                 {
                     throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
                 }
 
-                var definition = pullReplicationDefinitions.FirstOrDefault(x =>
-                        x is BlittableJsonReaderObject obj && obj.TryGetMember(nameof(PullReplicationDefinition.Name), out var name) && name.Equals(definitionName)) as BlittableJsonReaderObject;
+                var definition = hubPullReplications.Find(x => string.Equals(x.Name, definitionName));
                 if (definition == null)
                 {
                     throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
                 }
 
-                return JsonDeserializationCluster.PullReplicationDefinition(definition);
+                return definition;
             }
-        }
-
-        public DatabaseTopology ReadDatabaseTopology(BlittableJsonReaderObject rawDatabaseRecord)
-        {
-            rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology);
-            return JsonDeserializationCluster.DatabaseTopology(topology);
         }
 
         public IEnumerable<(string Prefix, long Value, long index)> GetIdentitiesFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, long take)
