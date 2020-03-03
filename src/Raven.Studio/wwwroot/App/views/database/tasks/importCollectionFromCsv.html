@@ -51,12 +51,12 @@
                                 <label class="control-label">Fields Delimiter</label>
                                 <div class="flex-grow" data-bind="with: csvConfig">
                                     <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                        <span data-bind="text: selectedDelimiter"></span>
+                                        <span data-bind="text: delimiter"></span>
                                         <span class="caret"></span>
                                     </button>
-                                    <ul class="dropdown-menu" data-bind="foreach: possibleDelimiters">
+                                    <ul class="dropdown-menu" data-bind="foreach: constructor.possibleDelimiters">
                                         <li>
-                                            <a href="#" data-bind="text: $data, click: $parent.selectedDelimiter.bind($parent.selectedDelimiter, $data)"></a>
+                                            <a href="#" data-bind="text: $data, click: _.partial($parent.delimiter)"></a>
                                         </li>
                                     </ul>
                                 </div>
@@ -67,12 +67,12 @@
                                 <label class="control-label">Text Qualifier</label>
                                 <div class="flex-grow">
                                     <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                        <span data-bind="text: selectedQuote"></span>
+                                        <span data-bind="text: quote"></span>
                                         <span class="caret"></span>
                                     </button>
-                                    <ul class="dropdown-menu" data-bind="foreach: possibleQuoteChars">
+                                    <ul class="dropdown-menu" data-bind="foreach: constructor.possibleQuoteChars">
                                         <li>
-                                            <a href="#" data-bind="text: $data, click: $parent.selectedQuote.bind($parent.selectedQuote, $data)"></a>
+                                            <a href="#" data-bind="text: $data, click: _.partial($parent.quote)"></a>
                                         </li>
                                     </ul>
                                 </div>
@@ -83,12 +83,12 @@
                                 <label class="control-label">Whitespace</label>
                                 <div class="flex-grow">
                                     <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                        <span data-bind="text: selectedTrimOption"></span>
+                                        <span data-bind="text: trimOption"></span>
                                         <span class="caret"></span>
                                     </button>
-                                    <ul class="dropdown-menu" data-bind="foreach: possibleTrimOptions">
+                                    <ul class="dropdown-menu" data-bind="foreach: constructor.possibleTrimOptions">
                                         <li>
-                                            <a href="#" data-bind="text: $data, click: $parent.selectedTrimOption.bind($parent.selectedTrimOption, $data)"></a>
+                                            <a href="#" data-bind="text: $data, click: _.partial($parent.trimOption)"></a>
                                         </li>
                                     </ul>
                                 </div>

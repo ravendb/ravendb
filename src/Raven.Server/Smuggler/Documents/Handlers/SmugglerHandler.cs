@@ -19,6 +19,7 @@ using System.Xml.Linq;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -680,7 +681,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     if (MultipartRequestHelper.HasFormDataContentDisposition(contentDisposition))
                                     {
                                         var key = HeaderUtilities.RemoveQuotes(contentDisposition.Name);
-                                        if (key != "importOptions")
+                                        if (key != Constants.Smuggler.ImportOptions)
                                             continue;
 
                                         BlittableJsonReaderObject blittableJson;
@@ -688,12 +689,12 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         {
                                             using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
-                                                blittableJson = await context.ReadForMemoryAsync(gzipStream, "importOptions");
+                                                blittableJson = await context.ReadForMemoryAsync(gzipStream, Constants.Smuggler.ImportOptions);
                                             }
                                         }
                                         else
                                         {
-                                            blittableJson = await context.ReadForMemoryAsync(section.Body, "importOptions");
+                                            blittableJson = await context.ReadForMemoryAsync(section.Body, Constants.Smuggler.ImportOptions);
                                         }
 
                                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
@@ -760,7 +761,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                 var reader = new MultipartReader(MultipartRequestHelper.GetBoundary(MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
                                     MultipartRequestHelper.MultipartBoundaryLengthLimit), HttpContext.Request.Body);
 
-                                CsvConfiguration csvConfig = new CsvConfiguration();
+                                CsvImportOptions csvConfig = new CsvImportOptions();
                                 
                                 while (true)
                                 {
@@ -774,7 +775,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     if (MultipartRequestHelper.HasFormDataContentDisposition(contentDisposition))
                                     {
                                         var key = HeaderUtilities.RemoveQuotes(contentDisposition.Name);
-                                        if (key != "CsvConfig")
+                                        if (key != Constants.Smuggler.CsvImportOptions)
                                             continue;
 
                                         BlittableJsonReaderObject blittableJson;
@@ -782,15 +783,15 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         {
                                             using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
-                                                blittableJson = await context.ReadForMemoryAsync(gzipStream, "CsvConfig");
+                                                blittableJson = await context.ReadForMemoryAsync(gzipStream, Constants.Smuggler.CsvImportOptions);
                                             }
                                         }
                                         else
                                         {
-                                            blittableJson = await context.ReadForMemoryAsync(section.Body, "CsvConfig");
+                                            blittableJson = await context.ReadForMemoryAsync(section.Body, Constants.Smuggler.CsvImportOptions);
                                         }
 
-                                        csvConfig = JsonDeserializationServer.CsvConfiguration(blittableJson);
+                                        csvConfig = JsonDeserializationServer.CsvImportOptions(blittableJson);
                                         continue;
                                     }
                                     
@@ -835,7 +836,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         }
 
         private void ImportDocumentsFromCsvStream(Stream stream, DocumentsOperationContext context, string entity, DatabaseSmugglerOptionsServerSide options, 
-                                                  SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token, CsvConfiguration csvConfig)
+                                                  SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token, CsvImportOptions csvConfig)
         {
             if (string.IsNullOrEmpty(entity) == false && char.IsLower(entity[0]))
                 entity = char.ToUpper(entity[0]) + entity.Substring(1);

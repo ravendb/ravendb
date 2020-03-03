@@ -21,19 +21,21 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class CsvConfiguration
+    public class CsvImportOptions 
     {
         public string Delimiter { get; set; }
-        public string Quote { get; set; }
-        public string Comment { get; set; }
+        public char Quote { get; set; }
+        public char Comment { get; set; }
         public bool AllowComments { get; set; }
         public TrimOptions TrimOptions { get; set; }
 
-        public CsvConfiguration()
+        public CsvImportOptions()
         {
+            Delimiter = ",";
+            Quote = '"';
         }
         
-        public CsvConfiguration(string delimiter, string quote, TrimOptions trim, bool allowComments, string comment )
+        public CsvImportOptions(string delimiter, char quote, TrimOptions trim, bool allowComments, char comment)
         {
             Delimiter = delimiter;
             Quote = quote;
@@ -70,7 +72,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
-        public CsvStreamSource(DocumentDatabase database, Stream stream, DocumentsOperationContext context, string collection, CsvConfiguration csvConfig)
+        public CsvStreamSource(DocumentDatabase database, Stream stream, DocumentsOperationContext context, string collection, CsvImportOptions csvConfig)
         {
             _database = database;
             _stream = stream;
@@ -79,13 +81,14 @@ namespace Raven.Server.Smuggler.Documents
             _collection = collection;
             
             _csvHelperConfig = new Configuration();
+            
             _csvHelperConfig.Delimiter = csvConfig.Delimiter;
-            _csvHelperConfig.Quote = csvConfig.Quote[0];
+            _csvHelperConfig.Quote = csvConfig.Quote;
             _csvHelperConfig.TrimOptions = csvConfig.TrimOptions;
             _csvHelperConfig.AllowComments = csvConfig.AllowComments;
-            if (csvConfig.AllowComments && csvConfig.Comment != null)
+            if (csvConfig.AllowComments && csvConfig.Comment != default(char))
             {
-                _csvHelperConfig.Comment = csvConfig.Comment[0];
+                _csvHelperConfig.Comment = csvConfig.Comment;
             }
             _csvHelperConfig.BadDataFound = null;
             

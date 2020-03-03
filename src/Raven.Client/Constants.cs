@@ -323,6 +323,17 @@ namespace Raven.Client
             }
         }
 
+        public class Smuggler
+        {
+            private Smuggler()
+            {
+            }
+
+            public const string ImportOptions = "importOptions";
+            
+            public const string CsvImportOptions  = "csvImportOptions";
+        }
+
         internal class Monitoring
         {
             private Monitoring()

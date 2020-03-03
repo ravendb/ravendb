@@ -258,7 +258,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(BuildInfoWithResourceNames));
             scripter.AddType(typeof(MigratedServerUrls));
             scripter.AddType(typeof(MigrationConfiguration));
-            scripter.AddType(typeof(CsvConfiguration));
+            scripter.AddType(typeof(CsvImportOptions));
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));

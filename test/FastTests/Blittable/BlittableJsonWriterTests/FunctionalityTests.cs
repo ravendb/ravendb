@@ -9,6 +9,7 @@ using Newtonsoft.Json.Converters;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Compression;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
@@ -202,6 +203,31 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), json);
             }
         }
+        
+        [Fact]
+        public void UsingChars()
+        {
+            var deserialize = JsonDeserializationBase.GenerateJsonDeserializationRoutine<CharClass>();
 
+            var djv = new DynamicJsonValue
+            {
+                [nameof(CharClass.CharWithValue)] = "a"
+            };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var json = context.ReadObject(djv, "json");
+                var result = deserialize.Invoke(json);
+                                
+                Assert.Equal('a', result.CharWithValue);
+                Assert.Equal(default(char), result.CharNoValue);
+            }
+        }
+
+        private class CharClass
+        {
+            public char CharWithValue { get; set; }
+            public char CharNoValue { get; set; }
+        }
     }
 }

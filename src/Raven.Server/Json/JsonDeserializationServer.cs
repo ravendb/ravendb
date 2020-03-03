@@ -186,7 +186,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ServerStatistics> ServerStatistics = GenerateJsonDeserializationRoutine<ServerStatistics>();
 
-        public static readonly Func<BlittableJsonReaderObject, CsvConfiguration> CsvConfiguration = GenerateJsonDeserializationRoutine<CsvConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, CsvImportOptions> CsvImportOptions = GenerateJsonDeserializationRoutine<CsvImportOptions>();
         
         public class Parameters
         {
