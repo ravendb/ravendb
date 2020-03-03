@@ -262,15 +262,23 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             {
                 const string error = "Error while running background tasks, this is very bad";
                 logger.FatalException(error, e);
-                ReportAlert(new Alert
+
+                try
                 {
-                    AlertLevel = AlertLevel.Error,
-                    CreatedAt = DateTime.UtcNow,
-                    Title = error,
-                    UniqueKey = error,
-                    Message = e.ToString(),
-                    Exception = e.Message
-                });
+                    ReportAlert(new Alert
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = DateTime.UtcNow,
+                        Title = error,
+                        UniqueKey = error,
+                        Message = e.ToString(),
+                        Exception = e.Message
+                    });
+                }
+                catch (Exception internalException)
+                {
+                    logger.FatalException("Failed to add alert", internalException);
+                }
             }
         }
 
