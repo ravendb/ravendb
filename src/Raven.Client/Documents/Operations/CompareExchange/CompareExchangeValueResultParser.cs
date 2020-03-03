@@ -34,13 +34,13 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 {
                     // simple
                     T value = default;
-                    raw?.TryGet("Object", out value);
+                    raw?.TryGet(Constants.CompareExchange.ObjectFieldName, out value);
                     results[key] = new CompareExchangeValue<T>(key, index, value);
                 }
                 else
                 {
                     if (lsv == null)
-                        lsv = context.GetLazyString("Object");
+                        lsv = context.GetLazyString(Constants.CompareExchange.ObjectFieldName);
 
                     if (raw == null || raw.Contains(lsv) == false)
                     {

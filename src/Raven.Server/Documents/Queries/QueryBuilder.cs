@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.Queries
 
                     var prefix = CompareExchangeKey.GetStorageKey(documentsContext.DocumentDatabase.Name, v.Value.ToString());
                     object value = null;
-                    server.Cluster.GetCompareExchangeValue(serverContext, prefix).Value?.TryGetMember("Object", out value);
+                    server.Cluster.GetCompareExchangeValue(serverContext, prefix).Value?.TryGetMember(Constants.CompareExchange.ObjectFieldName, out value);
 
                     if (value == null)
                         return new ValueExpression(string.Empty, ValueTokenType.Null);

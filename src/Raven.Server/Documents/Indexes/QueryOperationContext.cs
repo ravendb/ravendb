@@ -40,19 +40,6 @@ namespace Raven.Server.Documents.Indexes
                 _releaseServer = database.ServerStore.ContextPool.AllocateOperationContext(out Server);
         }
 
-        private QueryOperationContext(DocumentDatabase database, Index index)
-        {
-            if (database is null)
-                throw new ArgumentNullException(nameof(database));
-            if (index is null)
-                throw new ArgumentNullException(nameof(index));
-
-            _releaseDocuments = database.DocumentsStorage.ContextPool.AllocateOperationContext(out Documents);
-
-            if (index.Definition.HasCompareExchange)
-                _releaseServer = database.ServerStore.ContextPool.AllocateOperationContext(out Server);
-        }
-
         public IDisposable OpenReadTransaction()
         {
             var documentsTx = Documents.OpenReadTransaction();
@@ -72,12 +59,16 @@ namespace Raven.Server.Documents.Indexes
         public bool AreTransactionsOpened()
         {
             var opened = Documents.Transaction?.Disposed == false;
+            if (Server == null)
+                return opened;
 
-            if (Server != null)
-                opened |= Server.Transaction?.Disposed == false;
+            var serverOpened = Server.Transaction?.Disposed == false;
+            if (opened != serverOpened)
+                ThrowTransactionsNotInTheSameStateException(opened, serverOpened);
 
             return opened;
         }
+
         public void SetLongLivedTransactions(bool value)
         {
             Documents.PersistentContext.LongLivedTransactions = value;
@@ -160,6 +151,11 @@ namespace Raven.Server.Documents.Indexes
                 _serverTx?.Dispose();
                 _serverTx = null;
             }
+        }
+
+        private static void ThrowTransactionsNotInTheSameStateException(bool opened, bool serverOpened)
+        {
+            throw new InvalidOperationException($"Documents transaction ('{opened}') and server transaction ('{serverOpened}') do not have the same state.");
         }
     }
 }

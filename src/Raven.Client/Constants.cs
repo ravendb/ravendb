@@ -347,6 +347,15 @@ namespace Raven.Client
             }
         }
 
+        internal class CompareExchange
+        {
+            private CompareExchange()
+            {
+            }
+
+            public const string ObjectFieldName = "Object";
+        }
+
         internal class Monitoring
         {
             private Monitoring()

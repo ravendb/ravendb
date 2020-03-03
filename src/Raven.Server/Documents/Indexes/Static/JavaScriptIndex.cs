@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList,
-            List<(HashSet<CollectionName> ReferencedCollections, bool HasCompareExchangeReferences)> mapReferencedCollections, out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
+            List<MapMetadata> mapReferencedCollections, out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
         {
             var mapsArray = definitions.GetProperty(MapsProperty).Value;
             if (mapsArray.IsNull() || mapsArray.IsUndefined() || mapsArray.IsArray() == false)
@@ -204,17 +204,21 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static readonly ParserOptions DefaultParserOptions = new ParserOptions();
 
-        private (HashSet<CollectionName> ReferencedCollections, bool HasCompareExchangeReferences) ExecuteCodeAndCollectReferencedCollections(string code)
+        private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code)
         {
             var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
             var program = javascriptParser.ParseProgram();
             _engine.ExecuteWithReset(program);
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
             loadVisitor.Visit(program);
-            return (loadVisitor.ReferencedCollection, loadVisitor.HasCompareExchangeReferences);
+            return new MapMetadata
+            {
+                ReferencedCollections = loadVisitor.ReferencedCollection,
+                HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences
+            };
         }
 
-        private (List<string> Maps, List<(HashSet<CollectionName> ReferencedCollections, bool HasCompareExchangeReferences)> MapReferencedCollections) InitializeEngine(IndexDefinition definition)
+        private (List<string> Maps, List<MapMetadata> MapReferencedCollections) InitializeEngine(IndexDefinition definition)
         {
             _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
             _engine.SetValue("cmpxchg", new ClrFunctionInstance(_engine, "cmpxchg", LoadCompareExchangeValue));
@@ -231,7 +235,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             var maps = definition.Maps.ToList();
-            var mapReferencedCollections = new List<(HashSet<CollectionName> ReferencedCollections, bool HasCompareExchangeReferences)>();
+            var mapReferencedCollections = new List<MapMetadata>();
 
             foreach (var map in maps)
             {
@@ -402,6 +406,13 @@ function createSpatialField(lat, lng) {
         public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
         {
             ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
+        }
+
+        private class MapMetadata
+        {
+            public HashSet<CollectionName> ReferencedCollections;
+
+            public bool HasCompareExchangeReferences;
         }
     }
 }

@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Indexes.Static
             funcs.Add(map);
         }
 
-        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
+        public dynamic LoadDocument<TIgnored>(object keyOrEnumerable, string collectionName)
         {
             return LoadDocument(keyOrEnumerable, collectionName);
         }
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
         }
 
-        public dynamic LoadCompareExchangeValue<TIGnored>(object keyOrEnumerable)
+        public dynamic LoadCompareExchangeValue<TIgnored>(object keyOrEnumerable)
         {
             return LoadCompareExchangeValue(keyOrEnumerable);
         }
