@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
-using System.Runtime.Serialization;
 using CsvHelper;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 using Sparrow;
 using Sparrow.LowMemory;
+using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
 {
@@ -35,14 +35,56 @@ namespace Tests.Infrastructure
                 _csvWriter.WriteHeader(typeof(TestResourceSnapshot));
             }
         }
+        
+        public void WriteResourceSnapshot(TestStage testStage, ITestAssembly testAssembly) => WriteResourceSnapshot(testStage, testAssembly.Assembly.Name);
+        
+        public void WriteResourceSnapshot(TestStage testStage, ITestClass testClass) => WriteResourceSnapshot(testStage, testClass.Class.Name);
 
-        public void WriteResourceSnapshot(TestStage testStage, string comment = "")
+        public void WriteResourceSnapshot(TestStage testStage, ITestMethod testMethod, TestResult? testResult = null)
+        {
+            var displayName = $"{testMethod.TestClass.Class.Name}::{testMethod.Method.Name}()";
+            WriteResourceSnapshot(testStage, displayName, testResult);
+        }
+
+        private void WriteResourceSnapshot(TestStage testStage, string comment, TestResult? testResult = null)
         {
             lock (_syncObject)
             {
                 _csvWriter.NextRecord();
-                _csvWriter.WriteRecord(new TestResourceSnapshot(this, testStage, comment));
+
+                var snapshot = GetTestResourceSnapshot(testStage, comment, testResult);
+                _csvWriter.WriteRecord(snapshot);
             }
+        }
+
+        private TestResourceSnapshot GetTestResourceSnapshot(TestStage testStage, string comment, TestResult? testResult)
+        {
+            var timeStamp = DateTime.UtcNow;
+            var cpuUsage = _metricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, _cpuUsageCalculator.Calculate);
+
+            var memoryInfo = _metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
+
+            var snapshot = new TestResourceSnapshot
+            {
+                TotalScratchAllocatedMemory = new Size(MemoryInformation.GetTotalScratchAllocatedMemory(), SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+                TotalDirtyMemory = new Size(MemoryInformation.GetDirtyMemoryState().TotalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+                IsHighDirty = MemoryInformation.GetDirtyMemoryState().IsHighDirty,
+                TestStage = testStage,
+                TimeStamp = timeStamp.ToString("o"),
+                TestResult = testResult,
+                Comment = comment,
+                MachineCpuUsage = (long)cpuUsage.MachineCpuUsage,
+                ProcessCpuUsage = (long)cpuUsage.ProcessCpuUsage,
+                ProcessMemoryUsageInMb = memoryInfo.WorkingSet.GetValue(SizeUnit.Megabytes),
+                TotalMemoryInMb = memoryInfo.TotalPhysicalMemory.GetValue(SizeUnit.Megabytes),
+                TotalCommittableMemoryInMb = memoryInfo.TotalCommittableMemory.GetValue(SizeUnit.Megabytes),
+                AvailableMemoryInMb = memoryInfo.AvailableMemory.GetValue(SizeUnit.Megabytes),
+                CurrentCommitChargeInMb = memoryInfo.CurrentCommitCharge.GetValue(SizeUnit.Megabytes),
+                SharedCleanMemoryInMb = memoryInfo.SharedCleanMemory.GetValue(SizeUnit.Megabytes),
+                TotalScratchDirtyMemory = memoryInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Megabytes)
+            };
+
+            return snapshot;
         }
 
         public class TestResourceSnapshot
@@ -51,6 +93,8 @@ namespace Tests.Infrastructure
 
             public string Comment { get; set; }
 
+            public TestResult? TestResult { get; set; }
+            
             public DateTime InfluxTimestamp => DateTime.Parse(TimeStamp);
 
             public string TimeStamp { get; set; }
@@ -78,40 +122,6 @@ namespace Tests.Infrastructure
             public long TotalDirtyMemory { get; set; }
             
             public bool IsHighDirty { get; set; }
-
-            [Obsolete("Needed for serialization, should not be used directly", true)]
-            public TestResourceSnapshot()
-            {
-                
-            }
-
-            public static TestResourceSnapshot GetEmpty() => (TestResourceSnapshot)FormatterServices.GetUninitializedObject(typeof(TestResourceSnapshot));
-
-            internal TestResourceSnapshot(TestResourceSnapshotWriter parent, TestStage testStage, string comment)
-            {
-                var timeStamp = DateTime.UtcNow;
-                var cpuUsage = parent._metricCacher.GetValue(
-                    MetricCacher.Keys.Server.CpuUsage, 
-                    parent._cpuUsageCalculator.Calculate);
-                
-                var memoryInfo = parent._metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
-
-                TotalScratchAllocatedMemory = new Size(MemoryInformation.GetTotalScratchAllocatedMemory(), SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-                TotalDirtyMemory = new Size(MemoryInformation.GetDirtyMemoryState().TotalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-                IsHighDirty = MemoryInformation.GetDirtyMemoryState().IsHighDirty;
-                TestStage = testStage;
-                TimeStamp = timeStamp.ToString("o");
-                Comment = comment;
-                MachineCpuUsage = (long)cpuUsage.MachineCpuUsage;
-                ProcessCpuUsage = (long)cpuUsage.ProcessCpuUsage;
-                ProcessMemoryUsageInMb = memoryInfo.WorkingSet.GetValue(SizeUnit.Megabytes);
-                TotalMemoryInMb = memoryInfo.TotalPhysicalMemory.GetValue(SizeUnit.Megabytes);
-                TotalCommittableMemoryInMb = memoryInfo.TotalCommittableMemory.GetValue(SizeUnit.Megabytes);
-                AvailableMemoryInMb = memoryInfo.AvailableMemory.GetValue(SizeUnit.Megabytes);
-                CurrentCommitChargeInMb = memoryInfo.CurrentCommitCharge.GetValue(SizeUnit.Megabytes);
-                SharedCleanMemoryInMb = memoryInfo.SharedCleanMemory.GetValue(SizeUnit.Megabytes);
-                TotalScratchDirtyMemory = memoryInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Megabytes);
-            }
         }
 
         public void Dispose()
@@ -131,5 +141,12 @@ namespace Tests.Infrastructure
         TestEndedBeforeGc,
         TestEndedAfterGc,
         Delta
+    }
+
+    public enum TestResult
+    {
+        Success,
+        Fail,
+        Skipped
     }
 }
