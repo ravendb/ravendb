@@ -440,8 +440,7 @@ namespace Raven.Server.Documents.Handlers
                     try
                     {
                         doc = _database.DocumentsStorage.Get(context, counterGroupDetail.DocumentId,
-                            throwOnConflict: true, 
-                            skipValidationInDebug: true); // we are putting a counter, so we are going to update the metadata anyway.
+                            throwOnConflict: true);
 
                         if (doc == null)
                         {
