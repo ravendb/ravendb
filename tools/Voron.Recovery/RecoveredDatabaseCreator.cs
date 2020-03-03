@@ -66,6 +66,11 @@ namespace Voron.Recovery
             _byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
             Slice.From(_byteStringContext, "Attachments", ByteStringType.Immutable, out _attachmentsSlice);
 
+            CreateRecoveryLogDocument(recoverySession);
+        }
+
+        private void CreateRecoveryLogDocument(string recoverySession)
+        {
             using (var tx = _context.OpenWriteTransaction())
             {
                 using (var doc = _context.ReadObject(
@@ -127,7 +132,7 @@ namespace Voron.Recovery
                                             }
                                         }, orphanDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                                     {
-                                        var _ = _database.DocumentsStorage.Put(_context, orphanDocId, null, doc);
+                                        _database.DocumentsStorage.Put(_context, orphanDocId, null, doc);
                                     }
                                 }
 

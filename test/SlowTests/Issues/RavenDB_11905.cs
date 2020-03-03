@@ -32,7 +32,7 @@ namespace SlowTests.Issues
                 Path = dbPath
             }))
             {
-                var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
             }
 
             var recoveredDatabase = await GetDatabase(recoverDbName);
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
             }
             
             using (var store = GetDocumentStore())
-            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
+            using (EnsureDatabaseDeletion(recoverDbName, store))
             {
                 var databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 

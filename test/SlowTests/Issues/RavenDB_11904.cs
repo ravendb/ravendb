@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 store.Maintenance.Send(new CreateSampleDataOperation());
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 
-                var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
 
                 journals = new DirectoryInfo(Path.Combine(dbPath, "Journals")).GetFiles();
 
@@ -80,7 +80,7 @@ namespace SlowTests.Issues
             // let's import the recovery files
 
             using (var store = GetDocumentStore())
-            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
+            using (EnsureDatabaseDeletion(recoverDbName, store))
             {
                 var currentStats = store.Maintenance.ForDatabase(recoverDbName).Send(new GetStatisticsOperation());
 

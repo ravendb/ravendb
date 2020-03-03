@@ -181,8 +181,8 @@ namespace SlowTests.Voron
             Assert.True(flushed, "Test requires successful flush to log");
 
             string recoverDbName = $"RecoverDB_{Guid.NewGuid().ToString()}";
-            var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
-            using var x = EnsureDatabaseDeletion(recoverDbName, store);
+            store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
+            using var _ = EnsureDatabaseDeletion(recoverDbName, store);
             using var recoveredDatabase = await GetDatabase(recoverDbName);
 
             // run recovery

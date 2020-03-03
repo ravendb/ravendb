@@ -69,8 +69,7 @@ namespace SlowTests.Issues
                 store.Maintenance.Send(new CreateSampleDataOperation());
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 
-                var _ = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
-
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord {DatabaseName = recoverDbName}));
 
                 var recoveredDatabase = await GetDatabase(recoverDbName);
                 using (var recovery = new Recovery(new VoronRecoveryConfiguration()
@@ -93,7 +92,7 @@ namespace SlowTests.Issues
                 AdminCertificate = certificates.ServerCertificate.Value,
                 ClientCertificate = certificates.ServerCertificate.Value,
             }))
-            using (var __ = EnsureDatabaseDeletion(recoverDbName, store))
+            using (EnsureDatabaseDeletion(recoverDbName, store))
             {
                 var currentStats = store.Maintenance.ForDatabase(recoverDbName).Send(new GetStatisticsOperation());
 
