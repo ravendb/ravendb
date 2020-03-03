@@ -40,7 +40,7 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
             json[nameof(Indexes)] = new DynamicJsonArray(Indexes);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject previousValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject previousValue)
         {
             if (previousValue != null)
             {
