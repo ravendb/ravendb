@@ -674,10 +674,13 @@ namespace Raven.Server.Smuggler.Documents
                     if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
                         item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);
 
-                    // those flags will be re-added once counter/attachment/time-series is imported
+                    // those flags will be re-added once counter/time-series is imported
                     item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasCounters);
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasAttachments);
                     item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasTimeSeries);
+
+                    // attachments are special because they are referenced
+                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
+                        item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasAttachments);
 
                     break;
                 }
