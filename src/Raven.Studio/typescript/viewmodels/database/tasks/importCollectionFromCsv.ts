@@ -24,17 +24,17 @@ class csvConfiguration {
     allowComments = ko.observable<boolean>(false);
     commentCharacter = ko.observable<string>();
     
-    toDto() : Raven.Server.Smuggler.Documents.CsvImportOptions  {
+    toDto(): Raven.Server.Smuggler.Documents.CsvImportOptions {
         return {
-            Delimiter: this.getDelimiter(),            
+            Delimiter: this.getDelimiter(),
             Quote: this.getQuote(),
             TrimOptions: this.getTrimOption(),
             AllowComments: this.allowComments(),
-            Comment: this.commentCharacter()
+            Comment: _.trim(this.commentCharacter())
         }
     }
 
-    getDelimiter() : string {
+    getDelimiter(): string {
         switch (this.delimiter()) {
             case "Comma": 
                 return ",";
