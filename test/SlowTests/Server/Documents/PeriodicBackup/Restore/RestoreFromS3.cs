@@ -367,7 +367,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                                                $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
 
                 string lastFileToRestore;
-                using (var client = new RavenAwsS3Client(AmazonS3FactAttribute.S3Settings))
+                using (var client = new RavenAwsS3Client(defaultS3Settings))
                 {
                     var fullBackupPath = $"{defaultS3Settings.RemoteFolderName}/{backupStatus.FolderName}";
                     lastFileToRestore = (await client.ListObjectsAsync(fullBackupPath, string.Empty, false)).FileInfoDetails.Last().FullPath;
