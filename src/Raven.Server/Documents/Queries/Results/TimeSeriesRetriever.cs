@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
 using Lucene.Net.Store;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -42,7 +43,6 @@ namespace Raven.Server.Documents.Queries.Results
             _valuesDictionary = new Dictionary<ValueExpression, object>();
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
         }
-
 
         public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args)
         {
@@ -793,7 +793,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (timeSeriesFunction.Select[i].Item1 is MethodExpression me)
                 {
-                    if (Enum.TryParse(me.Name.Value, ignoreCase: true, out TimeSeriesAggregation.Type type))
+                    if (Enum.TryParse(me.Name.Value, ignoreCase: true, out AggregationType type))
                     {
                         aggStates[i] = new TimeSeriesAggregation(type);
                         continue;

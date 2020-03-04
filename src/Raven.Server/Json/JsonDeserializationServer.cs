@@ -43,6 +43,7 @@ using Raven.Server.Web.System;
 using Raven.Server.ServerWide;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Smuggler.Documents;
+using Raven.Server.Documents.TimeSeries;
 
 namespace Raven.Server.Json
 {
@@ -190,6 +191,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, ServerStatistics> ServerStatistics = GenerateJsonDeserializationRoutine<ServerStatistics>();
 
         public static readonly Func<BlittableJsonReaderObject, CsvImportOptions> CsvImportOptions = GenerateJsonDeserializationRoutine<CsvImportOptions>();
+
+        public static readonly Func<BlittableJsonReaderObject, TimeSeriesPolicyRunner.RollUpState> RollUpState = GenerateJsonDeserializationRoutine<TimeSeriesPolicyRunner.RollUpState>();
 
         public class Parameters
         {

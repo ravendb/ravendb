@@ -25,4 +25,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         public DateTime To, From;
     }
 
+    public enum AggregationType
+    {
+        Min,
+        Max,
+        Mean,
+        Avg,
+        First,
+        Last,
+        Sum,
+        Count,
+    }
 }
