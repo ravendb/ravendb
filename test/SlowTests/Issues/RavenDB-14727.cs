@@ -24,13 +24,21 @@ namespace SlowTests.Issues
                 Certificate = new X509Certificate2()
             }.Initialize())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new { Test = "test" }, "test");
-                    var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+                PutDocument();
 
-                    var errorMessage = $"The url {url} is using HTTP, but a certificate is specified, which require us to use HTTPS";
-                    Assert.Equal(errorMessage, exception.Message);
+                // should have the same behaviour
+                PutDocument();
+
+                void PutDocument()
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new { Test = "test" }, "test");
+                        var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+
+                        var errorMessage = $"The url {url} is using HTTP, but a certificate is specified, which require us to use HTTPS";
+                        Assert.Equal(errorMessage, exception.Message);
+                    }
                 }
             }
         }

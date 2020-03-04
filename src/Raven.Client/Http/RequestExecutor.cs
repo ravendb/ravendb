@@ -579,6 +579,14 @@ namespace Raven.Client.Http
             SessionInfo sessionInfo,
             CancellationToken token)
         {
+            await WaitForTopologyUpdate(topologyUpdate).ConfigureAwait(false);
+
+            var (currentIndex, currentNode) = ChooseNodeForRequest(command, sessionInfo);
+            await ExecuteAsync(currentNode, currentIndex, context, command, true, sessionInfo, token).ConfigureAwait(false);
+        }
+
+        private async Task WaitForTopologyUpdate(Task topologyUpdate)
+        {
             try
             {
                 if (topologyUpdate == null ||
@@ -609,20 +617,19 @@ namespace Raven.Client.Http
                         topologyUpdate = _firstTopologyUpdate;
                     }
                 }
+
                 await topologyUpdate.ConfigureAwait(false);
             }
             catch (Exception)
             {
                 lock (this)
                 {
-                    if (_firstTopologyUpdate == topologyUpdate)
+                    if (_lastKnownUrls != null && _firstTopologyUpdate == topologyUpdate)
                         _firstTopologyUpdate = null; // next request will raise it
                 }
+
                 throw;
             }
-
-            var (currentIndex, currentNode) = ChooseNodeForRequest(command, sessionInfo);
-            await ExecuteAsync(currentNode, currentIndex, context, command, true, sessionInfo, token).ConfigureAwait(false);
         }
 
         private void UpdateTopologyCallback(object _)
