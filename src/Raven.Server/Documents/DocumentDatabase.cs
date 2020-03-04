@@ -123,7 +123,7 @@ namespace Raven.Server.Documents
                     {
                         if (rawRecord != null)
                         {
-                            var isEncrypted = rawRecord.IsEncrypted();
+                            var isEncrypted = rawRecord.IsEncrypted;
                             // can happen when we are in the process of restoring a database
                             if (isEncrypted && MasterKey == null)
                                 throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
@@ -1032,9 +1032,9 @@ namespace Raven.Server.Documents
                         // read and save the database record
                         writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
                         using (serverContext.OpenReadTransaction())
-                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabase(serverContext, Name, out _))
+                        using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(serverContext, Name, out _))
                         {
-                            serverContext.Write(writer, rawRecord);
+                            serverContext.Write(writer, databaseRecord.Raw);
                         }
 
                         // save the database values (subscriptions, periodic backups statuses, etl states...)

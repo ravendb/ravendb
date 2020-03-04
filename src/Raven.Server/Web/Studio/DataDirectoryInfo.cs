@@ -139,7 +139,7 @@ namespace Raven.Server.Web.Studio
                 if (rawRecord == null)
                     return new List<string>();
 
-                var databaseTopology = rawRecord.GetTopology();
+                var databaseTopology = rawRecord.Topology;
                 if (databaseTopology == null)
                     return new List<string>();
 

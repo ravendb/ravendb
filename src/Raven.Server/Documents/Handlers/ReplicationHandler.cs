@@ -458,7 +458,7 @@ namespace Raven.Server.Documents.Handlers
                 ConflictSolver solverConfig;
                 using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    solverConfig = rawRecord?.GetConflictSolverConfiguration();
+                    solverConfig = rawRecord?.ConflictSolverConfiguration;
                 }
 
                 if (solverConfig != null)

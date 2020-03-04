@@ -53,7 +53,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                 if (databaseRecord == null)
                     return null; // should not happen
 
-                var periodicBackupTaskIds = databaseRecord.GetPeriodicBackupsTaskIds();
+                var periodicBackupTaskIds = databaseRecord.PeriodicBackupsTaskIds;
                 if (periodicBackupTaskIds == null || periodicBackupTaskIds.Count == 0)
                     return null; // no backup
 

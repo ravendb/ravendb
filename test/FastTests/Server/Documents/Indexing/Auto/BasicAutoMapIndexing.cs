@@ -965,7 +965,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     {
                         RawDatabase = rawRecord,
                         Name = database.Name,
-                        DatabaseTopology = rawRecord.GetTopology(),
+                        DatabaseTopology = rawRecord.Topology,
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
                             {
@@ -1024,7 +1024,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     var state = new ClusterObserver.DatabaseObservationState()
                     {
                         RawDatabase = rawRecord,
-                        DatabaseTopology = rawRecord.GetTopology(),
+                        DatabaseTopology = rawRecord.Topology,
                         Name = database.Name,
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
@@ -1084,7 +1084,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     var state = new ClusterObserver.DatabaseObservationState()
                     {
                         RawDatabase = rawRecord,
-                        DatabaseTopology = rawRecord.GetTopology(),
+                        DatabaseTopology = rawRecord.Topology,
                         Name = database.Name,
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
@@ -1144,7 +1144,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     var state = new ClusterObserver.DatabaseObservationState()
                     {
                         RawDatabase = rawRecord,
-                        DatabaseTopology = rawRecord.GetTopology(),
+                        DatabaseTopology = rawRecord.Topology,
                         Name = database.Name,
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
@@ -1204,7 +1204,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     var state = new ClusterObserver.DatabaseObservationState()
                     {
                         RawDatabase = rawRecord,
-                        DatabaseTopology = rawRecord.GetTopology(),
+                        DatabaseTopology = rawRecord.Topology,
                         Name = database.Name,
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {

@@ -196,7 +196,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 continue;
                             }
 
-                            var databaseTopology = rawRecord.GetTopology();
+                            var databaseTopology = rawRecord.Topology;
                             var topologyStamp = databaseTopology?.Stamp ?? new LeaderStamp
                             {
                                 Index = -1,
@@ -469,7 +469,7 @@ namespace Raven.Server.ServerWide.Maintenance
             maxEtag = long.MaxValue;
 
             using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                periodicBackupTaskIds = rawRecord.GetPeriodicBackupsTaskIds();
+                periodicBackupTaskIds = rawRecord.PeriodicBackupsTaskIds;
 
             if (periodicBackupTaskIds != null && periodicBackupTaskIds.Count > 0)
             {
@@ -1472,7 +1472,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public long ReadTruncatedClusterTransactionCommandsCount()
             {
-                RawDatabase.GetRecord().TryGet(nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount), out long count);
+                RawDatabase.Raw.TryGet(nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount), out long count);
                 return count;
             }
 
@@ -1480,7 +1480,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 BlittableJsonReaderObject autoDefinition = null;
                 definition = null;
-                RawDatabase.GetRecord().TryGet(nameof(DatabaseRecord.AutoIndexes), out BlittableJsonReaderObject autoIndexes);
+                RawDatabase.Raw.TryGet(nameof(DatabaseRecord.AutoIndexes), out BlittableJsonReaderObject autoIndexes);
                 if (autoIndexes?.TryGet(name, out autoDefinition) == false)
                     return false;
 
@@ -1490,22 +1490,22 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public Dictionary<string, DeletionInProgressStatus> ReadDeletionInProgress()
             {
-                return RawDatabase.GetDeletionInProgressStatus();
+                return RawDatabase.DeletionInProgress;
             }
 
             public bool ReadDatabaseDisabled()
             {
-                return RawDatabase.IsDisabled();
+                return RawDatabase.IsDisabled;
             }
 
             public bool ReadRestoringInProgress()
             {
-                return RawDatabase.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress;
+                return RawDatabase.DatabaseState == DatabaseStateStatus.RestoreInProgress;
             }
 
             public Dictionary<string, string> ReadSettings()
             {
-                return RawDatabase.GetSettings();
+                return RawDatabase.Settings;
             }
         }
     }
