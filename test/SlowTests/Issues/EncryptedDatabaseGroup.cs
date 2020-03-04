@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class EncryptedDatabaseGroup: ClusterTestBase
+    public class EncryptedDatabaseGroup : ClusterTestBase
     {
         public EncryptedDatabaseGroup(ITestOutputHelper output) : base(output)
         {
@@ -23,7 +23,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task AddingNodeToEncryptedDatabaseGroupShouldThrow()
         {
-            var (nodes, leader) = await CreateRaftClusterWithSsl(3);            
+            var (nodes, leader) = await CreateRaftClusterWithSsl(3);
 
             var options = new Options
             {
@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var notInDbGroupServer = Servers.Single(s => record.Topology.Members.Contains(s.ServerStore.NodeTag) == false);
                 await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)));
-                
+
                 var dbName = store.Database;
                 using (var notInDbGroupStore = GetDocumentStore(new Options
                 {
@@ -48,11 +48,11 @@ namespace SlowTests.Issues
                     ModifyDatabaseName = _ => dbName
                 }))
                 {
-                    await Assert.ThrowsAsync<DatabaseLoadFailureException>(async ()=> await TrySavingDocument(notInDbGroupStore));
+                    await Assert.ThrowsAsync<DatabaseLoadFailureException>(async () => await TrySavingDocument(notInDbGroupStore));
                     PutSecrectKeyForDatabaseInServersStore(dbName, notInDbGroupServer);
                     await notInDbGroupServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName, ignoreDisabledDatabase: true);
                     await TrySavingDocument(notInDbGroupStore);
-                }                
+                }
             }
         }
 
@@ -60,7 +60,7 @@ namespace SlowTests.Issues
         {
             using (var session = store.OpenAsyncSession())
             {
-                await session.StoreAsync(new User {Name = "Foo"});
+                await session.StoreAsync(new User { Name = "Foo" });
                 await session.SaveChangesAsync();
             }
         }
@@ -78,7 +78,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(options))
             {
                 await TrySavingDocument(store);
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))                
+                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
                     using (ctx.OpenWriteTransaction())
                     {
@@ -122,8 +122,8 @@ namespace SlowTests.Issues
                     var serverStore = nodes[2].ServerStore;
                     using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
+                    using (var databaseRecord = serverStore.Cluster.ReadRawDatabaseRecord(ctx, store.Database))
                     {
-                        var databaseRecord = serverStore.Cluster.ReadRawDatabaseRecord(ctx, store.Database);
                         return databaseRecord.Topology;
                     }
                 }

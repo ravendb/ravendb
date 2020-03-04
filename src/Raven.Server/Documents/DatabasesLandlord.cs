@@ -111,7 +111,7 @@ namespace Raven.Server.Documents
                         if (topology.RelevantFor(_serverStore.NodeTag) == false)
                             return;
 
-                        if (rawRecord.IsDisabled|| rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
+                        if (rawRecord.IsDisabled || rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
                         {
                             UnloadDatabase(databaseName);
                             return;
@@ -289,7 +289,7 @@ namespace Raven.Server.Documents
                 // that all the documents were replicated from this node, therefor the deletion will be called from the replication code.
                 return false;
 
-            var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
+            var record = rawRecord.MaterializedRecord;
             context.CloseTransaction();
 
             DeleteDatabase(dbName, deletionInProgress, record);
@@ -777,16 +777,14 @@ namespace Raven.Server.Documents
             Debug.Assert(_serverStore.Disposed == false);
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
             {
-                context.OpenReadTransaction();
-
-                var doc = _serverStore.Cluster.Read(context, "db/" + databaseName.Value.ToLowerInvariant());
-                if (doc == null)
+                if (databaseRecord == null)
                     return null;
 
-                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
-
-                if (databaseRecord.Encrypted)
+                var record = databaseRecord.MaterializedRecord;
+                if (record.Encrypted)
                 {
                     if (_serverStore.Server.WebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                     {
@@ -795,7 +793,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, databaseRecord);
+                return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, record);
             }
         }
 
