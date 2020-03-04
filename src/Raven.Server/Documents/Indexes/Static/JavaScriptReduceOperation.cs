@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             path = GetPropertyPath(me).ToArray();
 
                         var propertyName = prop.GetKey(Engine);
-                        cur.Add(CreateField(propertyName, path));
+                        cur.Add(CreateField(propertyName.AsString(), path));
                     }
 
                     _groupByFields = cur.ToArray();

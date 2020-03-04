@@ -136,10 +136,11 @@ namespace Raven.Server.Documents.Indexes.Static
                     foreach (var prop in oe.Properties)
                     {
                         var fieldName = prop.GetKey(engine);
+                        var fieldNameAsString = fieldName.AsString();
                         if (fieldName == "_")
                             HasDynamicReturns = true;
 
-                        Fields.Add(fieldName);
+                        Fields.Add(fieldNameAsString);
                     }
                 }
                 else if (CompareFields(oe) == false)
@@ -203,7 +204,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 return false;
             foreach (var p in oe.Properties)
             {
-                if (Fields.Contains(p.GetKey(_engine)) == false)
+                var key = p.GetKey(_engine);
+                var keyAsString = key.AsString();
+                if (Fields.Contains(keyAsString) == false)
                     return false;
             }
 
