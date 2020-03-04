@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using CsvHelper;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
@@ -35,31 +36,47 @@ namespace Tests.Infrastructure
                 _csvWriter.WriteHeader(typeof(TestResourceSnapshot));
             }
         }
-        
-        public void WriteResourceSnapshot(TestStage testStage, ITestAssembly testAssembly) => WriteResourceSnapshot(testStage, testAssembly.Assembly.Name);
-        
-        public void WriteResourceSnapshot(TestStage testStage, ITestClass testClass) => WriteResourceSnapshot(testStage, testClass.Class.Name);
+
+        public void WriteResourceSnapshot(TestStage testStage, ITestAssembly testAssembly)
+        {
+            var snapshot = GetTestResourceSnapshot(testStage, testAssembly.Assembly);
+            Write(snapshot);
+        }
+
+        public void WriteResourceSnapshot(TestStage testStage, ITestClass testClass)
+        {
+            var snapshot = GetTestResourceSnapshot(testStage, testClass.Class.Assembly);
+            snapshot.ClassName = testClass.Class.Name;
+            
+            Write(snapshot);
+        }
 
         public void WriteResourceSnapshot(TestStage testStage, ITestMethod testMethod, TestResult? testResult = null)
         {
-            var displayName = $"{testMethod.TestClass.Class.Name}::{testMethod.Method.Name}()";
-            WriteResourceSnapshot(testStage, displayName, testResult);
+            var testClass = testMethod.TestClass.Class;
+
+            var snapshot = GetTestResourceSnapshot(testStage, testClass.Assembly);
+            
+            snapshot.ClassName = testClass.Name;
+            snapshot.MethodName = testMethod.Method.Name;
+            snapshot.TestResult = testResult;
+            
+            Write(snapshot);
         }
 
-        private void WriteResourceSnapshot(TestStage testStage, string comment, TestResult? testResult = null)
+        private void Write(TestResourceSnapshot snapshot)
         {
             lock (_syncObject)
             {
                 _csvWriter.NextRecord();
-
-                var snapshot = GetTestResourceSnapshot(testStage, comment, testResult);
                 _csvWriter.WriteRecord(snapshot);
             }
         }
 
-        private TestResourceSnapshot GetTestResourceSnapshot(TestStage testStage, string comment, TestResult? testResult)
+        private TestResourceSnapshot GetTestResourceSnapshot(TestStage testStage, IAssemblyInfo assemblyInfo)
         {
             var timeStamp = DateTime.UtcNow;
+            var assemblyName = GetAssemblyShortName(assemblyInfo);
             var cpuUsage = _metricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, _cpuUsageCalculator.Calculate);
 
             var memoryInfo = _metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
@@ -71,8 +88,7 @@ namespace Tests.Infrastructure
                 IsHighDirty = MemoryInformation.GetDirtyMemoryState().IsHighDirty,
                 TestStage = testStage,
                 Timestamp = timeStamp.ToString("o"),
-                TestResult = testResult,
-                Comment = comment,
+                AssemblyName = assemblyName,
                 MachineCpuUsage = (long)cpuUsage.MachineCpuUsage,
                 ProcessCpuUsage = (long)cpuUsage.ProcessCpuUsage,
                 ProcessMemoryUsageInMb = memoryInfo.WorkingSet.GetValue(SizeUnit.Megabytes),
@@ -87,11 +103,21 @@ namespace Tests.Infrastructure
             return snapshot;
         }
 
+        private static string GetAssemblyShortName(IAssemblyInfo assemblyInfo)
+        {
+            var assemblyName = new AssemblyName(assemblyInfo.Name);
+            return assemblyName.Name;
+        }
+
         public class TestResourceSnapshot
         {
             public TestStage TestStage { get; set; }
-
-            public string Comment { get; set; }
+            
+            public string AssemblyName { get; set; }
+            
+            public string ClassName { get; set; }
+            
+            public string MethodName { get; set; }
 
             public TestResult? TestResult { get; set; }
             
