@@ -70,7 +70,7 @@ namespace Tests.Infrastructure
                 TotalDirtyMemory = new Size(MemoryInformation.GetDirtyMemoryState().TotalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
                 IsHighDirty = MemoryInformation.GetDirtyMemoryState().IsHighDirty,
                 TestStage = testStage,
-                TimeStamp = timeStamp.ToString("o"),
+                Timestamp = timeStamp.ToString("o"),
                 TestResult = testResult,
                 Comment = comment,
                 MachineCpuUsage = (long)cpuUsage.MachineCpuUsage,
@@ -95,9 +95,7 @@ namespace Tests.Infrastructure
 
             public TestResult? TestResult { get; set; }
             
-            public DateTime InfluxTimestamp => DateTime.Parse(TimeStamp);
-
-            public string TimeStamp { get; set; }
+            public string Timestamp { get; set; }
             
             public long MachineCpuUsage { get; set; }
             
