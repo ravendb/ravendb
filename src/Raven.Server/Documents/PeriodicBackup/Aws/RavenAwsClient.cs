@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private readonly byte[] _awsSecretKey;
         private readonly string _sessionToken;
 
-        protected string AwsRegion { get; set; } = string.Empty;
+        protected string AwsRegion { get; set; }
 
         public string RemoteFolderName { get; }
 

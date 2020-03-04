@@ -33,7 +33,7 @@ namespace Tests.Infrastructure
         {
             if (string.IsNullOrEmpty(ParsingError) == false)
             {
-                Skip = $"Failed to parse S3 settings, error: {ParsingError}";
+                Skip = $"Failed to parse custom S3 settings, error: {ParsingError}";
                 return;
             }
 

@@ -13,19 +13,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         }
 
         [CustomS3Fact, Trait("Category", "Smuggler")]
-        protected async Task can_backup_and_restore() => await can_backup_and_restore_internal();
+        public async Task can_backup_and_restore() => await can_backup_and_restore_internal();
         [CustomS3Fact, Trait("Category", "Smuggler")]
-        protected async Task can_backup_and_restore_snapshot() => await can_backup_and_restore_snapshot_internal();
+        public async Task can_backup_and_restore_snapshot() => await can_backup_and_restore_snapshot_internal();
         [CustomS3Fact, Trait("Category", "Smuggler")]
-        protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key() => 
+        public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key() => 
             await incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key_internal();
         [CustomS3Fact, Trait("Category", "Smuggler")]
-        protected async Task incremental_and_full_check_last_file_for_backup() => await incremental_and_full_check_last_file_for_backup_internal();
+        public async Task incremental_and_full_check_last_file_for_backup() => await incremental_and_full_check_last_file_for_backup_internal();
         [CustomS3Fact, Trait("Category", "Smuggler")]
-        protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key() => 
+        public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key() => 
             await incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key_internal();
         [CustomS3Fact, Trait("Category", "Smuggler")]
-        protected async Task snapshot_encrypted_db_and_restore_to_encrypted_DB() => await snapshot_encrypted_db_and_restore_to_encrypted_DB_internal();
+        public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB() => await snapshot_encrypted_db_and_restore_to_encrypted_DB_internal();
 
         protected override S3Settings GetS3Settings(string subPath = null)
         {
@@ -45,7 +45,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 RemoteFolderName = remoteFolderName,
                 AwsAccessKey = s3Settings.AwsAccessKey,
                 AwsSecretKey = s3Settings.AwsSecretKey,
-                CustomS3ServerUrl = s3Settings.CustomS3ServerUrl
+                CustomServerUrl = s3Settings.CustomServerUrl,
+                AwsRegionName = s3Settings.AwsRegionName,
             };
         }
     }
