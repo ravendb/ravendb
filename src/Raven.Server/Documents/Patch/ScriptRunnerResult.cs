@@ -18,16 +18,16 @@ namespace Raven.Server.Documents.Patch
 
         public readonly JsValue Instance;
 
-        public ObjectInstance GetOrCreate(in Key name)
+        public ObjectInstance GetOrCreate(JsValue property)
         {
             if (Instance.AsObject() is BlittableObjectInstance b)
-                return b.GetOrCreate(name);
+                return b.GetOrCreate(property);
             var parent = Instance.AsObject();
-            var o = parent.Get(name);
+            var o = parent.Get(property);
             if (o == null || o.IsUndefined() || o.IsNull())
             {
                 o = _parent.ScriptEngine.Object.Construct(Array.Empty<JsValue>());
-                parent.Set(name, o, false);
+                parent.Set(property, o, false);
             }
             return o.AsObject();
         }

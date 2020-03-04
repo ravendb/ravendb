@@ -176,10 +176,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
             foreach (var property in oi.GetOwnProperties())
             {
-                CompiledIndexField field = null;
-                var isGroupByField = _groupByFields?.TryGetValue(new SimpleField(property.Key), out field) ?? false;
+                var propertyAsString = property.Key.AsString();
 
-                yield return (property.Key, GetValue(property.Value.Value), field, isGroupByField);
+                CompiledIndexField field = null;
+                var isGroupByField = _groupByFields?.TryGetValue(new SimpleField(propertyAsString), out field) ?? false;
+
+                yield return (propertyAsString, GetValue(property.Value.Value), field, isGroupByField);
             }
         }
 

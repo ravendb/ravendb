@@ -66,8 +66,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
-                if (_fields.TryGetValue(property, out var field) == false)
-                    field = _fields[property] = IndexField.Create(property, new IndexFieldOptions(), _allFields);
+                var propertyAsString = property.AsString();
+
+                if (_fields.TryGetValue(propertyAsString, out var field) == false)
+                    field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields);
 
                 object value;
                 var actualValue = propertyDescriptor.Value;
@@ -75,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
                     //so we must use field.Name and not property from this point on.
-                    var val = TryDetectDynamicFieldCreation(property, actualValue.AsObject(), field);
+                    var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), field);
                     if (val != null)
                     {
                         if (val.IsObject() && val.AsObject().TryGetValue("$spatial", out _))
@@ -168,28 +170,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         continue;
 
                     var propertyName = kvp.Key;
-                    if (string.Equals(propertyName, nameof(CreateFieldOptions.Indexing), StringComparison.OrdinalIgnoreCase))
+                    var propertyNameAsString = propertyName.AsString();
+                    if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.Indexing), StringComparison.OrdinalIgnoreCase))
                     {
-                        field.Indexing = GetEnum<FieldIndexing>(optionValue, propertyName);
+                        field.Indexing = GetEnum<FieldIndexing>(optionValue, propertyNameAsString);
 
                         continue;
                     }
 
-                    if (string.Equals(propertyName, nameof(CreateFieldOptions.Storage), StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.Storage), StringComparison.OrdinalIgnoreCase))
                     {
                         if (optionValue.IsBoolean())
                             field.Storage = optionValue.AsBoolean()
                                 ? FieldStorage.Yes
                                 : FieldStorage.No;
                         else
-                            field.Storage = GetEnum<FieldStorage>(optionValue, propertyName);
+                            field.Storage = GetEnum<FieldStorage>(optionValue, propertyNameAsString);
 
                         continue;
                     }
 
-                    if (string.Equals(propertyName, nameof(CreateFieldOptions.TermVector), StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.TermVector), StringComparison.OrdinalIgnoreCase))
                     {
-                        field.TermVector = GetEnum<FieldTermVector>(optionValue, propertyName);
+                        field.TermVector = GetEnum<FieldTermVector>(optionValue, propertyNameAsString);
 
                         continue;
                     }

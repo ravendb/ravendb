@@ -75,11 +75,11 @@ namespace Raven.Server.Documents.Patch
                 else if (js.IsObject())
                 {
                     var asObject = js.AsObject();
-                    if ( asObject is ObjectWrapper wrapper)
+                    if (asObject is ObjectWrapper wrapper)
                     {
                         if (wrapper.Target is LazyNumberValue)
                         {
-                            _writer.WriteValue(BlittableJsonToken.LazyNumber, wrapper.Target);                            
+                            _writer.WriteValue(BlittableJsonToken.LazyNumber, wrapper.Target);
                         }
                         else if (wrapper.Target is LazyStringValue)
                         {
@@ -106,7 +106,6 @@ namespace Raven.Server.Documents.Patch
 
                         WriteNestedObject(js.AsObject(), filterProperties);
                     }
-                    
                 }
                 else
                 {
@@ -126,9 +125,8 @@ namespace Raven.Server.Documents.Patch
                     continue;
 
                 JsValue propertyValue = SafelyGetJsValue(property.Value);
-                                
-                WriteJsonValue(arrayInstance, false, property.Key, propertyValue);
-                
+
+                WriteJsonValue(arrayInstance, false, property.Key.AsString(), propertyValue);
             }
             _writer.WriteArrayEnd();
         }
@@ -158,7 +156,7 @@ namespace Raven.Server.Documents.Patch
                 _writer.StartWriteArray();
                 foreach (var property in jsArray.GetOwnProperties())
                 {
-                    WriteValue(jsArray, false, property.Key, property.Value);
+                    WriteValue(jsArray, false, property.Key.AsString(), property.Value);
                 }
                 _writer.WriteArrayEnd();
             }
@@ -260,7 +258,6 @@ namespace Raven.Server.Documents.Patch
                 if (WriteNumberBasedOnType(numType & BlittableJsonReaderBase.TypesMask))
                     return;
             }
-
             else if (boi.Blittable != null)
             {
                 var propIndex = boi.Blittable.GetPropertyIndex(propName);
@@ -339,23 +336,23 @@ namespace Raven.Server.Documents.Patch
             foreach (var property in properties)
             {
                 var propertyName = property.Key;
+                var propertyNameAsString = propertyName.AsString();
 
-                
-                if (ShouldFilterProperty(filterProperties, propertyName))
+                if (ShouldFilterProperty(filterProperties, propertyNameAsString))
                     continue;
 
                 var value = property.Value;
                 if (value == null)
                     continue;
-                JsValue safeValue = SafelyGetJsValue(value);                
+                JsValue safeValue = SafelyGetJsValue(value);
 
-                _writer.WritePropertyName(propertyName);
-                
-                WriteJsonValue(obj, isRoot, propertyName, safeValue);
+                _writer.WritePropertyName(propertyNameAsString);
+
+                WriteJsonValue(obj, isRoot, propertyNameAsString, safeValue);
             }
         }
 
-        private IEnumerable<KeyValuePair<Key, PropertyDescriptor>> GetObjectProperties(ObjectWrapper objectWrapper)
+        private IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetObjectProperties(ObjectWrapper objectWrapper)
         {
             var target = objectWrapper.Target;
             if (target is IDictionary dictionary)
@@ -364,7 +361,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     var jsValue = JsValue.FromObject(_scriptEngine, entry.Value);
                     var descriptor = new PropertyDescriptor(jsValue, false, false, false);
-                    yield return new KeyValuePair<Key, PropertyDescriptor>(entry.Key.ToString(), descriptor);
+                    yield return new KeyValuePair<JsValue, PropertyDescriptor>(entry.Key.ToString(), descriptor);
                 }
                 yield break;
             }
@@ -381,12 +378,12 @@ namespace Raven.Server.Documents.Patch
                     if (property.Name == nameof(Task<int>.Result))
                     {
                         var taskResultDescriptor = JintPreventResolvingTasksReferenceResolver.GetRunningTaskResult(task);
-                        yield return new KeyValuePair<Key, PropertyDescriptor>(property.Name, taskResultDescriptor);
+                        yield return new KeyValuePair<JsValue, PropertyDescriptor>(property.Name, taskResultDescriptor);
                         continue;
                     }
 
                     var descriptor = new PropertyInfoDescriptor(_scriptEngine, property, target);
-                    yield return new KeyValuePair<Key, PropertyDescriptor>(property.Name, descriptor);
+                    yield return new KeyValuePair<JsValue, PropertyDescriptor>(property.Name, descriptor);
                 }
                 yield break;
             }
@@ -398,14 +395,14 @@ namespace Raven.Server.Documents.Patch
                     continue;
 
                 var descriptor = new PropertyInfoDescriptor(_scriptEngine, property, target);
-                yield return new KeyValuePair<Key, PropertyDescriptor>(property.Name, descriptor);
+                yield return new KeyValuePair<JsValue, PropertyDescriptor>(property.Name, descriptor);
             }
 
             // look for fields
             foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
             {
                 var descriptor = new FieldInfoDescriptor(_scriptEngine, field, target);
-                yield return new KeyValuePair<Key, PropertyDescriptor>(field.Name, descriptor);
+                yield return new KeyValuePair<JsValue, PropertyDescriptor>(field.Name, descriptor);
             }
         }
 
@@ -439,7 +436,7 @@ namespace Raven.Server.Documents.Patch
                     var propIndex = propertiesByInsertionOrder.Properties[i];
                     obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
 
-                    var key = new Key(prop.Name);
+                    JsValue key = prop.Name.ToString();
                     var existInObject = obj.OwnValues.TryGetValue(key, out var modifiedValue);
 
                     if (existInObject == false && obj.Deletes?.Contains(key) == true)
@@ -474,19 +471,20 @@ namespace Raven.Server.Documents.Patch
             foreach (var modificationKvp in obj.OwnValues)
             {
                 //We already iterated through those properties while iterating the original properties set.
-                if (modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key))
+                if (modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key.AsString()))
                     continue;
 
                 var propertyName = modificationKvp.Key;
-                if (ShouldFilterProperty(filterProperties, propertyName))
+                var propertyNameAsString = propertyName.AsString();
+                if (ShouldFilterProperty(filterProperties, propertyNameAsString))
                     continue;
 
                 if (modificationKvp.Value.Changed == false)
                     continue;
 
-                _writer.WritePropertyName(propertyName);
+                _writer.WritePropertyName(propertyNameAsString);
                 var blittableObjectProperty = modificationKvp.Value;
-                WriteJsonValue(obj, isRoot, propertyName, blittableObjectProperty.Value);
+                WriteJsonValue(obj, isRoot, propertyNameAsString, blittableObjectProperty.Value);
             }
         }
 
