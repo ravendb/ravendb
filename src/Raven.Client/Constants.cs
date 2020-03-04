@@ -323,7 +323,7 @@ namespace Raven.Client
             }
         }
 
-        public static class Smuggler
+        internal static class Smuggler
         {
             public const string ImportOptions = "importOptions";
             

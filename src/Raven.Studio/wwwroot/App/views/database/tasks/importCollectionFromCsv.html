@@ -23,7 +23,7 @@
                                 <div class="bg-info text-info padding padding-xs margin-top margin-top-sm flex-horizontal">
                                     <small class="flex-start"><i class="icon-info"></i></small>
                                     <ul class="no-margin">
-                                        <li><small>CSV file must cotain headers.</small></li>
+                                        <li><small>CSV file must contain headers.</small></li>
                                         <li><small>Each column will be treated as a property.</small></li>
                                     </ul>
                                 </div>
@@ -32,14 +32,14 @@
                         <div class="form-group margin-top margin-left">
                             <label for="csvImportCollection" class="control-label">Import to Collection</label>
                             <div class="flex-grow">
-                                <input placeholder="Enter collection name (if doesn't exist in file)" class="form-control" type="text" name="csvImportCollection" id="csvImportCollection" 
+                                <input placeholder="Enter collection name (only if doesn't exist in file)" class="form-control" type="text" name="csvImportCollection" id="csvImportCollection" 
                                        data-bind="textInput: customCollectionName" autocomplete="off" />
                                 <div class="bg-info text-info padding padding-xs margin-top margin-top-sm flex-horizontal">
                                     <small class="flex-start"><i class="icon-info"></i></small>
                                     <ul class="no-margin">
                                         <li><small>The Collection name will be derived from the CSV file column <strong>@metadata.@collection</strong> - if it exists.</small></li>
                                         <li><small>Else, you can enter a collection name here.</small></li>
-                                        <li><small>If not specified, then the collection name will be derived form the CSV file name.</small></li>
+                                        <li><small>If not specified, then the collection name will be derived from the CSV file name.</small></li>
                                     </ul>
                                 </div>
                             </div>

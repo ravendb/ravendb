@@ -791,7 +791,21 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             blittableJson = await context.ReadForMemoryAsync(section.Body, Constants.Smuggler.CsvImportOptions);
                                         }
 
-                                        csvConfig = JsonDeserializationServer.CsvImportOptions(blittableJson);
+                                        try
+                                        {
+                                            csvConfig = JsonDeserializationServer.CsvImportOptions(blittableJson);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            var msg = "Failed to parse the CSV configuration parameters.";
+                                            if (e.InnerException.Message.Contains("String must be exactly one character long"))
+                                            {
+                                                msg += " Please verify that only one character is used for 'Comment' & 'Quote'";
+                                            }
+                                            
+                                            throw new InvalidOperationException(msg, e);
+                                        }
+
                                         continue;
                                     }
                                     
