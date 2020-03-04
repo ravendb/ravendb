@@ -5,6 +5,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesConfiguration : IDynamicJson
     {
+        internal const char TimeSeriesRollupSeparator = '@';
         public Dictionary<string, TimeSeriesCollectionConfiguration> Collections { get; set; }
 
         public DynamicJsonValue ToJson()

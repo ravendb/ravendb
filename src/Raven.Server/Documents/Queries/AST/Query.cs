@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
 using Sparrow;
 using Raven.Server.Documents.TimeSeries;
@@ -312,19 +313,7 @@ namespace Raven.Server.Documents.Queries.AST
 
     public struct TimeSeriesAggregation
     {
-        public enum Type
-        {
-            Min,
-            Max,
-            Mean,
-            Avg,
-            First,
-            Last,
-            Sum,
-            Count,
-        }
-
-        public Type Aggregation;
+        public AggregationType Aggregation;
         public bool Any => _values.Count > 0;
 
         private readonly List<object> _values;
@@ -332,7 +321,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public IEnumerable<object> Count => _count;
 
-        public TimeSeriesAggregation(Type type)
+        public TimeSeriesAggregation(AggregationType type)
         {
             Aggregation = type;
             _count = new List<object>();
@@ -361,31 +350,31 @@ namespace Raven.Server.Documents.Queries.AST
                 var val = values[i];
                 switch (Aggregation)
                 {
-                    case Type.Min:
+                    case AggregationType.Min:
                         if ((long)_count[i] == 0)
                             _values[i] = val.Min;
                         else
                             _values[i] = Math.Min((double)_values[i], val.Min);
                         break;
-                    case Type.Max:
+                    case AggregationType.Max:
                         if ((long)_count[i] == 0)
                             _values[i] = val.Max;
                         else
                             _values[i] = Math.Max((double)_values[i], val.Max);
                         break;
-                    case Type.Sum:
-                    case Type.Avg:
-                    case Type.Mean:
+                    case AggregationType.Sum:
+                    case AggregationType.Avg:
+                    case AggregationType.Mean:
                         _values[i] = (double)_values[i] + val.Sum;
                         break;
-                    case Type.First:
+                    case AggregationType.First:
                         if ((long)_count[i] == 0)
                             _values[i] = val.First;
                         break;
-                    case Type.Last:
+                    case AggregationType.Last:
                         _values[i] = val.Last;
                         break;
-                    case Type.Count:
+                    case AggregationType.Count:
                         break;
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
@@ -411,31 +400,31 @@ namespace Raven.Server.Documents.Queries.AST
                 var val = values[i];
                 switch (Aggregation)
                 {
-                    case Type.Min:
+                    case AggregationType.Min:
                         if ((long)_count[i] == 0)
                             _values[i] = val;
                         else
                             _values[i] = Math.Min((double)_values[i], val);
                         break;
-                    case Type.Max:
+                    case AggregationType.Max:
                         if ((long)_count[i] == 0)
                             _values[i] = val;
                         else
                             _values[i] = Math.Max((double)_values[i], val);
                         break;
-                    case Type.Sum:
-                    case Type.Avg:
-                    case Type.Mean:
+                    case AggregationType.Sum:
+                    case AggregationType.Avg:
+                    case AggregationType.Mean:
                         _values[i] = (double)_values[i] + val;
                         break;
-                    case Type.First:
+                    case AggregationType.First:
                         if ((long)_count[i] == 0)
                             _values[i] = val;
                         break;
-                    case Type.Last:
+                    case AggregationType.Last:
                         _values[i] = val;
                         break;
-                    case Type.Count:
+                    case AggregationType.Count:
                         break;
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
@@ -449,16 +438,16 @@ namespace Raven.Server.Documents.Queries.AST
         {
             switch (Aggregation)
             {
-                case Type.Min:
-                case Type.Max:
-                case Type.First:
-                case Type.Last:
-                case Type.Sum:
+                case AggregationType.Min:
+                case AggregationType.Max:
+                case AggregationType.First:
+                case AggregationType.Last:
+                case AggregationType.Sum:
                     break;
-                case Type.Count:
+                case AggregationType.Count:
                     return Count;
-                case Type.Mean:
-                case Type.Avg:
+                case AggregationType.Mean:
+                case AggregationType.Avg:
                     for (int i = 0; i < _values.Count; i++)
                     {
                         if ((long)_count[i] == 0)

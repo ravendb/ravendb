@@ -86,7 +86,7 @@ namespace SlowTests.Issues
         [Fact]
         public void ThrowOnDatabaseRecordChanges()
         {
-            const int numberOfFields = 29;
+            const int numberOfFields = 30;
             const int numberOfProperties = 0;
             var tasksList = new List<string>
             {

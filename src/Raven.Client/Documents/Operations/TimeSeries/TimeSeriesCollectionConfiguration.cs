@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
@@ -22,6 +23,29 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             RollupPolicies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
         }
 
+        internal RollupPolicy GetPolicy(string name)
+        {
+            if (name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) == false)
+                return RollupPolicy.RawPolicy;
+
+            return RollupPolicies.SingleOrDefault(p => name.Contains(p.Name));
+        }
+
+        internal RollupPolicy GetNextPolicy(RollupPolicy policy)
+        {
+            if (policy == RollupPolicy.RawPolicy)
+                return RollupPolicies[0];
+
+            var current = RollupPolicies.FindIndex(p => p == policy);
+            if (current < 0)
+                return null;
+
+            if (current == RollupPolicies.Count - 1)
+                return RollupPolicy.AfterAllPolices;
+
+            return RollupPolicies[current + 1];
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -36,9 +60,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public class RollupPolicy : IDynamicJson, IComparable<RollupPolicy>
     {
         /// <summary>
-        /// Name of the time series policy, defined by the convention "KeepFor{RetentionTime}AggregatedBy{TimeSpan} (e.g. keep for 12 hours and aggregate by 1 minute = KeepFor12:00:00AggregatedBy00:01:00)"
+        /// Name of the time series policy, defined by convention
         /// </summary>
-        public string Name; // defined by convention
+        public string Name;
 
         /// <summary>
         /// How long the data of this policy will be retained
@@ -48,19 +72,35 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// <summary>
         /// Define the aggregation of this policy
         /// </summary>
-        public TimeSpan AggregateBy;
+        public TimeSpan AggregationTime;
+
+        /// <summary>
+        /// Define the aggregation type
+        /// </summary>
+        public AggregationType Type;
+
+        
+        // TODO: consider Continuous Query approach
+
+        internal static RollupPolicy AfterAllPolices = new RollupPolicy();
+        internal static RollupPolicy RawPolicy = new RollupPolicy();
 
         private RollupPolicy()
         {
-            
         }
 
-        public RollupPolicy(TimeSpan retentionTime, TimeSpan aggregateBy)
+        public string GetTimeSeriesName(string rawName)
+        {
+            return $"{rawName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{Name}";
+        }
+
+        public RollupPolicy(TimeSpan retentionTime, TimeSpan aggregationTime, AggregationType type = AggregationType.Avg)
         {
             RetentionTime = retentionTime;
-            AggregateBy = aggregateBy;
+            AggregationTime = aggregationTime;
+            Type = type;
 
-            Name = $"KeepFor{RetentionTime}AggregatedBy{aggregateBy}";
+            Name = $"Every{AggregationTime}By{Type}";
         }
 
         public DynamicJsonValue ToJson()
@@ -69,7 +109,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 [nameof(Name)] = Name,
                 [nameof(RetentionTime)] = RetentionTime,
-                [nameof(AggregateBy)] = AggregateBy,
+                [nameof(AggregationTime)] = AggregationTime,
+                [nameof(Type)] = Type,
             };
         }
 
@@ -77,7 +118,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             Debug.Assert(Name == other.Name);
             return RetentionTime == other.RetentionTime &&
-                   AggregateBy == other.AggregateBy;
+                   AggregationTime == other.AggregationTime;
         }
 
         public int CompareTo(RollupPolicy other)
@@ -112,7 +153,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             if (y == null)
                 return -1;
 
-            var diff = x.AggregateBy.Ticks - y.AggregateBy.Ticks; // we can't cast to int, since it might overflow
+            var diff = x.AggregationTime.Ticks - y.AggregationTime.Ticks; // we can't cast to int, since it might overflow
 
             if (diff > 0)
                 return 1;
