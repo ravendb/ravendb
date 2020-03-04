@@ -25,7 +25,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         public string Delimiter { get; set; }
         public char Quote { get; set; }
-        public char Comment { get; set; }
+        public char? Comment { get; set; }
         public bool AllowComments { get; set; }
         public TrimOptions TrimOptions { get; set; }
 
@@ -55,7 +55,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly string _collection;
         private StreamReader _reader;
         private CsvReader _csvReader;
-        private readonly Configuration _csvHelperConfig;
+        private readonly CsvConfiguration _csvHelperConfig;
         private bool _hasId;
         private int _idIndex;
         private bool _hasCollection;
@@ -80,25 +80,25 @@ namespace Raven.Server.Smuggler.Documents
             _currentType = DatabaseItemType.Documents;
             _collection = collection;
             
-            _csvHelperConfig = new Configuration();
+            _csvHelperConfig = new CsvConfiguration(CultureInfo.InvariantCulture);
             
             _csvHelperConfig.Delimiter = csvConfig.Delimiter;
             _csvHelperConfig.Quote = csvConfig.Quote;
             _csvHelperConfig.TrimOptions = csvConfig.TrimOptions;
             _csvHelperConfig.AllowComments = csvConfig.AllowComments;
-            if (csvConfig.AllowComments && csvConfig.Comment != default(char))
+            if (csvConfig.AllowComments && csvConfig.Comment != null)
             {
-                _csvHelperConfig.Comment = csvConfig.Comment;
+                _csvHelperConfig.Comment = (char)csvConfig.Comment;
             }
-            _csvHelperConfig.BadDataFound = null;
             
+            _csvHelperConfig.BadDataFound = null;
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
             buildVersion = ServerVersion.DevBuildNumber;
             
-            _reader = new StreamReader(_stream);            
+            _reader = new StreamReader(_stream);
             _csvReader = new CsvReader(_reader, _csvHelperConfig);
             
             _result = result;

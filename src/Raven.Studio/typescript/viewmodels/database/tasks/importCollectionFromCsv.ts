@@ -30,7 +30,7 @@ class csvConfiguration {
             Quote: this.getQuote(),
             TrimOptions: this.getTrimOption(),
             AllowComments: this.allowComments(),
-            Comment: _.trim(this.commentCharacter())
+            Comment: _.trim(this.commentCharacter()) || undefined 
         }
     }
 
