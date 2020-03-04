@@ -99,7 +99,9 @@ export class amazonS3Credentials extends restoreSettings {
             AwsSessionToken: "",
             RemoteFolderName: _.trim(this.remoteFolder()),
             Disabled: false,
-            GetBackupConfigurationScript: null
+            GetBackupConfigurationScript: null,
+            //TODO RavenDB-14716
+            CustomS3ServerUrl: null,
         }
     };
 
@@ -321,7 +323,9 @@ export class ravenCloudCredentials extends restoreSettings {
             BucketName: _.trim(this.amazonS3().bucketName()),
             RemoteFolderName: _.trim(this.amazonS3().remoteFolder()),
             Disabled: false,
-            GetBackupConfigurationScript: null
+            GetBackupConfigurationScript: null,
+            //TODO RavenDB-14716
+            CustomS3ServerUrl: null,
         }
     }     
     // toAzureDto()       // todo: add when Raven Cloud supports this
@@ -364,7 +368,9 @@ export class ravenCloudCredentials extends restoreSettings {
             Expires: null,
             BackupStorageType: null,
             Disabled: false,
-            GetBackupConfigurationScript: null
+            GetBackupConfigurationScript: null,
+            //TODO RavenDB-14716
+            CustomS3ServerUrl: null,
         });
     }
 }

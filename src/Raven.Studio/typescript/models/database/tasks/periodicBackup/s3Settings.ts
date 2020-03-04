@@ -92,7 +92,9 @@ class s3Settings extends amazonSettings {
             AwsSessionToken: null,
             BucketName: null,
             RemoteFolderName: null,
-            GetBackupConfigurationScript: null
+            GetBackupConfigurationScript: null,
+            //TODO RavenDB-14716
+            CustomS3ServerUrl: null,
         }, allowedRegions);
     }
 }
