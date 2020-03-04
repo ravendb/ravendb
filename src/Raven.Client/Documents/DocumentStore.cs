@@ -218,6 +218,8 @@ namespace Raven.Client.Documents
 
             AssertValidConfiguration();
 
+            RequestExecutor.ValidateUrls(Urls, Certificate);
+
             try
             {
                 if (Conventions.AsyncDocumentIdGenerator == null) // don't overwrite what the user is doing
