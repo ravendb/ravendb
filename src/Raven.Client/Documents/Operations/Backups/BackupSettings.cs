@@ -132,7 +132,7 @@ namespace Raven.Client.Documents.Operations.Backups
         /// <summary>
         /// S3 server Url when using custom server
         /// </summary>
-        public string CustomS3ServerUrl { get; set; }
+        public string CustomServerUrl { get; set; }
         
         public override bool HasSettings()
         {
@@ -159,7 +159,7 @@ namespace Raven.Client.Documents.Operations.Backups
             if (other.RemoteFolderName != RemoteFolderName)
                 return false;
 
-            if (other.CustomS3ServerUrl != CustomS3ServerUrl)
+            if (other.CustomServerUrl != CustomServerUrl)
                 return false;
             
             return true;
@@ -169,7 +169,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             var djv = base.ToJson();
             djv[nameof(BucketName)] = BucketName;
-            djv[nameof(CustomS3ServerUrl)] = CustomS3ServerUrl;
+            djv[nameof(CustomServerUrl)] = CustomServerUrl;
             return djv;
         }
     }

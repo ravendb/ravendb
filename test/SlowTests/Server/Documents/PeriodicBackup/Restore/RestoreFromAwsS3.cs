@@ -43,33 +43,33 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 restoreConfiguration.Settings.AwsSecretKey = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS region cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("AWS Bucket name cannot be null or empty", e.InnerException.Message);
 
-                restoreConfiguration.Settings.AwsRegionName = "test";
+                restoreConfiguration.Settings.BucketName = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS Bucket name cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("AWS region name cannot be null or empty", e.InnerException.Message);
             }
         }
         
         [AmazonS3Fact, Trait("Category", "Smuggler")]
-        protected async Task can_backup_and_restore() => await can_backup_and_restore_internal();
+        public async Task can_backup_and_restore() => await can_backup_and_restore_internal();
         [AmazonS3Fact, Trait("Category", "Smuggler")]
-        protected async Task can_backup_and_restore_snapshot() => await can_backup_and_restore_snapshot_internal();
+        public async Task can_backup_and_restore_snapshot() => await can_backup_and_restore_snapshot_internal();
         [AmazonS3Fact, Trait("Category", "Smuggler")]
-        protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key() => 
+        public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key() => 
             await incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key_internal();
         [AmazonS3Fact, Trait("Category", "Smuggler")]
-        protected async Task incremental_and_full_check_last_file_for_backup() => await incremental_and_full_check_last_file_for_backup_internal();
+        public async Task incremental_and_full_check_last_file_for_backup() => await incremental_and_full_check_last_file_for_backup_internal();
         [AmazonS3Fact, Trait("Category", "Smuggler")]
-        protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key() => 
+        public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key() => 
             await incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key_internal();
         [AmazonS3Fact, Trait("Category", "Smuggler")]
-        protected async Task snapshot_encrypted_db_and_restore_to_encrypted_DB() => await snapshot_encrypted_db_and_restore_to_encrypted_DB_internal();
+        public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB() => await snapshot_encrypted_db_and_restore_to_encrypted_DB_internal();
 
         protected override S3Settings GetS3Settings(string subPath = null)
         {
-            var s3Settings = CustomS3FactAttribute.S3Settings;
+            var s3Settings = AmazonS3FactAttribute.S3Settings;
 
             if (s3Settings == null)
                 return null;
@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 RemoteFolderName = remoteFolderName,
                 AwsAccessKey = s3Settings.AwsAccessKey,
                 AwsSecretKey = s3Settings.AwsSecretKey,
-                CustomS3ServerUrl = s3Settings.CustomS3ServerUrl
+                AwsRegionName = s3Settings.AwsRegionName
             };
         }
     }
