@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands
             return ExternalReplicationState.GenerateItemName(DatabaseName, ExternalReplicationState.TaskId);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             return context.ReadObject(ExternalReplicationState.ToJson(), GetItemId());
         }

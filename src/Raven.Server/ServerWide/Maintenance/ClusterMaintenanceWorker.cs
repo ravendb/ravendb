@@ -177,7 +177,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             continue; // Database does not exists in this server
                         }
 
-                        topology = rawRecord.GetTopology();
+                        topology = rawRecord.Topology;
                     }
 
                     if (topology == null)

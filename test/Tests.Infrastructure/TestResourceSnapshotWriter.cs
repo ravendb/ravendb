@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
-using System.Runtime.Serialization;
+using System.Reflection;
 using CsvHelper;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 using Sparrow;
 using Sparrow.LowMemory;
+using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
 {
@@ -36,24 +37,91 @@ namespace Tests.Infrastructure
             }
         }
 
-        public void WriteResourceSnapshot(TestStage testStage, string comment = "")
+        public void WriteResourceSnapshot(TestStage testStage, ITestAssembly testAssembly)
+        {
+            var snapshot = GetTestResourceSnapshot(testStage, testAssembly.Assembly);
+            Write(snapshot);
+        }
+
+        public void WriteResourceSnapshot(TestStage testStage, ITestClass testClass)
+        {
+            var snapshot = GetTestResourceSnapshot(testStage, testClass.Class.Assembly);
+            snapshot.ClassName = testClass.Class.Name;
+            
+            Write(snapshot);
+        }
+
+        public void WriteResourceSnapshot(TestStage testStage, ITestMethod testMethod, TestResult? testResult = null)
+        {
+            var testClass = testMethod.TestClass.Class;
+
+            var snapshot = GetTestResourceSnapshot(testStage, testClass.Assembly);
+            
+            snapshot.ClassName = testClass.Name;
+            snapshot.MethodName = testMethod.Method.Name;
+            snapshot.TestResult = testResult;
+            
+            Write(snapshot);
+        }
+
+        private void Write(TestResourceSnapshot snapshot)
         {
             lock (_syncObject)
             {
                 _csvWriter.NextRecord();
-                _csvWriter.WriteRecord(new TestResourceSnapshot(this, testStage, comment));
+                _csvWriter.WriteRecord(snapshot);
             }
+        }
+
+        private TestResourceSnapshot GetTestResourceSnapshot(TestStage testStage, IAssemblyInfo assemblyInfo)
+        {
+            var timeStamp = DateTime.UtcNow;
+            var assemblyName = GetAssemblyShortName(assemblyInfo);
+            var cpuUsage = _metricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, _cpuUsageCalculator.Calculate);
+
+            var memoryInfo = _metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
+
+            var snapshot = new TestResourceSnapshot
+            {
+                TotalScratchAllocatedMemory = new Size(MemoryInformation.GetTotalScratchAllocatedMemory(), SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+                TotalDirtyMemory = new Size(MemoryInformation.GetDirtyMemoryState().TotalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+                IsHighDirty = MemoryInformation.GetDirtyMemoryState().IsHighDirty,
+                TestStage = testStage,
+                Timestamp = timeStamp.ToString("o"),
+                AssemblyName = assemblyName,
+                MachineCpuUsage = (long)cpuUsage.MachineCpuUsage,
+                ProcessCpuUsage = (long)cpuUsage.ProcessCpuUsage,
+                ProcessMemoryUsageInMb = memoryInfo.WorkingSet.GetValue(SizeUnit.Megabytes),
+                TotalMemoryInMb = memoryInfo.TotalPhysicalMemory.GetValue(SizeUnit.Megabytes),
+                TotalCommittableMemoryInMb = memoryInfo.TotalCommittableMemory.GetValue(SizeUnit.Megabytes),
+                AvailableMemoryInMb = memoryInfo.AvailableMemory.GetValue(SizeUnit.Megabytes),
+                CurrentCommitChargeInMb = memoryInfo.CurrentCommitCharge.GetValue(SizeUnit.Megabytes),
+                SharedCleanMemoryInMb = memoryInfo.SharedCleanMemory.GetValue(SizeUnit.Megabytes),
+                TotalScratchDirtyMemory = memoryInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Megabytes)
+            };
+
+            return snapshot;
+        }
+
+        private static string GetAssemblyShortName(IAssemblyInfo assemblyInfo)
+        {
+            var assemblyName = new AssemblyName(assemblyInfo.Name);
+            return assemblyName.Name;
         }
 
         public class TestResourceSnapshot
         {
             public TestStage TestStage { get; set; }
+            
+            public string AssemblyName { get; set; }
+            
+            public string ClassName { get; set; }
+            
+            public string MethodName { get; set; }
 
-            public string Comment { get; set; }
-
-            public DateTime InfluxTimestamp => DateTime.Parse(TimeStamp);
-
-            public string TimeStamp { get; set; }
+            public TestResult? TestResult { get; set; }
+            
+            public string Timestamp { get; set; }
             
             public long MachineCpuUsage { get; set; }
             
@@ -78,40 +146,6 @@ namespace Tests.Infrastructure
             public long TotalDirtyMemory { get; set; }
             
             public bool IsHighDirty { get; set; }
-
-            [Obsolete("Needed for serialization, should not be used directly", true)]
-            public TestResourceSnapshot()
-            {
-                
-            }
-
-            public static TestResourceSnapshot GetEmpty() => (TestResourceSnapshot)FormatterServices.GetUninitializedObject(typeof(TestResourceSnapshot));
-
-            internal TestResourceSnapshot(TestResourceSnapshotWriter parent, TestStage testStage, string comment)
-            {
-                var timeStamp = DateTime.UtcNow;
-                var cpuUsage = parent._metricCacher.GetValue(
-                    MetricCacher.Keys.Server.CpuUsage, 
-                    parent._cpuUsageCalculator.Calculate);
-                
-                var memoryInfo = parent._metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
-
-                TotalScratchAllocatedMemory = new Size(MemoryInformation.GetTotalScratchAllocatedMemory(), SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-                TotalDirtyMemory = new Size(MemoryInformation.GetDirtyMemoryState().TotalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-                IsHighDirty = MemoryInformation.GetDirtyMemoryState().IsHighDirty;
-                TestStage = testStage;
-                TimeStamp = timeStamp.ToString("o");
-                Comment = comment;
-                MachineCpuUsage = (long)cpuUsage.MachineCpuUsage;
-                ProcessCpuUsage = (long)cpuUsage.ProcessCpuUsage;
-                ProcessMemoryUsageInMb = memoryInfo.WorkingSet.GetValue(SizeUnit.Megabytes);
-                TotalMemoryInMb = memoryInfo.TotalPhysicalMemory.GetValue(SizeUnit.Megabytes);
-                TotalCommittableMemoryInMb = memoryInfo.TotalCommittableMemory.GetValue(SizeUnit.Megabytes);
-                AvailableMemoryInMb = memoryInfo.AvailableMemory.GetValue(SizeUnit.Megabytes);
-                CurrentCommitChargeInMb = memoryInfo.CurrentCommitCharge.GetValue(SizeUnit.Megabytes);
-                SharedCleanMemoryInMb = memoryInfo.SharedCleanMemory.GetValue(SizeUnit.Megabytes);
-                TotalScratchDirtyMemory = memoryInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Megabytes);
-            }
         }
 
         public void Dispose()
@@ -131,5 +165,12 @@ namespace Tests.Infrastructure
         TestEndedBeforeGc,
         TestEndedAfterGc,
         Delta
+    }
+
+    public enum TestResult
+    {
+        Success,
+        Fail,
+        Skipped
     }
 }

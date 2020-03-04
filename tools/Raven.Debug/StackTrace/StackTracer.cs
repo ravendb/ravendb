@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -46,8 +47,21 @@ namespace Raven.Debug.StackTrace
                     if (threadIds != null && threadIds.Contains(thread.OSThreadId) == false)
                         continue;
 
-                    var threadInfo = GetThreadInfo(thread, dataTarget, runtime, sb, includeStackObjects);
-                    threadInfoList.Add(threadInfo);
+                    try
+                    {
+                        var threadInfo = GetThreadInfo(thread, dataTarget, runtime, sb, includeStackObjects);
+                        threadInfoList.Add(threadInfo);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // thread has exited
+                        continue;
+                    }
+                    catch (Win32Exception e) when (e.HResult == 0x5)
+                    {
+                        // thread has exited
+                        continue;
+                    }
 
                     count++;
                     if (threadIds != null && count == threadIds.Count)
@@ -125,8 +139,7 @@ namespace Raven.Debug.StackTrace
             }
         }
 
-        private static ThreadInfo GetThreadInfo(ClrThread thread, DataTarget dataTarget,
-            ClrRuntime runtime, StringBuilder sb, bool includeStackObjects)
+        private static ThreadInfo GetThreadInfo(ClrThread thread, DataTarget dataTarget, ClrRuntime runtime, StringBuilder sb, bool includeStackObjects)
         {
             var hasStackTrace = thread.StackTrace.Count > 0;
 

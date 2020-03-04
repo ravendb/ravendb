@@ -4059,8 +4059,8 @@ namespace Raven.Server.Documents.Indexes
 
         private static bool TryFindIndexDefinition(string directoryName, RawDatabaseRecord record, out IndexDefinition staticDef, out AutoIndexDefinition autoDef)
         {
-            var indexes = record.GetIndexes();
-            var autoIndexes = record.GetAutoIndexes();
+            var indexes = record.Indexes;
+            var autoIndexes = record.AutoIndexes;
 
             if (indexes != null)
             {

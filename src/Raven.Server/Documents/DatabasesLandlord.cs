@@ -107,11 +107,11 @@ namespace Raven.Server.Documents
                         if (ShouldDeleteDatabase(context, databaseName, rawRecord))
                             return;
 
-                        topology = rawRecord.GetTopology();
+                        topology = rawRecord.Topology;
                         if (topology.RelevantFor(_serverStore.NodeTag) == false)
                             return;
 
-                        if (rawRecord.IsDisabled() || rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress)
+                        if (rawRecord.IsDisabled || rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
                         {
                             UnloadDatabase(databaseName);
                             return;
@@ -241,11 +241,10 @@ namespace Raven.Server.Documents
                     {
                         using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (context.OpenReadTransaction())
+                        using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                         {
-                            var rawRecord = _serverStore.Cluster.ReadRawDatabase(context, databaseName, out _);
-
                             // unload only if DB is still disabled
-                            if (IsDatabaseDisabled(rawRecord))
+                            if (IsDatabaseDisabled(databaseRecord.Raw))
                                 UnloadDatabaseInternal(databaseName);
                         }
                     }
@@ -253,10 +252,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static bool IsDatabaseDisabled(BlittableJsonReaderObject databaseRecordBlittable)
+        public static bool IsDatabaseDisabled(BlittableJsonReaderObject databaseRecord)
         {
-            var noDisabled = databaseRecordBlittable.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false;
-            var noDatabaseState = databaseRecordBlittable.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus dbState) == false;
+            var noDisabled = databaseRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false;
+            var noDatabaseState = databaseRecord.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus dbState) == false;
 
             if (noDisabled && noDatabaseState)
                 return false;
@@ -279,18 +278,18 @@ namespace Raven.Server.Documents
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
         {
             var deletionInProgress = DeletionInProgressStatus.No;
-            var directDelete = rawRecord.GetDeletionInProgressStatus()?.TryGetValue(_serverStore.NodeTag, out deletionInProgress) == true &&
+            var directDelete = rawRecord.DeletionInProgress?.TryGetValue(_serverStore.NodeTag, out deletionInProgress) == true &&
                                deletionInProgress != DeletionInProgressStatus.No;
 
             if (directDelete == false)
                 return false;
 
-            if (rawRecord.GetTopology().Rehabs.Contains(_serverStore.NodeTag))
+            if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag))
                 // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
                 // that all the documents were replicated from this node, therefor the deletion will be called from the replication code.
                 return false;
 
-            var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
+            var record = rawRecord.MaterializedRecord;
             context.CloseTransaction();
 
             DeleteDatabase(dbName, deletionInProgress, record);
@@ -778,16 +777,14 @@ namespace Raven.Server.Documents
             Debug.Assert(_serverStore.Disposed == false);
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
             {
-                context.OpenReadTransaction();
-
-                var doc = _serverStore.Cluster.Read(context, "db/" + databaseName.Value.ToLowerInvariant());
-                if (doc == null)
+                if (databaseRecord == null)
                     return null;
 
-                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
-
-                if (databaseRecord.Encrypted)
+                var record = databaseRecord.MaterializedRecord;
+                if (record.Encrypted)
                 {
                     if (_serverStore.Server.WebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                     {
@@ -796,7 +793,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, databaseRecord);
+                return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, record);
             }
         }
 

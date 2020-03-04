@@ -607,8 +607,8 @@ namespace Raven.Server.Web.System
                     }
                     else
                     {
-                        ravenConnectionStrings = rawRecord.GetRavenConnectionStrings();
-                        sqlConnectionStrings = rawRecord.GetSqlConnectionStrings();
+                        ravenConnectionStrings = rawRecord.RavenConnectionStrings;
+                        sqlConnectionStrings = rawRecord.SqlConnectionStrings;
                     }
                 }
 
@@ -636,7 +636,7 @@ namespace Raven.Server.Web.System
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
-                    var recordRavenConnectionStrings = rawRecord.GetRavenConnectionStrings();
+                    var recordRavenConnectionStrings = rawRecord.RavenConnectionStrings;
                     if (recordRavenConnectionStrings != null && recordRavenConnectionStrings.TryGetValue(connectionStringName, out var ravenConnectionString))
                     {
                         ravenConnectionStrings.TryAdd(connectionStringName, ravenConnectionString);
@@ -645,7 +645,7 @@ namespace Raven.Server.Web.System
                     break;
 
                 case ConnectionStringType.Sql:
-                    var recordSqlConnectionStrings = rawRecord.GetSqlConnectionStrings();
+                    var recordSqlConnectionStrings = rawRecord.SqlConnectionStrings;
                     if (recordSqlConnectionStrings != null && recordSqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString))
                     {
                         sqlConnectionStrings.TryAdd(connectionStringName, sqlConnectionString);
@@ -1056,7 +1056,7 @@ namespace Raven.Server.Web.System
                         if (rawRecord == null)
                             throw new DatabaseDoesNotExistException(Database.Name);
 
-                        hubPullReplications = rawRecord.GetHubPullReplications();
+                        hubPullReplications = rawRecord.HubPullReplications;
                         if (hubPullReplications == null)
                             throw new InvalidOperationException($"{Database.Name} does not have {nameof(DatabaseRecord.HubPullReplications)}");
                     }
@@ -1277,14 +1277,14 @@ namespace Raven.Server.Web.System
 
                             if (type == OngoingTaskType.RavenEtl)
                             {
-                                var ravenEtls = rawRecord.GetRavenEtls();
+                                var ravenEtls = rawRecord.RavenEtls;
                                 var ravenEtl = ravenEtls?.Find(x => x.TaskId == id);
                                 if (ravenEtl != null)
                                     _deletingEtl = (ravenEtl.Name, ravenEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
                             }
                             else
                             {
-                                var sqlEtls = rawRecord.GetSqlEtls();
+                                var sqlEtls = rawRecord.SqlEtls;
                                 var sqlEtl = sqlEtls?.Find(x => x.TaskId == id);
                                 if (sqlEtl != null)
                                     _deletingEtl = (sqlEtl.Name, sqlEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());

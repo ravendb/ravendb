@@ -451,7 +451,7 @@ namespace Raven.Server.Web.System
                     if (rawRecord == null)
                         DatabaseDoesNotExistException.Throw(name);
 
-                    topology = rawRecord.GetTopology();
+                    topology = rawRecord.Topology;
                 }
 
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "nodes");
@@ -737,7 +737,7 @@ namespace Raven.Server.Web.System
                                 if (rawRecord == null)
                                     continue;
 
-                                topology = rawRecord.GetTopology();
+                                topology = rawRecord.Topology;
                             }
 
                             foreach (var node in parameters.FromNodes)
@@ -1056,7 +1056,7 @@ namespace Raven.Server.Web.System
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                    var conflictSolverConfig = rawRecord.GetConflictSolverConfiguration();
+                    var conflictSolverConfig = rawRecord.ConflictSolverConfiguration;
                     if (conflictSolverConfig == null)
                         throw new InvalidOperationException($"Database record doesn't have {nameof(DatabaseRecord.ConflictSolverConfig)} property.");
 
@@ -1095,7 +1095,7 @@ namespace Raven.Server.Web.System
                     if (rawRecord == null)
                         throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName}, it doesn't exist.");
 
-                    if (rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false)
+                    if (rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false)
                         throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName} on node {ServerStore.NodeTag}, because it doesn't reside on this node.");
                 }
 

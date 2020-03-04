@@ -616,7 +616,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (rawRecord == null)
                     return false;
 
-                topology = rawRecord.GetTopology();
+                topology = rawRecord.Topology;
             }
 
             var taskStatus = GetTaskStatus(topology, periodicBackup.Configuration);
@@ -681,7 +681,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (context.OpenReadTransaction())
             {
                 var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name);
-                foreach (var taskId in record.GetPeriodicBackupsTaskIds())
+                foreach (var taskId in record.PeriodicBackupsTaskIds)
                 {
                     var config = record.GetPeriodicBackupConfiguration(taskId);
                     if (config.IncrementalBackupFrequency == null)

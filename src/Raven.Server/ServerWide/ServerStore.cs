@@ -1075,7 +1075,7 @@ namespace Raven.Server.ServerWide
                 using (ctx.OpenReadTransaction())
                 using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, db))
                 {
-                    topology = rawRecord.GetTopology();
+                    topology = rawRecord.Topology;
                     backupConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
                 }
 
@@ -1500,7 +1500,7 @@ namespace Raven.Server.ServerWide
 
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
             {
-                if (rawRecord != null && rawRecord.IsEncrypted() == false)
+                if (rawRecord != null && rawRecord.IsEncrypted== false)
                     throw new InvalidOperationException($"Cannot modify key {name} where there is an existing database that is not encrypted");
             }
 
@@ -1553,13 +1553,13 @@ namespace Raven.Server.ServerWide
                     if (rawRecord == null)
                         return true;
 
-                    if (rawRecord.IsEncrypted() == false)
+                    if (rawRecord.IsEncrypted== false)
                         return true;
 
-                    if (rawRecord.GetTopology().RelevantFor(NodeTag) == false)
+                    if (rawRecord.Topology.RelevantFor(NodeTag) == false)
                         return true;
 
-                    var deletionInProgress = rawRecord.GetDeletionInProgressStatus();
+                    var deletionInProgress = rawRecord.DeletionInProgress;
                     if (deletionInProgress != null && deletionInProgress.ContainsKey(NodeTag))
                     {
                         // we delete the node tag from the topology only after we get a confirmation that the database was actually deleted
@@ -1791,11 +1791,11 @@ namespace Raven.Server.ServerWide
             {
                 if (etlType == EtlType.Raven)
                 {
-                    var ravenConnectionStrings = databaseRecord.GetRavenConnectionStrings();
+                    var ravenConnectionStrings = databaseRecord.RavenConnectionStrings;
                     return ravenConnectionStrings != null && ravenConnectionStrings.TryGetValue(connectionStringName, out _);
                 }
 
-                var sqlConnectionString = databaseRecord.GetSqlConnectionStrings();
+                var sqlConnectionString = databaseRecord.SqlConnectionStrings;
                 return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
             }
         }
@@ -1879,7 +1879,7 @@ namespace Raven.Server.ServerWide
 
                         // Don't delete the connection string if used by tasks types: External Replication || Raven Etl
 
-                        var ravenEtls = rawRecord.GetRavenEtls();
+                        var ravenEtls = rawRecord.RavenEtls;
                         if (ravenEtls != null)
                         {
                             foreach (var ravenETlTask in ravenEtls)
@@ -1892,7 +1892,7 @@ namespace Raven.Server.ServerWide
                             }
                         }
 
-                        var externalReplications = rawRecord.GetExternalReplications();
+                        var externalReplications = rawRecord.ExternalReplications;
                         if (externalReplications != null)
                         {
                             foreach (var replicationTask in externalReplications)
@@ -1910,7 +1910,7 @@ namespace Raven.Server.ServerWide
 
                     case ConnectionStringType.Sql:
 
-                        var sqlEtls = rawRecord.GetSqlEtls();
+                        var sqlEtls = rawRecord.SqlEtls;
 
                         // Don't delete the connection string if used by tasks types: SQL Etl
                         if (sqlEtls != null)

@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
                 using (context.OpenReadTransaction())
                 {
                     var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name);
-                    sorters = rawRecord?.GetSorters();
+                    sorters = rawRecord?.Sorters;
                 }
 
                 if (sorters == null)
