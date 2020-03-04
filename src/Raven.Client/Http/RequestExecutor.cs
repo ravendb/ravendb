@@ -750,7 +750,7 @@ namespace Raven.Client.Http
             throw new AggregateException(message, list.Select(x => x.Item2));
         }
 
-        public static string[] ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
+        internal static string[] ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
         {
             var cleanUrls = new string[initialUrls.Length];
             var requireHttps = certificate != null;
