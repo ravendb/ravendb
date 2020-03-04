@@ -15,34 +15,34 @@ namespace Raven.Client.Documents.Session
     {
         private readonly AsyncSessionDocumentTimeSeries _asyncSessionTimeSeries;
 
-        public SessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, string documentId)
+        public SessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, string documentId, string name)
         {
-            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries(session, documentId);
+            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries(session, documentId, name);
         }
 
-        public SessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, object entity)
+        public SessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, object entity, string name)
         {
-            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries(session, entity);
+            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries(session, entity, name);
         }
 
-        public void Append(string timeseries, DateTime timestamp, string tag, IEnumerable<double> values)
+        public void Append(DateTime timestamp, string tag, IEnumerable<double> values)
         {
-            _asyncSessionTimeSeries.Append(timeseries, timestamp, tag, values);
+            _asyncSessionTimeSeries.Append(timestamp, tag, values);
         }
 
-        public IEnumerable<TimeSeriesEntry> Get(string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue)
+        public IEnumerable<TimeSeriesEntry> Get(DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue)
         {
-            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(timeseries, from, to, start, pageSize));
+            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(from, to, start, pageSize));
         }
 
-        public void Remove(string timeseries, DateTime from, DateTime to)
+        public void Remove(DateTime from, DateTime to)
         {
-            _asyncSessionTimeSeries.Remove(timeseries, from, to);
+            _asyncSessionTimeSeries.Remove(from, to);
         }
 
-        public void Remove(string timeseries, DateTime at)
+        public void Remove(DateTime at)
         {
-            _asyncSessionTimeSeries.Remove(timeseries, at);
+            _asyncSessionTimeSeries.Remove(at);
         }
     }
 }

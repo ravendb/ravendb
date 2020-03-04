@@ -18,20 +18,20 @@ namespace Raven.Client.Documents.Session
 {
     public class AsyncSessionDocumentTimeSeries : SessionTimeSeriesBase, IAsyncSessionDocumentTimeSeries
     {
-        public AsyncSessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, string documentId) : base(session, documentId)
+        public AsyncSessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, string documentId, string name) : base(session, documentId, name)
         {
         }
 
-        public AsyncSessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, object entity) : base(session, entity)
+        public AsyncSessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, object entity, string name) : base(session, entity, name)
         {
         }
 
-        public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
+        public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
             TimeSeriesDetails details;
-            
+              
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
-                cache.TryGetValue(timeseries, out var ranges) && 
+                cache.TryGetValue(Name, out var ranges) && 
                 ranges.Count > 0)
             {
                 if (ranges[0].From > to || ranges[ranges.Count - 1].To < from)
@@ -47,25 +47,25 @@ namespace Raven.Client.Documents.Session
                     Session.IncrementRequestCount();
 
                     details = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation(DocId, timeseries, from, to, start, pageSize), Session.SessionInfo, token: token)
+                            new GetTimeSeriesOperation(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
                         .ConfigureAwait(false);
 
                     if (Session.NoTracking == false)
                     {
                         var index = ranges[0].From > to ? 0 : ranges.Count;
-                        ranges.Insert(index, details.Values[timeseries][0]);
+                        ranges.Insert(index, details.Values[Name][0]);
                     }
 
-                    return details.Values[timeseries][0].Entries;
+                    return details.Values[Name][0].Entries;
                 }
 
                 var (servedFromCache, resultToUser, mergedValues, fromRangeIndex, toRangeIndex) = 
-                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(timeseries, from, to, ranges, start, pageSize, token)
+                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(from, to, ranges, start, pageSize, token)
                         .ConfigureAwait(false);
 
                 if (servedFromCache == false && Session.NoTracking == false)
                 {
-                    AddToCache(timeseries, from, to, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
+                    AddToCache(Name, from, to, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
                 }
 
                 return resultToUser;
@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Session
 
             if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
                 document.Metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray metadataTimeSeries) &&
-                metadataTimeSeries.BinarySearch(timeseries) < 0)
+                metadataTimeSeries.BinarySearch(Name) < 0)
             {
                 // the document is loaded in the session, but the metadata says that there is no such timeseries
                 return Array.Empty<TimeSeriesEntry>();
@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Session
             Session.IncrementRequestCount();
 
             details = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation(DocId, timeseries, from, to, start, pageSize), Session.SessionInfo, token: token)
+                    new GetTimeSeriesOperation(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
                 .ConfigureAwait(false);
 
             if (Session.NoTracking == false)
@@ -92,13 +92,13 @@ namespace Raven.Client.Documents.Session
                     Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
                 }
 
-                cache[timeseries] = new List<TimeSeriesRangeResult>
+                cache[Name] = new List<TimeSeriesRangeResult>
                 {
-                    details.Values[timeseries][0]
+                    details.Values[Name][0]
                 };
             }
 
-            return details.Values[timeseries][0].Entries;
+            return details.Values[Name][0].Entries;
         }
 
         private static IEnumerable<TimeSeriesEntry> SkipAndTrimRangeIfNeeded(
@@ -134,7 +134,6 @@ namespace Raven.Client.Documents.Session
 
         private async Task<(bool ServedFromCache, IEnumerable<TimeSeriesEntry> ResultToUser, TimeSeriesEntry[] MergedValues, int FromRangeIndex, int ToRangeIndex)>
             ServeFromCacheOrGetMissingPartsFromServerAndMerge(
-                string timeseries,
                 DateTime from,
                 DateTime to,
                 List<TimeSeriesRangeResult> ranges,
@@ -213,14 +212,14 @@ namespace Raven.Client.Documents.Session
             Session.IncrementRequestCount();
 
             var details = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation(DocId, timeseries, rangesToGetFromServer, start, pageSize), Session.SessionInfo, token: token)
+                    new GetTimeSeriesOperation(DocId, Name, rangesToGetFromServer, start, pageSize), Session.SessionInfo, token: token)
                 .ConfigureAwait(false);
 
             // merge all the missing parts we got from server
             // with all the ranges in cache that are between 'fromRange' and 'toRange'
 
             var mergedValues = MergeRangesWithResults(from, to, ranges, fromRangeIndex, toRangeIndex,
-                resultFromServer: details.Values[timeseries], out resultToUser);
+                resultFromServer: details.Values[Name], out resultToUser);
 
             return (false, resultToUser, mergedValues, fromRangeIndex, toRangeIndex);
 
