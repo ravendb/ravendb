@@ -681,21 +681,19 @@ namespace Raven.Server.ServerWide
                     var dbKey = $"db/{tuple.Key}";
                     using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                     using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+                    using (var databaseRecord = ReadRawDatabaseRecord(context, tuple.Key))
                     {
-                        using (var databaseRecord = ReadRawDatabaseRecord(context, tuple.Key))
+                        if (databaseRecord == null)
+                            continue;
+
+                        var databaseRecordJson = databaseRecord.Raw;
+                        databaseRecordJson.Modifications = new DynamicJsonValue
                         {
-                            if (databaseRecord == null)
-                                continue;
+                            [nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount)] = tuple.Value
+                        };
+                        var newDatabaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
 
-                            var databaseRecordJson = databaseRecord.Raw;
-                            databaseRecordJson.Modifications = new DynamicJsonValue
-                            {
-                                [nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount)] = tuple.Value
-                            };
-                            var newDatabaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
-
-                            UpdateValue(index, items, valueNameLowered, valueName, newDatabaseRecordJson);
-                        }
+                        UpdateValue(index, items, valueNameLowered, valueName, newDatabaseRecordJson);
                     }
 
                     // we simply update the value without invoking the OnChange function
@@ -2071,7 +2069,7 @@ namespace Raven.Server.ServerWide
                         if (topology.RelevantFor(newTag) && topology.Count == 1)
                             continue;
 
-                        var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
+                        var record = rawRecord.MaterializedRecord;
                         record.Topology = new DatabaseTopology();
                         record.Topology.Members.Add(newTag);
                         toShrink.Add(record);
@@ -2605,7 +2603,7 @@ namespace Raven.Server.ServerWide
                 if (databaseRecord == null)
                     return null;
 
-                return databaseRecord.GetMaterializedRecord();
+                return databaseRecord.MaterializedRecord;
             }
         }
 

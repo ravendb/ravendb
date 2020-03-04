@@ -26,7 +26,16 @@ namespace Raven.Server.ServerWide
             _record = record ?? throw new ArgumentNullException(nameof(record));
         }
 
-        public BlittableJsonReaderObject Raw => _record;
+        public BlittableJsonReaderObject Raw
+        {
+            get
+            {
+                if (_record == null)
+                    throw new ArgumentNullException(nameof(_record));
+
+                return _record;
+            }
+        }
 
         private bool? _isDisabled;
 
@@ -646,15 +655,18 @@ namespace Raven.Server.ServerWide
             _record = null;
         }
 
-        public DatabaseRecord GetMaterializedRecord()
+        public DatabaseRecord MaterializedRecord
         {
-            if (_materializedRecord == null)
+            get
             {
-                _materializedRecord = JsonDeserializationCluster.DatabaseRecord(_record);
-                Dispose();
-            }
+                if (_materializedRecord == null)
+                {
+                    _materializedRecord = JsonDeserializationCluster.DatabaseRecord(_record);
+                    Dispose();
+                }
 
-            return _materializedRecord;
+                return _materializedRecord;
+            }
         }
     }
 }

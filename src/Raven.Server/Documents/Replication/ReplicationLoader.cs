@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Replication
             return null;
         }
 
-        public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions, 
+        public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
             TcpConnectionHeaderMessage.OperationTypes headerOperation,
             JsonOperationContext.ManagedPinnedBuffer buffer)
         {
@@ -291,7 +291,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private IncomingReplicationHandler CreateIncomingReplicationHandler(
-            TcpConnectionOptions tcpConnectionOptions, 
+            TcpConnectionOptions tcpConnectionOptions,
             JsonOperationContext.ManagedPinnedBuffer buffer,
             string pullReplicationName = null)
         {
@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.Replication
 
                 var incomingConnectionRejectionInfos = _incomingRejectionStats.GetOrAdd(connectionInfo,
                     _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
-                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo {Reason = e.ToString()});
+                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo { Reason = e.ToString() });
 
                 throw;
             }
@@ -582,7 +582,7 @@ namespace Raven.Server.Documents.Replication
                     continue;
 
                 var pullReplication = newRecord.HubPullReplications.Find(x => x.Name == instance.PullReplicationDefinitionName);
-                
+
                 if (pullReplication != null && pullReplication.Disabled == false)
                 {
                     // update the destination
@@ -614,7 +614,7 @@ namespace Raven.Server.Documents.Replication
         private void DropIncomingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<IDisposable> instancesToDispose)
         {
             var toRemove = connectionsToRemove?.ToList();
-            if (toRemove == null || toRemove.Count  == 0)
+            if (toRemove == null || toRemove.Count == 0)
                 return;
 
             // this is relevant for sink
@@ -679,7 +679,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (newDestination.Disabled)
                     continue;
-                
+
                 removedDestinations.Remove(newDestination);
                 if (current.TryGetValue(newDestination, out var actual))
                 {
@@ -691,7 +691,7 @@ namespace Raven.Server.Documents.Replication
                     if (handler == null)
                         continue;
 
-                    if (handler.Destination is ExternalReplication ex && 
+                    if (handler.Destination is ExternalReplication ex &&
                         actual is ExternalReplication actualEx &&
                         newDestination is ExternalReplication newDestinationEx)
                     {
@@ -797,33 +797,28 @@ namespace Raven.Server.Documents.Replication
         {
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
+            using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
             {
-                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
+                if (rawRecord == null)
+                    return;
+
+                var deletionInProgress = rawRecord.DeletionInProgress;
+                if (deletionInProgress.ContainsKey(_server.NodeTag) == false)
+                    return;
+
+                try
                 {
-                    if (rawRecord == null)
-                        return;
-
-                    var deletionInProgress = rawRecord.DeletionInProgress;
-                    if (deletionInProgress.ContainsKey(_server.NodeTag) == false)
-                        return;
-
-                    try
-                    {
-                        cts.Cancel();
-                    }
-                    catch
-                    {
-                        // nothing that we can do about it.
-                        // probably the database is being deleted.
-                    }
-                    finally
-                    {
-                        var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
-                        TaskExecutor.Execute(state =>
-                        {
-                            _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record);
-                        }, null);
-                    }
+                    cts.Cancel();
+                }
+                catch
+                {
+                    // nothing that we can do about it.
+                    // probably the database is being deleted.
+                }
+                finally
+                {
+                    var record = rawRecord.MaterializedRecord;
+                    TaskExecutor.Execute(_ => _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record), null);
                 }
             }
         }
@@ -1035,7 +1030,7 @@ namespace Raven.Server.Documents.Replication
                         _log.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
                     }
                 }
-                    
+
                 var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse
                 {
                     OccurredAt = SystemTime.UtcNow,
@@ -1521,7 +1516,7 @@ namespace Raven.Server.Documents.Replication
         public string DestinationFormatted => $"{_node.Url}/databases/{_node.Database}";
         public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
         {
-            return new[] {_stats.ToReplicationPerformanceStats()};
+            return new[] { _stats.ToReplicationPerformanceStats() };
         }
     }
 
