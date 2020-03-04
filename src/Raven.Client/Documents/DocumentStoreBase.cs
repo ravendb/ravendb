@@ -129,9 +129,11 @@ namespace Raven.Client.Documents
                         throw new ArgumentNullException(nameof(value), "Urls cannot contain null");
 
                     if (Uri.TryCreate(value[i], UriKind.Absolute, out _) == false)
-                        throw new ArgumentException(value[i] + " is not a valid url");
+                        throw new ArgumentException($"'{value[i]}' is not a valid url");
+
                     value[i] = value[i].TrimEnd('/');
                 }
+
                 _urls = value;
             }
         }

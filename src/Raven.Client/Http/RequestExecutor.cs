@@ -600,13 +600,6 @@ namespace Raven.Client.Http
                         {
                             if (_lastKnownUrls == null)
                             {
-                                // will happen if we failed to parse the initial urls
-                                if (topologyUpdate != null && topologyUpdate.IsFaulted)
-                                {
-                                    var inner = topologyUpdate.Exception.ExtractSingleInnerException();
-                                    throw inner;
-                                }
-
                                 // shouldn't happen
                                 throw new InvalidOperationException("No known topology and no previously known one, cannot proceed, likely a bug");
                             }
@@ -624,7 +617,7 @@ namespace Raven.Client.Http
             {
                 lock (this)
                 {
-                    if (_lastKnownUrls != null && _firstTopologyUpdate == topologyUpdate)
+                    if (_firstTopologyUpdate == topologyUpdate)
                         _firstTopologyUpdate = null; // next request will raise it
                 }
 
@@ -757,7 +750,7 @@ namespace Raven.Client.Http
             throw new AggregateException(message, list.Select(x => x.Item2));
         }
 
-        protected static string[] ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
+        public static string[] ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
         {
             var cleanUrls = new string[initialUrls.Length];
             var requireHttps = certificate != null;
@@ -765,7 +758,8 @@ namespace Raven.Client.Http
             {
                 var url = initialUrls[index];
                 if (Uri.TryCreate(url, UriKind.Absolute, out var uri) == false)
-                    throw new InvalidOperationException("The url '" + url + "' is not valid");
+                    throw new InvalidOperationException($"'{url}' is not a valid url");
+
                 cleanUrls[index] = uri.ToString().TrimEnd('/', ' ');
                 requireHttps |= string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase);
             }
@@ -781,9 +775,9 @@ namespace Raven.Client.Http
                     continue;
 
                 if (certificate != null)
-                    throw new InvalidOperationException("The url " + url + " is using HTTP, but a certificate is specified, which require us to use HTTPS");
+                    throw new InvalidOperationException($"The url {url} is using HTTP, but a certificate is specified, which require us to use HTTPS");
 
-                throw new InvalidOperationException("The url " + url + " is using HTTP, but other urls are using HTTPS, and mixing of HTTP and HTTPS is not allowed");
+                throw new InvalidOperationException($"The url {url} is using HTTP, but other urls are using HTTPS, and mixing of HTTP and HTTPS is not allowed");
             }
             return cleanUrls;
         }
