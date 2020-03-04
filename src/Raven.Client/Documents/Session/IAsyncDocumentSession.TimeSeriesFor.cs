@@ -13,9 +13,9 @@ namespace Raven.Client.Documents.Session
     public partial interface IAsyncDocumentSession
     {
 
-        IAsyncSessionDocumentTimeSeries TimeSeriesFor(string documentId);
+        IAsyncSessionDocumentTimeSeries TimeSeriesFor(string documentId, string name);
 
-        IAsyncSessionDocumentTimeSeries TimeSeriesFor(object entity);
+        IAsyncSessionDocumentTimeSeries TimeSeriesFor(object entity, string name);
 
     }
 }

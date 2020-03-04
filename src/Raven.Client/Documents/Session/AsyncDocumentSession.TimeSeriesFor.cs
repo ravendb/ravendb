@@ -11,14 +11,14 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class AsyncDocumentSession
     {
-        public IAsyncSessionDocumentTimeSeries TimeSeriesFor(string documentId)
+        public IAsyncSessionDocumentTimeSeries TimeSeriesFor(string documentId, string name)
         {
-            return new AsyncSessionDocumentTimeSeries(this, documentId);
+            return new AsyncSessionDocumentTimeSeries(this, documentId, name);
         }
 
-        public IAsyncSessionDocumentTimeSeries TimeSeriesFor(object entity)
+        public IAsyncSessionDocumentTimeSeries TimeSeriesFor(object entity, string name)
         {
-            return new AsyncSessionDocumentTimeSeries(this, entity);
+            return new AsyncSessionDocumentTimeSeries(this, entity, name);
         }
     }
 }

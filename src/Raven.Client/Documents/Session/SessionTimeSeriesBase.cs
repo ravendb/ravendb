@@ -18,19 +18,23 @@ namespace Raven.Client.Documents.Session
     public abstract class SessionTimeSeriesBase
     {
         protected string DocId;
+        protected string Name;
         protected InMemoryDocumentSessionOperations Session;
 
-        protected SessionTimeSeriesBase(InMemoryDocumentSessionOperations session, string documentId)
+        protected SessionTimeSeriesBase(InMemoryDocumentSessionOperations session, string documentId, string name)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
 
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+            
             DocId = documentId;
+            Name = name;
             Session = session;
-
         }
 
-        protected SessionTimeSeriesBase(InMemoryDocumentSessionOperations session, object entity)
+        protected SessionTimeSeriesBase(InMemoryDocumentSessionOperations session, object entity, string name)
         {
             if (session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false || document == null)
             {
@@ -38,22 +42,23 @@ namespace Raven.Client.Documents.Session
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+
             DocId = document.Id;
+            Name = name;
             Session = session;
         }
 
-        public void Append(string timeseries, DateTime timestamp, string tag, IEnumerable<double> values)
+        public void Append(DateTime timestamp, string tag, IEnumerable<double> values)
         {
-            if (string.IsNullOrWhiteSpace(timeseries))
-                throw new ArgumentNullException(nameof(timeseries));
-
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
                 Session.DeletedEntities.Contains(documentInfo.Entity))
-                ThrowDocumentAlreadyDeletedInSession(DocId, timeseries);
+                ThrowDocumentAlreadyDeletedInSession(DocId, Name);
 
             var op = new TimeSeriesOperation.AppendOperation
             {
-                Name = timeseries,
+                Name = Name,
                 Timestamp = timestamp,
                 Tag = tag,
                 Values = values is double[] arr
@@ -76,23 +81,20 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public void Remove(string timeseries, DateTime at)
+        public void Remove(DateTime at)
         {
-            Remove(timeseries, at, at);
+            Remove(at, at);
         }
 
-        public void Remove(string timeseries, DateTime from, DateTime to)
+        public void Remove(DateTime from, DateTime to)
         {
-            if (string.IsNullOrWhiteSpace(timeseries))
-                throw new ArgumentNullException(nameof(timeseries));
-
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
                 Session.DeletedEntities.Contains(documentInfo.Entity))
-                ThrowDocumentAlreadyDeletedInSession(DocId, timeseries);
+                ThrowDocumentAlreadyDeletedInSession(DocId, Name);
 
             var op = new TimeSeriesOperation.RemoveOperation
             {
-                Name = timeseries,
+                Name = Name,
                 From = from,
                 To = to
             };

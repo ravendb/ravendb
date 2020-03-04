@@ -13,9 +13,9 @@ namespace Raven.Client.Documents.Session
     public partial interface IDocumentSession
     {
 
-        ISessionDocumentTimeSeries TimeSeriesFor(string documentId);
+        ISessionDocumentTimeSeries TimeSeriesFor(string documentId, string name);
 
-        ISessionDocumentTimeSeries TimeSeriesFor(object entity);
+        ISessionDocumentTimeSeries TimeSeriesFor(object entity, string name);
 
     }
 }
