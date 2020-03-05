@@ -94,7 +94,7 @@ class s3Settings extends amazonSettings {
             RemoteFolderName: null,
             GetBackupConfigurationScript: null,
             //TODO RavenDB-14716
-            CustomS3ServerUrl: null,
+            CustomServerUrl: null,
         }, allowedRegions);
     }
 }

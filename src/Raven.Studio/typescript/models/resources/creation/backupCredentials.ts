@@ -101,7 +101,7 @@ export class amazonS3Credentials extends restoreSettings {
             Disabled: false,
             GetBackupConfigurationScript: null,
             //TODO RavenDB-14716
-            CustomS3ServerUrl: null,
+            CustomServerUrl: null,
         }
     };
 
@@ -325,7 +325,7 @@ export class ravenCloudCredentials extends restoreSettings {
             Disabled: false,
             GetBackupConfigurationScript: null,
             //TODO RavenDB-14716
-            CustomS3ServerUrl: null,
+            CustomServerUrl: null,
         }
     }     
     // toAzureDto()       // todo: add when Raven Cloud supports this
@@ -370,7 +370,7 @@ export class ravenCloudCredentials extends restoreSettings {
             Disabled: false,
             GetBackupConfigurationScript: null,
             //TODO RavenDB-14716
-            CustomS3ServerUrl: null,
+            CustomServerUrl: null,
         });
     }
 }
