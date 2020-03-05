@@ -45,7 +45,7 @@ namespace SlowTests.SparrowTests
                 file.Dispose();
             }
 
-            var retentionSize = long.MaxValue;
+            const long retentionSize = long.MaxValue;
             var loggingSource = new LoggingSource(
                 LogMode.Information,
                 path,
@@ -68,9 +68,15 @@ namespace SlowTests.SparrowTests
                 Thread.Sleep(10);
             }
 
+            string[] afterEndFiles = null;
+            WaitForValue(() =>
+            {
+                afterEndFiles = Directory.GetFiles(path);
+                return afterEndFiles.Any(f => toCheckLogFiles.Any(tc => tc.Item1.Equals(f) && tc.Item2 == false));
+            }, false, 10_000, 1_000);
+            
             loggingSource.EndLogging();
 
-            var afterEndFiles = Directory.GetFiles(path);
             AssertNoFileMissing(afterEndFiles);
 
             try
@@ -134,28 +140,25 @@ namespace SlowTests.SparrowTests
                 Thread.Sleep(10);
             }
 
-            var sw = Stopwatch.StartNew();
-            while (true)
+            const int threshold = 2 * fileSize;
+            long size = 0;
+            string[] afterEndFiles = null;
+            var isRetentionPolicyApplied = WaitForValue( () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(1));
-                
-                var afterEndFiles = Directory.GetFiles(path);
-                AssertNoFileMissing(afterEndFiles);
-                var size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
-                const int threshold = 2 * fileSize;
+                Task.Delay(TimeSpan.FromSeconds(1));
 
-                if (Math.Abs(size - retentionSize) <= threshold)
-                    break;
-                    
-                if(sw.Elapsed < TimeSpan.FromSeconds(10))
-                    continue;
-                
-                Assert.True(false,
-                    $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
-                    Environment.NewLine +
-                    JustFileNamesAsString(afterEndFiles));
-            }
+                afterEndFiles = Directory.GetFiles(path);
+                AssertNoFileMissing(afterEndFiles);
+                size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
+
+                return Math.Abs(size - retentionSize) <= threshold;
+            }, true, 10_000, 1_000);
             
+            Assert.True(isRetentionPolicyApplied,
+                $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
+                Environment.NewLine +
+                JustFileNamesAsString(afterEndFiles));
+
             loggingSource.EndLogging();
         }
 

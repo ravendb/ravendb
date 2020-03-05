@@ -642,7 +642,7 @@ namespace FastTests
             } while (true);
         }
 
-        protected T WaitForValue<T>(Func<T> act, T expectedVal, int timeout = 15000)
+        protected T WaitForValue<T>(Func<T> act, T expectedVal, int timeout = 15000, int interval = 16)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -670,7 +670,7 @@ namespace FastTests
                     }
                 }
 
-                Thread.Sleep(16);
+                Thread.Sleep(interval);
             } while (true);
         }
 
