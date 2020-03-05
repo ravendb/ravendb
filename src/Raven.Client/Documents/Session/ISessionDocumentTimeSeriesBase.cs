@@ -15,17 +15,22 @@ namespace Raven.Client.Documents.Session
     public interface ISessionDocumentTimeSeriesBase
     {
         /// <summary>
-        /// Append the the values (and tag) to the times series at the provided timstamp
+        /// Append the the values (and optional tag) to the times series at the provided time stamp
         /// </summary>
-        void Append(DateTime timestamp, string tag, IEnumerable<double> values);
+        void Append(DateTime timestamp, IEnumerable<double> values, string tag = null);
 
         /// <summary>
-        /// Remove all the values in the timeseries in the range of from .. to.
+        /// Append a single value (and optional tag) to the times series at the provided time stamp
+        /// </summary>
+        void Append(DateTime timestamp, double value, string tag = null);
+
+        /// <summary>
+        /// Remove all the values in the time series in the range of from .. to.
         /// </summary>
         void Remove(DateTime from, DateTime to);
 
         /// <summary>
-        /// Remove the value in the timeseries in the specified timestamp
+        /// Remove the value in the time series in the specified time stamp
         /// </summary>
         void Remove(DateTime at);
 

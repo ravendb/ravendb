@@ -50,7 +50,12 @@ namespace Raven.Client.Documents.Session
             Session = session;
         }
 
-        public void Append(DateTime timestamp, string tag, IEnumerable<double> values)
+        public void Append(DateTime timestamp, double value, string tag = null)
+        {
+            Append(timestamp, new []{ value }, tag);
+        }
+
+        public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
         {
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
                 Session.DeletedEntities.Contains(documentInfo.Entity))
