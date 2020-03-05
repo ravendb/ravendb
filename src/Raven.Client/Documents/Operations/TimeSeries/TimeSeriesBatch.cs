@@ -97,13 +97,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (input.TryGet(nameof(Name), out string name) == false || name == null)
                     throw new InvalidDataException($"Missing '{nameof(Name)}' property");
 
-                if (input.TryGet(nameof(Tag), out string tag) == false || name == null)
+                if (input.TryGet(nameof(Tag), out string tag) == false)
                     throw new InvalidDataException($"Missing '{nameof(Tag)}' property");
 
-                if (input.TryGet(nameof(Timestamp), out DateTime ts) == false || name == null)
+                if (input.TryGet(nameof(Timestamp), out DateTime ts) == false)
                     throw new InvalidDataException($"Missing '{nameof(Timestamp)}' property");
 
-                if (input.TryGet(nameof(Values), out BlittableJsonReaderArray values) == false || name == null)
+                if (input.TryGet(nameof(Values), out BlittableJsonReaderArray values) == false || values == null)
                     throw new InvalidDataException($"Missing '{nameof(Values)}' property");
 
                 var doubleValues = new double[values.Length];
