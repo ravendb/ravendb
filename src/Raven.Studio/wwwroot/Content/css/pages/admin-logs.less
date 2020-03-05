@@ -9,6 +9,17 @@
         font-size: 13px;
         line-height: 17px;
         width: 100%;
+        
+        .copy-item {
+            color: darken(@color-4-1, 20%);
+            visibility: hidden;
+        }
+
+        &:hover {
+            .copy-item {
+                visibility: visible;
+            }
+        }
     }
     
     pre {
