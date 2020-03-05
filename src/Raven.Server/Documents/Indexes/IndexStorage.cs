@@ -734,11 +734,46 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        internal HashSet<string> ReadIndexFields()
+        {
+            var fields = new HashSet<string>();
+
+            using (var tx = _environment.ReadTransaction())
+            {
+                var fieldsTree = tx.ReadTree(IndexSchema.FieldsTree);
+                if (fieldsTree != null)
+                {
+                    using (var it = fieldsTree.MultiRead(IndexSchema.TimeSlice))
+                    {
+                        if (it.Seek(Slices.BeforeAllKeys))
+                        {
+                            do
+                            {
+                                fields.Add(it.CurrentKey.ToString());
+                            } while (it.MoveNext());
+                        }
+                    }
+                }
+            }
+
+            return fields;
+        }
+
+        internal void WriteIndexFields(RavenTransaction tx, HashSet<string> timeFieldsToAdd)
+        {
+            var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.FieldsTree);
+
+            foreach (var fieldName in timeFieldsToAdd)
+                fieldsTree.MultiAdd(IndexSchema.TimeSlice, fieldName);
+        }
+
         private class IndexSchema
         {
             public const string StatsTree = "Stats";
 
             public const string EtagsTree = "Etags";
+
+            public const string FieldsTree = "Fields";
 
             public const string EtagsTombstoneTree = "Etags.Tombstone";
 
@@ -778,6 +813,8 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice MaxNumberOfOutputsPerDocument;
 
+            public static readonly Slice TimeSlice;
+
             static IndexSchema()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -799,6 +836,7 @@ namespace Raven.Server.Documents.Indexes
                     Slice.From(ctx, "State", ByteStringType.Immutable, out StateSlice);
                     Slice.From(ctx, "ErrorTimestamps", ByteStringType.Immutable, out ErrorTimestampsSlice);
                     Slice.From(ctx, "MaxNumberOfOutputsPerDocument", ByteStringType.Immutable, out MaxNumberOfOutputsPerDocument);
+                    Slice.From(ctx, "Time", ByteStringType.Immutable, out TimeSlice);
                 }
             }
         }

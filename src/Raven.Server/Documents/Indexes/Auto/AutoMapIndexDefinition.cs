@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             {
                 // auto index was created to handle queries like startsWith(id(), 'users/')
 
-                AddFields(new[] { Constants.Documents.Indexing.Fields.DocumentIdFieldName }, new []
+                AddFields(new[] { Constants.Documents.Indexing.Fields.DocumentIdFieldName }, new[]
                 {
                     (Constants.Documents.Indexing.Fields.DocumentIdFieldName, new IndexFieldOptions())
                 });
@@ -112,6 +112,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
             var lockMode = ReadLockMode(reader);
             var priority = ReadPriority(reader);
+            var version = ReadVersion(reader);
             var collections = ReadCollections(reader);
 
             if (reader.TryGet(nameof(MapFields), out BlittableJsonReaderArray jsonArray) == false)
@@ -141,7 +142,8 @@ namespace Raven.Server.Documents.Indexes.Auto
             return new AutoMapIndexDefinition(collections[0], fields)
             {
                 LockMode = lockMode,
-                Priority = priority
+                Priority = priority,
+                Version = version
             };
         }
     }

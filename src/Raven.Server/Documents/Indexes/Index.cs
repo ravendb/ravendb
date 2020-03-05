@@ -105,6 +105,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal LuceneIndexPersistence IndexPersistence;
 
+        internal IndexFieldsPersistence IndexFieldsPersistence;
+
         private readonly AsyncManualResetEvent _indexingBatchCompleted = new AsyncManualResetEvent();
 
         private readonly SemaphoreSlim _indexingInProgress = new SemaphoreSlim(1, 1);
@@ -671,6 +673,9 @@ namespace Raven.Server.Documents.Indexes
 
             IndexPersistence = new LuceneIndexPersistence(this);
             IndexPersistence.Initialize(environment);
+
+            IndexFieldsPersistence = new IndexFieldsPersistence(this);
+            IndexFieldsPersistence.Initialize();
         }
 
         protected virtual void OnInitialization()
@@ -1797,6 +1802,7 @@ namespace Raven.Server.Documents.Indexes
                                 UpdateThreadAllocations(indexContext, null, null, false);
                             }
 
+                            IndexFieldsPersistence.Persist(indexContext);
                             _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
                         }
 

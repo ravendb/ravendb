@@ -4,22 +4,22 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
-using Sparrow.Json;
-
-using Voron;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Server;
+using Voron;
 using Voron.Impl;
-using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Indexes
 {
     public abstract class IndexDefinitionBase
     {
         public string Name { get; protected set; }
+
+        public long Version { get; protected set; }
 
         public HashSet<string> Collections { get; protected set; }
 
@@ -30,6 +30,11 @@ namespace Raven.Server.Documents.Indexes
         public virtual bool HasDynamicFields => false;
 
         public virtual bool HasCompareExchange => false;
+
+        protected IndexDefinitionBase()
+        {
+            Version = IndexVersion.CurrentVersion;
+        }
 
         public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
         {
@@ -52,9 +57,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (name.Length < 64)
                 return name;
-            // RavenDB-8220 To avoid giving the same path to indexes with the 
+            // RavenDB-8220 To avoid giving the same path to indexes with the
             // same 64 chars prefix, we hash the full name. Note that this is
-            // a persistent value and should NOT be changed. 
+            // a persistent value and should NOT be changed.
             return name.Substring(0, 64) + "." + Hashing.XXHash32.Calculate(name);
         }
 
@@ -64,6 +69,10 @@ namespace Raven.Server.Documents.Indexes
 
             writer.WritePropertyName(nameof(Name));
             writer.WriteString(Name);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Version));
+            writer.WriteInteger(Version);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(Collections));
@@ -110,6 +119,18 @@ namespace Raven.Server.Documents.Indexes
         public Dictionary<string, IndexFieldBase> MapFields { get; protected set; }
 
         public Dictionary<string, IndexField> IndexFields { get; set; }
+
+        public static class IndexVersion
+        {
+            public const long BaseVersion = 40_000;
+
+            public const long TimeTicks = 50_000;
+
+            /// <summary>
+            /// Remember to bump this
+            /// </summary>
+            public const long CurrentVersion = TimeTicks;
+        }
     }
 
     public abstract class IndexDefinitionBase<T> : IndexDefinitionBase where T : IndexFieldBase
@@ -192,7 +213,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var data = stream.ToArray();
             var nonce = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()); // 192-bit
-            var encryptedData = new byte[data.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()]; // data length + 128-bit mac 
+            var encryptedData = new byte[data.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()]; // data length + 128-bit mac
 
             fixed (byte* ctx = EncryptionContext)
             fixed (byte* pData = data)
@@ -421,6 +442,14 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException("No persisted priority");
 
             return (IndexPriority)priorityAsInt;
+        }
+
+        protected static long ReadVersion(BlittableJsonReaderObject reader)
+        {
+            if (reader.TryGet(nameof(Version), out long version) == false)
+                return IndexVersion.BaseVersion;
+
+            return version;
         }
     }
 }

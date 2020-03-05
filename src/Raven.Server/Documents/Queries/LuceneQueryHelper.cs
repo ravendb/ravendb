@@ -25,12 +25,12 @@ namespace Raven.Server.Documents.Queries
             return Term(fieldName, value, termType, exact: exact);
         }
 
-        public static Query Equal(string fieldName, LuceneTermType termType, long value)
+        public static Query Equal(string fieldName, long value)
         {
             return CreateRange(fieldName, value, true, value, true);
         }
 
-        public static Query Equal(string fieldName, LuceneTermType termType, double value)
+        public static Query Equal(string fieldName, double value)
         {
             return CreateRange(fieldName, value, true, value, true);
         }
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static Query NotEqual(string fieldName, LuceneTermType termType, long value)
+        public static Query NotEqual(string fieldName, long value)
         {
             return new BooleanQuery
             {
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static Query NotEqual(string fieldName, LuceneTermType termType, double value)
+        public static Query NotEqual(string fieldName, double value)
         {
             return new BooleanQuery
             {
@@ -67,12 +67,12 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, false, exact);
         }
 
-        public static Query LessThan(string fieldName, LuceneTermType termType, long value)
+        public static Query LessThan(string fieldName, long value)
         {
             return CreateRange(fieldName, long.MinValue, true, value, false);
         }
 
-        public static Query LessThan(string fieldName, LuceneTermType termType, double value)
+        public static Query LessThan(string fieldName, double value)
         {
             return CreateRange(fieldName, double.MinValue, true, value, false);
         }
@@ -82,12 +82,12 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, true, exact);
         }
 
-        public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, long value)
+        public static Query LessThanOrEqual(string fieldName, long value)
         {
             return CreateRange(fieldName, long.MinValue, true, value, true);
         }
 
-        public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, double value)
+        public static Query LessThanOrEqual(string fieldName, double value)
         {
             return CreateRange(fieldName, double.MinValue, true, value, true);
         }
@@ -97,12 +97,12 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, value, termType, false, Null, LuceneTermType.Null, true, exact);
         }
 
-        public static Query GreaterThan(string fieldName, LuceneTermType termType, long value)
+        public static Query GreaterThan(string fieldName, long value)
         {
             return CreateRange(fieldName, value, false, long.MaxValue, true);
         }
 
-        public static Query GreaterThan(string fieldName, LuceneTermType termType, double value)
+        public static Query GreaterThan(string fieldName, double value)
         {
             return CreateRange(fieldName, value, false, double.MaxValue, true);
         }
@@ -112,12 +112,12 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, value, termType, true, Null, LuceneTermType.Null, true, exact);
         }
 
-        public static Query GreaterThanOrEqual(string fieldName, LuceneTermType termType, long value)
+        public static Query GreaterThanOrEqual(string fieldName, long value)
         {
             return CreateRange(fieldName, value, true, long.MaxValue, true);
         }
 
-        public static Query GreaterThanOrEqual(string fieldName, LuceneTermType termType, double value)
+        public static Query GreaterThanOrEqual(string fieldName, double value)
         {
             return CreateRange(fieldName, value, true, double.MaxValue, true);
         }
@@ -127,12 +127,12 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, fromValue, termType, true, toValue, termType, true, exact);
         }
 
-        public static Query Between(string fieldName, LuceneTermType termType, long fromValue, long toValue)
+        public static Query Between(string fieldName, long fromValue, long toValue)
         {
             return CreateRange(fieldName, fromValue, true, toValue, true);
         }
 
-        public static Query Between(string fieldName, LuceneTermType termType, double fromValue, double toValue)
+        public static Query Between(string fieldName, double fromValue, double toValue)
         {
             return CreateRange(fieldName, fromValue, true, toValue, true);
         }
@@ -297,8 +297,8 @@ namespace Raven.Server.Documents.Queries
                 var res = sb.ToString();
                 expectedLength = res.Length;
                 Debug.Assert(expectedLength == term.Length,
-                    @"if analyzer changes length of term and removes wildcards after processing it, 
-there is no way to know where to put the wildcard character back after the analysis. 
+                    @"if analyzer changes length of term and removes wildcards after processing it,
+there is no way to know where to put the wildcard character back after the analysis.
 This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
                 return new Term(fieldName, res);
             }
@@ -319,8 +319,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
             var analyzedTermString = sb.ToString();
             expectedLength = analyzedTermString.Length;
             Debug.Assert(expectedLength == term.Length,
-                @"if analyzer changes length of term and removes wildcards after processing it, 
-there is no way to know where to put the wildcard character back after the analysis. 
+                @"if analyzer changes length of term and removes wildcards after processing it,
+there is no way to know where to put the wildcard character back after the analysis.
 This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
 
             return new Term(fieldName, analyzedTermString);
