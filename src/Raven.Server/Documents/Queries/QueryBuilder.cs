@@ -9,26 +9,26 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Spatial.Queries;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.Utils;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.LuceneIntegration;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Spatial4n.Core.Shapes;
+using Index = Raven.Server.Documents.Indexes.Index;
 using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.MoreLikeThisQuery;
 using Query = Raven.Server.Documents.Queries.AST.Query;
 using Version = Lucene.Net.Util.Version;
-using Raven.Client.Documents.Indexes;
-using Raven.Server.ServerWide.Commands;
-using Sparrow;
-using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -37,11 +37,11 @@ namespace Raven.Server.Documents.Queries
         private static readonly KeywordAnalyzer KeywordAnalyzer = new KeywordAnalyzer();
 
         public static Lucene.Net.Search.Query BuildQuery(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression,
-            IndexDefinitionBase indexDef, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
+            Index index, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var luceneQuery = ToLuceneQuery(serverContext, context, metadata.Query, whereExpression, metadata, indexDef, parameters, analyzer, factories);
+                var luceneQuery = ToLuceneQuery(serverContext, context, metadata.Query, whereExpression, metadata, index, parameters, analyzer, factories);
 
                 // The parser already throws parse exception if there is a syntax error.
                 // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Queries
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var filterQuery = BuildQuery(serverContext, context, metadata, whereExpression, indexDef: null, parameters, analyzer, factories);
+                var filterQuery = BuildQuery(serverContext, context, metadata, whereExpression, index: null, parameters, analyzer, factories);
                 var moreLikeThisQuery = ToMoreLikeThisQuery(serverContext, context, metadata.Query, whereExpression, metadata, parameters, analyzer, factories, out var baseDocument, out var options);
 
                 return new MoreLikeThisQuery
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Queries
 
             var firstArgument = moreLikeThisExpression.Arguments[0];
             if (firstArgument is BinaryExpression binaryExpression)
-                return ToLuceneQuery(serverContext, context, query, binaryExpression, metadata, indexDef: null, parameters, analyzer, factories);
+                return ToLuceneQuery(serverContext, context, query, binaryExpression, metadata, index: null, parameters, analyzer, factories);
 
             var firstArgumentValue = GetValueAsString(GetValue(query, metadata, parameters, firstArgument).Value);
             if (bool.TryParse(firstArgumentValue, out var firstArgumentBool))
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query ToLuceneQuery(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
-            QueryExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDef,
+            QueryExpression expression, QueryMetadata metadata, Index index,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Queries
 
                             var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
 
-                            exact = IsExact(indexDef, exact, fieldName);
+                            exact = IsExact(index, exact, fieldName);
 
                             var (value, valueType) = GetValue(query, metadata, parameters, right, true);
 
@@ -182,12 +182,19 @@ namespace Raven.Server.Documents.Queries
                             switch (fieldType)
                             {
                                 case LuceneFieldType.String:
-                                    var valueAsString = GetValueAsString(value);
-
                                     if (exact && metadata.IsDynamic)
                                         luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
 
                                     exact |= valueType == ValueTokenType.Parameter;
+
+                                    if (TryUseTime(index, fieldName, value, exact, out var ticks))
+                                    {
+                                        luceneFieldName = fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix;
+                                        value = ticks;
+                                        goto case LuceneFieldType.Long;
+                                    }
+
+                                    var valueAsString = GetValueAsString(value);
 
                                     switch (where.Operator)
                                     {
@@ -211,17 +218,17 @@ namespace Raven.Server.Documents.Queries
                                     switch (where.Operator)
                                     {
                                         case OperatorType.Equal:
-                                            return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsLong);
+                                            return LuceneQueryHelper.Equal(luceneFieldName, valueAsLong);
                                         case OperatorType.NotEqual:
-                                            return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsLong);
+                                            return LuceneQueryHelper.NotEqual(luceneFieldName, valueAsLong);
                                         case OperatorType.LessThan:
-                                            return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsLong);
+                                            return LuceneQueryHelper.LessThan(luceneFieldName, valueAsLong);
                                         case OperatorType.GreaterThan:
-                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsLong);
+                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, valueAsLong);
                                         case OperatorType.LessThanEqual:
-                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsLong);
+                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, valueAsLong);
                                         case OperatorType.GreaterThanEqual:
-                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsLong);
+                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, valueAsLong);
                                     }
                                     break;
                                 case LuceneFieldType.Double:
@@ -230,17 +237,17 @@ namespace Raven.Server.Documents.Queries
                                     switch (where.Operator)
                                     {
                                         case OperatorType.Equal:
-                                            return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsDouble);
+                                            return LuceneQueryHelper.Equal(luceneFieldName, valueAsDouble);
                                         case OperatorType.NotEqual:
-                                            return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsDouble);
+                                            return LuceneQueryHelper.NotEqual(luceneFieldName, valueAsDouble);
                                         case OperatorType.LessThan:
-                                            return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsDouble);
+                                            return LuceneQueryHelper.LessThan(luceneFieldName, valueAsDouble);
                                         case OperatorType.GreaterThan:
-                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsDouble);
+                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, valueAsDouble);
                                         case OperatorType.LessThanEqual:
-                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsDouble);
+                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, valueAsDouble);
                                         case OperatorType.GreaterThanEqual:
-                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsDouble);
+                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, valueAsDouble);
                                     }
                                     break;
                                 default:
@@ -250,51 +257,51 @@ namespace Raven.Server.Documents.Queries
                             throw new NotSupportedException("Should not happen!");
                         }
                     case OperatorType.And:
-                    {
-                        var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, indexDef, parameters, analyzer,
-                            factories, exact);
-                        var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, indexDef, parameters, analyzer,
-                            factories, exact);
-
-                        if (left is RavenBooleanQuery rbq)
                         {
-                            if (rbq.TryAnd(right) == false)
-                                rbq = new RavenBooleanQuery(left, right, OperatorType.And);
-                        }
-                        else
-                        {
-                            rbq = new RavenBooleanQuery(OperatorType.And);
-                            rbq.And(left, right);
-                        }
+                            var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
+                                factories, exact);
+                            var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
+                                factories, exact);
 
-                        return rbq;
-                    }
+                            if (left is RavenBooleanQuery rbq)
+                            {
+                                if (rbq.TryAnd(right) == false)
+                                    rbq = new RavenBooleanQuery(left, right, OperatorType.And);
+                            }
+                            else
+                            {
+                                rbq = new RavenBooleanQuery(OperatorType.And);
+                                rbq.And(left, right);
+                            }
+
+                            return rbq;
+                        }
                     case OperatorType.Or:
-                    {
-                        var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, indexDef, parameters, analyzer,
-                            factories, exact);
-                        var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, indexDef, parameters, analyzer,
-                            factories, exact);
-
-                        if (left is RavenBooleanQuery rbq)
                         {
-                            if (rbq.TryOr(right) == false)
-                                rbq = new RavenBooleanQuery(left, right, OperatorType.Or);
-                        }
-                        else
-                        {
-                            rbq = new RavenBooleanQuery(OperatorType.Or);
-                            rbq.Or(left, right);
-                        }
+                            var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
+                                factories, exact);
+                            var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
+                                factories, exact);
 
-                        return rbq;
-                    }
+                            if (left is RavenBooleanQuery rbq)
+                            {
+                                if (rbq.TryOr(right) == false)
+                                    rbq = new RavenBooleanQuery(left, right, OperatorType.Or);
+                            }
+                            else
+                            {
+                                rbq = new RavenBooleanQuery(OperatorType.Or);
+                                rbq.Or(left, right);
+                            }
+
+                            return rbq;
+                        }
                 }
             }
             if (expression is NegatedExpression ne)
             {
                 var inner = ToLuceneQuery(serverContext, documentsContext, query, ne.Expression,
-                    metadata, indexDef, parameters, analyzer, factories, exact);
+                    metadata, index, parameters, analyzer, factories, exact);
                 return new BooleanQuery
                 {
                     {inner,  Occur.MUST_NOT},
@@ -304,7 +311,6 @@ namespace Raven.Server.Documents.Queries
             if (expression is BetweenExpression be)
             {
                 var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
-                exact = IsExact(indexDef, exact, fieldName);
                 var (valueFirst, valueFirstType) = GetValue(query, metadata, parameters, be.Min);
                 var (valueSecond, _) = GetValue(query, metadata, parameters, be.Max);
 
@@ -313,17 +319,27 @@ namespace Raven.Server.Documents.Queries
                 switch (fieldType)
                 {
                     case LuceneFieldType.String:
+                        exact = IsExact(index, exact, fieldName);
+
+                        if (TryUseTime(index, fieldName, valueFirst, valueSecond, exact, out var ticksFirst, out var ticksSecond))
+                        {
+                            luceneFieldName = fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix;
+                            valueFirst = ticksFirst;
+                            valueSecond = ticksSecond;
+                            goto case LuceneFieldType.Long;
+                        }
+
                         var valueFirstAsString = GetValueAsString(valueFirst);
                         var valueSecondAsString = GetValueAsString(valueSecond);
                         return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsString, valueSecondAsString, exact);
                     case LuceneFieldType.Long:
                         var valueFirstAsLong = (long)valueFirst;
                         var valueSecondAsLong = (long)valueSecond;
-                        return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsLong, valueSecondAsLong);
+                        return LuceneQueryHelper.Between(luceneFieldName, valueFirstAsLong, valueSecondAsLong);
                     case LuceneFieldType.Double:
                         var valueFirstAsDouble = (double)valueFirst;
                         var valueSecondAsDouble = (double)valueSecond;
-                        return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsDouble, valueSecondAsDouble);
+                        return LuceneQueryHelper.Between(luceneFieldName, valueFirstAsDouble, valueSecondAsDouble);
                     default:
                         throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);
                 }
@@ -331,7 +347,7 @@ namespace Raven.Server.Documents.Queries
             if (expression is InExpression ie)
             {
                 var fieldName = ExtractIndexFieldName(query, parameters, ie.Source, metadata);
-                exact = IsExact(indexDef, exact, fieldName);
+                exact = IsExact(index, exact, fieldName);
                 var termType = LuceneTermType.Null;
                 var hasGotTheRealType = false;
 
@@ -390,9 +406,9 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Regex:
                         return HandleRegex(query, me, metadata, parameters, factories);
                     case MethodType.StartsWith:
-                        return HandleStartsWith(query, me, metadata, indexDef, parameters, exact);
+                        return HandleStartsWith(query, me, metadata, index, parameters, exact);
                     case MethodType.EndsWith:
-                        return HandleEndsWith(query, me, metadata, indexDef, parameters, exact);
+                        return HandleEndsWith(query, me, metadata, index, parameters, exact);
                     case MethodType.Lucene:
                         return HandleLucene(query, me, metadata, parameters, analyzer, exact);
                     case MethodType.Exists:
@@ -415,12 +431,77 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
         }
 
-        private static bool IsExact(IndexDefinitionBase indexDefinition, bool exact, QueryFieldName fieldName)
+        private static bool TryUseTime(Index index, string fieldName, object valueFirst, object valueSecond, bool exact, out long ticksFirst, out long ticksSecond)
+        {
+            ticksFirst = -1;
+            ticksSecond = -1;
+
+            if (exact || index == null || valueFirst == null || valueSecond == null || index.Definition.Version < IndexDefinitionBase.IndexVersion.TimeTicks)
+                return false;
+
+            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(valueFirst, out ticksFirst) && TryGetTime(valueSecond, out ticksSecond))
+                return true;
+
+            return false;
+        }
+
+        private static bool TryUseTime(Index index, string fieldName, object value, bool exact, out long ticks)
+        {
+            ticks = -1;
+
+            if (exact || index == null || value == null || index.Definition.Version < IndexDefinitionBase.IndexVersion.TimeTicks)
+                return false;
+
+            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(value, out ticks))
+                return true;
+
+            return false;
+        }
+
+        private unsafe static bool TryGetTime(object value, out long ticks)
+        {
+            ticks = -1;
+            DateTime dt = default;
+            DateTimeOffset dto = default;
+            LazyStringParser.Result result = LazyStringParser.Result.Failed;
+
+            switch (value)
+            {
+                case LazyStringValue lsv:
+                    result = LazyStringParser.TryParseDateTime(lsv.Buffer, lsv.Size, out dt, out dto);
+                    break;
+                case string valueAsString:
+                    fixed (char* buffer = valueAsString)
+                        result = LazyStringParser.TryParseDateTime(buffer, valueAsString.Length, out dt, out dto);
+                    break;
+                default:
+                    var otherAsString = value.ToString();
+                    fixed (char* buffer = otherAsString)
+                        result = LazyStringParser.TryParseDateTime(buffer, otherAsString.Length, out dt, out dto);
+                    break;
+            }
+
+            switch (result)
+            {
+                case LazyStringParser.Result.Failed:
+                    return false;
+                case LazyStringParser.Result.DateTime:
+                    ticks = dt.Ticks;
+                    return true;
+                case LazyStringParser.Result.DateTimeOffset:
+                    ticks = dto.UtcDateTime.Ticks; // TODO [ppekrol]
+                    return true;
+                default:
+                    throw new InvalidOperationException("Should not happen!");
+            }
+        }
+
+        private static bool IsExact(Index index, bool exact, QueryFieldName fieldName)
         {
             if (exact)
                 return true;
 
-            if (indexDefinition?.IndexFields != null && indexDefinition.IndexFields.TryGetValue(fieldName, out var indexingOptions))
+            if (index?.Definition?.IndexFields != null && index.Definition.IndexFields.TryGetValue(fieldName, out var indexingOptions))
                 return indexingOptions.Indexing == FieldIndexing.Exact;
 
             return false;
@@ -587,7 +668,7 @@ namespace Raven.Server.Documents.Queries
             return parser.Parse(GetValueAsString(value));
         }
 
-        private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDefinition, BlittableJsonReaderObject parameters, bool exact)
+        private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, Index index, BlittableJsonReaderObject parameters, bool exact)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
@@ -601,7 +682,7 @@ namespace Raven.Server.Documents.Queries
             else
                 valueAsString += LuceneQueryHelper.Asterisk;
 
-            exact = IsExact(indexDefinition, exact, fieldName);
+            exact = IsExact(index, exact, fieldName);
 
             if (exact && metadata.IsDynamic)
                 fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
@@ -609,7 +690,7 @@ namespace Raven.Server.Documents.Queries
             return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.Prefix, exact: exact);
         }
 
-        private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDefinition, BlittableJsonReaderObject parameters, bool exact)
+        private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, Index index, BlittableJsonReaderObject parameters, bool exact)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
@@ -622,7 +703,7 @@ namespace Raven.Server.Documents.Queries
                 ? LuceneQueryHelper.Asterisk
                 : valueAsString.Insert(0, LuceneQueryHelper.Asterisk);
 
-            exact = IsExact(indexDefinition, exact, fieldName);
+            exact = IsExact(index, exact, fieldName);
 
             if (exact && metadata.IsDynamic)
                 fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
@@ -635,7 +716,7 @@ namespace Raven.Server.Documents.Queries
         {
             var proximity = int.Parse(((ValueExpression)expression.Arguments[1]).Token.Value);
 
-            return ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, indexDef: null, parameters, analyzer, factories, exact, proximity);
+            return ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, index: null, parameters, analyzer, factories, exact, proximity);
         }
 
         private static Lucene.Net.Search.Query HandleFuzzy(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
@@ -643,7 +724,7 @@ namespace Raven.Server.Documents.Queries
         {
             var similarity = float.Parse(((ValueExpression)expression.Arguments[1]).Token.Value);
 
-            var q = ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, indexDef: null, parameters, analyzer, factories, exact);
+            var q = ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, index: null, parameters, analyzer, factories, exact);
             var tq = q as TermQuery;
             if (tq == null)
                 throw new InvalidQueryException("Fuzzy only works on term queries", metadata.QueryText, parameters); // should not happen
@@ -654,7 +735,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleBoost(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact)
         {
-            if(expression.Arguments.Count != 2)
+            if (expression.Arguments.Count != 2)
             {
                 throw new InvalidQueryException($"Boost(expression, boostVal) requires two arguments, but was called with {expression.Arguments.Count}",
                     metadata.QueryText, parameters);
@@ -667,7 +748,7 @@ namespace Raven.Server.Documents.Queries
                     metadata.QueryText, parameters);
             }
 
-            var q = ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, indexDef: null, parameters, analyzer, factories, exact);
+            var q = ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, index: null, parameters, analyzer, factories, exact);
             q.Boost = boost;
 
             return q;
@@ -731,7 +812,6 @@ namespace Raven.Server.Documents.Queries
                 return pq;
             }
 
-
             BooleanQuery q = null;
             var occur = Occur.SHOULD;
             Lucene.Net.Search.Query firstQuery = null;
@@ -742,29 +822,27 @@ namespace Raven.Server.Documents.Queries
                 {
                     firstQuery = t;
                     continue;
-            }
-
+                }
 
                 if (q == null)
                 {
                     q = new BooleanQuery();
 
-            if (expression.Arguments.Count == 3)
-            {
-                var fieldExpression = (FieldExpression)expression.Arguments[2];
-                if (fieldExpression.Compound.Count != 1)
-                    ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
+                    if (expression.Arguments.Count == 3)
+                    {
+                        var fieldExpression = (FieldExpression)expression.Arguments[2];
+                        if (fieldExpression.Compound.Count != 1)
+                            ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
 
-                var op = fieldExpression.Compound[0];
+                        var op = fieldExpression.Compound[0];
 
-                if (string.Equals("AND", op.Value, StringComparison.OrdinalIgnoreCase))
-                    occur = Occur.MUST;
-
-                else if (string.Equals("OR", op.Value, StringComparison.OrdinalIgnoreCase))
-                    occur = Occur.SHOULD;
-                else
-                    ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
-            }
+                        if (string.Equals("AND", op.Value, StringComparison.OrdinalIgnoreCase))
+                            occur = Occur.MUST;
+                        else if (string.Equals("OR", op.Value, StringComparison.OrdinalIgnoreCase))
+                            occur = Occur.SHOULD;
+                        else
+                            ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
+                    }
 
                     q.Add(firstQuery, occur);
                     firstQuery = null;
@@ -826,8 +904,7 @@ namespace Raven.Server.Documents.Queries
                                     escapePositions = new List<int>(16);
 
                                 escapePositions.Add(nextCharIndex - 1);
-        }
-
+                            }
                         } while (shouldContinue);
 
                         if (nextCharIndex == -1)
@@ -1023,7 +1100,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleExact(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
-            return ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, indexDef: null, parameters, analyzer, factories, exact: true);
+            return ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, index: null, parameters, analyzer, factories, exact: true);
         }
 
         public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,

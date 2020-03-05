@@ -82,26 +82,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             switch (_index.Type)
             {
                 case IndexType.AutoMap:
-                    _converter = new LuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, indexEmptyEntries: true);
+                    _converter = new LuceneDocumentConverter(index, indexEmptyEntries: true);
                     break;
                 case IndexType.AutoMapReduce:
-                    _converter = new LuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, indexEmptyEntries: true, storeValue: true);
+                    _converter = new LuceneDocumentConverter(index, indexEmptyEntries: true, storeValue: true);
                     break;
                 case IndexType.MapReduce:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, storeValue: true);
+                    _converter = new AnonymousLuceneDocumentConverter(index, storeValue: true);
                     break;
                 case IndexType.Map:
                     _converter = _index.SourceType == IndexSourceType.Documents
-                        ? (LuceneDocumentConverterBase)new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries)
-                        : new TimeSeriesAnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
+                        ? (LuceneDocumentConverterBase)new AnonymousLuceneDocumentConverter(index)
+                        : new TimeSeriesAnonymousLuceneDocumentConverter(index);
                     break;
                 case IndexType.JavaScriptMap:
                     _converter = _index.SourceType == IndexSourceType.Documents
-                        ? (LuceneDocumentConverterBase)new JintLuceneDocumentConverter(fields, (MapIndexDefinition)index.Definition, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries)
-                        : new TimeSeriesJintLuceneDocumentConverter(fields, (MapIndexDefinition)index.Definition, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
+                        ? (LuceneDocumentConverterBase)new JintLuceneDocumentConverter((MapIndex)index)
+                        : new TimeSeriesJintLuceneDocumentConverter((MapIndex)index);
                     break;
                 case IndexType.JavaScriptMapReduce:
-                    _converter = new JintLuceneDocumentConverter(fields, (MapReduceIndexDefinition)index.Definition, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, storeValue: true);
+                    _converter = new JintLuceneDocumentConverter((MapReduceIndex)index, storeValue: true);
                     break;
                 case IndexType.Faulty:
                     _converter = null;

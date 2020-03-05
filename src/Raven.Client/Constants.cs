@@ -265,6 +265,8 @@ namespace Raven.Client
 
                     public const string RangeFieldSuffixDouble = "_D" + RangeFieldSuffix;
 
+                    internal const string TimeFieldSuffix = "_Time";
+
                     public const string NullValue = "NULL_VALUE";
 
                     public const string EmptyString = "EMPTY_STRING";

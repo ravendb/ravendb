@@ -74,6 +74,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected readonly Dictionary<string, IndexField> _fields;
         private readonly bool _indexImplicitNull;
         private readonly bool _indexEmptyEntries;
+        private readonly Index _index;
         private readonly int _numberOfBaseFields;
         private readonly string _keyFieldName;
         protected readonly bool _storeValue;
@@ -89,13 +90,32 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         protected LuceneDocumentConverterBase(
-            ICollection<IndexField> fields,
-            bool indexImplicitNull,
+            Index index,
             bool indexEmptyEntries,
             int numberOfBaseFields,
             string keyFieldName = null,
             bool storeValue = false,
             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+            : this(
+                  index.Definition.IndexFields.Values,
+                  index.Configuration.IndexMissingFieldsAsNull,
+                  indexEmptyEntries,
+                  numberOfBaseFields,
+                  keyFieldName,
+                  storeValue,
+                  storeValueFieldName)
+        {
+            _index = index ?? throw new ArgumentNullException(nameof(index));
+        }
+
+        protected LuceneDocumentConverterBase(
+             ICollection<IndexField> fields,
+             bool indexImplicitNull,
+             bool indexEmptyEntries,
+             int numberOfBaseFields,
+             string keyFieldName = null,
+             bool storeValue = false,
+             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
         {
             var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
             foreach (var field in fields)
@@ -104,6 +124,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
+
             _numberOfBaseFields = numberOfBaseFields;
             _keyFieldName = keyFieldName ?? (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
             _storeValue = storeValue;
@@ -252,6 +273,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 instance.Add(GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector));
                 newFields++;
+
+                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTime.Ticks, Field.Store.NO));
+                newFields++;
+
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
+
                 return newFields;
             }
 
@@ -267,6 +294,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 instance.Add(GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector));
                 newFields++;
+
+                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTimeOffset.UtcDateTime.Ticks, Field.Store.NO)); // TODO [ppekrol] UTC?
+                newFields++;
+
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
+
                 return newFields;
             }
 
@@ -615,6 +648,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     yield return numericFieldLong.SetLongValue(longValue);
                     break;
             }
+        }
+
+        private NumericField GerOrCreateNumericLongField(string name, long value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
+        {
+            var numericFieldLong = GetNumericFieldFromCache(name, null, storage, termVector);
+            return numericFieldLong.SetLongValue(value);
         }
 
         private NumericField GetNumericFieldFromCache(string name, Field.Index? index, Field.Store store, Field.TermVector termVector)

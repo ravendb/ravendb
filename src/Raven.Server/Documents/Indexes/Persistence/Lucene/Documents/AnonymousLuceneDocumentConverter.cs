@@ -10,8 +10,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public sealed class AnonymousLuceneDocumentConverter : AnonymousLuceneDocumentConverterBase
     {
+        public AnonymousLuceneDocumentConverter(Index index, bool storeValue = false)
+            : base(index, numberOfBaseFields: 1, storeValue: storeValue)
+        {
+        }
+
+        [Obsolete("Used for testing purposes only")]
         public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false)
-            : base(fields, isMultiMap, indexImplicitNull, indexEmptyEntries, numberOfBaseFields: 1, storeValue: storeValue)
+                    : base(fields, isMultiMap, indexImplicitNull, indexEmptyEntries, numberOfBaseFields: 1, storeValue: storeValue)
         {
         }
     }
@@ -21,8 +27,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly bool _isMultiMap;
         private IPropertyAccessor _propertyAccessor;
 
+        protected AnonymousLuceneDocumentConverterBase(Index index, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+            : base(index, index.Configuration.IndexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
+        {
+            _isMultiMap = index.IsMultiMap;
+        }
+
+        [Obsolete("Used for testing purposes only")]
         protected AnonymousLuceneDocumentConverterBase(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
-            : base(fields, indexImplicitNull, indexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
+          : base(fields, indexImplicitNull, indexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
         {
             _isMultiMap = isMultiMap;
         }

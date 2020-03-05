@@ -13,6 +13,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly BlittableJsonTraverser _blittableTraverser;
 
+        public LuceneDocumentConverter(Index index, bool indexEmptyEntries = true, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+            : base(index, indexEmptyEntries, numberOfBaseFields: 1, keyFieldName, storeValue, storeValueFieldName)
+        {
+            _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
+        }
+
         public LuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = true, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
             : base(fields, indexImplicitNull, indexEmptyEntries, numberOfBaseFields: 1, keyFieldName, storeValue, storeValueFieldName)
         {

@@ -17,13 +17,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public sealed class JintLuceneDocumentConverter : JintLuceneDocumentConverterBase
     {
-        public JintLuceneDocumentConverter(ICollection<IndexField> fields, MapIndexDefinition definition, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false)
-            : base(fields, definition.IndexDefinition, indexImplicitNull, indexEmptyEntries, storeValue: storeValue)
+        public JintLuceneDocumentConverter(MapIndex index, bool storeValue = false)
+            : base(index, index.Definition.IndexDefinition, storeValue: storeValue)
         {
         }
 
-        public JintLuceneDocumentConverter(ICollection<IndexField> fields, MapReduceIndexDefinition definition, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false)
-            : base(fields, definition.IndexDefinition, indexImplicitNull, indexEmptyEntries, storeValue: storeValue)
+        public JintLuceneDocumentConverter(MapReduceIndex index, bool storeValue = false)
+            : base(index, index.Definition.IndexDefinition, storeValue: storeValue)
         {
         }
     }
@@ -32,10 +32,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly IndexFieldOptions _allFields;
 
-        protected JintLuceneDocumentConverterBase(ICollection<IndexField> fields, IndexDefinition definition, bool indexImplicitNull = false, bool indexEmptyEntries = false, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
-            : base(fields, indexImplicitNull, indexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
+        protected JintLuceneDocumentConverterBase(Index index, IndexDefinition indexDefinition, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+            : base(index, index.Configuration.IndexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
         {
-            definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
+            indexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
         }
 
         private const string CreatedFieldValuePropertyName = "$value";

@@ -121,6 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     definition.Name = ReadName(reader);
                     definition.LockMode = ReadLockMode(reader);
                     definition.Priority = ReadPriority(reader);
+                    definition.Version = ReadVersion(reader);
 
                     return definition;
                 }

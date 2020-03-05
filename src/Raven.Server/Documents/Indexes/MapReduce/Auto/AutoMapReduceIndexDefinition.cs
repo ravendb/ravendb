@@ -171,6 +171,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             var lockMode = ReadLockMode(reader);
             var priority = ReadPriority(reader);
+            var version = ReadVersion(reader);
 
             if (reader.TryGet(nameof(Collections), out BlittableJsonReaderArray jsonArray) == false)
                 throw new InvalidOperationException("No persisted collections");
@@ -227,7 +228,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields)
             {
                 LockMode = lockMode,
-                Priority = priority
+                Priority = priority,
+                Version = version
             };
         }
     }

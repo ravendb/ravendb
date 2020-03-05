@@ -22,6 +22,9 @@ namespace Raven.Client.Documents.Indexes
             _configuration = new IndexConfiguration();
         }
 
+        [JsonIgnore]
+        internal long Version { get; set; }
+
         /// <summary>
         /// This is the means by which the outside world refers to this index definition
         /// </summary>
@@ -382,7 +385,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Defines pattern for identifiers of documents which reference IDs of reduce outputs documents
         /// </summary>
-        public string PatternForOutputReduceToCollectionReferences{ get; set; }
+        public string PatternForOutputReduceToCollectionReferences { get; set; }
 
         /// <summary>
         /// Defines a collection name for reference documents created based on provided pattern
