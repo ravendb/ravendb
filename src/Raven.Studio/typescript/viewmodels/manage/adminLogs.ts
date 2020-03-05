@@ -196,9 +196,12 @@ class adminLogs extends viewModelBase {
     
     // noinspection JSMethodCanBeStatic
     itemHtmlProvider(item: string) {
+        const errorClass = this.hasError(item) ? "class='bg-danger'" : "";
+
         return $("<pre class='item'></pre>")
-            .toggleClass("bg-danger", this.hasError(item))
-            .text(item);
+            .addClass("flex-horizontal")
+            .prepend(`<span ${errorClass}>${item}</span>`)
+            .prepend("<a href='#' class='copy-item margin-right margin-right-sm flex-start' title='Copy log msg to clipboard'><i class='icon-copy'></i></a>");
     }
     
     compositionComplete() {
@@ -211,6 +214,12 @@ class adminLogs extends viewModelBase {
             }
             
             this.duringManualScrollEvent = false;
+        });
+      
+        $( ".list-view" ).on( "click", "a", function(event) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            copyToClipboard.copy($(this).parent().children().last().text(), "Log message has been copied to clipboard");
         });
     }
     
