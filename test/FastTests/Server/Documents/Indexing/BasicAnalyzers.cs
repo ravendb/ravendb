@@ -164,6 +164,8 @@ namespace FastTests.Server.Documents.Indexing
 
     internal class TestIndexDefinitions : IndexDefinitionBase
     {
+        public override long Version => IndexVersion.CurrentVersion;
+
         public TestIndexDefinitions()
         {
             Collections = new HashSet<string> { Constants.Documents.Collections.AllDocumentsCollection };

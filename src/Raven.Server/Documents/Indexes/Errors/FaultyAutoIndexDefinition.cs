@@ -10,9 +10,8 @@ namespace Raven.Server.Documents.Indexes.Errors
     {
         public readonly AutoIndexDefinitionBase Definition;
 
-        public FaultyAutoIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority,
-            IndexField[] mapFields, AutoIndexDefinitionBase definition)
-            : base(name, collections, lockMode, priority, mapFields)
+        public FaultyAutoIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexField[] mapFields, AutoIndexDefinitionBase definition)
+            : base(name, collections, lockMode, priority, mapFields, definition.Version)
         {
             Definition = definition;
         }

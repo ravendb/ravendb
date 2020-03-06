@@ -22,9 +22,6 @@ namespace Raven.Client.Documents.Indexes
             _configuration = new IndexConfiguration();
         }
 
-        [JsonIgnore]
-        internal long? Version { get; set; }
-
         /// <summary>
         /// This is the means by which the outside world refers to this index definition
         /// </summary>

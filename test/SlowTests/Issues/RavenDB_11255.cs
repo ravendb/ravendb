@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
                     for (int i = 0; i < 10; i++)
                     {
-                        persistedDef = MapIndexDefinition.Load(index._indexStorage.Environment());
+                        persistedDef = MapIndexDefinition.Load(index._indexStorage.Environment(), out var version);
 
                         if (persistedDef.Priority == IndexPriority.High)
                             break;
