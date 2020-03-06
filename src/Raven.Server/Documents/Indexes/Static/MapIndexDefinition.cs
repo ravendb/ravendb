@@ -15,17 +15,16 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly bool _hasDynamicFields;
         private readonly bool _hasCompareExchange;
+
         public readonly IndexDefinition IndexDefinition;
 
-        public MapIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields, bool hasCompareExchange)
-            : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, GetFields(definition, outputFields))
+        public MapIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields, bool hasCompareExchange, long indexVersion)
+            : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, GetFields(definition, outputFields), indexVersion)
         {
             _hasDynamicFields = hasDynamicFields;
             _hasCompareExchange = hasCompareExchange;
             IndexDefinition = definition;
         }
-
-        public override long Version => IndexDefinition.Version ?? IndexVersion.CurrentVersion;
 
         public override bool HasDynamicFields => _hasDynamicFields;
 
@@ -111,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return hashCode * 397 ^ IndexDefinition.GetHashCode();
         }
 
-        public static IndexDefinition Load(StorageEnvironment environment)
+        public static IndexDefinition Load(StorageEnvironment environment, out long version)
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var tx = environment.ReadTransaction())
@@ -123,7 +122,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     definition.Name = ReadName(reader);
                     definition.LockMode = ReadLockMode(reader);
                     definition.Priority = ReadPriority(reader);
-                    definition.Version = ReadVersion(reader);
+
+                    version = ReadVersion(reader);
 
                     return definition;
                 }
@@ -136,11 +136,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException("No persisted definition");
 
             return JsonDeserializationServer.IndexDefinition(jsonObject);
-        }
-
-        internal override void Reset()
-        {
-            IndexDefinition.Version = IndexVersion.CurrentVersion;
         }
     }
 }

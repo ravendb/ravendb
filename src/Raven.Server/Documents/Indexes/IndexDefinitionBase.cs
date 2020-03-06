@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes
     {
         public string Name { get; protected set; }
 
-        public virtual long Version => IndexVersion.CurrentVersion;
+        public abstract long Version { get; }
 
         public HashSet<string> Collections { get; protected set; }
 
@@ -135,10 +135,10 @@ namespace Raven.Server.Documents.Indexes
         protected const string MetadataFileName = "metadata";
 
         protected static readonly Slice DefinitionSlice;
-
+        private long _indexVersion;
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields)
+        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields, long indexVersion)
         {
             Name = name;
             Collections = collections;
@@ -163,6 +163,7 @@ namespace Raven.Server.Documents.Indexes
 
             LockMode = lockMode;
             Priority = priority;
+            _indexVersion = indexVersion;
         }
 
         static IndexDefinitionBase()
@@ -171,6 +172,13 @@ namespace Raven.Server.Documents.Indexes
             {
                 Slice.From(ctx, "Definition", ByteStringType.Immutable, out DefinitionSlice);
             }
+        }
+
+        public override long Version => _indexVersion;
+
+        internal override void Reset()
+        {
+            _indexVersion = IndexVersion.CurrentVersion;
         }
 
         public override void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)

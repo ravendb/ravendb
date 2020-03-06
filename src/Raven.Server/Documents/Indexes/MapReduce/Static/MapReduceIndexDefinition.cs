@@ -6,9 +6,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class MapReduceIndexDefinition : MapIndexDefinition
     {
-        public MapReduceIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields,
-            CompiledIndexField[] groupByFields, bool hasDynamicFields, bool hasCompareExchange)
-            : base(definition, collections, outputFields, hasDynamicFields, hasCompareExchange)
+        public MapReduceIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, CompiledIndexField[] groupByFields, bool hasDynamicFields, bool hasCompareExchange, long indexVersion)
+            : base(definition, collections, outputFields, hasDynamicFields, hasCompareExchange, indexVersion)
         {
             GroupByFields = new HashSet<CompiledIndexField>(groupByFields);
             OutputReduceToCollection = definition.OutputReduceToCollection;

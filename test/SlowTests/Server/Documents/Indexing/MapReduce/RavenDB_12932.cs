@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
@@ -308,8 +309,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndexes().First();
 
-                var definition = MapIndexDefinition.Load(index._environment);
+                var definition = MapIndexDefinition.Load(index._environment, out var version);
                 Assert.NotNull(definition.PatternForOutputReduceToCollectionReferences);
+                Assert.Equal(IndexDefinitionBase.IndexVersion.CurrentVersion, version);
 
                 Assert.Equal("CustomCollection", definition.PatternReferencesCollectionName);
 
