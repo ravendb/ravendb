@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -175,6 +176,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
+            Debug.Assert(definition.Version == null, "definition.Version == null");
+
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
             instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),

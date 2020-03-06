@@ -68,7 +68,9 @@ namespace SlowTests.Tests.Indexes
                     .Select(x => IndexField.Create(x, new IndexFieldOptions(), null))
                     .ToList();
 
+#pragma warning disable CS0618 // Type or member is obsolete
                 var converter = new AnonymousLuceneDocumentConverter(fields, false);
+#pragma warning restore CS0618 // Type or member is obsolete
                 foreach (var result in results)
                 {
                     using (var lazyStringValue = context.GetLazyString("docs/1"))

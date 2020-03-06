@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException();
 
             _initialized = true;
-            _timeFields = _index._indexStorage.ReadIndexFields();
+            _timeFields = _index._indexStorage.ReadIndexTimeFields();
         }
 
         internal void MarkHasTimeValue(string fieldName)
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes
             if (_timeFieldsToWrite == null)
                 return;
 
-            _index._indexStorage.WriteIndexFields(indexContext.Transaction, _timeFieldsToWrite);
+            _index._indexStorage.WriteIndexTimeFields(indexContext.Transaction, _timeFieldsToWrite);
 
             indexContext.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
             {

@@ -11,8 +11,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoMapIndexDefinition : AutoIndexDefinitionBase
     {
-        public AutoMapIndexDefinition(string collection, AutoIndexField[] fields)
-            : base(AutoIndexNameFinder.FindMapIndexName(collection, fields), collection, fields)
+        public AutoMapIndexDefinition(string collection, AutoIndexField[] fields, long? indexVersion = null)
+            : base(AutoIndexNameFinder.FindMapIndexName(collection, fields), collection, fields, indexVersion)
         {
         }
 
@@ -139,11 +139,10 @@ namespace Raven.Server.Documents.Indexes.Auto
                 fields[i] = field;
             }
 
-            return new AutoMapIndexDefinition(collections[0], fields)
+            return new AutoMapIndexDefinition(collections[0], fields, version)
             {
                 LockMode = lockMode,
-                Priority = priority,
-                Version = version
+                Priority = priority
             };
         }
     }

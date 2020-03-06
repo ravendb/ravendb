@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -284,6 +285,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false)
             where TStaticIndex : MapReduceIndex
         {
+            Debug.Assert(definition.Version == null, "definition.Version == null");
+
             TStaticIndex instance;
             if (typeof(TStaticIndex) == typeof(MapReduceIndex))
                 instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex, StaticIndexBase>(definition, documentDatabase.Configuration, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex));

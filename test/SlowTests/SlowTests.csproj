@@ -28,6 +28,8 @@
     <None Remove="Data\RavenDB_13512\Incremental\18-01.ravendb-incremental-backup" />
     <None Remove="Data\RavenDB_13512\Incremental\18.ravendb-incremental-backup" />
     <None Remove="Data\RavenDB-13937.ravendbdump" />
+    <None Remove="Data\RavenDB_13759\Auto_Orders_ByOrderedAt.zip" />
+    <None Remove="Data\RavenDB_13759\Orders_ByOrderBy.zip" />
     <None Remove="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data-2.zip" />
     <None Remove="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data.zip" />
   </ItemGroup>
@@ -77,6 +79,8 @@
     <EmbeddedResource Include="Data\RavenDB_13512\Incremental\17.ravendb-full-backup" />
     <EmbeddedResource Include="Data\RavenDB_13512\Incremental\18-01.ravendb-incremental-backup" />
     <EmbeddedResource Include="Data\RavenDB_13512\Incremental\18.ravendb-incremental-backup" />
+    <EmbeddedResource Include="Data\RavenDB_13759\Auto_Orders_ByOrderedAt.zip" />
+    <EmbeddedResource Include="Data\RavenDB_13759\Orders_ByOrderBy.zip" />
     <EmbeddedResource Include="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data-2.zip" />
     <EmbeddedResource Include="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data.zip" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />

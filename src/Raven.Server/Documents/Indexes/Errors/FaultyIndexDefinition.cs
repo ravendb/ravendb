@@ -49,5 +49,9 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
             return _definition.Compare(indexDefinition);
         }
+
+        internal override void Reset()
+        {
+        }
     }
 }

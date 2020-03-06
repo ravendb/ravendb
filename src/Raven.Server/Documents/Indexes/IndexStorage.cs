@@ -734,7 +734,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal HashSet<string> ReadIndexFields()
+        internal HashSet<string> ReadIndexTimeFields()
         {
             var fields = new HashSet<string>();
 
@@ -759,7 +759,7 @@ namespace Raven.Server.Documents.Indexes
             return fields;
         }
 
-        internal void WriteIndexFields(RavenTransaction tx, HashSet<string> timeFieldsToAdd)
+        internal void WriteIndexTimeFields(RavenTransaction tx, HashSet<string> timeFieldsToAdd)
         {
             var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.FieldsTree);
 

@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes
     {
         public string Name { get; protected set; }
 
-        public long Version { get; protected set; }
+        public virtual long Version => IndexVersion.CurrentVersion;
 
         public HashSet<string> Collections { get; protected set; }
 
@@ -30,11 +30,6 @@ namespace Raven.Server.Documents.Indexes
         public virtual bool HasDynamicFields => false;
 
         public virtual bool HasCompareExchange => false;
-
-        protected IndexDefinitionBase()
-        {
-            Version = IndexVersion.CurrentVersion;
-        }
 
         public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
         {
@@ -107,6 +102,8 @@ namespace Raven.Server.Documents.Indexes
         {
             return MapFields.ContainsKey(name);
         }
+
+        internal abstract void Reset();
 
         protected abstract void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);
 
