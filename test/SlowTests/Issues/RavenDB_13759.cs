@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
 using Xunit;
@@ -160,6 +162,36 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void WhenUsingExactOnDateTimeOffsetWeShouldBeAbleToQueryByThisValue()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Orders_ByOrderBy_DateTimeOffset().Execute(store);
+
+                var now = DateTime.Now;
+                var offsetNow = DateTimeOffset.Now;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order_DateTimeOffset { OrderedAt = now, ShippedAt = offsetNow });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession(new SessionOptions { NoCaching = true }))
+                {
+                    var orders = session.Query<Order_DateTimeOffset, Orders_ByOrderBy_DateTimeOffset>()
+                        .Where(x => x.ShippedAt == offsetNow, exact: true)
+                        .ToList();
+
+                    Assert.Equal(1, orders.Count);
+                }
+            }
+        }
+
         private class Orders_ByOrderBy : AbstractIndexCreationTask<Order>
         {
             public Orders_ByOrderBy()
@@ -171,6 +203,28 @@ namespace SlowTests.Issues
                                     o.ShippedAt
                                 };
             }
+        }
+
+        private class Orders_ByOrderBy_DateTimeOffset : AbstractIndexCreationTask<Order_DateTimeOffset>
+        {
+            public Orders_ByOrderBy_DateTimeOffset()
+            {
+                Map = orders => from o in orders
+                                select new
+                                {
+                                    o.OrderedAt,
+                                    o.ShippedAt
+                                };
+
+                Index(x => x.ShippedAt, FieldIndexing.Exact);
+            }
+        }
+
+        private class Order_DateTimeOffset
+        {
+            public DateTime OrderedAt { get; set; }
+
+            public DateTimeOffset? ShippedAt { get; set; }
         }
 
         private static Stream GetFile(string name)

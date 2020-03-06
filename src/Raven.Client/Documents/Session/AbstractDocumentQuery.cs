@@ -23,6 +23,7 @@ using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -904,7 +905,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public void WhereLessThanOrEqual(string fieldName, object value, bool exact = false)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-        
+
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
@@ -928,7 +929,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public void WhereRegex(string fieldName, string pattern)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-            
+
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
@@ -1697,8 +1698,14 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (_conventions.TryConvertValueToObjectForQuery(whereParams.FieldName, whereParams.Value, forRange, out var objValue))
                 return objValue;
 
-            if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
+            if (type == typeof(DateTime))
                 return whereParams.Value;
+            if (type == typeof(DateTimeOffset))
+            {
+                return whereParams.Exact
+                    ? ((DateTimeOffset)whereParams.Value).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture)
+                    : whereParams.Value;
+            }
             if (type == typeof(string))
                 return (string)whereParams.Value;
             if (type == typeof(int))
