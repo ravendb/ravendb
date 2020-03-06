@@ -579,11 +579,19 @@ namespace Raven.Client.Http
             SessionInfo sessionInfo,
             CancellationToken token)
         {
+            await WaitForTopologyUpdate(topologyUpdate).ConfigureAwait(false);
+
+            var (currentIndex, currentNode) = ChooseNodeForRequest(command, sessionInfo);
+            await ExecuteAsync(currentNode, currentIndex, context, command, true, sessionInfo, token).ConfigureAwait(false);
+        }
+
+        private async Task WaitForTopologyUpdate(Task topologyUpdate)
+        {
             try
             {
                 if (topologyUpdate == null ||
-                    // if we previous have a topology error, let's see if we can refresh this
-                    // can happen if user tried a request to a db that didn't exist, created it, then try immediately
+                    // if we previously had a topology error, let's see if we can refresh this
+                    // can happen if the user tried a request to a db that didn't exist, created it, then tried immediately
                     topologyUpdate.IsFaulted) 
                 {
                     lock (this)
@@ -591,12 +599,18 @@ namespace Raven.Client.Http
                         if (_firstTopologyUpdate == null || topologyUpdate == _firstTopologyUpdate)
                         {
                             if (_lastKnownUrls == null)
+                            {
+                                // shouldn't happen
                                 throw new InvalidOperationException("No known topology and no previously known one, cannot proceed, likely a bug");
+                            }
+
                             _firstTopologyUpdate = FirstTopologyUpdate(_lastKnownUrls);
                         }
+
                         topologyUpdate = _firstTopologyUpdate;
                     }
                 }
+
                 await topologyUpdate.ConfigureAwait(false);
             }
             catch (Exception)
@@ -606,11 +620,9 @@ namespace Raven.Client.Http
                     if (_firstTopologyUpdate == topologyUpdate)
                         _firstTopologyUpdate = null; // next request will raise it
                 }
+
                 throw;
             }
-
-            var (currentIndex, currentNode) = ChooseNodeForRequest(command, sessionInfo);
-            await ExecuteAsync(currentNode, currentIndex, context, command, true, sessionInfo, token).ConfigureAwait(false);
         }
 
         private void UpdateTopologyCallback(object _)
@@ -738,7 +750,7 @@ namespace Raven.Client.Http
             throw new AggregateException(message, list.Select(x => x.Item2));
         }
 
-        protected static string[] ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
+        internal static string[] ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
         {
             var cleanUrls = new string[initialUrls.Length];
             var requireHttps = certificate != null;
@@ -746,7 +758,8 @@ namespace Raven.Client.Http
             {
                 var url = initialUrls[index];
                 if (Uri.TryCreate(url, UriKind.Absolute, out var uri) == false)
-                    throw new InvalidOperationException("The url '" + url + "' is not valid");
+                    throw new InvalidOperationException($"'{url}' is not a valid url");
+
                 cleanUrls[index] = uri.ToString().TrimEnd('/', ' ');
                 requireHttps |= string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase);
             }
@@ -762,9 +775,9 @@ namespace Raven.Client.Http
                     continue;
 
                 if (certificate != null)
-                    throw new InvalidOperationException("The url " + url + " is using HTTP, but a certificate is specified, which require us to use HTTPS");
+                    throw new InvalidOperationException($"The url {url} is using HTTP, but a certificate is specified, which require us to use HTTPS");
 
-                throw new InvalidOperationException("The url " + url + " is using HTTP, but other urls are using HTTPS, and mixing of HTTP and HTTPS is not allowed");
+                throw new InvalidOperationException($"The url {url} is using HTTP, but other urls are using HTTPS, and mixing of HTTP and HTTPS is not allowed");
             }
             return cleanUrls;
         }

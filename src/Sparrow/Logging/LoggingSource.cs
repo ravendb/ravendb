@@ -70,7 +70,7 @@ namespace Sparrow.Logging
         public static readonly LoggingSource AuditLog = new LoggingSource(LogMode.None, Path.GetTempPath(), "Audit Log", TimeSpan.MaxValue, long.MaxValue);
 
         private static readonly byte[] _headerRow =
-            Encodings.Utf8.GetBytes($"Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException{Environment.NewLine}");
+            Encodings.Utf8.GetBytes($"Time, Thread, Level, Source, Logger, Message, Exception{Environment.NewLine}");
 
         public class WebSocketContext
         {

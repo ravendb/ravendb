@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     stats.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, Database.Name);
                     stats.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, Database.Name);
+                    stats.CountOfCompareExchangeTombstones = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, Database.Name);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context.Documents, ResponseBodyStream()))

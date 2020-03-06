@@ -54,6 +54,8 @@ class heightCalculator {
         this.lineHeight = doubleLinesHeight - initialHeight;
         this.padding = doubleLinesHeight - 2 * this.lineHeight;
         this.charactersPerLine = charactersInline;
+        
+        row.populate("", 0, -200, undefined);
     }
 }
 

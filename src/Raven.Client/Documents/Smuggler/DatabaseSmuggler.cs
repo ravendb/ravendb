@@ -354,7 +354,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 var form = new MultipartFormDataContent
                 {
-                    {new BlittableJsonContent(stream => { ctx.Write(stream, _options); }), "importOptions"},
+                    {new BlittableJsonContent(stream => { ctx.Write(stream, _options); }), Constants.Smuggler.ImportOptions},
                     {new StreamContentWithConfirmation(_stream, _tcs), "file", "name"}
                 };
 

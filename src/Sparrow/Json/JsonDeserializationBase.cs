@@ -106,6 +106,7 @@ namespace Sparrow.Json
         private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
         {
             var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+            
             if (type == typeof(string) ||
                 type == typeof(char) ||
                 type == typeof(bool) ||

@@ -7,9 +7,12 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -81,7 +84,6 @@ namespace SlowTests.Issues
 
                         throw;
                     }
-
                 }
             }
         }
@@ -125,6 +127,50 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task CannotImportCsvWithInvalidCsvConfigCharParams()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(_testCompany, "companies/1");
+                    session.Store(new { Query = "From companies" }, "queries/1");
+                    session.SaveChanges();
+                }
+
+                var client = new HttpClient();
+                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?fromDocument=queries%2F1&format=csv");
+
+                using (var commands = store.Commands())
+                {
+                    var getOperationIdCommand = new GetNextOperationIdCommand();
+                    await commands.RequestExecutor.ExecuteAsync(getOperationIdCommand, commands.Context);
+                    var operationId = getOperationIdCommand.Result;
+
+                    var invalidCsvConfig = new InValidCsvImportOptions()
+                    {
+                        Delimiter = ",",
+                        Quote = " '",    // 2 characters is invalid
+                        Comment = " #",  // 2 characters is invalid
+                        AllowComments = true,
+                        TrimOptions = "None"
+                    };
+
+                    var csvImportCommand = new CsvImportCommand(stream, null, operationId, invalidCsvConfig);
+
+                    var exception = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
+                    {
+                        await commands.ExecuteAsync(csvImportCommand);
+                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
+                        await operation.WaitForCompletionAsync();
+                    });
+
+                    Assert.Contains("Please verify that only one character is used", exception.Message);
+                }
+            }
+        }
+
         private readonly Company _testCompany = new Company
         {
             ExternalId = "WOLZA",
@@ -161,6 +207,7 @@ namespace SlowTests.Issues
             public Address Address { get; set; }
             public string Phone { get; set; }
             public string Fax { get; set; }
+
             public override bool Equals(object obj)
             {
                 if (!(obj is Company other))
@@ -205,31 +252,54 @@ namespace SlowTests.Issues
             public string Title { get; set; }
         }
 
+        private class InValidCsvImportOptions
+        {
+            public string Delimiter { get; set; }
+            public string Quote { get; set; } // Quote is char in CSVHelper
+            public string Comment { get; set; } // Comment is char in CSVHelper
+            public bool AllowComments { get; set; }
+            public string TrimOptions { get; set; }
+        }
+
         private class CsvImportCommand : RavenCommand
         {
             private readonly Stream _stream;
             private readonly string _collection;
             private readonly long _operationId;
+            private readonly InValidCsvImportOptions _csvConfig;
 
             public override bool IsReadRequest => false;
-            
 
-            public CsvImportCommand(Stream stream, string collection, long operationId)
+            public CsvImportCommand(Stream stream, string collection, long operationId, InValidCsvImportOptions inValidCsvConfiguration = null)
             {
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
 
                 _collection = collection;
                 _operationId = operationId;
+                _csvConfig = inValidCsvConfiguration;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/smuggler/import/csv?operationId={_operationId}&collection={_collection}";
+                var form = new MultipartFormDataContent();
 
-                var form = new MultipartFormDataContent
+                if (_csvConfig != null)
                 {
-                    {new StreamContent(_stream), "file", "name"}
-                };
+                    var _csvConfigBlittable = EntityToBlittable.ConvertCommandToBlittable(_csvConfig, ctx);
+                    form = new MultipartFormDataContent
+                    {
+                        {new BlittableJsonContent(stream => { ctx.Write(stream, _csvConfigBlittable); }), Constants.Smuggler.CsvImportOptions},
+                        {new StreamContent(_stream), "file", "name"}
+                    };
+                }
+                else
+                {
+                    form = new MultipartFormDataContent
+                    {
+                        {new StreamContent(_stream), "file", "name"}
+                    };
+                }
 
                 return new HttpRequestMessage
                 {

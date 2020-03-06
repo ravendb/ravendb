@@ -31,8 +31,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private const int MinOnePartUploadSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
         private const long MultiPartUploadLimitInBytes = 5L * 1024 * 1024 * 1024 * 1024; // 5TB
 
+        protected readonly string DefaultCustomRegion = string.Empty;
+        
         private readonly string _bucketName;
         private readonly Logger _logger;
+        private readonly Uri _customS3ServerUrl;
+
+
+        private bool HasCustomServerUrl => _customS3ServerUrl != null;
 
         public RavenAwsS3Client(S3Settings s3Settings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null)
             : base(s3Settings, progress, cancellationToken)
@@ -43,9 +49,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (string.IsNullOrWhiteSpace(s3Settings.AwsAccessKey))
                 throw new ArgumentException("AWS Access Key cannot be null or empty");
 
-            if (string.IsNullOrWhiteSpace(s3Settings.AwsRegionName))
-                throw new ArgumentException("AWS Region Name cannot be null or empty");
-
+            if (string.IsNullOrWhiteSpace(s3Settings.CustomServerUrl))
+            {
+                if (string.IsNullOrWhiteSpace(s3Settings.AwsRegionName))
+                    throw new ArgumentException("AWS region name cannot be null or empty");
+            }
+            else
+            {
+                _customS3ServerUrl = new Uri(s3Settings.CustomServerUrl);
+            }
+            
+            AwsRegion = s3Settings.AwsRegionName == null? string.Empty : s3Settings.AwsRegionName.ToLower();
             _bucketName = s3Settings.BucketName;
             _logger = logger;
         }
@@ -307,8 +321,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 if (bucketLocation.Equals(AwsRegion, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     throw new InvalidOperationException(
-                        $"AWS location is set to {AwsRegion}, " +
-                        $"but the bucket named: '{_bucketName}' " +
+                        $"AWS location is set to \"{AwsRegion}\", " +
+                        $"but the bucket named: \"'{_bucketName}'\" " +
                         $"is located in: {bucketLocation}");
                 }
             }
@@ -377,15 +391,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     {
                         // when the bucket's region is US East (N. Virginia - us-east-1), 
                         // Amazon S3 returns an empty string for the bucket's region
-                        value = DefaultRegion;
+                        // In custom s3 server empty string returned when region name didn't configure in s3 server. 
+                        return HasCustomServerUrl 
+                            ? DefaultCustomRegion 
+                            : DefaultRegion;
                     }
-                    else if (value.Equals("EU", StringComparison.OrdinalIgnoreCase))
-                    {
+                    if (HasCustomServerUrl == false && value.Equals("EU", StringComparison.OrdinalIgnoreCase))
                         // EU (Ireland) => EU or eu-west-1
-                        value = "eu-west-1";
-                    }
+                        return "eu-west-1";
 
-                    return value == string.Empty ? DefaultRegion : value;
+                    return value;
                 }
             }
         }
@@ -927,12 +942,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public override string GetUrl()
         {
-            var baseUrl = base.GetUrl();
-            return $"{baseUrl}/{_bucketName}";
+            return HasCustomServerUrl 
+                ? $"{_customS3ServerUrl}{_bucketName}" 
+                : $"{base.GetUrl()}/{_bucketName}";
         }
 
         public override string GetHost()
         {
+            if (HasCustomServerUrl)
+                return _customS3ServerUrl.GetComponents(UriComponents.Host | UriComponents.Port, UriFormat.UriEscaped);
+            
             if (AwsRegion == DefaultRegion || IsRegionInvariantRequest)
                 return "s3.amazonaws.com";
 
