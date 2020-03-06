@@ -10,13 +10,14 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly Index _index;
 
+        private bool _supportsTimeFields;
         private HashSet<string> _timeFields;
-
         private HashSet<string> _timeFieldsToWrite;
 
         public IndexFieldsPersistence(Index index)
         {
             _index = index ?? throw new ArgumentNullException(nameof(index));
+            _supportsTimeFields = index.Definition.Version >= IndexDefinitionBase.IndexVersion.TimeTicks;
         }
 
         internal void Initialize()
@@ -25,11 +26,16 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException();
 
             _initialized = true;
-            _timeFields = _index._indexStorage.ReadIndexTimeFields();
+
+            if (_supportsTimeFields)
+                _timeFields = _index._indexStorage.ReadIndexTimeFields();
         }
 
         internal void MarkHasTimeValue(string fieldName)
         {
+            if (_supportsTimeFields == false)
+                return;
+
             if (_timeFields.Contains(fieldName))
                 return;
 
@@ -41,7 +47,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal bool HasTimeValues(string fieldName)
         {
-            return _timeFields.Contains(fieldName);
+            return _supportsTimeFields && _timeFields.Contains(fieldName);
         }
 
         internal void Persist(TransactionOperationContext indexContext)
