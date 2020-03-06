@@ -9,13 +9,23 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public abstract class AutoIndexDefinitionBase : IndexDefinitionBase<AutoIndexField>
     {
+        private long _indexVersion;
+
         public IndexState State { get; set; }
 
-        protected AutoIndexDefinitionBase(string indexName, string collection, AutoIndexField[] fields)
+        protected AutoIndexDefinitionBase(string indexName, string collection, AutoIndexField[] fields, long? indexVersion = null)
             : base(indexName, new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, fields)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
+            _indexVersion = indexVersion ?? IndexVersion.CurrentVersion;
+        }
+
+        public override long Version => _indexVersion;
+
+        internal override void Reset()
+        {
+            _indexVersion = IndexVersion.CurrentVersion;
         }
 
         protected abstract override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);

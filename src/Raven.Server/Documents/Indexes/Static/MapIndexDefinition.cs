@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Indexes.Static
             IndexDefinition = definition;
         }
 
+        public override long Version => IndexDefinition.Version ?? IndexVersion.CurrentVersion;
+
         public override bool HasDynamicFields => _hasDynamicFields;
 
         public override bool HasCompareExchange => _hasCompareExchange;
@@ -134,6 +136,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException("No persisted definition");
 
             return JsonDeserializationServer.IndexDefinition(jsonObject);
+        }
+
+        internal override void Reset()
+        {
+            IndexDefinition.Version = IndexVersion.CurrentVersion;
         }
     }
 }

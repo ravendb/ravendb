@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         [Obsolete("Used for testing purposes only")]
         public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false)
-                    : base(fields, isMultiMap, indexImplicitNull, indexEmptyEntries, numberOfBaseFields: 1, storeValue: storeValue)
+            : base(fields, isMultiMap, indexImplicitNull, indexEmptyEntries, numberOfBaseFields: 1, storeValue: storeValue)
         {
         }
     }

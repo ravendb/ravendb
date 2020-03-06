@@ -197,5 +197,10 @@ namespace FastTests.Server.Documents.Indexing
         {
             throw new NotImplementedException();
         }
+
+        internal override void Reset()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
