@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client;
-using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -126,7 +126,7 @@ namespace SlowTests.Issues
                 }
             }
         }
-        
+
         [Fact]
         public async Task CannotImportCsvWithInvalidCsvConfigCharParams()
         {
@@ -151,14 +151,13 @@ namespace SlowTests.Issues
                     var invalidCsvConfig = new InValidCsvImportOptions()
                     {
                         Delimiter = ",",
-                        Quote = " '",    // 2 characters is invalid 
-                        Comment = " #",  // 2 characters is invalid 
+                        Quote = " '",    // 2 characters is invalid
+                        Comment = " #",  // 2 characters is invalid
                         AllowComments = true,
                         TrimOptions = "None"
                     };
-                        
-                    var csvImportCommand = new CsvImportCommand(stream, null, operationId, invalidCsvConfig);
 
+                    var csvImportCommand = new CsvImportCommand(stream, null, operationId, invalidCsvConfig);
 
                     var exception = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
                     {
@@ -166,7 +165,7 @@ namespace SlowTests.Issues
                         var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
                         await operation.WaitForCompletionAsync();
                     });
-                    
+
                     Assert.Contains("Please verify that only one character is used", exception.Message);
                 }
             }
@@ -208,6 +207,7 @@ namespace SlowTests.Issues
             public Address Address { get; set; }
             public string Phone { get; set; }
             public string Fax { get; set; }
+
             public override bool Equals(object obj)
             {
                 if (!(obj is Company other))
@@ -260,7 +260,7 @@ namespace SlowTests.Issues
             public bool AllowComments { get; set; }
             public string TrimOptions { get; set; }
         }
-        
+
         private class CsvImportCommand : RavenCommand
         {
             private readonly Stream _stream;
@@ -270,7 +270,7 @@ namespace SlowTests.Issues
 
             public override bool IsReadRequest => false;
 
-            public CsvImportCommand(Stream stream, string collection, long operationId, InValidCsvImportOptions? inValidCsvConfiguration = null)
+            public CsvImportCommand(Stream stream, string collection, long operationId, InValidCsvImportOptions inValidCsvConfiguration = null)
             {
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
 
@@ -283,7 +283,7 @@ namespace SlowTests.Issues
             {
                 url = $"{node.Url}/databases/{node.Database}/smuggler/import/csv?operationId={_operationId}&collection={_collection}";
                 var form = new MultipartFormDataContent();
-                
+
                 if (_csvConfig != null)
                 {
                     var _csvConfigBlittable = EntityToBlittable.ConvertCommandToBlittable(_csvConfig, ctx);

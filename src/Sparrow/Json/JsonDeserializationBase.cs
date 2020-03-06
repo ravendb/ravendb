@@ -110,7 +110,6 @@ namespace Sparrow.Json
             if (type == typeof(string) ||
                 type == typeof(char) ||
                 type == typeof(bool) ||
-                type == typeof(char) ||
                 type == typeof(long) ||
                 type == typeof(ulong) ||
                 type == typeof(int) ||

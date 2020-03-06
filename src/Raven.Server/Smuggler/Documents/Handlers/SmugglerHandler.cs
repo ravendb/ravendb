@@ -802,7 +802,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         catch (Exception e)
                                         {
                                             var msg = "Failed to parse the CSV configuration parameters.";
-                                            if (e.InnerException.Message.Contains("String must be exactly one character long"))
+                                            if (e.InnerException.Message.Contains("Could not convert"))
                                             {
                                                 msg += " Please verify that only one character is used for 'Comment' & 'Quote'";
                                             }
