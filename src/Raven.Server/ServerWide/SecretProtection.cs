@@ -820,7 +820,7 @@ namespace Raven.Server.ServerWide
             public void Load(Stream input, char[] password)
             {
                 Asn1Sequence obj = (Asn1Sequence)Asn1Object.FromStream(input);
-                Pfx bag = new Pfx(obj);
+                Pfx bag = Pfx.GetInstance(obj);
                 ContentInfo info = bag.AuthSafe;
                 bool wrongPkcs12Zero = false;
 
@@ -862,7 +862,7 @@ namespace Raven.Server.ServerWide
                 if (info.ContentType.Equals(PkcsObjectIdentifiers.Data))
                 {
                     byte[] octs = ((Asn1OctetString)info.Content).GetOctets();
-                    AuthenticatedSafe authSafe = new AuthenticatedSafe(
+                    AuthenticatedSafe authSafe = AuthenticatedSafe.GetInstance(
                         (Asn1Sequence)Asn1OctetString.FromByteArray(octs));
                     ContentInfo[] cis = authSafe.GetContentInfo();
 
@@ -891,7 +891,7 @@ namespace Raven.Server.ServerWide
 
                             foreach (Asn1Sequence subSeq in seq)
                             {
-                                SafeBag b = new SafeBag(subSeq);
+                                SafeBag b = SafeBag.GetInstance(subSeq);
 
                                 if (b.BagID.Equals(PkcsObjectIdentifiers.CertBag))
                                 {
@@ -918,7 +918,7 @@ namespace Raven.Server.ServerWide
 
                 foreach (SafeBag b in certBags)
                 {
-                    CertBag certBag = new CertBag((Asn1Sequence)b.BagValue);
+                    CertBag certBag = CertBag.GetInstance((Asn1Sequence)b.BagValue);
                     byte[] octets = ((Asn1OctetString)certBag.CertValue).GetOctets();
                     Org.BouncyCastle.X509.X509Certificate cert = new X509CertificateParser().ReadCertificate(octets);
 

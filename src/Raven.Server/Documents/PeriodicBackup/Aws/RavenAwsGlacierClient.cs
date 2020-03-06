@@ -36,6 +36,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (string.IsNullOrWhiteSpace(glacierSettings.VaultName))
                 throw new ArgumentException("AWS vault name can't be null or empty");
 
+            if (string.IsNullOrWhiteSpace(glacierSettings.AwsRegionName))
+                throw new ArgumentException("AWS region cannot be null or empty");
+            
+            AwsRegion = glacierSettings.AwsRegionName.ToLower();
             _vaultName = glacierSettings.VaultName;
             _logger = logger;
         }
@@ -94,7 +98,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             // using a chunked upload we can upload up to 10,000 chunks, 4GB max each
             // we limit every chunk to a minimum of 128MB
             // constraints: the part size must be a megabyte(1024KB) 
-            // multiplied by a power of 2—for example, 
+            // multiplied by a power of 2-for example, 
             // 1048576(1MB), 2097152(2MB), 4194304(4MB), 8388608(8 MB), and so on.
             // the minimum allowable part size is 1MB and the maximum is 4GB(4096 MB).
             var maxLengthPerPart = Math.Max(MinOnePartUploadSizeLimitInBytes, stream.Length / 10000);

@@ -257,6 +257,7 @@ namespace Raven.Server.ServerWide.Commands
                         Value = result
                     };
                 }
+                // if we ever decide to make replication of compare exchange, then we should write the compare exchange tombstones to schema on restore
             }
             return new CompareExchangeResult
             {

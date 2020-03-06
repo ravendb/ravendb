@@ -13,7 +13,7 @@
             <div class="row">
                 <div class="col-sm-8 col-lg-6 col-xl-5">
                     <div class="input-group file-input" data-bind="validationElement: importedFileName">
-                        <input type="file" id="importDatabaseFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }, disable: isImporting" tabindex="-1" />
+                        <input type="file" accept=".ravendbdump" id="importDatabaseFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }, disable: isImporting" tabindex="-1" />
                         <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'"></span>
                         <span class="input-group-btn">
                             <label for="importDatabaseFilePicker" class="btn btn-default">

@@ -43,13 +43,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (string.IsNullOrWhiteSpace(amazonSettings.AwsSecretKey))
                 throw new ArgumentException("AWS secret key cannot be null or empty");
 
-            if (string.IsNullOrWhiteSpace(amazonSettings.AwsRegionName))
-                throw new ArgumentException("AWS region cannot be null or empty");
-
             _awsAccessKey = amazonSettings.AwsAccessKey;
             _awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + amazonSettings.AwsSecretKey);
             _sessionToken = amazonSettings.AwsSessionToken;
-            AwsRegion = amazonSettings.AwsRegionName.ToLower();
+            
             RemoteFolderName = amazonSettings.RemoteFolderName;
         }
 

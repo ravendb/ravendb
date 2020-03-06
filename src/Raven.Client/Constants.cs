@@ -347,6 +347,13 @@ namespace Raven.Client
             }
         }
 
+        internal static class Smuggler
+        {
+            public const string ImportOptions = "importOptions";
+            
+            public const string CsvImportOptions  = "csvImportOptions";
+        }
+
         internal class CompareExchange
         {
             private CompareExchange()

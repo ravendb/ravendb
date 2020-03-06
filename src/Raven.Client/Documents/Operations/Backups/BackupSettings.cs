@@ -125,10 +125,15 @@ namespace Raven.Client.Documents.Operations.Backups
     public class S3Settings : AmazonSettings
     {
         /// <summary>
-        /// Amazon S3 Bucket name.
+        /// S3 Bucket name.
         /// </summary>
         public string BucketName { get; set; }
 
+        /// <summary>
+        /// S3 server Url when using custom server
+        /// </summary>
+        public string CustomServerUrl { get; set; }
+        
         public override bool HasSettings()
         {
             if (base.HasSettings())
@@ -154,6 +159,9 @@ namespace Raven.Client.Documents.Operations.Backups
             if (other.RemoteFolderName != RemoteFolderName)
                 return false;
 
+            if (other.CustomServerUrl != CustomServerUrl)
+                return false;
+            
             return true;
         }
 
@@ -161,6 +169,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             var djv = base.ToJson();
             djv[nameof(BucketName)] = BucketName;
+            djv[nameof(CustomServerUrl)] = CustomServerUrl;
             return djv;
         }
     }
