@@ -290,15 +290,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 if (field.Indexing != FieldIndexing.Default && (indexing == Field.Index.NOT_ANALYZED || indexing == Field.Index.NOT_ANALYZED_NO_NORMS))
                     dateAsString = dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture);
                 else
+                {
                     dateAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
+
+                    instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTimeOffset.UtcDateTime.Ticks, Field.Store.NO)); // TODO [ppekrol] UTC?
+                    newFields++;
+
+                    _index.IndexFieldsPersistence.MarkHasTimeValue(path);
+                }
 
                 instance.Add(GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector));
                 newFields++;
-
-                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTimeOffset.UtcDateTime.Ticks, Field.Store.NO)); // TODO [ppekrol] UTC?
-                newFields++;
-
-                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
 
                 return newFields;
             }
