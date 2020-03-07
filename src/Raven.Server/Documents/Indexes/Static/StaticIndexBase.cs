@@ -16,7 +16,15 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public delegate IEnumerable IndexingFunc(IEnumerable<dynamic> items);
 
-    public abstract class StaticTimeSeriesIndexBase : AbstractStaticIndexBase
+    public abstract class StaticCountersIndexBase : StaticCountersAndTimeSeriesIndexBase
+    {
+    }
+
+    public abstract class StaticTimeSeriesIndexBase : StaticCountersAndTimeSeriesIndexBase
+    {
+    }
+
+    public abstract class StaticCountersAndTimeSeriesIndexBase : AbstractStaticIndexBase
     {
         public void AddMap(string collection, string name, IndexingFunc map)
         {

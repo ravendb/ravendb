@@ -3,9 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Config;
-using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -27,7 +25,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 case IndexSourceType.Documents:
                     return GetDocumentsIndexInstance(definition, configuration);
                 case IndexSourceType.TimeSeries:
-                    return GetTimeSeriesIndexInstance(definition, configuration);
+                    return GetIndexInstance<StaticTimeSeriesIndexBase>(definition, configuration);
+                case IndexSourceType.Counters:
+                    return GetIndexInstance<StaticCountersIndexBase>(definition, configuration);
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
@@ -54,7 +54,8 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StaticTimeSeriesIndexBase GetTimeSeriesIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
+        private static TIndexBase GetIndexInstance<TIndexBase>(IndexDefinition definition, RavenConfiguration configuration)
+            where TIndexBase : AbstractStaticIndexBase
         {
             var type = definition.DetectStaticIndexType();
             if (type.IsJavaScript())
@@ -69,7 +70,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             try
             {
-                return (StaticTimeSeriesIndexBase)result.Value;
+                return (TIndexBase)result.Value;
             }
             catch (Exception)
             {

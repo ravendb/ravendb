@@ -19,6 +19,12 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsStaleDueToReferences(MapCountersIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons)
+        {
+            return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsStaleDueToReferences(MapTimeSeriesIndex index, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons)
         {
             return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
@@ -32,6 +38,12 @@ namespace Raven.Server.Documents.Indexes
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe long CalculateIndexEtag(MapIndex index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
+        {
+            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe long CalculateIndexEtag(MapCountersIndex index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
             return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
         }

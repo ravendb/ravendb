@@ -2,26 +2,25 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using Raven.Server.Documents.Replication;
-using Raven.Server.ServerWide.Context;
-using Voron;
-using Voron.Data.Tables;
-using Voron.Impl;
-using Sparrow;
-using Sparrow.Binary;
-using static Raven.Server.Documents.DocumentsStorage;
-using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Voron;
+using Voron.Data.Tables;
+using Voron.Impl;
+using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
@@ -58,8 +57,9 @@ namespace Raven.Server.Documents
         private enum CountersTable
         {
             // Format of this is:
-            // lower document id, record separator, prefix 
+            // lower document id, record separator, prefix
             CounterKey = 0,
+
             Etag = 1,
             ChangeVector = 2,
             Data = 3,
@@ -107,7 +107,6 @@ namespace Raven.Server.Documents
 
                 return dbIdIndex;
             }
-
         }
 
         static CountersStorage()
@@ -280,7 +279,6 @@ namespace Raven.Server.Documents
                 using (context.Allocator.Allocate(documentKeyPrefix.Size + counterName.Size, out var counterKeyBuffer))
                 using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterName, out var counterKeySlice))
                 {
-
                     BlittableJsonReaderObject data;
                     exists = false;
                     var value = delta;
@@ -323,7 +321,7 @@ namespace Raven.Server.Documents
                                 data.Size + sizeof(long) * 3 > MaxCounterDocumentSize)
                             {
                                 // we now need to add a new counter to the counters blittable
-                                // and adding it will cause to grow beyond 2KB (the 24bytes is an 
+                                // and adding it will cause to grow beyond 2KB (the 24bytes is an
                                 // estimate, we don't actually depend on hard 2KB limit).
 
                                 var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
@@ -394,7 +392,6 @@ namespace Raven.Server.Documents
                     return changeVector;
                 }
             }
-
             finally
             {
                 foreach (var s in _counterModificationMemoryScopes)
@@ -698,7 +695,6 @@ namespace Raven.Server.Documents
 
                         UpdateMetricsForNewCounterGroup(data);
 
-
                         return;
                     }
 
@@ -737,7 +733,7 @@ namespace Raven.Server.Documents
                                             $"Local Counter-Group document '{counterKeySlice}' is missing '{DbIds}' property. Shouldn't happen");
                                     }
 
-                                    // clone counter group key  
+                                    // clone counter group key
                                     var scope = context.Allocator.Allocate(counterGroupKey.Size, out var output);
 
                                     putCountersData = new PutCountersData
@@ -813,7 +809,7 @@ namespace Raven.Server.Documents
                             if (currentData.Size > MaxCounterDocumentSize)
                             {
                                 // after adding new counters to the counters blittable
-                                // we caused the blittable to grow beyond 2KB 
+                                // we caused the blittable to grow beyond 2KB
 
                                 currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
                                 currentData.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
@@ -870,9 +866,8 @@ namespace Raven.Server.Documents
 
             if (data.TryGet(Values, out BlittableJsonReaderObject values) == false)
                 return;
-            
-            _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(values.Count);
 
+            _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(values.Count);
         }
 
         private bool MergeCounterIfNeeded(
@@ -916,7 +911,7 @@ namespace Raven.Server.Documents
                                 case ConflictStatus.Update:
                                 // raw blob is more up to date => put counter
                                 case ConflictStatus.Conflict:
-                                    // conflict => resolve to raw blob 
+                                    // conflict => resolve to raw blob
                                     localCounterValues = new BlittableJsonReaderObject.RawBlob();
                                     break;
                                 case ConflictStatus.AlreadyMerged:
@@ -967,7 +962,7 @@ namespace Raven.Server.Documents
                                     localCounters.Modifications[counterName] = deletedSourceCounter;
                                     return true;
                                 case ConflictStatus.Conflict:
-                                    // conflict => resolve to raw blob and merge change vectors 
+                                    // conflict => resolve to raw blob and merge change vectors
                                     MergeBlobAndDeleteVector(context, dbIdsHolder, localCounterValues, deletedCv);
 
                                     localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
@@ -1034,7 +1029,6 @@ namespace Raven.Server.Documents
             {
                 CounterOverflowException.ThrowFor(docId, counterName, e);
             }
-
 
             return value;
         }
@@ -1138,7 +1132,7 @@ namespace Raven.Server.Documents
             _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(1);
             var bytesPutsInBytes =
                 counterKey.Size + counterName.Length
-                                + sizeof(long) // etag 
+                                + sizeof(long) // etag
                                 + sizeof(long) // counter value
                                 + changeVector.Length + collection.Length;
 
@@ -1163,7 +1157,7 @@ namespace Raven.Server.Documents
                         return;
 
                     // not sure if we can _rely_ on the tx write lock here, so let's be safe and create
-                    // a new instance, just in case 
+                    // a new instance, just in case
                     _tableCreated = new HashSet<string>(_tableCreated, StringComparer.OrdinalIgnoreCase)
                      {
                          collection.Name
@@ -1285,7 +1279,6 @@ namespace Raven.Server.Documents
                     var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId);
                     yield return ($"{nodeTag ?? "?"}-{dbId}", val, etag);
                 }
-
             }
         }
 
@@ -1377,7 +1370,7 @@ namespace Raven.Server.Documents
 
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var newChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-                
+
                 using (Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey))
                 using (Slice.From(context.Allocator, newChangeVector, out var cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
@@ -1548,7 +1541,7 @@ namespace Raven.Server.Documents
 
             if (modified == false)
             {
-                // if no counter was removed, we can be sure that there are no modification when the counter's count in the metadata is equal to the count of countersToAdd 
+                // if no counter was removed, we can be sure that there are no modification when the counter's count in the metadata is equal to the count of countersToAdd
                 modified = countersToAdd.Count != metadataCounters.Length;
             }
 

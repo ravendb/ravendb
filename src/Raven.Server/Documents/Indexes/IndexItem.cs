@@ -48,17 +48,24 @@ namespace Raven.Server.Documents.Indexes
 
     public class DocumentIndexItem : IndexItem
     {
-        public DocumentIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, int size, object item) : base(id, lowerId, null, null,
-            etag, lastModified, null, size, item, IndexItemType.Document)
+        public DocumentIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, int size, object item)
+            : base(id, lowerId, null, null, etag, lastModified, null, size, item, IndexItemType.Document)
         {
         }
     }
 
     public class TimeSeriesIndexItem : IndexItem
     {
-        public TimeSeriesIndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue sourceDocumentId, LazyStringValue lowerSourceDocumentId, long etag,
-            DateTime lastModified, string timeSeriesName, int size, object item) : base(id, lowerId, sourceDocumentId, lowerSourceDocumentId, etag, lastModified,
-            timeSeriesName, size, item, IndexItemType.TimeSeries)
+        public TimeSeriesIndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue sourceDocumentId, LazyStringValue lowerSourceDocumentId, long etag, DateTime lastModified, string timeSeriesName, int size, object item)
+            : base(id, lowerId, sourceDocumentId, lowerSourceDocumentId, etag, lastModified, timeSeriesName, size, item, IndexItemType.TimeSeries)
+        {
+        }
+    }
+
+    public class CountersIndexItem : IndexItem
+    {
+        public CountersIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, int size, object item)
+            : base(id, lowerId, null, null, etag, default, null, size, item, IndexItemType.Counters)
         {
         }
     }
