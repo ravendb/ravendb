@@ -250,6 +250,9 @@ namespace Raven.Server.Documents.Indexes
                 case IndexSourceType.TimeSeries:
                     _itemType = "time series item";
                     break;
+                case IndexSourceType.Counters:
+                    _itemType = "counter item";
+                    break;
                 default:
                     throw new ArgumentException($"Unknown index source type: {sourceType}");
             }

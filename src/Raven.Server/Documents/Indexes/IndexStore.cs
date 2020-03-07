@@ -492,6 +492,27 @@ namespace Raven.Server.Documents.Indexes
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
                         }
                         break;
+                    case IndexSourceType.Counters:
+                        switch (definition.Type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                index = MapCountersIndex.CreateNew(definition, _documentDatabase);
+                                break;
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                throw new NotSupportedException("TODO ppekrol");
+                                //var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(definition, _documentDatabase);
+
+                                //if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
+                                //    mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+
+                                //index = mapReduceIndex;
+                                break;
+                            default:
+                                throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
+                        }
+                        break;
                     default:
                         throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
                 }

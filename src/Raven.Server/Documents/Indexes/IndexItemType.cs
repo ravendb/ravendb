@@ -5,5 +5,6 @@
         None,
         Document,
         TimeSeries,
+        Counters
     }
 }
