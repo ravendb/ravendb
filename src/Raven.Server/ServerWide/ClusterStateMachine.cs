@@ -2950,20 +2950,14 @@ namespace Raven.Server.ServerWide
 
             UpdateRecordForToggle(context, command.Value.DatabaseNames, type, index, oldDatabaseRecord =>
             {
-                var rawDatabaseRecord = new RawDatabaseRecord(oldDatabaseRecord);
-                var settings = rawDatabaseRecord.Settings;
-                if (settings.TryGetValue("Indexing.Disable", out var indexingDisabledString) &&
-                    bool.TryParse(indexingDisabledString, out var currentlyIndexingDisabled) &&
-                    currentlyIndexingDisabled == command.Value.Disable)
-                {
-                    return false;
-                }
+                oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool isCurrentlyDisabled);
 
-                settings["Indexing.Disable"] = command.Value.Disable.ToString();
+                if (isCurrentlyDisabled == command.Value.Disable)
+                    return false;
 
                 oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
                 {
-                    [nameof(DatabaseRecord.Settings)] = TypeConverter.ToBlittableSupportedType(settings)
+                    [nameof(DatabaseRecord.Disabled)] = command.Value.Disable
                 };
 
                 return true;
@@ -2978,14 +2972,20 @@ namespace Raven.Server.ServerWide
 
             UpdateRecordForToggle(context, command.Value.DatabaseNames, type, index, oldDatabaseRecord =>
             {
-                oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool isCurrentlyDisabled);
-
-                if (isCurrentlyDisabled == command.Value.Disable)
+                var rawDatabaseRecord = new RawDatabaseRecord(oldDatabaseRecord);
+                var settings = rawDatabaseRecord.Settings;
+                if (settings.TryGetValue("Indexing.Disable", out var indexingDisabledString) &&
+                    bool.TryParse(indexingDisabledString, out var currentlyIndexingDisabled) &&
+                    currentlyIndexingDisabled == command.Value.Disable)
+                {
                     return false;
+                }
+
+                settings["Indexing.Disable"] = command.Value.Disable.ToString();
 
                 oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
                 {
-                    [nameof(DatabaseRecord.Disabled)] = command.Value.Disable
+                    [nameof(DatabaseRecord.Settings)] = TypeConverter.ToBlittableSupportedType(settings)
                 };
 
                 return true;
