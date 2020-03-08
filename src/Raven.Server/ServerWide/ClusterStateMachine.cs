@@ -427,6 +427,9 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleDatabasesStateCommand):
                         ToggleDatabasesState(cmd, context, type, index);
                         break;
+                    case nameof(ToggleIndexingStateCommand):
+                        ToggleIndexesState(cmd, context, type, index);
+                        break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
@@ -2942,16 +2945,62 @@ namespace Raven.Server.ServerWide
         private void ToggleDatabasesState(BlittableJsonReaderObject cmd, TransactionOperationContext context, string type, long index)
         {
             var command = (ToggleDatabasesStateCommand)JsonDeserializationCluster.Commands[type](cmd);
-
             if (command.Value == null)
                 throw new RachisInvalidOperationException($"{nameof(ToggleParameters)} is null for command type: {type}");
 
-            if (command.Value.DatabaseNames == null)
+            UpdateRecordForToggle(context, command.Value.DatabaseNames, type, index, oldDatabaseRecord =>
+            {
+                var rawDatabaseRecord = new RawDatabaseRecord(oldDatabaseRecord);
+                var settings = rawDatabaseRecord.Settings;
+                if (settings.TryGetValue("Indexing.Disable", out var indexingDisabledString) &&
+                    bool.TryParse(indexingDisabledString, out var currentlyIndexingDisabled) &&
+                    currentlyIndexingDisabled == command.Value.Disable)
+                {
+                    return false;
+                }
+
+                settings["Indexing.Disable"] = command.Value.Disable.ToString();
+
+                oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                {
+                    [nameof(DatabaseRecord.Settings)] = TypeConverter.ToBlittableSupportedType(settings)
+                };
+
+                return true;
+            });
+        }
+
+        private void ToggleIndexesState(BlittableJsonReaderObject cmd, TransactionOperationContext context, string type, long index)
+        {
+            var command = (ToggleIndexingStateCommand)JsonDeserializationCluster.Commands[type](cmd);
+            if (command.Value == null)
+                throw new RachisInvalidOperationException($"{nameof(ToggleParameters)} is null for command type: {type}");
+
+            UpdateRecordForToggle(context, command.Value.DatabaseNames, type, index, oldDatabaseRecord =>
+            {
+                oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool isCurrentlyDisabled);
+
+                if (isCurrentlyDisabled == command.Value.Disable)
+                    return false;
+
+                oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                {
+                    [nameof(DatabaseRecord.Disabled)] = command.Value.Disable
+                };
+
+                return true;
+            });
+        }
+
+        private void UpdateRecordForToggle(TransactionOperationContext context, string[] databaseNames,
+            string type, long index, Func<BlittableJsonReaderObject, bool> updateRecord)
+        {
+            if (databaseNames == null)
                 throw new RachisInvalidOperationException($"{nameof(ToggleParameters.DatabaseNames)} is null for command type: {type}");
 
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
 
-            foreach (var databaseName in command.Value.DatabaseNames)
+            foreach (var databaseName in databaseNames)
             {
                 var key = "db/" + databaseName;
                 using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice valueNameLowered))
@@ -2960,18 +3009,11 @@ namespace Raven.Server.ServerWide
                     if (oldDatabaseRecord == null)
                         continue;
 
-                    oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool isCurrentlyDisabled);
-
-                    if (command.Value.Disable == isCurrentlyDisabled)
+                    if (updateRecord(oldDatabaseRecord) == false)
                         continue;
 
                     using (oldDatabaseRecord)
                     {
-                        oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
-                        {
-                            [nameof(DatabaseRecord.Disabled)] = command.Value.Disable
-                        };
-
                         var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
                         toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName));
                     }

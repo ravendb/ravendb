@@ -111,7 +111,8 @@ namespace Raven.Server.ServerWide
             [nameof(EditRefreshCommand)] = 42_003,
 
             [nameof(EditRevisionsForConflictsConfigurationCommand)] = 42_004,
-            [nameof(ToggleDatabasesStateCommand)] = 42_005
+            [nameof(ToggleDatabasesStateCommand)] = 42_005,
+            [nameof(ToggleIndexingStateCommand)] = 42_005
         };
 
         public static bool CanPutCommand(string command)
