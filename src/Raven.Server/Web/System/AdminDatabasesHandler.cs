@@ -886,49 +886,35 @@ namespace Raven.Server.Web.System
 
                 var resultList = new List<DynamicJsonValue>();
                 var raftRequestId = GetRaftRequestIdFromQuery();
+
                 foreach (var name in parameters.DatabaseNames)
                 {
-                    DatabaseRecord databaseRecord;
                     using (context.OpenReadTransaction())
-                        databaseRecord = ServerStore.Cluster.ReadDatabase(context, name);
-
-                    if (databaseRecord == null)
                     {
-                        resultList.Add(new DynamicJsonValue
+                        var databaseExists = ServerStore.Cluster.DatabaseExists(context, name);
+                        if (databaseExists == false)
                         {
-                            ["Name"] = name,
-                            ["Success"] = false,
-                            ["Reason"] = "database not found"
-                        });
-                        continue;
+                            resultList.Add(new DynamicJsonValue
+                            {
+                                ["Name"] = name,
+                                ["Success"] = false,
+                                ["Reason"] = "database not found"
+                            });
+                            continue;
+                        }
                     }
-
-                    if (databaseRecord.Disabled == disable)
-                    {
-                        var state = disable ? "disabled" : "enabled";
-                        resultList.Add(new DynamicJsonValue
-                        {
-                            ["Name"] = name,
-                            ["Success"] = true, //even if we have nothing to do, no reason to return failure status
-                            ["Disabled"] = disable,
-                            ["Reason"] = $"Database already {state}"
-                        });
-                        continue;
-                    }
-
-                    databaseRecord.Disabled = disable;
-
-                    var (index, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null, $"{raftRequestId}/{name}");
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     resultList.Add(new DynamicJsonValue
                     {
                         ["Name"] = name,
                         ["Success"] = true,
                         ["Disabled"] = disable,
-                        ["Reason"] = $"Database state={databaseRecord.Disabled} was propagated on the cluster"
+                        ["Reason"] = $"Database state={disable} was propagated on the cluster"
                     });
                 }
+
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(parameters.DatabaseNames, disable, $"{raftRequestId}");
+                await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

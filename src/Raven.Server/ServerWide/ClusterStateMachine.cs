@@ -424,6 +424,9 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateLicenseLimitsCommand):
                         UpdateValue<NodeLicenseLimits>(context, type, cmd, index);
                         break;
+                    case nameof(ToggleDatabasesStateCommand):
+                        ToggleDatabasesState(cmd, context, type, index);
+                        break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
@@ -2936,10 +2939,53 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private void ToggleDatabasesState(BlittableJsonReaderObject cmd, TransactionOperationContext context, string type, long index)
+        {
+            var command = (ToggleDatabasesStateCommand)JsonDeserializationCluster.Commands[type](cmd);
+
+            if (command.Value == null)
+                throw new RachisInvalidOperationException($"{nameof(ToggleParameters)} is null for command type: {type}");
+
+            if (command.Value.DatabaseNames == null)
+                throw new RachisInvalidOperationException($"{nameof(ToggleParameters.DatabaseNames)} is null for command type: {type}");
+
+            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
+
+            foreach (var databaseName in command.Value.DatabaseNames)
+            {
+                var key = "db/" + databaseName;
+                using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    var oldDatabaseRecord = ReadInternal(context, out _, valueNameLowered);
+                    if (oldDatabaseRecord == null)
+                        continue;
+
+                    oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool isCurrentlyDisabled);
+
+                    if (command.Value.Disable == isCurrentlyDisabled)
+                        continue;
+
+                    using (oldDatabaseRecord)
+                    {
+                        oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                        {
+                            [nameof(DatabaseRecord.Disabled)] = command.Value.Disable
+                        };
+
+                        var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
+                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName));
+                    }
+                }
+            }
+
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+        }
+
         private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
         {
             if (serverWideBackupConfiguration == null)
-                throw new RachisInvalidOperationException($"Server-wide backup configuration is null for commmand type: {type}");
+                throw new RachisInvalidOperationException($"Server-wide backup configuration is null for command type: {type}");
 
             if (serverWideBackupConfiguration.Name == null)
                 throw new RachisInvalidOperationException($"Server-wide backup configuration name is null or empty for command type: {type}");
