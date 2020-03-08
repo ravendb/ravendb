@@ -399,15 +399,15 @@ namespace Raven.Server.Web.System
             var clusterTopology = ServerStore.GetClusterTopology(context);
             ValidateClusterMembers(clusterTopology, databaseRecord);
 
-            if (databaseRecord.Topology?.Members?.Count > 0)
+            if (databaseRecord.Topology?.Count > 0)
             {
                 var topology = databaseRecord.Topology;
-                foreach (var member in topology.Members)
+                foreach (var node in topology.AllNodes)
                 {
-                    if (clusterTopology.Contains(member) == false)
-                        throw new ArgumentException($"Failed to add node {member}, because we don't have it in the cluster.");
+                    if (clusterTopology.Contains(node) == false)
+                        throw new ArgumentException($"Failed to add node {node}, because we don't have it in the cluster.");
                 }
-                topology.ReplicationFactor = topology.Members.Count;
+                topology.ReplicationFactor = Math.Min(topology.Count, clusterTopology.AllNodes.Count);
             }
             else
             {
@@ -416,7 +416,6 @@ namespace Raven.Server.Web.System
 
                 databaseRecord.Topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
             }
-
 
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
@@ -488,8 +487,12 @@ namespace Raven.Server.Web.System
                 topology.Members.Clear();
             }
 
+            var unique = new HashSet<string>();
             foreach (var node in topology.AllNodes)
             {
+                if (unique.Add(node) == false)
+                    throw new InvalidOperationException($"node '{node}' already exists. This is not allowed.");
+
                 var url = clusterTopology.GetUrlFromTag(node);
                 if (databaseRecord.Encrypted && NotUsingHttps(url))
                     throw new InvalidOperationException($"{databaseRecord.DatabaseName} is encrypted but node {node} with url {url} doesn't use HTTPS. This is not allowed.");

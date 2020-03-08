@@ -121,6 +121,27 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
+        public async Task KeepReplicationFactorOnRecordUpdate()
+        {
+            var clusterSize = 3;
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = clusterSize
+            }))
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                record.Topology.Members.Remove("A");
+                record.Topology.Rehabs.Add("A");
+
+                await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, record.Etag));
+                var val = await WaitForValueAsync(async () => await GetMembersCount(store, store.Database), clusterSize);
+                Assert.Equal(3, val);
+            }
+        }
+
+        [Fact]
         public async Task MoveToRehabOnServerDown()
         {
             var clusterSize = 3;
