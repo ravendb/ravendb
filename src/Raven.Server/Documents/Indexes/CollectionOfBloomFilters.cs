@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Indexes
         private BloomFilter _currentFilter;
         private Mode _mode;
         private readonly Tree _tree;
+        public bool Consumed { get; private set; }
 
         private CollectionOfBloomFilters(Mode mode, Tree tree, TransactionOperationContext context)
         {
@@ -162,6 +163,9 @@ namespace Raven.Server.Documents.Indexes
 
         public bool Add(LazyStringValue key)
         {
+            if (Consumed)
+                return false;
+
             if (_filters.Length == 1)
             {
                 if (_currentFilter.Add(key))
@@ -193,6 +197,12 @@ namespace Raven.Server.Documents.Indexes
             if (_currentFilter.Count < _currentFilter.Capacity)
                 return;
 
+            if (_mode == Mode.X86 && _filters.Length >= 8)
+            {
+                Consumed = true;
+                return;
+            }
+
             AddFilter(CreateNewFilter(_filters.Length, _mode));
         }
 
@@ -200,6 +210,16 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_filters == null || _filters.Length == 0)
                 return;
+
+            if (Consumed)
+            {
+                foreach (var filter in _filters)
+                    filter.Delete();
+
+                _filters = null;
+                _currentFilter = null;
+                return;
+            }
 
             foreach (var filter in _filters)
                 filter.Flush();
@@ -439,6 +459,14 @@ namespace Raven.Server.Documents.Indexes
                     return; // avoid re-throwing it
 
                 _tree.Increment(_keySlice, Count - _initialCount);
+            }
+
+            internal void Delete()
+            {
+                if (_tree.Llt.Environment.Options.IsCatastrophicFailureSet)
+                    return; // avoid re-throwing it
+
+                _tree.Delete(_keySlice);
             }
 
             public void Dispose()
