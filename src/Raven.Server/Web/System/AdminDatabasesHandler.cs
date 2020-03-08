@@ -847,7 +847,7 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "indexes/toggle");
                 var parameters = JsonDeserializationServer.Parameters.DisableDatabaseToggleParameters(json);
 
-                var (index, _) = await ServerStore.ToggleIndexingStateAsync(parameters.DatabaseNames, disable, $"{raftRequestId}");
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleType.Indexes, parameters.DatabaseNames, disable, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 NoContentStatus();
@@ -861,31 +861,16 @@ namespace Raven.Server.Web.System
             var enable = GetBoolValueQueryString("enable") ?? true;
             var raftRequestId = GetRaftRequestIdFromQuery();
 
+            if (enable &&
+                Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)
+            {
+                throw licenseLimit;
+            }
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                DatabaseRecord databaseRecord;
-                long index;
-                using (context.OpenReadTransaction())
-                    databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out index);
-
-                if (databaseRecord.Encrypted)
-                {
-                    throw new InvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: " + name);
-                }
-
-                if (enable == databaseRecord.Topology.DynamicNodesDistribution)
-                    return;
-
-                if (enable &&
-                    Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)
-                {
-                    throw licenseLimit;
-                }
-
-                databaseRecord.Topology.DynamicNodesDistribution = enable;
-
-                var (commandResultIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
-                await ServerStore.Cluster.WaitForIndexNotification(commandResultIndex);
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleType.DynamicDatabaseDistribution, new []{name}, enable, $"{raftRequestId}");
+                await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 NoContentStatus();
             }
@@ -927,7 +912,7 @@ namespace Raven.Server.Web.System
                     });
                 }
 
-                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(parameters.DatabaseNames, disable, $"{raftRequestId}");
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleType.Databases, parameters.DatabaseNames, disable, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

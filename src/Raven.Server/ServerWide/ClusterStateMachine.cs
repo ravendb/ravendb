@@ -427,9 +427,6 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleDatabasesStateCommand):
                         ToggleDatabasesState(cmd, context, type, index);
                         break;
-                    case nameof(ToggleIndexingStateCommand):
-                        ToggleIndexesState(cmd, context, type, index);
-                        break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
@@ -2948,59 +2945,12 @@ namespace Raven.Server.ServerWide
             if (command.Value == null)
                 throw new RachisInvalidOperationException($"{nameof(ToggleParameters)} is null for command type: {type}");
 
-            UpdateRecordForToggle(context, command.Value.DatabaseNames, type, index, oldDatabaseRecord =>
-            {
-                oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool isCurrentlyDisabled);
-
-                if (isCurrentlyDisabled == command.Value.Disable)
-                    return false;
-
-                oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
-                {
-                    [nameof(DatabaseRecord.Disabled)] = command.Value.Disable
-                };
-
-                return true;
-            });
-        }
-
-        private void ToggleIndexesState(BlittableJsonReaderObject cmd, TransactionOperationContext context, string type, long index)
-        {
-            var command = (ToggleIndexingStateCommand)JsonDeserializationCluster.Commands[type](cmd);
-            if (command.Value == null)
-                throw new RachisInvalidOperationException($"{nameof(ToggleParameters)} is null for command type: {type}");
-
-            UpdateRecordForToggle(context, command.Value.DatabaseNames, type, index, oldDatabaseRecord =>
-            {
-                var rawDatabaseRecord = new RawDatabaseRecord(oldDatabaseRecord);
-                var settings = rawDatabaseRecord.Settings;
-                if (settings.TryGetValue("Indexing.Disable", out var indexingDisabledString) &&
-                    bool.TryParse(indexingDisabledString, out var currentlyIndexingDisabled) &&
-                    currentlyIndexingDisabled == command.Value.Disable)
-                {
-                    return false;
-                }
-
-                settings["Indexing.Disable"] = command.Value.Disable.ToString();
-
-                oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
-                {
-                    [nameof(DatabaseRecord.Settings)] = TypeConverter.ToBlittableSupportedType(settings)
-                };
-
-                return true;
-            });
-        }
-
-        private void UpdateRecordForToggle(TransactionOperationContext context, string[] databaseNames,
-            string type, long index, Func<BlittableJsonReaderObject, bool> updateRecord)
-        {
-            if (databaseNames == null)
+            if (command.Value.DatabaseNames == null)
                 throw new RachisInvalidOperationException($"{nameof(ToggleParameters.DatabaseNames)} is null for command type: {type}");
 
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
 
-            foreach (var databaseName in databaseNames)
+            foreach (var databaseName in command.Value.DatabaseNames)
             {
                 var key = "db/" + databaseName;
                 using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice valueNameLowered))
@@ -3009,8 +2959,60 @@ namespace Raven.Server.ServerWide
                     if (oldDatabaseRecord == null)
                         continue;
 
-                    if (updateRecord(oldDatabaseRecord) == false)
-                        continue;
+                    var rawDatabaseRecord = new RawDatabaseRecord(oldDatabaseRecord);
+                    switch (command.Value.ToggleType)
+                    {
+                        case ToggleType.Databases:
+                            if (rawDatabaseRecord.IsDisabled == command.Value.State)
+                                continue;
+
+                            oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                            {
+                                [nameof(DatabaseRecord.Disabled)] = command.Value.State
+                            };
+
+                            break;
+                        case ToggleType.Indexes:
+                            var settings = rawDatabaseRecord.Settings;
+                            if (settings.TryGetValue("Indexing.Disable", out var indexingDisabledString) &&
+                                bool.TryParse(indexingDisabledString, out var currentlyIndexingDisabled) &&
+                                currentlyIndexingDisabled == command.Value.State)
+                            {
+                                continue;
+                            }
+
+                            settings["Indexing.Disable"] = command.Value.State.ToString();
+
+                            oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                            {
+                                [nameof(DatabaseRecord.Settings)] = TypeConverter.ToBlittableSupportedType(settings)
+                            };
+
+                            break;
+                        case ToggleType.DynamicDatabaseDistribution:
+                            if (rawDatabaseRecord.IsEncrypted)
+                            {
+                                throw new RachisInvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: {databaseName}");
+                            }
+
+                            var topology = rawDatabaseRecord.Topology;
+                            if (topology == null)
+                                continue;
+
+                            if (topology.DynamicNodesDistribution == command.Value.State)
+                                continue;
+
+                            topology.DynamicNodesDistribution = command.Value.State;
+
+                            oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                            {
+                                [nameof(DatabaseRecord.Topology)] = topology.ToJson()
+                            };
+
+                            break;
+                        default:
+                            throw new RachisInvalidOperationException($"Argument out of range for `{nameof(ToggleDatabasesStateCommand.Value.ToggleType)}`");
+                    }
 
                     using (oldDatabaseRecord)
                     {

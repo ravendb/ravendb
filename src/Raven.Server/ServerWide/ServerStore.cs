@@ -1704,23 +1704,13 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editExpiration);
         }
 
-        public Task<(long Index, object Result)> ToggleDatabasesStateAsync(string[] databaseNames, bool disable, string raftRequestId)
+        public Task<(long Index, object Result)> ToggleDatabasesStateAsync(ToggleType toggleType, string[] databaseNames, bool state, string raftRequestId)
         {
             var command = new ToggleDatabasesStateCommand(new ToggleParameters
             {
+                ToggleType = toggleType,
                 DatabaseNames = databaseNames,
-                Disable = disable
-            }, raftRequestId);
-
-            return SendToLeaderAsync(command);
-        }
-
-        public Task<(long Index, object Result)> ToggleIndexingStateAsync(string[] databaseNames, bool disable, string raftRequestId)
-        {
-            var command = new ToggleIndexingStateCommand(new ToggleParameters
-            {
-                DatabaseNames = databaseNames,
-                Disable = disable
+                State = state
             }, raftRequestId);
 
             return SendToLeaderAsync(command);
