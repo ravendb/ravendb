@@ -317,7 +317,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         internal async Task CleanUpUnusedAutoIndexes(DatabaseObservationState databaseState)
         {
-            if (databaseState.DatabaseTopology.Count != databaseState.Current.Count)
+            if (AllDatabaseNodesHasReport(databaseState) == false) 
                 return;
 
             var indexes = new Dictionary<string, TimeSpan>();
@@ -474,7 +474,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return null;
             }
 
-            if (state.DatabaseTopology.Count != state.Current.Count)
+            if (AllDatabaseNodesHasReport(state) == false) 
                 return null;
 
             long commandCount = long.MaxValue;
@@ -493,6 +493,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 return null;
 
             return commandCount;
+        }
+
+        private static bool AllDatabaseNodesHasReport(DatabaseObservationState state)
+        {
+            foreach (var node in state.DatabaseTopology.AllNodes)
+            {
+                if (state.Current.ContainsKey(node) == false)
+                    return false;
+            }
+
+            return true;
         }
 
         private void AddToDecisionLog(string database, string updateReason, Exception e)
