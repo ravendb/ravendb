@@ -1715,6 +1715,17 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(command);
         }
 
+        public Task<(long Index, object Result)> ToggleIndexingStateAsync(string[] databaseNames, bool disable, string raftRequestId)
+        {
+            var command = new ToggleIndexingStateCommand(new ToggleParameters
+            {
+                DatabaseNames = databaseNames,
+                Disable = disable
+            }, raftRequestId);
+
+            return SendToLeaderAsync(command);
+        }
+
         public Task<(long Index, object Result)> PutServerWideBackupConfigurationAsync(ServerWideBackupConfiguration configuration, string raftRequestId)
         {
             var command = new PutServerWideBackupConfigurationCommand(configuration, raftRequestId);

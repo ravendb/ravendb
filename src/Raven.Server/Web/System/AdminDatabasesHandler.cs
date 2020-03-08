@@ -837,6 +837,23 @@ namespace Raven.Server.Web.System
             await ToggleDisableDatabases(disable: false);
         }
 
+        [RavenAction("/admin/databases/toggle-indexing", "POST", AuthorizationStatus.Operator)]
+        public async Task ToggleIndexing()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var raftRequestId = GetRaftRequestIdFromQuery();
+                var disable = GetBoolValueQueryString("disable", required: true) ?? false;
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "indexes/toggle");
+                var parameters = JsonDeserializationServer.Parameters.DisableDatabaseToggleParameters(json);
+
+                var (index, _) = await ServerStore.ToggleIndexingStateAsync(parameters.DatabaseNames, disable, $"{raftRequestId}");
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                NoContentStatus();
+            }
+        }
+
         [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.Operator)]
         public async Task ToggleDynamicDatabaseDistribution()
         {
