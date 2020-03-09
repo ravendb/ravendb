@@ -843,7 +843,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var raftRequestId = GetRaftRequestIdFromQuery();
-                var disable = GetBoolValueQueryString("disable", required: true) ?? false;
+                var disable = GetBoolValueQueryString("disable") ?? false;
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "indexes/toggle");
                 var parameters = JsonDeserializationServer.Parameters.DisableDatabaseToggleParameters(json);
 

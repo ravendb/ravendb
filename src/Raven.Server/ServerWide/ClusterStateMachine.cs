@@ -26,6 +26,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -2974,14 +2975,15 @@ namespace Raven.Server.ServerWide
                             break;
                         case ToggleType.Indexes:
                             var settings = rawDatabaseRecord.Settings;
-                            if (settings.TryGetValue("Indexing.Disable", out var indexingDisabledString) &&
+                            var configurationKey = RavenConfiguration.GetKey(x => x.Indexing.Disabled);
+                            if (settings.TryGetValue(configurationKey, out var indexingDisabledString) &&
                                 bool.TryParse(indexingDisabledString, out var currentlyIndexingDisabled) &&
                                 currentlyIndexingDisabled == command.Value.State)
                             {
                                 continue;
                             }
 
-                            settings["Indexing.Disable"] = command.Value.State.ToString();
+                            settings[configurationKey] = command.Value.State.ToString();
 
                             oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
                             {
