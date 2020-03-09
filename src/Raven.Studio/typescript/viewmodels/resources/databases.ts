@@ -179,6 +179,7 @@ class databases extends viewModelBase {
         switch (e.ChangeType) {
             case "Load":
             case "Put":
+            case "Update":
                 this.updateDatabaseInfo(e.DatabaseName);
                 break;
 
