@@ -1269,12 +1269,12 @@ namespace Raven.Server.Documents
             return new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
         }
 
-        public (long Value, long Etag)? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
+        public CounterValue? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
         {
             if (TryGetRawBlob(context, docId, counterName, out var etag, out var blob) == false)
                 return null;
 
-            return (InternalGetCounterValue(blob, docId, counterName), etag);
+            return new CounterValue(InternalGetCounterValue(blob, docId, counterName), etag);
         }
 
         private static bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out long etag, out BlittableJsonReaderObject.RawBlob blob)
@@ -1311,7 +1311,7 @@ namespace Raven.Server.Documents
             return scope;
         }
 
-        public IEnumerable<(string ChangeVector, long Value, long ETag)> GetCounterValues(DocumentsOperationContext context, string docId, string counterName)
+        public IEnumerable<CounterPartialValue> GetCounterPartialValues(DocumentsOperationContext context, string docId, string counterName)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
@@ -1341,7 +1341,7 @@ namespace Raven.Server.Documents
                     var dbId = dbIds[dbIdIndex].ToString();
                     var val = GetPartialValue(dbIdIndex, blob);
                     var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId);
-                    yield return ($"{nodeTag ?? "?"}-{dbId}", val, etag);
+                    yield return new CounterPartialValue(val, etag, $"{nodeTag ?? "?"}-{dbId}");
                 }
             }
         }
@@ -1864,9 +1864,29 @@ namespace Raven.Server.Documents
         public int Size;
     }
 
-    public class CounterValue
+    public struct CounterValue
     {
-        public long Value;
-        public long Etag;
+        public readonly long Value;
+        public readonly long Etag;
+
+        public CounterValue(long value, long etag)
+        {
+            Value = value;
+            Etag = etag;
+        }
+    }
+
+    public struct CounterPartialValue
+    {
+        public readonly long PartialValue;
+        public readonly long Etag;
+        public readonly string ChangeVector;
+
+        public CounterPartialValue(long partialValue, long etag, string changeVector)
+        {
+            PartialValue = partialValue;
+            Etag = etag;
+            ChangeVector = changeVector;
+        }
     }
 }

@@ -928,9 +928,9 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 var rawValues = new ObjectInstance(ScriptEngine);
-                foreach (var (cv, val, etag) in _database.DocumentsStorage.CountersStorage.GetCounterValues(_docsCtx, id, name))
+                foreach (var partialValue in _database.DocumentsStorage.CountersStorage.GetCounterPartialValues(_docsCtx, id, name))
                 {
-                    rawValues.FastAddProperty(cv, val, true, false, false);
+                    rawValues.FastAddProperty(partialValue.ChangeVector, partialValue.PartialValue, true, false, false);
                 }
 
                 return rawValues;

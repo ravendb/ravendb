@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     foreach (var kvp in _legacyDictionary)
                     {
-                        using (var values = ToCounterGroup(context, kvp.Key, kvp.Value, out var cv))                        
+                        using (var values = ToCounterGroup(context, kvp.Key, kvp.Value, out var cv))
                         using (var cvLsv = context.GetLazyString(cv))
                         using (var keyLsv = context.GetLazyString(kvp.Key))
                         {
@@ -734,20 +734,19 @@ namespace Raven.Server.Documents.Handlers
             if (addFullValues)
             {
                 fullValues = new Dictionary<string, long>();
-                foreach (var (cv, val, curEtag) in database.DocumentsStorage.CountersStorage.GetCounterValues(context,
-                    docId, counterName))
+                foreach (var partialValue in database.DocumentsStorage.CountersStorage.GetCounterPartialValues(context, docId, counterName))
                 {
-                    etag = HashCode.Combine(etag, curEtag);
+                    etag = HashCode.Combine(etag, partialValue.Etag);
                     try
                     {
-                        value = checked(value + val);
+                        value = checked(value + partialValue.PartialValue);
                     }
                     catch (OverflowException e)
                     {
                         CounterOverflowException.ThrowFor(docId, counterName, e);
                     }
 
-                    fullValues[cv] = val;
+                    fullValues[partialValue.ChangeVector] = partialValue.PartialValue;
                 }
             }
             else
@@ -755,7 +754,9 @@ namespace Raven.Server.Documents.Handlers
                 var v = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName);
                 if (v == null)
                     return;
-                (value, etag) = v.Value;
+
+                value = v.Value.Value;
+                etag = v.Value.Etag;
             }
 
             if (result.Counters == null)
