@@ -188,6 +188,10 @@ class databasesManager {
 
             case "RemoveNode":
             case "Delete":
+                if (!db) {
+                    return;
+                }
+
                 // fetch latest database info since we don't know at this point if database was removed from current node
                 this.updateDatabaseInfo(db, event.DatabaseName)
                     .fail((xhr: JQueryXHR) => {
