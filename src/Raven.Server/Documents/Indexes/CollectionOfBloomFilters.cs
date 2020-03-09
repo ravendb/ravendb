@@ -37,7 +37,8 @@ namespace Raven.Server.Documents.Indexes
         private BloomFilter _currentFilter;
         private Mode _mode;
         private readonly Tree _tree;
-        public bool Consumed { get; private set; }
+        public bool Consumed;
+        private static readonly long _consumed = -1L;
 
         private CollectionOfBloomFilters(Mode mode, Tree tree, TransactionOperationContext context)
         {
@@ -63,6 +64,18 @@ namespace Raven.Server.Documents.Indexes
         {
             var tree = indexContext.Transaction.InnerTransaction.CreateTree("BloomFilters");
             var count = GetCount(tree, ref mode);
+            if (count == _consumed)
+            {
+                Debug.Assert(mode == Mode.X86, "BloomFilters in x64 mode got consumed, should not happen and likely a bug!");
+
+                var consumedCollection = new CollectionOfBloomFilters(mode, tree: null, context: null)
+                {
+                    Consumed = true
+                };
+
+                return consumedCollection;
+            }
+
             var collection = new CollectionOfBloomFilters(mode, tree, indexContext);
 
             for (var i = 0; i < count; i++)
@@ -215,6 +228,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 foreach (var filter in _filters)
                     filter.Delete();
+
+                // mark as consumed in the storage
+                _tree.Add(Count32Slice, _consumed);
 
                 _filters = null;
                 _currentFilter = null;
