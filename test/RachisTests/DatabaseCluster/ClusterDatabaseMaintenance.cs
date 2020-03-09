@@ -1590,6 +1590,28 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
+        public async Task KeepDatabaseIdOnSoftDelete()
+        {
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 3
+            }))
+            {
+                var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, "A", timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
+                await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex + 1, TimeSpan.FromSeconds(15));
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record.UnusedDatabaseIds.Count);
+
+                result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: false, "B", timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
+                await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex + 1, TimeSpan.FromSeconds(15));
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record.UnusedDatabaseIds.Count);
+            }
+        }
+
+        [Fact]
         public async Task WaitBreakdownTimeBeforeReplacing()
         {
             var clusterSize = 3;
