@@ -635,66 +635,37 @@ namespace Raven.Client.Documents.Linq
 
         private void VisitEquals(MethodCallExpression expression)
         {
-            ExpressionInfo fieldInfo = null;
-            Expression constant = null;
-            object comparisonType = null;
+            EqualsGetArgs(expression, out var firstArg, out var secondArg, out var comparisonArg);
 
-            if (expression.Object == null)
+            ExpressionInfo fieldInfo;
+            Expression constant;
+            if (IsMemberAccessForQuerySource(firstArg))
             {
-                var a = expression.Arguments[0];
-                var b = expression.Arguments[1];
-
-                if (a is MemberExpression && b is ConstantExpression)
-                {
-                    fieldInfo = GetMember(a);
-                    constant = b;
-                }
-                else if (a is ConstantExpression && b is MemberExpression)
-                {
-                    fieldInfo = GetMember(b);
-                    constant = a;
-                }
-
-                if (expression.Arguments.Count == 3 &&
-                    expression.Arguments[2].NodeType == ExpressionType.Constant &&
-                    expression.Arguments[2].Type == typeof(StringComparison))
-                {
-                    comparisonType = ((ConstantExpression)expression.Arguments[2]).Value;
-
-                }
+                if(IsMemberAccessForQuerySource(secondArg))
+                    throw new NotSupportedException("Where clauses containing an Equals Expression between two fields are not supported. " +
+                                                    "The equalization should be between a field and a constant value. " +
+                                                    $"`{firstArg}` and `{secondArg}` are both fields, so cannot convert {expression} to a proper query.");
+                        
+                fieldInfo = GetMember(firstArg);
+                constant = secondArg;
+            }
+            else if (IsMemberAccessForQuerySource(secondArg))
+            {
+                fieldInfo = GetMember(secondArg);
+                constant = firstArg;
             }
             else
             {
-                switch (expression.Object.NodeType)
-                {
-                    case ExpressionType.MemberAccess:
-                        fieldInfo = GetMember(expression.Object);
-                        constant = expression.Arguments[0];
-                        break;
-                    case ExpressionType.Constant:
-                        fieldInfo = GetMember(expression.Arguments[0]);
-                        constant = expression.Object;
-                        break;
-                    case ExpressionType.Parameter:
-                        fieldInfo = new ExpressionInfo(_currentPath.EndsWith("[].")
-                            ? _currentPath.Substring(0, _currentPath.Length - 3)
-                            : _currentPath.Substring(0, _currentPath.Length - 1),
-                            expression.Object.Type, false);
-                        constant = expression.Arguments[0];
-                        break;
-                    default:
-                        throw new NotSupportedException("Nodes of type + " + expression.Object.NodeType + " are not understood in this context");
-                }
-                if (expression.Arguments.Count == 2 &&
-                    expression.Arguments[1].NodeType == ExpressionType.Constant &&
-                    expression.Arguments[1].Type == typeof(StringComparison))
-                {
-                    comparisonType = ((ConstantExpression)expression.Arguments[1]).Value;
-                }
+                throw new NotSupportedException("Where clauses containing an Expression between two constants are not supported. " +
+                                                "The equalization should be between a field and a constant value. " +
+                                                $"`{firstArg}` and `{secondArg}` are both constants, so cannot convert {expression} to a proper query.");
             }
 
-            if (comparisonType != null)
+            if (comparisonArg != null
+                && comparisonArg.NodeType == ExpressionType.Constant 
+                && comparisonArg.Type == typeof(StringComparison))
             {
+                var comparisonType = ((ConstantExpression)comparisonArg).Value;
                 switch ((StringComparison)comparisonType)
                 {
                     case StringComparison.CurrentCulture:
@@ -716,6 +687,25 @@ namespace Raven.Client.Documents.Linq
                 AllowWildcards = false,
                 Exact = _insideExact
             });
+        }
+
+        private static void EqualsGetArgs(MethodCallExpression expression, out Expression firstArg, out Expression secondArg, out Expression comparisonArg)
+        {
+            comparisonArg = null;
+            if (expression.Object == null)
+            {
+                firstArg = expression.Arguments[0];
+                secondArg = expression.Arguments[1];
+                if (expression.Arguments.Count == 3)
+                    comparisonArg = expression.Arguments[2];
+            }
+            else
+            {
+                firstArg = expression.Object;
+                secondArg = expression.Arguments[0];
+                if (expression.Arguments.Count == 2)
+                    comparisonArg = expression.Arguments[1];
+            }
         }
 
         private void VisitStringContains(MethodCallExpression _)
