@@ -58,9 +58,9 @@ namespace Raven.Server.Documents.Queries.Results
 
             var djv = new DynamicJsonValue();
 
-            foreach (var (cv, val, etag) in DocumentsStorage.CountersStorage.GetCounterValues(ctx, docId, name))
+            foreach (var partialValue in DocumentsStorage.CountersStorage.GetCounterPartialValues(ctx, docId, name))
             {
-                djv[cv] = val;
+                djv[partialValue.ChangeVector] = partialValue.PartialValue;
             }
 
             return djv;
