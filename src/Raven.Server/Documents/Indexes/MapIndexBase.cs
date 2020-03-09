@@ -54,16 +54,9 @@ namespace Raven.Server.Documents.Indexes
             EnsureValidStats(stats);
 
             bool mustDelete;
-            if (_filters.Consumed == false)
+            using (_stats.BloomStats.Start())
             {
-                using (_stats.BloomStats.Start())
-                {
-                    mustDelete = _filters.Add(lowerId) == false;
-                }
-            }
-            else
-            {
-                mustDelete = true;
+                mustDelete = _filters.Add(lowerId) == false;
             }
 
             if (mustDelete)
