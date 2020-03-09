@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
@@ -20,16 +21,22 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            DeletionInProgressStatus deletionStatus = DeletionInProgressStatus.No;
+            record.DeletionInProgress?.TryGetValue(NodeTag, out deletionStatus);
+
             record.Topology.RemoveFromTopology(NodeTag);
             record.DeletionInProgress?.Remove(NodeTag);
 
             if (DatabaseId == null)
                 return null;
 
-            if (record.UnusedDatabaseIds == null)
-                record.UnusedDatabaseIds = new HashSet<string>();
+            if (deletionStatus == DeletionInProgressStatus.HardDelete)
+            {
+                if (record.UnusedDatabaseIds == null)
+                    record.UnusedDatabaseIds = new HashSet<string>();
 
-            record.UnusedDatabaseIds.Add(DatabaseId);
+                record.UnusedDatabaseIds.Add(DatabaseId);
+            }
 
             return null;
         }
