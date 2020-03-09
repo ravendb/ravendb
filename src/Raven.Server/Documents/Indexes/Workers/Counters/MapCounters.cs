@@ -3,6 +3,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Workers.Counters
 {
@@ -20,16 +21,17 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
         {
             foreach (var counters in GetCountersEnumerator(queryContext, collection, lastEtag, pageSize))
             {
-                yield return new CountersIndexItem(counters.DocumentId, counters.DocumentId, counters.Etag, counters.Values.Size, counters);
+                foreach (var counterName in counters.CounterNames)
+                    yield return new CounterIndexItem(counters.DocumentId, counters.DocumentId, counters.Etag, counterName, counters.Size);
             }
         }
 
-        private IEnumerable<CounterGroupDetail> GetCountersEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
+        private IEnumerable<CounterGroupMetadata> GetCountersEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                return _countersStorage.GetCountersFrom(queryContext.Documents, lastEtag + 1, 0, pageSize);
+                return _countersStorage.GetCountersMetadataFrom(queryContext.Documents, lastEtag + 1, 0, pageSize);
 
-            return _countersStorage.GetCountersFrom(queryContext.Documents, collection, lastEtag + 1, 0, pageSize);
+            return _countersStorage.GetCountersMetadataFrom(queryContext.Documents, collection, lastEtag + 1, 0, pageSize);
         }
     }
 }

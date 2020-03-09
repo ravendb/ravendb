@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, _compiled.Maps[collection], collection, stats, type);
+            return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, filter: null, _compiled.Maps[collection], collection, stats, type);
         }
 
         public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

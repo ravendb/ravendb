@@ -8,6 +8,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Counters;
 using Raven.Server.Documents.Queries;
@@ -196,7 +197,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, _compiled.Maps[collection], collection, stats, type);
+            return new StaticIndexItemEnumerator<DynamicCounterEntry>(items, new CounterItemFilterBehavior(), _compiled.Maps[collection], collection, stats, type);
         }
 
         public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
@@ -241,7 +242,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         private void HandleTimeSeriesChange(CounterChange change)
         {
-            if (HandleAllDocs == false /*&& Collections.Contains(change.CollectionName) == false*/) // TODO [ppekrol]
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false)
                 return;
 
             _mre.Set();

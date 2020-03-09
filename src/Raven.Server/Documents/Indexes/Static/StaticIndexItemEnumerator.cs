@@ -16,15 +16,11 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly string _firstKey;
         private readonly bool _allItems;
         private readonly string _allItemsKey;
+        private readonly IIndexItemFilterBehavior _filter;
 
-        protected StaticIndexItemEnumerator(IEnumerable<IndexItem> items)
+        public StaticIndexItemEnumerator(IEnumerable<IndexItem> items, IIndexItemFilterBehavior filter, Dictionary<string, List<IndexingFunc>> funcs, string collection, IndexingStatsScope stats, IndexType type)
         {
             _itemsEnumerator = items.GetEnumerator();
-        }
-
-        public StaticIndexItemEnumerator(IEnumerable<IndexItem> items, Dictionary<string, List<IndexingFunc>> funcs, string collection, IndexingStatsScope stats, IndexType type)
-            : this(items)
-        {
             _documentReadStats = stats?.For(IndexingOperation.Map.DocumentRead, start: false);
 
             var indexingFunctionType = type.IsJavaScript() ? IndexingOperation.Map.Jint : IndexingOperation.Map.Linq;
@@ -71,6 +67,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             CurrentIndexingScope.Current.SetSourceCollection(collection, mapFuncStats);
+            _filter = filter;
         }
 
         public bool MoveNext(out IEnumerable resultsOfCurrentDocument, out long? etag)
@@ -84,6 +81,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     Current = _itemsEnumerator.Current;
                     etag = Current.Etag;
+
+                    if (_filter != null && _filter.ShouldFilter(Current))
+                        continue;
 
                     if (Current.IndexingKey == null && _singleKey)
                         resultsOfCurrentDocument = _resultsOfCurrentDocument[_firstKey];
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             private class Enumerator<TEnumeratorType> : IEnumerator<TEnumeratorType> where TEnumeratorType : AbstractDynamicObject, new()
             {
-                private TEnumeratorType _dynamicDocument;
+                private TEnumeratorType _dynamicItem;
                 private readonly StaticIndexItemEnumerator<TEnumeratorType> _inner;
                 private object _seen;
 
@@ -159,14 +159,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     _seen = _inner.Current.Item;
 
-                    if (_dynamicDocument == null)
-                        _dynamicDocument = new TEnumeratorType();
+                    if (_dynamicItem == null)
+                        _dynamicItem = new TEnumeratorType();
 
-                    _dynamicDocument.Set(_seen);
+                    _dynamicItem.Set(_seen);
 
-                    Current = _dynamicDocument;
+                    Current = _dynamicItem;
 
-                    CurrentIndexingScope.Current.Source = _dynamicDocument;
+                    CurrentIndexingScope.Current.Source = _dynamicItem;
 
                     return true;
                 }
