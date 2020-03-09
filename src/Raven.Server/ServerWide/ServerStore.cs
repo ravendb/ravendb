@@ -1015,6 +1015,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AddDatabaseCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Put));
                     break;
+                case nameof(ToggleDatabasesStateCommand):
                 case nameof(UpdateTopologyCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Update));
                     break;

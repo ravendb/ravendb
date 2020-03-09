@@ -178,29 +178,36 @@ class databasesManager {
 
     private onDatabaseUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
         const db = this.getDatabaseByName(event.DatabaseName);
-        if ((event.ChangeType === "Delete" || event.ChangeType === "RemoveNode" ) && db) {
-            // fetch latest database info since we don't know at this point if database was removed from current node
-            this.updateDatabaseInfo(db, event.DatabaseName)
-                .fail((xhr: JQueryXHR) => {
-                    if (xhr.status === 404) {
-                        this.onDatabaseDeleted(db);
-                    }
-                })
-                .done((info: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
-                    // check if database if still relevant on this node
-                    const localTag = clusterTopologyManager.default.localNodeTag();
-                    
-                    const relevant = !!info.NodesTopology.Members.find(x => x.NodeTag === localTag)
-                        || !!info.NodesTopology.Promotables.find(x => x.NodeTag === localTag)
-                        || !!info.NodesTopology.Rehabs.find(x => x.NodeTag === localTag);
-                    
-                    if (!relevant) {
-                        this.onNoLongerRelevant(db);
-                    }
-                });
 
-        } else if (event.ChangeType === "Put") {
-            this.updateDatabaseInfo(db, event.DatabaseName);
+        switch (event.ChangeType) {
+            case "Load":
+            case "Put":
+            case "Update":
+                this.updateDatabaseInfo(db, event.DatabaseName);
+                break;
+
+            case "RemoveNode":
+            case "Delete":
+                // fetch latest database info since we don't know at this point if database was removed from current node
+                this.updateDatabaseInfo(db, event.DatabaseName)
+                    .fail((xhr: JQueryXHR) => {
+                        if (xhr.status === 404) {
+                            this.onDatabaseDeleted(db);
+                        }
+                    })
+                    .done((info: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
+                        // check if database if still relevant on this node
+                        const localTag = clusterTopologyManager.default.localNodeTag();
+
+                        const relevant = !!info.NodesTopology.Members.find(x => x.NodeTag === localTag)
+                            || !!info.NodesTopology.Promotables.find(x => x.NodeTag === localTag)
+                            || !!info.NodesTopology.Rehabs.find(x => x.NodeTag === localTag);
+
+                        if (!relevant) {
+                            this.onNoLongerRelevant(db);
+                        }
+                    });
+                break;
         }
     }
 
