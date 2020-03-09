@@ -158,6 +158,68 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<CounterGroupMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, long etag, long skip, long take)
+        {
+            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToCounterGroupMetadata(context, ref result.Reader);
+            }
+        }
+
+        public IEnumerable<CounterGroupMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, string collection, long etag, long skip, long take)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                yield break;
+
+            var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
+
+            if (table == null)
+                yield break;
+
+            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag, skip))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToCounterGroupMetadata(context, ref result.Reader);
+            }
+        }
+
+        public static CounterGroupMetadata TableValueToCounterGroupMetadata(JsonOperationContext context, ref TableValueReader tvr)
+        {
+            var docId = ExtractDocId(context, ref tvr);
+
+            var counterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var valuesData = GetCounterValuesData(context, ref tvr);
+            int size = 0;
+
+            if (valuesData != null)
+            {
+                size = valuesData.Size;
+
+                if (valuesData.TryGet(Values, out BlittableJsonReaderObject values))
+                {
+                    foreach (var counterName in values.GetPropertyNames())
+                        counterNames.Add(counterName);
+                }
+            }
+
+            return new CounterGroupMetadata
+            {
+                DocumentId = docId,
+                Etag = TableValueToEtag((int)CountersTable.Etag, ref tvr),
+                CounterNames = counterNames,
+                Size = size
+            };
+        }
+
         public IEnumerable<CounterGroupDetail> GetCountersFrom(DocumentsOperationContext context, long etag, long skip, long take)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
@@ -385,6 +447,7 @@ namespace Raven.Server.Documents
                         ChangeVector = changeVector,
                         DocumentId = documentId,
                         Name = name,
+                        CollectionName = collectionName.Name,
                         Type = exists ? CounterChangeTypes.Increment : CounterChangeTypes.Put,
                         Value = value
                     });
@@ -778,6 +841,7 @@ namespace Raven.Server.Documents
                                     {
                                         ChangeVector = changeVector,
                                         DocumentId = documentId,
+                                        CollectionName = collectionName.Name,
                                         Name = counterName,
                                         Value = value,
                                         Type = changeType
@@ -1390,6 +1454,7 @@ namespace Raven.Server.Documents
                 {
                     ChangeVector = newChangeVector,
                     DocumentId = documentId,
+                    CollectionName = collectionName.Name,
                     Name = counterName,
                     Type = CounterChangeTypes.Delete
                 });
@@ -1789,5 +1854,19 @@ namespace Raven.Server.Documents
 
             return TableValueToEtag((int)CountersTable.Etag, ref result.Reader);
         }
+    }
+
+    public class CounterGroupMetadata
+    {
+        public LazyStringValue DocumentId;
+        public long Etag;
+        public HashSet<string> CounterNames;
+        public int Size;
+    }
+
+    public class CounterValue
+    {
+        public long Value;
+        public long Etag;
     }
 }

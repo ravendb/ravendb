@@ -162,6 +162,11 @@ namespace Raven.Client.Documents.Changes
         public string DocumentId { get; set; }
 
         /// <summary>
+        /// Document collection name.
+        /// </summary>
+        public string CollectionName { get; set; }
+
+        /// <summary>
         /// Counter change vector.
         /// </summary>
         public string ChangeVector { get; set; }
@@ -180,6 +185,7 @@ namespace Raven.Client.Documents.Changes
                 [nameof(Name)] = Name,
                 [nameof(Value)] = Value,
                 [nameof(DocumentId)] = DocumentId,
+                [nameof(CollectionName)] = CollectionName,
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString()
             };
@@ -190,6 +196,7 @@ namespace Raven.Client.Documents.Changes
             value.TryGet(nameof(Name), out string name);
             value.TryGet(nameof(Value), out long val);
             value.TryGet(nameof(DocumentId), out string documentId);
+            value.TryGet(nameof(CollectionName), out string collectionName);
             value.TryGet(nameof(ChangeVector), out string changeVector);
             value.TryGet(nameof(Type), out string type);
 
@@ -199,6 +206,7 @@ namespace Raven.Client.Documents.Changes
                 Value = val,
                 DocumentId = documentId,
                 ChangeVector = changeVector,
+                CollectionName = collectionName,
                 Type = (CounterChangeTypes)Enum.Parse(typeof(CounterChangeTypes), type, ignoreCase: true)
             };
         }

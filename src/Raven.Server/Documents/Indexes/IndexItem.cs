@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Server.Documents.Indexes.Static.Counters;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes
@@ -62,10 +63,10 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public class CountersIndexItem : IndexItem
+    public class CounterIndexItem : IndexItem
     {
-        public CountersIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, int size, object item)
-            : base(id, lowerId, null, null, etag, default, null, size, item, IndexItemType.Counters)
+        public CounterIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, string counterName, int size)
+            : base(id, lowerId, null, null, etag, default, counterName, size, new CounterEntry(id, counterName, etag), IndexItemType.Counters)
         {
         }
     }

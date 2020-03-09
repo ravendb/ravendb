@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new StaticIndexItemEnumerator<DynamicBlittableJson>(items, _compiled.Maps[collection], collection, stats, type);
+            return new StaticIndexItemEnumerator<DynamicBlittableJson>(items, filter: null, _compiled.Maps[collection], collection, stats, type);
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
