@@ -635,7 +635,7 @@ namespace Raven.Client.Documents.Linq
 
         private void VisitEquals(MethodCallExpression expression)
         {
-            EqualsGetArgs(expression, out var firstArg, out var secondArg, out var comparisonArg);
+            GetEqualsArgumentsFromExpression(expression, out var firstArg, out var secondArg, out var comparisonArg);
 
             ExpressionInfo fieldInfo;
             Expression constant;
@@ -689,7 +689,7 @@ namespace Raven.Client.Documents.Linq
             });
         }
 
-        private static void EqualsGetArgs(MethodCallExpression expression, out Expression firstArg, out Expression secondArg, out Expression comparisonArg)
+        private static void GetEqualsArgumentsFromExpression(MethodCallExpression expression, out Expression firstArg, out Expression secondArg, out Expression comparisonArg)
         {
             comparisonArg = null;
             if (expression.Object == null)
