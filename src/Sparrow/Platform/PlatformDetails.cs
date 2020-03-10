@@ -8,7 +8,7 @@ namespace Sparrow.Platform
     {
         public static readonly bool IsWindows8OrNewer;
 
-        internal static readonly bool IsWindows10OrNewer;
+        private static readonly bool IsWindows10OrNewer;
 
         public static readonly bool Is32Bits = IntPtr.Size == sizeof(int);
 
@@ -21,6 +21,7 @@ namespace Sparrow.Platform
 
         public static readonly bool CanPrefetch;
         public static readonly bool CanDiscardMemory;
+        internal static readonly bool CanUseHttp2;
 
         public static bool RunningOnDocker;
 
@@ -36,6 +37,7 @@ namespace Sparrow.Platform
 
             CanPrefetch = IsWindows8OrNewer || RunningOnPosix;
             CanDiscardMemory = IsWindows10OrNewer || RunningOnPosix;
+            CanUseHttp2 = IsWindows10OrNewer || RunningOnPosix;
         }
 
         private static bool TryGetWindowsVersion(out decimal version)

@@ -12,7 +12,7 @@ namespace Raven.Server.Config.Categories
     {
         public HttpConfiguration()
         {
-            Protocols = PlatformDetails.IsWindows10OrNewer ? HttpProtocols.Http1AndHttp2 : HttpProtocols.Http1;
+            Protocols = PlatformDetails.CanUseHttp2 ? HttpProtocols.Http1AndHttp2 : HttpProtocols.Http1;
         }
 
         [Description("Set Kestrel's minimum required data rate in bytes per second. This option should configured together with 'Http.MinDataRateGracePeriod'")]
