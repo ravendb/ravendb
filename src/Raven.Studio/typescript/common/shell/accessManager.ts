@@ -84,7 +84,7 @@ class accessManager {
         disableSystemIoStats: this.disableIfNotOperatorOrAbove,
         disableAdvancedMenuItem: this.disableIfNotOperatorOrAbove,
         disableCaptureStackTraces: this.disableIfNotOperatorOrAbove,
-        enableRecordTransactionCommands: this.disableIfNotOperatorOrAbove
+        enableRecordTransactionCommands: this.operatorAndAbove
     };
     
     databaseSettingsMenu = {
