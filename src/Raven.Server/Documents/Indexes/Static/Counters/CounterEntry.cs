@@ -6,11 +6,11 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         public readonly LazyStringValue DocumentId;
 
-        public readonly string Name;
+        public readonly LazyStringValue Name;
 
         public readonly long Etag;
 
-        public CounterEntry(LazyStringValue documentId, string counterName, long etag)
+        public CounterEntry(LazyStringValue documentId, LazyStringValue counterName, long etag)
         {
             DocumentId = documentId;
             Name = counterName;

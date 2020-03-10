@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes
 
     public class CounterIndexItem : IndexItem
     {
-        public CounterIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, string counterName, int size)
+        public CounterIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, LazyStringValue counterName, int size)
             : base(id, lowerId, null, null, etag, default, counterName, size, new CounterEntry(id, counterName, etag), IndexItemType.Counters)
         {
         }
