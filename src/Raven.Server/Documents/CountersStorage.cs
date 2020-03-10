@@ -230,7 +230,7 @@ namespace Raven.Server.Documents
         {
             var docId = ExtractDocId(context, ref tvr);
 
-            var counterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var counterNames = new HashSet<LazyStringValue>();
 
             var valuesData = GetCounterValuesData(context, ref tvr);
             int size = 0;
@@ -241,8 +241,13 @@ namespace Raven.Server.Documents
 
                 if (valuesData.TryGet(Values, out BlittableJsonReaderObject values))
                 {
-                    foreach (var counterName in values.GetPropertyNames())
-                        counterNames.Add(counterName);
+                    var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                    for (var i = 0; i < values.Count; i++)
+                    {
+                        values.GetPropertyByIndex(i, ref propertyDetails);
+
+                        counterNames.Add(propertyDetails.Name);
+                    }
                 }
             }
 
@@ -1895,7 +1900,7 @@ namespace Raven.Server.Documents
     {
         public LazyStringValue DocumentId;
         public long Etag;
-        public HashSet<string> CounterNames;
+        public HashSet<LazyStringValue> CounterNames;
         public int Size;
     }
 

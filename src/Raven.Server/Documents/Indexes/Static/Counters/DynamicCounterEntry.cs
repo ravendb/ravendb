@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         public dynamic DocumentId => TypeConverter.ToDynamicType(_counterEntry.DocumentId);
 
-        public string Name
+        public LazyStringValue Name
         {
             get
             {
