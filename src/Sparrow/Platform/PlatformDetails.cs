@@ -21,6 +21,7 @@ namespace Sparrow.Platform
 
         public static readonly bool CanPrefetch;
         public static readonly bool CanDiscardMemory;
+        internal static readonly bool CanUseHttp2;
 
         public static bool RunningOnDocker;
 
@@ -36,6 +37,7 @@ namespace Sparrow.Platform
 
             CanPrefetch = IsWindows8OrNewer || RunningOnPosix;
             CanDiscardMemory = IsWindows10OrNewer || RunningOnPosix;
+            CanUseHttp2 = IsWindows10OrNewer || RunningOnPosix;
         }
 
         private static bool TryGetWindowsVersion(out decimal version)

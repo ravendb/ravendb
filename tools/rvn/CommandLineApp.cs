@@ -159,7 +159,8 @@ namespace rvn
                         return 0;
                     });
 
-                }, throwOnUnexpectedArg: false);
+                    subcmd.UnrecognizedArgumentHandling = UnrecognizedArgumentHandling.StopParsingAndCollect;
+                });
 
                 cmd.Command("unregister", subcmd =>
                 {

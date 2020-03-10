@@ -971,5 +971,68 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [Fact]
+        public async Task ReplicateRaftDocuments()
+        {
+            var cluster = await CreateRaftCluster(2, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 1,
+                ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology
+                {
+                    Members = new List<string>{cluster.Leader.ServerStore.NodeTag}
+                }
+            }))
+            {
+                var database = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var mre = new ManualResetEventSlim(false);
+                database.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Store(new User(),"users/1");
+                    session.Store(new User(),"users/2");
+                    session.SaveChanges();
+                }
+
+                await Task.Delay(3000); // wait for cleanup
+                cluster.Leader.ServerStore.Observer.Suspended = true;
+                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Store(new User(),"users/3");
+                    session.SaveChanges();
+                }
+
+                Assert.False(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology
+                {
+                    Members = new List<string>{"A","B"}
+                }, store.Database, "users/3", null, TimeSpan.FromSeconds(10)));
+
+                database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                mre.Set();
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology
+                {
+                    Members = new List<string>{"A","B"}
+                }, store.Database, "users/3", null, TimeSpan.FromSeconds(10)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology
+                {
+                    Members = new List<string>{"A","B"}
+                }, store.Database, "users/2", null, TimeSpan.FromSeconds(10)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology
+                {
+                    Members = new List<string>{"A","B"}
+                }, store.Database, "users/1", null, TimeSpan.FromSeconds(10)));
+            }
+        }
     }
 }

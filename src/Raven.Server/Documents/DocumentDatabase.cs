@@ -449,6 +449,13 @@ namespace Raven.Server.Documents
         {
             while (DatabaseShutdown.IsCancellationRequested == false)
             {
+                var topology = ServerStore.LoadDatabaseTopology(Name);
+                if (topology.Promotables.Contains(ServerStore.NodeTag))
+                {
+                    await Task.Delay(1000);
+                    continue;
+                }
+
                 await _hasClusterTransaction.WaitAsync();
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
