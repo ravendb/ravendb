@@ -502,13 +502,12 @@ namespace Raven.Server.Documents.Indexes
                                 break;
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
-                                throw new NotSupportedException("TODO ppekrol");
-                                //var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(definition, _documentDatabase);
+                                var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceCountersIndex>(definition, _documentDatabase);
 
-                                //if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
-                                //    mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+                                if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
+                                    mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
 
-                                //index = mapReduceIndex;
+                                index = mapReduceIndex;
                                 break;
                             default:
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
