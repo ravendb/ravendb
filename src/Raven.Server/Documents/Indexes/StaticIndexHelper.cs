@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;

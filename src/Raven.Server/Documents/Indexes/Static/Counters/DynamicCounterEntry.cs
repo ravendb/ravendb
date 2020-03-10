@@ -6,11 +6,8 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     public class DynamicCounterEntry : AbstractDynamicObject
     {
         private CounterEntry _counterEntry;
-        private QueryOperationContext _context;
-        private Index _index;
 
         private long _value;
-        private bool _valueSet;
 
         public override dynamic GetId()
         {
@@ -22,47 +19,37 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return _counterEntry.DocumentId;
         }
 
-        public override void Set(object item)
+        public override bool Set(object item)
         {
             _counterEntry = (CounterEntry)item;
             _value = 0;
-            _valueSet = false;
 
-            if (_context == null)
-            {
-                var current = CurrentIndexingScope.Current;
-                _context = current.QueryContext;
-                _index = current.Index;
-            }
+            var current = CurrentIndexingScope.Current;
 
-            Debug.Assert(_context == CurrentIndexingScope.Current.QueryContext, "_context == CurrentIndexingScope.Current.QueryContext");
+            var value = current.Index
+                .DocumentDatabase
+                .DocumentsStorage
+                .CountersStorage
+                .GetCounterValue(current.QueryContext.Documents, _counterEntry.DocumentId, _counterEntry.Name);
+
+            if (value == null)
+                return false;
+
+            _value = value.Value.Value;
+            return true;
         }
 
         public dynamic DocumentId => TypeConverter.ToDynamicType(_counterEntry.DocumentId);
 
-        public dynamic Value
+        public string Name
         {
             get
             {
-                if (_valueSet == false)
-                {
-                    Debug.Assert(_context != null, "_context != null");
-
-                    var value = _index
-                        .DocumentDatabase
-                        .DocumentsStorage
-                        .CountersStorage
-                        .GetCounterValue(_context.Documents, _counterEntry.DocumentId, _counterEntry.Name);
-
-                    if (value != null)
-                        _value = value.Value.Value;
-
-                    _valueSet = true;
-                }
-
-                return _value;
+                return _counterEntry.Name;
             }
         }
+
+        public dynamic Value => _value;
 
         protected override bool TryGetByName(string name, out object result)
         {

@@ -158,6 +158,17 @@ namespace Raven.Server.Documents
             }
         }
 
+        public CounterGroupMetadata GetCountersMetadata(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var index = CountersSchema.FixedSizeIndexes[AllCountersEtagSlice];
+
+            if (table.Read(context.Allocator, index, etag, out var tvr) == false)
+                return null;
+
+            return TableValueToCounterGroupMetadata(context, ref tvr);
+        }
+
         public IEnumerable<CounterGroupMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, long etag, long skip, long take)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);

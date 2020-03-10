@@ -162,7 +162,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (_dynamicItem == null)
                         _dynamicItem = new TEnumeratorType();
 
-                    _dynamicItem.Set(_seen);
+                    if (_dynamicItem.Set(_seen) == false)
+                        return false;
 
                     Current = _dynamicItem;
 

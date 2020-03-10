@@ -8,17 +8,15 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Counters;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
-using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
-namespace Raven.Server.Documents.Indexes.Static.TimeSeries
+namespace Raven.Server.Documents.Indexes.Static.Counters
 {
     public class MapCountersIndex : MapIndexBase<MapIndexDefinition, IndexField>
     {
@@ -47,7 +45,8 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
         {
-            return new TimeSeriesQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand);
+            throw new NotImplementedException("TODO ppekrol");
+            //return new TimeSeriesQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand);
         }
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
@@ -55,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             base.SubscribeToChanges(documentDatabase);
 
             if (documentDatabase != null)
-                documentDatabase.Changes.OnCounterChange += HandleTimeSeriesChange;
+                documentDatabase.Changes.OnCounterChange += HandleCounterChange;
         }
 
         protected override void UnsubscribeFromChanges(DocumentDatabase documentDatabase)
@@ -63,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             base.UnsubscribeFromChanges(documentDatabase);
 
             if (documentDatabase != null)
-                documentDatabase.Changes.OnCounterChange -= HandleTimeSeriesChange;
+                documentDatabase.Changes.OnCounterChange -= HandleCounterChange;
         }
 
         protected override void HandleDocumentChange(DocumentChange change)
@@ -108,18 +107,16 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (_handleReferences != null)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
 
-            writer.DeleteBySourceDocument(tombstone.LowerId, stats);
+            base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
         protected override IndexItem GetItemByEtag(QueryOperationContext queryContext, long etag)
         {
-            return default; // TODO [ppekrol]
+            var counters = DocumentDatabase.DocumentsStorage.CountersStorage.GetCountersMetadata(queryContext.Documents, etag);
+            if (counters == null)
+                return default;
 
-            //var timeSeries = DocumentDatabase.DocumentsStorage.CountersStorage.GetTimeSeries(queryContext.Documents, etag);
-            //if (timeSeries == null)
-            //    return default;
-
-            //return new TimeSeriesIndexItem(timeSeries.Key, timeSeries.Key, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, timeSeries.Baseline, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
+            return new CounterIndexItem(counters.DocumentId, counters.DocumentId, counters.Etag, counters.CounterNames.FirstOrDefault(), counters.Size);
         }
 
         protected override bool ShouldReplace()
@@ -135,7 +132,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, long? compareExchangeReferenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
-            if (isStale && (stalenessReasons == null || (_handleReferences == null && _handleCompareExchangeReferences == null)))
+            if (isStale && (stalenessReasons == null || _handleReferences == null && _handleCompareExchangeReferences == null))
                 return isStale;
 
             return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons) || isStale;
@@ -156,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             var length = minLength;
 
             if (_handleReferences != null)
-                length += sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+                length += sizeof(long) * 4 * Collections.Count * _referencedCollections.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             if (_handleCompareExchangeReferences != null)
                 length += sizeof(long) * 4 * _compiled.CollectionsWithCompareExchangeReferences.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
@@ -185,9 +182,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public override long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(queryContext.Documents);
+                return DocumentsStorage.ReadLastCountersEtag(queryContext.Documents.Transaction.InnerTransaction);
 
-            return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(queryContext.Documents, collection);
+            return DocumentDatabase.DocumentsStorage.CountersStorage.GetLastCounterEtag(queryContext.Documents, collection);
         }
 
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
@@ -240,7 +237,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
-        private void HandleTimeSeriesChange(CounterChange change)
+        private void HandleCounterChange(CounterChange change)
         {
             if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false)
                 return;
