@@ -25,10 +25,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return _segmentEntry.Key;
         }
 
-        public override void Set(object item)
+        public override bool Set(object item)
         {
             _segmentEntry = (TimeSeriesSegmentEntry)item;
             _entries = null;
+            return true;
         }
 
         public DynamicArray Entries
@@ -143,10 +144,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 throw new NotSupportedException();
             }
 
-            public override void Set(object item)
+            public override bool Set(object item)
             {
                 _entry = (TimeSeriesStorage.Reader.SingleResult)item;
                 _values = null;
+                return true;
             }
 
             public dynamic Values

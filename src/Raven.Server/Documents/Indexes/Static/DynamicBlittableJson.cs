@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public abstract class AbstractDynamicObject : DynamicObject
     {
-        public abstract void Set(object item);
+        public abstract bool Set(object item);
 
         public abstract dynamic GetId();
 
@@ -82,15 +82,16 @@ namespace Raven.Server.Documents.Indexes.Static
             BlittableJson = blittableJson;
         }
 
-        public void Set(Document document)
+        public bool Set(Document document)
         {
             _doc = document;
             BlittableJson = document.Data;
+            return true;
         }
 
-        public override void Set(object item)
+        public override bool Set(object item)
         {
-            Set((Document)item);
+            return Set((Document)item);
         }
 
         public bool TryGetDocument(out Document doc)
