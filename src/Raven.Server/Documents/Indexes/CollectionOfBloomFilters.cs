@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Indexes
             if (_currentFilter.Count < _currentFilter.Capacity)
                 return;
 
-            if (_mode == Mode.X86 && _filters.Length >= 8)
+            if (_mode == Mode.X86 && _filters.Length >= 20)
             {
                 Consumed = true;
                 return;
