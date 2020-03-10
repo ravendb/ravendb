@@ -169,6 +169,30 @@ namespace Raven.Server.Documents
             return TableValueToCounterGroupMetadata(context, ref tvr);
         }
 
+        public IEnumerable<CounterGroupMetadata> GetCountersMetadata(DocumentsOperationContext context, Slice documentId)
+        {
+            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+            using (ConvertToKeyWithPrefix(out var key))
+            {
+                foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
+                {
+                    yield return TableValueToCounterGroupMetadata(context, ref result.Value.Reader);
+                }
+            }
+
+            IDisposable ConvertToKeyWithPrefix(out Slice key)
+            {
+                var scope = context.Allocator.Allocate(documentId.Size + 1, out var keyByte);
+
+                documentId.CopyTo(keyByte.Ptr);
+                keyByte.Ptr[documentId.Size] = SpecialChars.RecordSeparator;
+
+                key = new Slice(keyByte);
+                return scope;
+            }
+        }
+
         public IEnumerable<CounterGroupMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, long etag, long skip, long take)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);

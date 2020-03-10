@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         protected internal readonly StaticCountersIndexBase _compiled;
         private bool? _isSideBySide;
 
-        private HandleReferences _handleReferences;
+        private HandleCountersReferences _handleReferences;
         private /*HandleCompareExchangeTimeSeriesReferences*/ object _handleCompareExchangeReferences;
 
         protected MapCountersIndex(MapIndexDefinition definition, StaticCountersIndexBase compiled)
@@ -91,8 +91,8 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             //if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
             //    workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeTimeSeriesReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
-            //if (_referencedCollections.Count > 0)
-            //    workers.Add(_handleReferences = new HandleTimeSeriesReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+            if (_referencedCollections.Count > 0)
+                workers.Add(_handleReferences = new HandleCountersReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage.CountersStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             workers.Add(new MapCounters(this, DocumentDatabase.DocumentsStorage.CountersStorage, _indexStorage, null, Configuration));
 

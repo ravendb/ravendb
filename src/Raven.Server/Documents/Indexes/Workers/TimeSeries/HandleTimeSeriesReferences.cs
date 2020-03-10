@@ -17,13 +17,13 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             _timeSeriesStorage = timeSeriesStorage;
         }
 
-        protected override IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
+        protected override IEnumerable<IndexItem> GetItems(DocumentsOperationContext databaseContext, Slice key)
         {
             var timeSeries = _timeSeriesStorage.GetTimeSeries(databaseContext, key);
             if (timeSeries == null)
-                return default;
+                yield break;
 
-            return new TimeSeriesIndexItem(timeSeries.Key, timeSeries.Key, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
+            yield return new TimeSeriesIndexItem(timeSeries.Key, timeSeries.Key, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
