@@ -14,6 +14,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Workers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -290,9 +291,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex, StaticIndexBase>(definition, documentDatabase.Configuration, IndexDefinitionBase.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex));
             else if (typeof(TStaticIndex) == typeof(MapReduceTimeSeriesIndex))
                 instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex, StaticTimeSeriesIndexBase>(definition, documentDatabase.Configuration, IndexDefinitionBase.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex));
+            else if (typeof(TStaticIndex) == typeof(MapReduceCountersIndex))
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceCountersIndex, StaticCountersIndexBase>(definition, documentDatabase.Configuration, (staticMapIndexDefinition, staticIndex) => new MapReduceCountersIndex(staticMapIndexDefinition, staticIndex));
             else
                 throw new NotSupportedException($"Not supported index type {typeof(TStaticIndex).Name}");
-
 
             ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase,
                 checkIfCollectionEmpty: isIndexReset == false);
@@ -462,6 +464,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             return StaticIndexHelper.ShouldReplace(this, ref _isSideBySide);
         }
+
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
             return _compiled.ReferencedCollections;
