@@ -8,7 +8,7 @@ namespace Sparrow.Platform
     {
         public static readonly bool IsWindows8OrNewer;
 
-        private static readonly bool IsWindows10OrNewer;
+        internal static readonly bool IsWindows10OrNewer;
 
         public static readonly bool Is32Bits = IntPtr.Size == sizeof(int);
 
