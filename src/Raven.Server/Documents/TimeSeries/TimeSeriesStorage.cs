@@ -143,6 +143,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var reader = tree.Read(slice);
                 if (reader == null)
                     return (0, start, end);
+
                 var count = reader.Reader.ReadLittleEndianInt64();
 
                 foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(slice, Slices.Empty, 0))
@@ -942,7 +943,7 @@ namespace Raven.Server.Documents.TimeSeries
                 readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
             }
 
-            private string GetCurrentSegmentChangeVector()
+            internal string GetCurrentSegmentChangeVector()
             {
                 return DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, ref _tvr);
             }
@@ -1021,7 +1022,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var newTimeSeries = tss.GetStatsFor(context, docId, name).Count == 0;
 
                 UpdateTotalCountStats(context, docId, name, segment.NumberOfLiveEntries);
-                _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, key, collectionName.Name, name, newEtag, baseline);
+                _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, key, collectionName.Name, name, newEtag, baseline, changeVector);
 
                 using (Slice.From(context.Allocator, changeVector, out Slice cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out var collectionSlice))
@@ -1298,7 +1299,7 @@ namespace Raven.Server.Documents.TimeSeries
                 // the key came from the existing value, have to clone it
                 using (Slice.From(_context.Allocator, _key, _keySize, out var keySlice))
                 {
-                    _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, keySlice, _collection.Name, _name, _currentEtag, BaselineDate);
+                    _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, keySlice, _collection.Name, _name, _currentEtag, BaselineDate, _currentChangeVector);
                     using (Table.Allocate(out var tvb))
                     using (DocumentIdWorker.GetStringPreserveCase(_context, _collection.Name, out var collectionSlice))
                     using (Slice.From(_context.Allocator, _currentChangeVector, out var cv))
@@ -1339,7 +1340,7 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureSegmentSize(newSegment.NumberOfBytes);
 
                 _tss.UpdateTotalCountStats(_context, _docId, _name, newSegment.NumberOfLiveEntries);
-                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, key, _collection.Name, _name, _currentEtag, BaselineDate);
+                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, key, _collection.Name, _name, _currentEtag, BaselineDate, _currentChangeVector);
 
                 using (Slice.From(_context.Allocator, _currentChangeVector, out Slice cv))
                 using (DocumentIdWorker.GetStringPreserveCase(_context, _collection.Name, out var collectionSlice))
@@ -1461,7 +1462,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
-            var newSeries = false;
+            var newSeries = GetStatsFor(context, documentId, name).Count == 0;
 
             using (var appendEnumerator = toAppend.GetEnumerator())
             {
@@ -1489,9 +1490,9 @@ namespace Raven.Server.Documents.TimeSeries
                             {
                                 // no matches for this series at all, need to create new segment
                                 segmentHolder.AppendToNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagAsSpan(current.Tag), current.Status);
-                                newSeries = true;
                                 break;
                             }
+
 
                             EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, current);
 
@@ -1517,7 +1518,8 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            if (newSeries)
+            if (newSeries && 
+                GetStatsFor(context, documentId, name).Count > 0)
             {
                 AddTimeSeriesNameToMetadata(context, documentId, name);
             }

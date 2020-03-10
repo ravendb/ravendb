@@ -8,6 +8,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -79,7 +80,8 @@ namespace Raven.Server.Documents.TimeSeries
             Collection,
             NextRollUp,
             PolicyToApply,
-            Etag
+            Etag,
+            ChangeVector
         }
 
         internal class RollUpState
@@ -91,6 +93,7 @@ namespace Raven.Server.Documents.TimeSeries
             public string Collection;
             public DateTime NextRollUp;
             public string RollUpPolicy;
+            public string ChangeVector;
         }
 
         static TimeSeriesPolicyRunner()
@@ -118,7 +121,7 @@ namespace Raven.Server.Documents.TimeSeries
             });
         }
 
-        public unsafe void MarkForPolicy(DocumentsOperationContext context, Slice key, string collection, string name, long etag, DateTime baseline)
+        public unsafe void MarkForPolicy(DocumentsOperationContext context, Slice key, string collection, string name, long etag, DateTime baseline, string changeVector)
         {
             var config = Configuration.Collections[collection];
 
@@ -152,6 +155,7 @@ namespace Raven.Server.Documents.TimeSeries
             using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
             using (Slice.From(context.Allocator,collection, ByteStringType.Immutable,out var collectionSlice))
             using (Slice.From(context.Allocator, nextPolicy.GetTimeSeriesName(raw), ByteStringType.Immutable, out var policyToApply))
+            using (Slice.From(context.Allocator, changeVector, ByteStringType.Immutable, out var changeVectorSlice))
             {
                 if (table.ReadByKey(prefix, out var tvr))
                 {
@@ -166,6 +170,7 @@ namespace Raven.Server.Documents.TimeSeries
                 tvb.Add(Bits.SwapBytes(nextRollup));
                 tvb.Add(policyToApply);
                 tvb.Add(etag);
+                tvb.Add(changeVectorSlice);
 
                 table.Set(tvb);
             }
@@ -186,30 +191,24 @@ namespace Raven.Server.Documents.TimeSeries
             var now = DateTime.UtcNow;
             try
             {
-                DatabaseTopology topology;
-                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                using (serverContext.OpenReadTransaction())
-                {
-                    topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
-                }
-                var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
-
                 var states = new List<RollUpState>();
-
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     while (true)
                     {
                         context.Reset();
                         context.Renew();
-
+                        
                         using (context.OpenReadTransaction())
                         {
-                            GetRollUps(context, now, 1024, states, out var duration);
+                            PrepareRollUps(context, now, 1024, states, out var duration);
                             if (states.Count == 0)
                                 return;
 
-                            var command = new RollupTimeSeriesCommand(Configuration, states);
+                            var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
+                            var isFirstInTopology = string.Equals(topology.Members.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
+
+                            var command = new RollupTimeSeriesCommand(Configuration, states, isFirstInTopology);
                             await _database.TxMerger.Enqueue(command);
                             if (command.RolledUp == 0)
                                 break;
@@ -234,14 +233,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private void GetRollUps(DocumentsOperationContext context, DateTime currentTime, long take, List<RollUpState> states, out Stopwatch duration)
+        private void PrepareRollUps(DocumentsOperationContext context, DateTime currentTime, long take, List<RollUpState> states, out Stopwatch duration)
         {
             RollUpSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollUps, 16);
             var table = context.Transaction.InnerTransaction.OpenTable(RollUpSchema, TimeSeriesRollUps);
             var currentTicks = currentTime.Ticks;
 
             duration = Stopwatch.StartNew();
-            var keys = new Dictionary<Slice, long>();
             foreach (var item in table.SeekForwardFrom(RollUpSchema.Indexes[NextRollUp], Slices.BeforeAllKeys, 0))
             {
                 if (take <= 0)
@@ -261,7 +259,8 @@ namespace Raven.Server.Documents.TimeSeries
                     Collection = DocumentsStorage.TableValueToString(context, (int)RollUpColumn.Collection, ref item.Result.Reader),
                     NextRollUp = new DateTime(rollUpTime),
                     RollUpPolicy = DocumentsStorage.TableValueToString(context, (int)RollUpColumn.PolicyToApply, ref item.Result.Reader),
-                    Etag = DocumentsStorage.TableValueToLong((int)RollUpColumn.Etag, ref item.Result.Reader)
+                    Etag = DocumentsStorage.TableValueToLong((int)RollUpColumn.Etag, ref item.Result.Reader),
+                    ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollUpColumn.ChangeVector, ref item.Result.Reader)
                 };
 
                 states.Add(state);
@@ -273,13 +272,15 @@ namespace Raven.Server.Documents.TimeSeries
         {
             private readonly TimeSeriesConfiguration _configuration;
             private readonly List<RollUpState> _states;
+            private readonly bool _isFirstInTopology;
 
             public long RolledUp;
 
-            internal RollupTimeSeriesCommand(TimeSeriesConfiguration configuration, List<RollUpState> states)
+            internal RollupTimeSeriesCommand(TimeSeriesConfiguration configuration, List<RollUpState> states, bool isFirstInTopology)
             {
                 _configuration = configuration;
                 _states = states;
+                _isFirstInTopology = isFirstInTopology;
             }
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
@@ -287,7 +288,6 @@ namespace Raven.Server.Documents.TimeSeries
                 RollUpSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollUps, 16);
                 var table = context.Transaction.InnerTransaction.OpenTable(RollUpSchema, TimeSeriesRollUps);
                 var toRemove = new List<Slice>();
-
 
                 foreach (var item in _states)
                 {
@@ -311,15 +311,48 @@ namespace Raven.Server.Documents.TimeSeries
                     if (item.Etag != DocumentsStorage.TableValueToLong((int)RollUpColumn.Etag, ref current))
                         continue; // concurrency check
 
-                    RolledUp++;
                     var startFrom = item.NextRollUp.Add(-policy.AggregationTime);
+                    var rawTimeSeries = item.Name.Split(TimeSeriesConfiguration.TimeSeriesRollupSeparator)[0];
+                    var intoTimeSeries = policy.GetTimeSeriesName(rawTimeSeries);
+                    
+                    var intoReader = tss.GetReader(context, item.DocId, intoTimeSeries, startFrom, startFrom);
+                    var previouslyAggregated = intoReader.Init();
+                    if (previouslyAggregated)
+                    {
+                        var changeVector = intoReader.GetCurrentSegmentChangeVector();
+                        if (ChangeVectorUtils.GetConflictStatus(item.ChangeVector, changeVector) == ConflictStatus.AlreadyMerged)
+                        {
+                            // this rollup is already done
+                            toRemove.Add(item.Key);
+                            continue;
+                        }
+                    }
+
+                    if (_isFirstInTopology == false)
+                        continue; // we execute the actual rollup only on the primary node to avoid conflicts
+
                     var reader = tss.GetReader(context, item.DocId, item.Name, startFrom, DateTime.MaxValue);
                     var values = tss.GetAggregatedValues(reader, DateTime.MinValue, policy.AggregationTime, policy.Type);
-                    var rawName = item.Name.Split(TimeSeriesConfiguration.TimeSeriesRollupSeparator)[0];
-                    // TODO: remove everything after values
-                    tss.AppendTimestamp(context, item.DocId, item.Collection, policy.GetTimeSeriesName(rawName), values);
+
+                    if (previouslyAggregated)
+                    {
+                        // if we need to re-aggregate we need to delete everything we have from that point on.  
+                        var removeRequest = new TimeSeriesStorage.DeletionRangeRequest
+                        {
+                            Collection = item.Collection,
+                            DocumentId = item.DocId,
+                            Name = intoTimeSeries,
+                            From = startFrom,
+                            To = DateTime.MaxValue
+                        };
+
+                        tss.RemoveTimestampRange(context, removeRequest);
+                    }
+                    
+                    tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values);
 
                     toRemove.Add(item.Key);
+                    RolledUp++;
                 }
 
                 foreach (var item in toRemove)
