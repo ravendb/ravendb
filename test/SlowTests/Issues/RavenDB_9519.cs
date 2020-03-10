@@ -270,7 +270,7 @@ namespace SlowTests.Issues
 
             public override bool IsReadRequest => false;
 
-            public CsvImportCommand(Stream stream, string collection, long operationId, InValidCsvImportOptions? inValidCsvConfiguration = null)
+            public CsvImportCommand(Stream stream, string collection, long operationId, InValidCsvImportOptions inValidCsvConfiguration = null)
             {
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
 
