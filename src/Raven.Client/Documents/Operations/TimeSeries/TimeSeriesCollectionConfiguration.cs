@@ -78,8 +78,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// Define the aggregation type
         /// </summary>
         public AggregationType Type;
-
-        
         // TODO: consider Continuous Query approach
 
         internal static RollupPolicy AfterAllPolices = new RollupPolicy();
