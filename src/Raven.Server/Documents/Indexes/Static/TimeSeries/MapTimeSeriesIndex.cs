@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         protected internal readonly StaticTimeSeriesIndexBase _compiled;
         private bool? _isSideBySide;
 
-        private HandleReferences _handleReferences;
+        private HandleTimeSeriesReferences _handleReferences;
         private HandleCompareExchangeTimeSeriesReferences _handleCompareExchangeReferences;
 
         protected MapTimeSeriesIndex(MapIndexDefinition definition, StaticTimeSeriesIndexBase compiled)
