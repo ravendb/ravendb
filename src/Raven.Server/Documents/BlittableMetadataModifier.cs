@@ -395,8 +395,8 @@ namespace Raven.Server.Documents
                     }
                     goto case -2;
                 case 11: // @timeseries
-                    if (OperateOnTypes.HasFlag(DatabaseItemType.TimeSeries) ||
-                        state.StringBuffer[0] != (byte)'@' ||
+                    // always remove the @timeseries metadata
+                    if (state.StringBuffer[0] != (byte)'@' ||
                         *(long*)(state.StringBuffer + 1) != 7598247067624761716)
                     {
                         aboutToReadPropertyName = true;

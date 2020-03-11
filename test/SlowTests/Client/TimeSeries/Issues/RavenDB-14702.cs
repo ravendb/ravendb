@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,7 +30,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new { Name = "aviv" }, "zzz/1");
+                        await session.StoreAsync(new User { Name = "aviv" }, "zzz/1");
                         await session.SaveChangesAsync();
                     }
 
@@ -54,6 +55,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                         session.SaveChanges();
                     }
 
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var doc = await session.LoadAsync<User>("zzz/1");
+                        doc.Name = "Karmel";
+                        await session.SaveChangesAsync();
+                    }
+
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -66,7 +74,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     using (var session = store2.OpenSession())
                     {
-                        var doc = session.Load<object>("zzz/1");
+                        var doc = session.Load<User>("zzz/1");
                         Assert.NotNull(doc);
 
                         var ts = session.TimeSeriesFor(doc).Get("small", DateTime.MinValue, DateTime.MaxValue).ToList();

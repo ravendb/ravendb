@@ -135,9 +135,12 @@ namespace Raven.Server.Documents.TimeSeries
             using (var slicer = new TimeSeriesSlicer(context, docId, name, default))
             {
                 var slice = slicer.TimeSeriesPrefixSlice;
-                var count = tree.Read(slice).Reader.ReadLittleEndianInt64();
                 var start = DateTime.MinValue;
                 var end = DateTime.MaxValue;
+                var reader = tree.Read(slice);
+                if (reader == null)
+                    return (0, start, end);
+                var count = reader.Reader.ReadLittleEndianInt64();
 
                 foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(slice, Slices.Empty, 0))
                 {
@@ -877,6 +880,9 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureSegmentSize(segment.NumberOfBytes);
 
                 TimeSeriesValuesSegment.ParseTimeSeriesKey(key, context, out var docId, out var name);
+                var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
+                var newTimeSeries = tss.GetStatsFor(context, docId, name).Count == 0;
+
                 UpdateTotalCountStats(context, docId, name, segment.NumberOfLiveEntries);
 
                 using (Slice.From(context.Allocator, changeVector, out Slice cv))
@@ -892,6 +898,9 @@ namespace Raven.Server.Documents.TimeSeries
 
                     table.Set(tvb);
                 }
+
+                if (newTimeSeries)
+                    tss.AddTimeSeriesNameToMetadata(context, docId, name);
             }
 
             bool IsOverlapWithHigherSegment(Slice prefix)
@@ -1615,11 +1624,16 @@ namespace Raven.Server.Documents.TimeSeries
             return next;
         }
 
-        private void AddTimeSeriesNameToMetadata(DocumentsOperationContext ctx, string docId, string tsName)
+        public void AddTimeSeriesNameToMetadata(DocumentsOperationContext ctx, string docId, string tsName)
         {
+            var tss = _documentDatabase.DocumentsStorage.TimeSeriesStorage;
+            if (tss.GetStatsFor(ctx, docId, tsName).Count == 0)
+                return;
+
             var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId);
             if (doc == null)
                 return;
+
 
             var data = doc.Data;
             BlittableJsonReaderArray tsNames = null;
