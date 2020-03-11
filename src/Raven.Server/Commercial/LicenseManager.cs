@@ -1561,29 +1561,29 @@ namespace Raven.Server.Commercial
                 details: new MessageDetails
                 {
                     Message = $"The {taskType} task: '{taskName}' will not be redistributed " + 
-                              $"to healthy node because current license doesn't include highly available tasks feature." + Environment.NewLine +
-                              $"Task's last responsible node {lastResponsibleNode}, is currently {nodeState}, will continue to execute the {taskType} task." + Environment.NewLine +
-                              $"You can choose a different mentor node that will execute the {taskType} task " +
+                              $"to a healthy node because the current license doesn't include the highly available tasks feature." + Environment.NewLine +
+                              $"Task's last responsible node '{lastResponsibleNode}', is currently {nodeState} and will continue to execute the {GetTaskType(databaseTask, lower: true)} task." + Environment.NewLine +
+                              $"You can choose a different mentor node that will execute this task " +
                               $"(current mentor node state: {GetMentorNodeState(databaseTask, databaseTopology, nodeState)}). " + Environment.NewLine + Environment.NewLine +
                               $"Upgrading the license will allow RavenDB to manage that automatically."
                 });
             return alert;
         }
 
-        private static string GetTaskType(IDatabaseTask databaseTask)
+        private static string GetTaskType(IDatabaseTask databaseTask, bool lower = false)
         {
             switch (databaseTask)
             {
                 case PeriodicBackupConfiguration _:
-                    return "Backup";
+                    return lower == false ? "Backup" : "backup";
                 case SubscriptionState _:
-                    return "Subscription";
+                    return lower == false ? "Subscription" : "subscription";
                 case RavenEtlConfiguration _:
                     return "Raven ETL";
                 case SqlEtlConfiguration _:
                     return "SQL ETL";
                 case ExternalReplication _:
-                    return "External Replication";
+                    return lower == false ? "External Replication" : "external replication";
                 default:
                     return string.Empty;
             }
@@ -1598,12 +1598,12 @@ namespace Raven.Server.Commercial
         private static string GetNodeState(DatabaseTopology databaseTopology, string nodeTag)
         {
             if (databaseTopology.Promotables.Contains(nodeTag))
-                return "in promotable state";
+                return "in a 'promotable' state";
 
             if (databaseTopology.Rehabs.Contains(nodeTag))
-                return "in rehab state";
+                return "in a 'rehab' state";
 
-            return "not part of the cluster";
+            return "not a part of the cluster";
         }
 
         public void AssertCanCreateEncryptedDatabase()
