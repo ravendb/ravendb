@@ -247,7 +247,7 @@ namespace FastTests.Server.Documents.Indexing
                             collection.Add(key);
                         }
 
-                        Assert.Equal(8, collection.Count);
+                        Assert.Equal(20, collection.Count);
                         collection.Flush();
                         Assert.Equal(0, collection.Count);
                     }
