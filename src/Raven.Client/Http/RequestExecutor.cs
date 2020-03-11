@@ -1873,6 +1873,8 @@ namespace Raven.Client.Http
                 lock (_locker)
                 {
                     _serverCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback.Concat(new[] { value }).ToArray();
+                    GlobalHttpClientWithCompression.Clear();
+                    GlobalHttpClientWithoutCompression.Clear();
                 }
             }
 
@@ -1884,6 +1886,8 @@ namespace Raven.Client.Http
                 lock (_locker)
                 {
                     _serverCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback.Except(new[] { value }).ToArray();
+                    GlobalHttpClientWithCompression.Clear();
+                    GlobalHttpClientWithoutCompression.Clear();
                 }
             }
         }
