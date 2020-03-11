@@ -578,7 +578,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         using (var slicer = new TimeSeriesStorage.TimeSeriesSlicer(context, docId, item.Name, item.Baseline))
                         {
-                            if (tss.TryAppendEntireSegment(context, slicer.TimeSeriesKeySlice, collectionName, item.ChangeVector, item.Segment, item.Baseline))
+                            if (tss.TryAppendEntireSegment(context, slicer.TimeSeriesKeySlice, collectionName, item))
                             {
                                 var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, item.ChangeVector);
