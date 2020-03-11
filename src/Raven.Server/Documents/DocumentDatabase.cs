@@ -1384,6 +1384,7 @@ namespace Raven.Server.Documents
         {
             // raise alert if redistribution is necessary 
             if (databaseTopology.Count > 1 &&
+                ServerStore.NodeTag != lastResponsibleNode &&
                 databaseTopology.Members.Contains(lastResponsibleNode) == false)
             {
                 var alert = LicenseManager.CreateHighlyAvailableTasksAlert(databaseTopology, configuration, lastResponsibleNode);
