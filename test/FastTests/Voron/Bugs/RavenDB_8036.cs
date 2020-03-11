@@ -1,4 +1,5 @@
-﻿using Voron;
+﻿using System.Threading.Tasks;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,12 @@ namespace FastTests.Voron.Bugs
             {
                 var allocatePage = tx1.LowLevelTransaction.AllocatePage(1);
 
-                using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction(tx1.LowLevelTransaction.PersistentContext))
+                using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction(tx1.LowLevelTransaction.PersistentContext,
+                    action => Task.Run(() =>
+                    {
+                        action();
+                        return true;
+                    })))
                 {
                     using (tx1)
                     {

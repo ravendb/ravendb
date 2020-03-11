@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Server;
@@ -915,7 +916,7 @@ namespace Voron.Impl
         /// The current transaction is considered completed in memory but not yet
         /// committed to disk. This *must* be completed by calling EndAsyncCommit.
         /// </summary>
-        public LowLevelTransaction BeginAsyncCommitAndStartNewTransaction(TransactionPersistentContext persistentContext)
+        public LowLevelTransaction BeginAsyncCommitAndStartNewTransaction(TransactionPersistentContext persistentContext, Func<Action, Task<bool>> taskRunner)
         {
             if (Flags != TransactionFlags.ReadWrite)
                 ThrowReadTranscationCannotDoAsyncCommit();
@@ -933,8 +934,8 @@ namespace Voron.Impl
                 );
             _asyncCommitNextTransaction = nextTx;
             AsyncCommit = writeToJournalIsRequired
-                  ? Task.Run(() => { CommitStage2_WriteToJournal(); return true; })
-                  : NoWriteToJournalRequiredTask;
+                ? taskRunner(CommitStage2_WriteToJournal)
+                : NoWriteToJournalRequiredTask;
 
             var usageIncremented = false;
 

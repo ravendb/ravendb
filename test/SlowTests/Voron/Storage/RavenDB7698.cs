@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -30,7 +31,12 @@ namespace SlowTests.Voron.Storage
 
             try
             {
-                using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction(tx1.LowLevelTransaction.PersistentContext))
+                using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction(tx1.LowLevelTransaction.PersistentContext,
+                    action => Task.Run(() =>
+                    {
+                        action();
+                        return true;
+                    })))
                 {
                     using (tx1)
                     {

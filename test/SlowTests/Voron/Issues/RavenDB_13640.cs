@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests.Voron;
 using Voron;
 using Xunit;
@@ -30,7 +31,12 @@ namespace SlowTests.Voron.Issues
                 {
                     tx1.LowLevelTransaction.BeforeCommitFinalization += delegate { throw  new InvalidOperationException();};
 
-                    Assert.Throws<InvalidOperationException>(() => tx1.BeginAsyncCommitAndStartNewTransaction(tx1.LowLevelTransaction.PersistentContext));
+                    Assert.Throws<InvalidOperationException>(() => tx1.BeginAsyncCommitAndStartNewTransaction(tx1.LowLevelTransaction.PersistentContext,
+                        action => Task.Run(() =>
+                        {
+                            action();
+                            return true;
+                        })));
                 }
             }
             finally

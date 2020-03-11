@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Voron.Impl;
 
@@ -34,7 +36,28 @@ namespace Raven.Server.Documents
         public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsOperationContext context)
         {
             _replaced = true;
-            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction(context.PersistentContext);
+
+            var taskRunner = new Func<Action, Task<bool>>(action =>
+            {
+                var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
+                {
+                    try
+                    {
+                        action();
+                        tcs.SetResult(true);
+                    }
+                    catch (Exception e)
+                    {
+                        tcs.SetException(e);
+                    }
+                }, null, $"'{_context.DocumentDatabase.Name}' Async Commit for Transaction Merging Thread");
+
+                return tcs.Task;
+            });
+            
+            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction(context.PersistentContext, taskRunner);
             return new DocumentsTransaction(context, tx, _changes);
         }
 

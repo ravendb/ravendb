@@ -7,6 +7,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Data.RawData;
@@ -110,13 +111,13 @@ namespace Voron.Impl
             _lowLevelTransaction.Commit();
         }
 
-        public Transaction BeginAsyncCommitAndStartNewTransaction(TransactionPersistentContext persistentContext)
+        public Transaction BeginAsyncCommitAndStartNewTransaction(TransactionPersistentContext persistentContext, Func<Action, Task<bool>> taskRunner)
         {
             if (_lowLevelTransaction.Flags != TransactionFlags.ReadWrite)
                 ThrowInvalidAsyncCommitOnRead();
 
             PrepareForCommit();
-            var tx = _lowLevelTransaction.BeginAsyncCommitAndStartNewTransaction(persistentContext);
+            var tx = _lowLevelTransaction.BeginAsyncCommitAndStartNewTransaction(persistentContext, taskRunner);
             return new Transaction(tx);
         }
 
