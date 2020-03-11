@@ -97,6 +97,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
     public class TimeSeriesReplicationItem : ReplicationBatchItem
     {
         public Slice Key;
+        public LazyStringValue Name;
         public LazyStringValue Collection;
         public TimeSeriesValuesSegment Segment;
         public override long AssertChangeVectorSize()
@@ -113,6 +114,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                    sizeof(int) + // size of the segment
                    Segment.NumberOfBytes + // data
+
+                   sizeof(int) +
+                   Name.Size +
 
                    sizeof(int) + // size of doc collection
                    Collection.Size; // doc collection;
@@ -139,6 +143,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Memory.Copy(pTemp + tempBufferPos, Segment.Ptr, Segment.NumberOfBytes);
                 tempBufferPos += Segment.NumberOfBytes;
 
+                *(int*)(pTemp + tempBufferPos) = Name.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, Name.Buffer, Name.Size);
+                tempBufferPos += Name.Size;
+
                 *(int*)(pTemp + tempBufferPos) = Collection.Size;
                 tempBufferPos += sizeof(int);
                 Memory.Copy(pTemp + tempBufferPos, Collection.Buffer, Collection.Size);
@@ -162,6 +171,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             Memory.Copy(mem, Reader.ReadExactly(segmentSize), segmentSize);
             Segment = new TimeSeriesValuesSegment(mem, segmentSize);
 
+            SetLazyStringValueFromString(context, out Name);
             SetLazyStringValueFromString(context, out Collection);
             Debug.Assert(Collection != null);
 
@@ -173,7 +183,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             {
                 Collection = Collection,
                 Segment = Segment,
-                Key = Key
+                Key = Key,
+                Name = Name
             };
         }
 
