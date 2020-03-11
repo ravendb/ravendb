@@ -217,6 +217,8 @@ namespace Raven.Server.Documents.Replication
                     {                        
                         foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats))
                         {
+                            _parent.CancellationToken.ThrowIfCancellationRequested();
+                            
                             if (lastTransactionMarker != item.TransactionMarker)
                             {
                                 if (delay.Ticks > 0)

@@ -2142,7 +2142,14 @@ namespace Raven.Server.Rachis
         internal static void DisconnectAction(Task<RachisConnection> connectionTask)
         {
             Debug.Assert(connectionTask.IsCompleted);
-            connectionTask.Result.Disconnect();
+            try
+            {
+                connectionTask.Result.Disconnect();
+            }
+            catch
+            {
+                // we don't care about it, since this is part of a continuation task.
+            }
         }
     }
 

@@ -4,11 +4,17 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
     public class HttpConfiguration : ConfigurationCategory
     {
+        public HttpConfiguration()
+        {
+            Protocols = PlatformDetails.CanUseHttp2 ? HttpProtocols.Http1AndHttp2 : HttpProtocols.Http1;
+        }
+
         [Description("Set Kestrel's minimum required data rate in bytes per second. This option should configured together with 'Http.MinDataRateGracePeriod'")]
         [DefaultValue(null)]
         [SizeUnit(SizeUnit.Bytes)]
@@ -64,7 +70,7 @@ namespace Raven.Server.Config.Categories
         public bool UseLibuv { get; set; }
 
         [Description("Sets HTTP protocols that should be supported by the server")]
-        [DefaultValue(HttpProtocols.Http1AndHttp2)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Http.Protocols", ConfigurationEntryScope.ServerWideOnly)]
         public HttpProtocols Protocols { get; set; }
     }
