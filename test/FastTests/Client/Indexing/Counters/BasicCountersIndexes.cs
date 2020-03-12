@@ -869,5 +869,119 @@ namespace FastTests.Client.Indexing.Counters
                 Assert.Equal(IndexPriority.High, indexes[0].Priority);
             }
         }
+
+        [Fact]
+        public void CanUpdateMapReduceCountersIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "CountersIndex",
+                    Maps = {
+                    "from counter in counters.Users.HeartRate " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name, " +
+                    "   Count = 1" +
+                    "}" },
+                    Reduce = "from r in results " +
+                     "group r by r.Name into g " +
+                     "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                     "let sumCount = g.Sum(x => x.Count) " +
+                     "select new {" +
+                     "  HeartBeat = sumHeartBeat / sumCount, " +
+                     "  Name = g.Key, " +
+                     "  Count = sumCount" +
+                     "}"
+                }));
+
+                store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "CountersIndex",
+                    Maps = {
+                    "from counter in counters.Users.HeartRate " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name, " +
+                    "   Count = 1" +
+                    "}" },
+                    Reduce = "from r in results " +
+                     "group r by r.Name into g " +
+                     "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                     "let sumCount = g.Sum(x => x.Count) " +
+                     "select new {" +
+                     "  HeartBeat = sumCount / sumHeartBeat, " + // <--- changed
+                     "  Name = g.Key, " +
+                     "  Count = sumCount" +
+                     "}"
+                }));
+
+                WaitForIndexing(store);
+
+                Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
+
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
+
+                Assert.Contains("sumCount / sumHeartBeat", indexes[0].Reduce);
+            }
+        }
+
+        [Fact]
+        public void CanUpdateMapReduceCountersIndexWithoutUpdatingCompiledIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "CountersIndex",
+                    Maps = {
+                    "from counter in counters.Users.HeartRate " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name, " +
+                    "   Count = 1" +
+                    "}" },
+                    Reduce = "from r in results " +
+                     "group r by r.Name into g " +
+                     "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                     "let sumCount = g.Sum(x => x.Count) " +
+                     "select new {" +
+                     "  HeartBeat = sumHeartBeat / sumCount, " +
+                     "  Name = g.Key, " +
+                     "  Count = sumCount" +
+                     "}",
+                    Priority = IndexPriority.Low
+                }));
+
+                store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "CountersIndex",
+                    Maps = {
+                    "from counter in counters.Users.HeartRate " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name, " +
+                    "   Count = 1" +
+                    "}" },
+                    Reduce = "from r in results " +
+                     "group r by r.Name into g " +
+                     "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                     "let sumCount = g.Sum(x => x.Count) " +
+                     "select new {" +
+                     "  HeartBeat = sumHeartBeat / sumCount, " +
+                     "  Name = g.Key, " +
+                     "  Count = sumCount" +
+                     "}",
+                    Priority = IndexPriority.High
+                }));
+
+                Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
+
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
+
+                Assert.Equal(IndexPriority.High, indexes[0].Priority);
+            }
+        }
     }
 }
