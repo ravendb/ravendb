@@ -62,11 +62,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
                     
-                    writer.WritePropertyName(nameof(TimeSeriesStats.DocumentId));
+                    writer.WritePropertyName(nameof(Client.Documents.Operations.TimeSeries.TimeSeriesStats.DocumentId));
                     writer.WriteString(documentId);
                     writer.WriteComma();
                     
-                    writer.WritePropertyName(nameof(TimeSeriesStats.TimeSeries));
+                    writer.WritePropertyName(nameof(Client.Documents.Operations.TimeSeries.TimeSeriesStats.TimeSeries));
                     
                     writer.WriteStartArray();
                     

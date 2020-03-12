@@ -48,6 +48,7 @@ namespace Raven.Server.Documents
         private readonly string _counterGroups;
         private readonly string _timeseries;
         private readonly string _deletedRanges;
+        private readonly string _timeSeriesStats;
 
 
         private bool? _isHiLo;
@@ -72,6 +73,7 @@ namespace Raven.Server.Documents
             _counterGroups = GetName(CollectionTableType.CounterGroups);
             _timeseries = GetName(CollectionTableType.TimeSeries);
             _deletedRanges = GetName(CollectionTableType.TimeSeriesDeletedRanges);
+            _timeSeriesStats = GetName(CollectionTableType.TimeSeriesStats);
 
         }
 
@@ -97,7 +99,8 @@ namespace Raven.Server.Documents
                     return _timeseries;
                 case CollectionTableType.TimeSeriesDeletedRanges:
                     return _deletedRanges;
-
+                case CollectionTableType.TimeSeriesStats:
+                    return _timeSeriesStats;
                 default:
                     throw new NotSupportedException($"Collection table type '{type}' is not supported.");
             }
@@ -222,6 +225,7 @@ namespace Raven.Server.Documents
         Counters,
         CounterGroups,
         TimeSeries,
-        TimeSeriesDeletedRanges
+        TimeSeriesDeletedRanges,
+        TimeSeriesStats
     }
 }

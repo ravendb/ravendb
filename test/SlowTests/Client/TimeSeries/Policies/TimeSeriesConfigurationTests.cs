@@ -284,26 +284,6 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                var p1 = new RollupPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new RollupPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new RollupPolicy(TimeSpan.FromSeconds(3));
-
-                var config = new TimeSeriesConfiguration
-                {
-                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
-                    {
-                        ["Users"] = new TimeSeriesCollectionConfiguration
-                        {
-                            RollupPolicies = new List<RollupPolicy>
-                            {
-                                p2,p3
-                            },
-                            RawDataRetentionTime = TimeSpan.FromHours(96)
-                        },
-                    }
-                };
-                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-
                 var baseline = DateTime.Today.AddDays(-1);
 
                 using (var session = store.OpenSession())
@@ -318,35 +298,28 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
+                var p1 = new RollupPolicy(TimeSpan.FromSeconds(1));
+                var p2 = new RollupPolicy(TimeSpan.FromSeconds(2));
+                var p3 = new RollupPolicy(TimeSpan.FromSeconds(3));
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RollupPolicies = new List<RollupPolicy>
+                            {
+                                p1, p2 ,p3
+                            },
+                            RawDataRetentionTime = TimeSpan.FromHours(96)
+                        },
+                    }
+                };
+                
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollUps();
 
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User {Name = "Karmel"}, "users/karmel");
-
-                    for (int i = 0; i < 100; i++)
-                    {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddSeconds(0.2 * i + 0.1), "watches/fitbit", new[] {29d * i});
-                    }
-                    session.SaveChanges();
-                }
-
-                await database.TimeSeriesPolicyRunner.RunRollUps();
-
-                config.Collections["Users"].RollupPolicies.Add(p1);
-                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-
-                using (var session = store.OpenSession())
-                {
-
-                    session.TimeSeriesFor("users/karmel")
-                        .Append("Heartrate", baseline.AddSeconds(0.2 * 100 + 0.1), "watches/fitbit", new[] {29d * 100});
-                    session.SaveChanges();
-                }
-
-                await database.TimeSeriesPolicyRunner.RunRollUps();
                 WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
