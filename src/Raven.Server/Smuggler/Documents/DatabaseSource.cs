@@ -20,6 +20,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Iteration;
 using Raven.Server.Utils.Enumerators;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Voron;
 
 namespace Raven.Server.Smuggler.Documents
@@ -32,6 +33,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly long _startDocumentEtag;
         private readonly long _startRaftIndex;
+        private readonly Logger _logger;
         private IDisposable _returnContext;
         private IDisposable _returnServerContext;
         private DocumentsTransaction _disposeTransaction;
@@ -60,11 +62,12 @@ namespace Raven.Server.Smuggler.Documents
         public string LastDatabaseChangeVector { get; private set; }
         public long LastRaftIndex { get; private set; }
 
-        public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startRaftIndex)
+        public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startRaftIndex, Logger logger)
         {
             _database = database;
             _startDocumentEtag = startDocumentEtag;
             _startRaftIndex = startRaftIndex;
+            _logger = logger;
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion)
@@ -501,7 +504,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
 
-        private static unsafe string GetOriginalName(DocumentsOperationContext context, string docId, string lowerName)
+        private unsafe string GetOriginalName(DocumentsOperationContext context, string docId, string lowerName)
         {
             try
             {
@@ -530,14 +533,18 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
             }
-            catch
+            catch (Exception e)
             {
-#if DEBUG
-                throw;
-#endif
+                var error = $"An error occured during exporting time-series '{lowerName}' in document '{docId}'";
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(error, e);
             }
 
-            Debug.Assert(false, "Are you exporting an orphaned time-series?");
+            var msg = $"Can't find time-series '{lowerName}' in document '{docId}', are you exporting an orphaned time-series?";
+            if (_logger.IsInfoEnabled)
+                _logger.Info(msg);
+
+            Debug.Assert(false, msg);
             return lowerName;
         }
 
