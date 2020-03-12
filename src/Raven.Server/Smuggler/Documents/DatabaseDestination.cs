@@ -268,7 +268,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void FixDocumentMetadataIfNecessary()
             {
-                if (_documentIdsOfMissingAttachments == null || 
+                if (_documentIdsOfMissingAttachments == null ||
                     _documentIdsOfMissingAttachments.Count == 0)
                     return;
 
@@ -430,7 +430,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                _command = new MergedBatchPutCommand(_database, _buildType, _log, 
+                _command = new MergedBatchPutCommand(_database, _buildType, _log,
                     _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
                 {
                     IsRevision = _isRevision
@@ -657,9 +657,9 @@ namespace Raven.Server.Smuggler.Documents
                         pullReplication.TaskId = 0;
                         pullReplication.Disabled = true;
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsHubCommand(_database.Name, RaftIdGenerator.DontCareId)
-                            {
-                                Definition = pullReplication
-                            }
+                        {
+                            Definition = pullReplication
+                        }
                         ));
                     }
                     progress.HubPullReplicationsUpdated = true;
@@ -873,7 +873,7 @@ namespace Raven.Server.Smuggler.Documents
             private long _attachmentsStreamSizeOverhead;
 
             public MergedBatchPutCommand(DocumentDatabase database, BuildVersionType buildType,
-                Logger log, 
+                Logger log,
                 ConcurrentDictionary<string, CollectionName> missingDocumentsForRevisions = null,
                 HashSet<string> documentIdsOfMissingAttachments = null)
             {
@@ -915,7 +915,7 @@ namespace Raven.Server.Smuggler.Documents
                         using (Slice.External(context.Allocator, tombstone.LowerId, out Slice key))
                         {
                             newEtag = _database.DocumentsStorage.GenerateNextEtag();
-                                tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                            tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
 
                             databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, tombstone.ChangeVector);
                             switch (tombstone.Type)
@@ -936,8 +936,7 @@ namespace Raven.Server.Smuggler.Documents
                                     _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, tombstone.ChangeVector, tombstone.LastModified.Ticks);
                                     break;
                                 case Tombstone.TombstoneType.Counter:
-                                    _database.DocumentsStorage.CountersStorage.DeleteCounter(context, key.ToString(), tombstone.Collection, null,
-                                        forceTombstone: true, tombstone.LastModified.Ticks);
+                                    _database.DocumentsStorage.CountersStorage.DeleteCounter(context, key.ToString(), tombstone.Collection, null);
                                     break;
                             }
                         }
@@ -1021,7 +1020,7 @@ namespace Raven.Server.Smuggler.Documents
                     PutAttachments(context, document, isRevision: false, out _);
 
                     newEtag = _database.DocumentsStorage.GenerateNextEtag();
-                        document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                    document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
                     databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
 
                     _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, document.ChangeVector, document.Flags, document.NonPersistentFlags);
