@@ -10,20 +10,25 @@
         line-height: 17px;
         width: 100%;
         
-        .copy-item {
+        .copy-item-button {
             color: darken(@color-4-1, 20%);
             visibility: hidden;
+            padding: 5px 0px 0px 5px;
         }
 
         &:hover {
-            .copy-item {
+            .copy-item-button {
                 visibility: visible;
             }
         }
     }
-    
+
     pre {
-        padding: 5px;
+        padding: 0px 2px 0px 2px;
+    }
+    
+    span {
+        padding: 5px 5px 5px 1px;
     }
     
     .even {
@@ -32,8 +37,10 @@
                 background-color: lighten(@panel-bg,5%);
             }
             
-            &.bg-danger {
-                background-color: lighten(@state-danger-bg, 6%);
+            span {
+                &.bg-danger {
+                    background-color: lighten(@state-danger-bg, 6%);
+                }
             }
         }
     }

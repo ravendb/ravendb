@@ -21,7 +21,7 @@ class heightCalculator {
         const lines = item.split(/\r?\n/);
         const totalLinesCount = _.sum(lines.map(l => {
             if (l.length > this.charactersPerLine) {
-                return Math.ceil(l.length  * 1.0 / this.charactersPerLine);
+                return Math.ceil(l.length / this.charactersPerLine);
             }
             return 1;
         }));
@@ -192,7 +192,7 @@ class adminLogs extends viewModelBase {
     
     private hasError(item: string): boolean {
         return item.includes("EXCEPTION:") || item.includes("Exception:") || item.includes("FATAL ERROR:");
-    }    
+    }
     
     // noinspection JSMethodCanBeStatic
     itemHtmlProvider(item: string) {
@@ -200,8 +200,8 @@ class adminLogs extends viewModelBase {
 
         return $("<pre class='item'></pre>")
             .addClass("flex-horizontal")
-            .prepend(`<span ${errorClass}>${item}</span>`)
-            .prepend("<a href='#' class='copy-item margin-right margin-right-sm flex-start' title='Copy log msg to clipboard'><i class='icon-copy'></i></a>");
+            .prepend(`<span ${errorClass}>${generalUtils.escapeHtml(item)}</span>`)
+            .prepend("<a href='#' class='copy-item-button margin-right margin-right-sm flex-start' title='Copy log msg to clipboard'><i class='icon-copy'></i></a>");
     }
     
     compositionComplete() {
@@ -216,10 +216,10 @@ class adminLogs extends viewModelBase {
             this.duringManualScrollEvent = false;
         });
       
-        $( ".list-view" ).on( "click", "a", function(event) {
+        $(".list-view").on("click", ".copy-item-button", function(event) {
             event.preventDefault();
             event.stopImmediatePropagation();
-            copyToClipboard.copy($(this).parent().children().last().text(), "Log message has been copied to clipboard");
+            copyToClipboard.copy($(this).next().text(), "Log message has been copied to clipboard");
         });
     }
     
