@@ -293,7 +293,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     dateAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
 
-                    instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTimeOffset.UtcDateTime.Ticks, Field.Store.NO)); // TODO [ppekrol] UTC?
+                    instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTimeOffset.UtcDateTime.Ticks, Field.Store.NO));
                     newFields++;
 
                     _index.IndexFieldsPersistence.MarkHasTimeValue(path);

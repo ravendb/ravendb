@@ -489,7 +489,7 @@ namespace Raven.Server.Documents.Queries
                     ticks = dt.Ticks;
                     return true;
                 case LazyStringParser.Result.DateTimeOffset:
-                    ticks = dto.UtcDateTime.Ticks; // TODO [ppekrol]
+                    ticks = dto.UtcDateTime.Ticks;
                     return true;
                 default:
                     throw new InvalidOperationException("Should not happen!");
