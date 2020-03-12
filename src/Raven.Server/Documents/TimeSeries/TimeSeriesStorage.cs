@@ -453,6 +453,10 @@ namespace Raven.Server.Documents.TimeSeries
                     if (doc == null)
                         return;
 
+                    var tss = _documentDatabase.DocumentsStorage.TimeSeriesStorage;
+                    if (tss.GetStatsFor(ctx, docId, tsName).Count > 0)
+                        return;
+
                     var data = doc.Data;
                     var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
 
