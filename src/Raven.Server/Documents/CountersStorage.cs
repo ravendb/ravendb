@@ -377,7 +377,7 @@ namespace Raven.Server.Documents
 
                 ByteStringContext.InternalScope countersGroupKeyScope = default;
                 using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
-                using (Slice.From(context.Allocator, name, out Slice counterName))
+                using (DocumentIdWorker.GetLower(context.Allocator, name, out Slice counterName))
                 using (context.Allocator.Allocate(documentKeyPrefix.Size + counterName.Size, out var counterKeyBuffer))
                 using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterName, out var counterKeySlice))
                 {
@@ -806,7 +806,7 @@ namespace Raven.Server.Documents
                     {
                         sourceCounters.GetPropertyByIndex(i, ref prop);
 
-                        using (Slice.From(context.Allocator, prop.Name, out Slice counterNameSlice))
+                        using (DocumentIdWorker.GetLower(context.Allocator, prop.Name, out Slice counterNameSlice))
                         using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
                         using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
                         {
@@ -1324,7 +1324,7 @@ namespace Raven.Server.Documents
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
-            using (Slice.From(context.Allocator, counterName, out Slice counterNameSlice))
+            using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
             using (context.Allocator.Allocate(counterNameSlice.Size + documentIdPrefix.Size, out var buffer))
             using (CreateCounterKeySlice(context, buffer, documentIdPrefix, counterNameSlice, out var counterKeySlice))
             {
@@ -1356,7 +1356,7 @@ namespace Raven.Server.Documents
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
-            using (Slice.From(context.Allocator, counterName, out Slice counterNameSlice))
+            using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
             using (context.Allocator.Allocate(counterNameSlice.Size + documentIdPrefix.Size, out var buffer))
             using (CreateCounterKeySlice(context, buffer, documentIdPrefix, counterNameSlice, out var counterKeySlice))
             {
@@ -1426,8 +1426,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public string DeleteCounter(DocumentsOperationContext context, string documentId, string collection, string counterName, bool forceTombstone = false,
-            long lastModifiedTicks = -1)
+        public string DeleteCounter(DocumentsOperationContext context, string documentId, string collection, string counterName)
         {
             if (context.Transaction == null)
             {
@@ -1436,7 +1435,7 @@ namespace Raven.Server.Documents
             }
 
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
-            using (Slice.From(context.Allocator, counterName, out Slice counterNameSlice))
+            using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
             using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
             using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
             {
@@ -1450,18 +1449,28 @@ namespace Raven.Server.Documents
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
                     return null;
 
-                var propIndex = counters.GetPropertyIndex(counterName);
-                if (propIndex == -1)
+                var propertyIndex = -1;
+                var property = new BlittableJsonReaderObject.PropertyDetails();
+
+                for (var i = 0; i < counters.Count; i++)
+                {
+                    counters.GetPropertyByIndex(i, ref property);
+
+                    if (string.Equals(property.Name, counterName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (property.Value is LazyNumberValue) // already deleted
+                            return null;
+
+                        propertyIndex = i;
+                        break;
+                    }
+                }
+
+                if (propertyIndex == -1)
                     return null;
 
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-                counters.GetPropertyByIndex(propIndex, ref prop);
-
-                if (prop.Value is LazyStringValue) // already deleted
-                    return null;
-
-                counterName = prop.Name; // use original casing
-                var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, prop.Value as BlittableJsonReaderObject.RawBlob);
+                counterName = property.Name; // use original casing
+                var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, property.Value as BlittableJsonReaderObject.RawBlob);
                 counters.Modifications = new DynamicJsonValue(counters)
                 {
                     [counterName] = deleteCv

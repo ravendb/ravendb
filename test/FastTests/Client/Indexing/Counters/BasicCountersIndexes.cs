@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Indexes;
@@ -735,6 +737,94 @@ namespace FastTests.Client.Indexing.Counters
                     Assert.Equal(0, counts.ReferenceTableCount);
                     Assert.Equal(0, counts.CollectionTableCount);
                 }
+            }
+        }
+
+        [Fact]
+        public void MapIndexWithCaseInsensitiveCounterNames()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+                    session.CountersFor(company).Increment("HeartRate", 13);
+
+                    session.SaveChanges();
+                }
+
+                var result = store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "MyCounterIndex",
+                    Maps = {
+                    "from counter in counters.Companies.HeartRate " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name," +
+                    "   User = counter.DocumentId " +
+                    "}" }
+                }));
+
+                WaitForIndexing(store);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("13", terms);
+
+                // delete counters
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.CountersFor(company).Delete("hearTraTe"); // <--- note casing hearTraTe
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "HeartBeat", null));
+                Assert.Equal(0, terms.Length);
+            }
+        }
+
+        [Fact]
+        public void CanUpdateMapCountersIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "MyCounterIndex",
+                    Maps = {
+                    "from counter in counters.Companies.Likes " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name," +
+                    "   User = counter.DocumentId " +
+                    "}" }
+                }));
+
+                store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "MyCounterIndex",
+                    Maps = {
+                    "from counter in counters.Companies.Dislikes " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name," +
+                    "   User = counter.DocumentId " +
+                    "}" }
+                }));
+
+                WaitForIndexing(store);
+
+                Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
+
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
+
+                Assert.Contains("Dislikes", indexes[0].Maps.First());
             }
         }
     }
