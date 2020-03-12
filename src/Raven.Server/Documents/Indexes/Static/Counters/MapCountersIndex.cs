@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
                 return;
             }
 
-            if (_referencedCollections.Count > 0 && _referencedCollections.Contains(change.CollectionName))
+            if (_referencedCollections.Contains(change.CollectionName))
             {
                 _mre.Set();
             }
