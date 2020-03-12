@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -800,7 +801,22 @@ namespace Raven.Server.Documents.Indexes
                             MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
                         default:
-                            throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
+                            throw new NotSupportedException($"Cannot update {definition.Type} index from {nameof(IndexDefinition)}");
+                    }
+                    break;
+                case IndexSourceType.Counters:
+                    switch (definition.Type)
+                    {
+                        case IndexType.Map:
+                        case IndexType.JavaScriptMap:
+                            MapCountersIndex.Update(existingIndex, definition, _documentDatabase);
+                            break;
+                        case IndexType.MapReduce:
+                        case IndexType.JavaScriptMapReduce:
+                            MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
+                            break;
+                        default:
+                            throw new NotSupportedException($"Cannot create {definition.Type} index from {nameof(CountersIndexDefinition)}");
                     }
                     break;
                 case IndexSourceType.TimeSeries:
@@ -815,7 +831,7 @@ namespace Raven.Server.Documents.Indexes
                             MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
                         default:
-                            throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
+                            throw new NotSupportedException($"Cannot create {definition.Type} index from {nameof(TimeSeriesIndexDefinition)}");
                     }
                     break;
                 default:

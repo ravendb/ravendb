@@ -9,6 +9,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Client.Documents.Indexes;
 
 namespace FastTests.Client.Indexing.Counters
 {
@@ -825,6 +826,47 @@ namespace FastTests.Client.Indexing.Counters
                 var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
 
                 Assert.Contains("Dislikes", indexes[0].Maps.First());
+            }
+        }
+
+        [Fact]
+        public void CanUpdateMapCountersIndexWithoutUpdatingCompiledIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "MyCounterIndex",
+                    Maps = {
+                    "from counter in counters.Companies.Likes " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name," +
+                    "   User = counter.DocumentId " +
+                    "}" },
+                    Priority = IndexPriority.Low
+                }));
+
+                store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "MyCounterIndex",
+                    Maps = {
+                    "from counter in counters.Companies.Likes " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name," +
+                    "   User = counter.DocumentId " +
+                    "}" },
+                    Priority = IndexPriority.High
+                }));
+
+                WaitForIndexing(store);
+
+                Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
+
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
+
+                Assert.Equal(IndexPriority.High, indexes[0].Priority);
             }
         }
     }
