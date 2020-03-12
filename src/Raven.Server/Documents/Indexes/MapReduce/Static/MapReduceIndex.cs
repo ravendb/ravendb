@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             else if (typeof(TStaticIndex) == typeof(MapReduceTimeSeriesIndex))
                 instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex, StaticTimeSeriesIndexBase>(definition, documentDatabase.Configuration, IndexDefinitionBase.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex));
             else if (typeof(TStaticIndex) == typeof(MapReduceCountersIndex))
-                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceCountersIndex, StaticCountersIndexBase>(definition, documentDatabase.Configuration, (staticMapIndexDefinition, staticIndex) => new MapReduceCountersIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceCountersIndex, StaticCountersIndexBase>(definition, documentDatabase.Configuration, IndexDefinitionBase.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceCountersIndex(staticMapIndexDefinition, staticIndex));
             else
                 throw new NotSupportedException($"Not supported index type {typeof(TStaticIndex).Name}");
 
