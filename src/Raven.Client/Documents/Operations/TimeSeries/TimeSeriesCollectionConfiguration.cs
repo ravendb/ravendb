@@ -92,13 +92,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return $"{rawName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{Name}";
         }
 
-        public RollupPolicy(TimeSpan retentionTime, TimeSpan aggregationTime, AggregationType type = AggregationType.Avg)
+        public RollupPolicy(TimeSpan aggregationTime, AggregationType type = AggregationType.Avg) : this(aggregationTime, TimeSpan.MaxValue, type)
+        {
+        }
+
+        public RollupPolicy(TimeSpan aggregationTime, TimeSpan retentionTime, AggregationType type = AggregationType.Avg)
         {
             RetentionTime = retentionTime;
             AggregationTime = aggregationTime;
             Type = type;
 
-            Name = $"Every{AggregationTime}By{Type}";
+            var retentionStr = retentionTime == TimeSpan.MaxValue ? "" : $"KeepFor{retentionTime}";
+            Name = $"Every{AggregationTime}By{Type}{retentionStr}";
         }
 
         public DynamicJsonValue ToJson()
@@ -114,9 +119,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         protected bool Equals(RollupPolicy other)
         {
-            Debug.Assert(Name == other.Name);
             return RetentionTime == other.RetentionTime &&
-                   AggregationTime == other.AggregationTime;
+                   AggregationTime == other.AggregationTime && 
+                   Type == other.Type;
         }
 
         public int CompareTo(RollupPolicy other)
