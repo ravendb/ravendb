@@ -904,7 +904,6 @@ namespace Raven.Server.Documents.TimeSeries
 
                 using (Slice.From(context.Allocator, changeVector, out Slice cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out var collectionSlice))
-                using (DocumentIdWorker.GetStringPreserveCase(context, name, out var tsNameSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(key);
@@ -913,7 +912,6 @@ namespace Raven.Server.Documents.TimeSeries
                     tvb.Add(segment.Ptr, segment.NumberOfBytes);
                     tvb.Add(collectionSlice);
                     tvb.Add(context.GetTransactionMarker());
-                    tvb.Add(tsNameSlice);
 
                     table.Set(tvb);
                 }
@@ -1177,7 +1175,6 @@ namespace Raven.Server.Documents.TimeSeries
                 using (Slice.From(_context.Allocator, _key, _keySize, out var keySlice))
                 using (Table.Allocate(out var tvb))
                 using (DocumentIdWorker.GetStringPreserveCase(_context, _collection.Name, out var collectionSlice))
-                using (DocumentIdWorker.GetStringPreserveCase(_context, _name, out var tsNameSlice))
                 using (Slice.From(_context.Allocator, _currentChangeVector, out var cv))
                 {
                     tvb.Add(keySlice);
@@ -1186,7 +1183,6 @@ namespace Raven.Server.Documents.TimeSeries
                     tvb.Add(newValueSegment.Ptr, newValueSegment.NumberOfBytes);
                     tvb.Add(collectionSlice);
                     tvb.Add(_context.GetTransactionMarker());
-                    tvb.Add(tsNameSlice);
 
                     Table.Set(tvb);
                 }
@@ -1217,7 +1213,6 @@ namespace Raven.Server.Documents.TimeSeries
 
                 using (Slice.From(_context.Allocator, _currentChangeVector, out Slice cv))
                 using (DocumentIdWorker.GetStringPreserveCase(_context, _collection.Name, out var collectionSlice))
-                using (DocumentIdWorker.GetStringPreserveCase(_context, _name, out var tsNameSlice))
                 using (Table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(key);
@@ -1226,7 +1221,6 @@ namespace Raven.Server.Documents.TimeSeries
                     tvb.Add(newSegment.Ptr, newSegment.NumberOfBytes);
                     tvb.Add(collectionSlice);
                     tvb.Add(_context.GetTransactionMarker());
-                    tvb.Add(tsNameSlice);
 
                     Table.Insert(tvb);
                 }
@@ -1738,7 +1732,6 @@ namespace Raven.Server.Documents.TimeSeries
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                 Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
                 Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
-                Name = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Name, ref reader),
                 Etag = Bits.SwapBytes(etag),
                 TransactionMarker = DocumentsStorage.TableValueToShort((int)TimeSeriesTable.TransactionMarker, nameof(TimeSeriesTable.TransactionMarker), ref reader)
             };
@@ -1845,13 +1838,13 @@ namespace Raven.Server.Documents.TimeSeries
 
             var key = new LazyStringValue(null, keyPtr, keySize, context);
 
-            TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, context, out var docId, out _, out var baseline);
-
+            TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, context, out var docId, out var lowerName, out var baseline);
+           
             return new TimeSeriesSegmentEntry
             {
                 Key = key,
                 DocId = docId,
-                Name = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Name, ref reader),
+                Name = lowerName,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                 Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
                 SegmentSize = segmentSize,
@@ -2086,8 +2079,7 @@ namespace Raven.Server.Documents.TimeSeries
             ChangeVector = 2,
             Segment = 3,
             Collection = 4,
-            TransactionMarker = 5,
-            Name = 6
+            TransactionMarker = 5
         }
 
         private enum DeletedRangeTable
