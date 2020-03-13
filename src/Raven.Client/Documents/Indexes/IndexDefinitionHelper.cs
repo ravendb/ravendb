@@ -239,22 +239,30 @@ namespace Raven.Client.Documents.Indexes
             {
                 return IndexSourceType.TimeSeries;
             }
-            
+
+            if (map.StartsWith("counters", StringComparison.OrdinalIgnoreCase))
+            {
+                return IndexSourceType.TimeSeries;
+            }
+
             if (map.StartsWith("from"))
             {
                 // detect `from ts in timeseries` or `from ts in timeseries.Users.HeartRate`
-                
-                var tokens = map.Split(new [] {' '}, 4, StringSplitOptions.RemoveEmptyEntries);
-                if (tokens.Length >= 4 && tokens[2] == "in" && tokens[3].StartsWith("timeSeries", StringComparison.OrdinalIgnoreCase))
+
+                var tokens = map.Split(new[] { ' ' }, 4, StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length >= 4 && tokens[2] == "in")
                 {
-                    return IndexSourceType.TimeSeries;
+                    if (tokens[3].StartsWith("timeSeries", StringComparison.OrdinalIgnoreCase))
+                        return IndexSourceType.TimeSeries;
+                    if (tokens[3].StartsWith("counters", StringComparison.OrdinalIgnoreCase))
+                        return IndexSourceType.Counters;
                 }
             }
 
             // fallback to documents based index
             return IndexSourceType.Documents;
         }
-        
+
         internal static IndexType DetectStaticIndexType(string map, string reduce)
         {
             if (string.IsNullOrWhiteSpace(map))

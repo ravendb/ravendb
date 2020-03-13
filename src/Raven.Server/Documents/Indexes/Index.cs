@@ -27,6 +27,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Workers;
@@ -377,6 +378,17 @@ namespace Raven.Server.Documents.Indexes
                                             return MapReduceIndex.CreateNew<MapReduceIndex>(staticDef, documentDatabase);
                                     }
                                     break;
+                                case IndexSourceType.Counters:
+                                    switch (staticDef.Type)
+                                    {
+                                        case IndexType.Map:
+                                        case IndexType.JavaScriptMap:
+                                            return MapCountersIndex.CreateNew(staticDef, documentDatabase);
+                                        case IndexType.MapReduce:
+                                        case IndexType.JavaScriptMapReduce:
+                                            return MapReduceIndex.CreateNew<MapReduceCountersIndex>(staticDef, documentDatabase);
+                                    }
+                                    break;
                                 case IndexSourceType.TimeSeries:
                                     switch (staticDef.Type)
                                     {
@@ -423,6 +435,18 @@ namespace Raven.Server.Documents.Indexes
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
                                 return MapReduceIndex.Open<MapReduceIndex>(environment, documentDatabase);
+                            default:
+                                throw new ArgumentException($"Unknown index type {type} for index {name}");
+                        }
+                    case IndexSourceType.Counters:
+                        switch (type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                return MapCountersIndex.Open(environment, documentDatabase);
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                return MapReduceIndex.Open<MapReduceCountersIndex>(environment, documentDatabase);
                             default:
                                 throw new ArgumentException($"Unknown index type {type} for index {name}");
                         }
