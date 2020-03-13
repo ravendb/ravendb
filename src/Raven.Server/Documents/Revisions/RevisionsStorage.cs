@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Revisions
 
         public static readonly TableSchema RevisionsSchema = new TableSchema()
         {
-            TableType = (byte)TableType.Revisions
+            TableType = (byte)TableType.Revisions,
         };
 
         public RevisionsConfiguration ConflictConfiguration;
@@ -130,6 +130,8 @@ namespace Raven.Server.Documents.Revisions
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
+                RevisionsSchema.CompressValues();
+
                 Slice.From(ctx, "RevisionsChangeVector", ByteStringType.Immutable, out var changeVectorSlice);
                 Slice.From(ctx, "RevisionsIdAndEtag", ByteStringType.Immutable, out IdAndEtagSlice);
                 Slice.From(ctx, "DeleteRevisionEtag", ByteStringType.Immutable, out DeleteRevisionEtagSlice);
@@ -139,6 +141,7 @@ namespace Raven.Server.Documents.Revisions
                 Slice.From(ctx, nameof(ResolvedFlagByEtagSlice), ByteStringType.Immutable, out ResolvedFlagByEtagSlice);
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Revisions), ByteStringType.Immutable, out RevisionsPrefix);
+                
                 RevisionsSchema.DefineKey(new TableSchema.SchemaIndexDef
                 {
                     StartIndex = (int)RevisionsTable.ChangeVector,

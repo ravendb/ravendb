@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using GeoAPI.Linq;
 using Sparrow.Binary;
 using Voron;
 using Voron.Data.Tables;
-using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
-using Enumerable = System.Linq.Enumerable;
 
 namespace FastTests.Voron.Tables
 {
@@ -84,11 +81,9 @@ namespace FastTests.Voron.Tables
                 Assert.True(minAllocatedSize < firstAllocatedSize);
             }
         }
-        
-        
 
         [Fact]
-        public unsafe void Can_defined_compressed_table_and_read_write_small()
+        public unsafe void Can_define_compressed_table_and_read_write_small()
         {
             using (var tx = Env.WriteTransaction())
             {
@@ -144,8 +139,66 @@ namespace FastTests.Voron.Tables
                 }
             }
         }
+
         [Fact]
-        public unsafe void Can_defined_compressed_table_and_read_write_large()
+        public void Can_update_compressed_value()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                Slice.From(tx.Allocator, "Compression", out var etagIndexName);
+                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                {
+                    Name = etagIndexName,
+                    IsGlobal = true,
+                    StartIndex = 1,
+                };
+
+                var tableSchema = new TableSchema()
+                    .CompressValues()
+                    .DefineFixedSizeIndex(fixedSizedIndex)
+                    .DefineKey(new TableSchema.SchemaIndexDef
+                    {
+                        StartIndex = 0,
+                        Count = 1,
+                    });
+
+                tableSchema.Create(tx, "Items", 16);
+                var itemsTable = tx.OpenTable(tableSchema, "Items");
+                const long number = 1L;
+
+                using (itemsTable.Allocate(out TableValueBuilder builder))
+                using (Slice.From(tx.Allocator, "val1", out var key))
+                using (Slice.From(tx.Allocator, new string('a', 1024 * 16), out var val))
+                {
+                    builder.Add(key);
+                    builder.Add(Bits.SwapBytes(number));
+                    builder.Add(val);
+                    long id = itemsTable.Insert(builder);
+                    var allocatedSize = itemsTable.GetAllocatedSize(id);
+                    Assert.True(allocatedSize < 128);
+                }
+
+                using (itemsTable.Allocate(out TableValueBuilder builder))
+                using (Slice.From(tx.Allocator, "val1", out var key))
+                using (Slice.From(tx.Allocator, new string('a', 1024 * 32), out var val))
+                {
+                    builder.Add(key);
+                    builder.Add(Bits.SwapBytes(number));
+                    builder.Add(val);
+                    itemsTable.Set(builder);
+                }
+
+                using (Slice.From(tx.Allocator, "val1", out var key))
+                {
+                    Assert.True(itemsTable.ReadByKey(key, out var reader));
+                    Assert.True(itemsTable.GetAllocatedSize(reader.Id) < 128);
+
+                }
+            }
+        }
+
+        [Fact]
+        public unsafe void Can_define_compressed_table_and_read_write_large()
         {
             using (var tx = Env.WriteTransaction())
             {
