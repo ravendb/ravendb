@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -30,10 +31,12 @@ namespace Voron.Data.RawData
             public const short CompressedFlagMask = unchecked((short)(1 << 15));
             public const short ValueOnlyMask = ~CompressedFlagMask;
 
-            public void Freed()
+            public void SetFreed()
             {
                 UsedSize_Buffer = -1;
             }
+
+            public bool IsFreed => UsedSize_Buffer == -1;
 
             public bool IsCompressed
             {
@@ -49,7 +52,11 @@ namespace Voron.Data.RawData
 
             public short UsedSize
             {
-                get => (short)(UsedSize_Buffer & ValueOnlyMask);
+                get
+                {
+                    Debug.Assert(IsFreed == false, "Should not try to get size of freed instance");
+                    return (short)(UsedSize_Buffer & ValueOnlyMask);
+                }
                 set => UsedSize_Buffer = (short)(UsedSize_Buffer & ValueOnlyMask);
             }
         }
@@ -130,7 +137,7 @@ namespace Voron.Data.RawData
             while (offset + sizeof(RawDataEntrySizes) < Constants.Storage.PageSize)
             {
                 var sizes = (RawDataEntrySizes*)((byte*)pageHeader + offset);
-                if (sizes->UsedSize != -1)
+                if (sizes->IsFreed == false)
                 {
                     var currentId = (pageHeader->PageNumber * Constants.Storage.PageSize) + offset;
 
@@ -198,7 +205,7 @@ namespace Voron.Data.RawData
                 VoronUnrecoverableErrorException.Raise(_tx, $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
             var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
-            if (sizes->UsedSize < 0)
+            if (sizes->IsFreed)
                 VoronUnrecoverableErrorException.Raise(_tx, $"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
             if (sizes->AllocatedSize < sizes->UsedSize)
@@ -255,7 +262,7 @@ namespace Voron.Data.RawData
             }
 
             var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
-            if (sizes->UsedSize < 0)
+            if (sizes->IsFreed)
                 VoronUnrecoverableErrorException.Raise(tx,
                     $"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
@@ -332,10 +339,10 @@ namespace Voron.Data.RawData
                 VoronUnrecoverableErrorException.Raise(_tx, $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
             var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
-            if (sizes->UsedSize < 0)
+            if (sizes->IsFreed)
                 VoronUnrecoverableErrorException.Raise(_tx, $"Asked to free a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
-            sizes->Freed();
+            sizes->SetFreed();
             Memory.Set((byte*)pageHeader + posInPage + sizeof(RawDataEntrySizes), 0, sizes->AllocatedSize);
             pageHeader->NumberOfEntries--;
 

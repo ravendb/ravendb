@@ -463,7 +463,7 @@ namespace Voron.Recovery
                                 }
 
                                 pos += entry->AllocatedSize + sizeof(RawDataSection.RawDataEntrySizes);
-                                if (entry->AllocatedSize == 0 || entry->UsedSize == -1)
+                                if (entry->AllocatedSize == 0 || entry->IsFreed)
                                     continue;
 
                                 if (Write(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, documentsWriter, revisionsWriter,

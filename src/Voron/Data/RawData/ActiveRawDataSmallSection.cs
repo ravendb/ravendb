@@ -129,7 +129,7 @@ namespace Voron.Data.RawData
                 var oldSize = (RawDataEntrySizes*)((byte*)pageHeader + i);
                 sb.Append($"{i} - {oldSize->AllocatedSize} / {oldSize->UsedSize} - ");
 
-                if (oldSize->UsedSize > 0)
+                if (oldSize->IsFreed == false)
                 {
                     var tvr = new TableValueReader((byte*)pageHeader + i + sizeof(RawDataEntrySizes),
                         oldSize->UsedSize);
@@ -178,7 +178,7 @@ namespace Voron.Data.RawData
                     if (oldSize->AllocatedSize <= 0)
                         VoronUnrecoverableErrorException.Raise(_tx, $"Allocated size cannot be zero or negative, but was {oldSize->AllocatedSize} in page {pageHeader->PageNumber}");
 
-                    if (oldSize->UsedSize < 0)
+                    if (oldSize->IsFreed)
                     {
                         pos += (ushort)(oldSize->AllocatedSize + sizeof(RawDataEntrySizes));
                         continue; // this was freed
