@@ -17,11 +17,8 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
 
         protected override IEnumerable<IndexItem> GetItems(DocumentsOperationContext databaseContext, Slice key)
         {
-            foreach (var counter in _countersStorage.GetCountersMetadata(databaseContext, key))
-            {
-                foreach (var counterName in counter.CounterNames)
-                    yield return new CounterIndexItem(counter.DocumentId, counter.DocumentId, counter.Etag, counterName, counter.Size);
-            }
+            foreach (var counter in _countersStorage.Indexing.GetCountersMetadata(databaseContext, key))
+                yield return new CounterIndexItem(counter.Key, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

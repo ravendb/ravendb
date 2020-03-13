@@ -45,6 +45,13 @@ namespace Raven.Server.Documents.Indexes.Static
                                 break;
                             }
 
+                        case Constants.Counters.All:
+                            {
+                                _allItems = true;
+                                _allItemsKey = Constants.Counters.All;
+                                break;
+                            }
+
                         case Constants.TimeSeries.All:
                             {
                                 _allItems = true;

@@ -9,7 +9,11 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         public bool ShouldFilter(IndexItem item)
         {
-            return _seenIds.Add(item.LowerId) == false;
+            var key = item.LowerId;
+            if (key == null)
+                return true;
+
+            return _seenIds.Add(key) == false;
         }
     }
 }

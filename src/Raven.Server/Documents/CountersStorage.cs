@@ -139,12 +139,16 @@ namespace Raven.Server.Documents
             });
         }
 
+        public readonly IndexingMethods Indexing;
+
         public CountersStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
             _documentDatabase = documentDatabase;
             _documentsStorage = documentDatabase.DocumentsStorage;
 
             tx.CreateTree(CounterKeysSlice);
+
+            Indexing = new IndexingMethods(this);
         }
 
         public IEnumerable<ReplicationBatchItem> GetCountersFrom(DocumentsOperationContext context, long etag)
@@ -156,108 +160,6 @@ namespace Raven.Server.Documents
             {
                 yield return CreateReplicationBatchItem(context, result);
             }
-        }
-
-        public CounterGroupMetadata GetCountersMetadata(DocumentsOperationContext context, long etag)
-        {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
-            var index = CountersSchema.FixedSizeIndexes[AllCountersEtagSlice];
-
-            if (table.Read(context.Allocator, index, etag, out var tvr) == false)
-                return null;
-
-            return TableValueToCounterGroupMetadata(context, ref tvr);
-        }
-
-        public IEnumerable<CounterGroupMetadata> GetCountersMetadata(DocumentsOperationContext context, Slice documentId)
-        {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
-
-            using (ConvertToKeyWithPrefix(out var key))
-            {
-                foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
-                {
-                    yield return TableValueToCounterGroupMetadata(context, ref result.Value.Reader);
-                }
-            }
-
-            IDisposable ConvertToKeyWithPrefix(out Slice key)
-            {
-                var scope = context.Allocator.Allocate(documentId.Size + 1, out var keyByte);
-
-                documentId.CopyTo(keyByte.Ptr);
-                keyByte.Ptr[documentId.Size] = SpecialChars.RecordSeparator;
-
-                key = new Slice(keyByte);
-                return scope;
-            }
-        }
-
-        public IEnumerable<CounterGroupMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, long etag, long skip, long take)
-        {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
-
-            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
-            {
-                if (take-- <= 0)
-                    yield break;
-
-                yield return TableValueToCounterGroupMetadata(context, ref result.Reader);
-            }
-        }
-
-        public IEnumerable<CounterGroupMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, string collection, long etag, long skip, long take)
-        {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
-            if (collectionName == null)
-                yield break;
-
-            var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
-
-            if (table == null)
-                yield break;
-
-            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag, skip))
-            {
-                if (take-- <= 0)
-                    yield break;
-
-                yield return TableValueToCounterGroupMetadata(context, ref result.Reader);
-            }
-        }
-
-        public static CounterGroupMetadata TableValueToCounterGroupMetadata(JsonOperationContext context, ref TableValueReader tvr)
-        {
-            var docId = ExtractDocId(context, ref tvr);
-
-            var counterNames = new HashSet<LazyStringValue>();
-
-            var valuesData = GetCounterValuesData(context, ref tvr);
-            int size = 0;
-
-            if (valuesData != null)
-            {
-                size = valuesData.Size;
-
-                if (valuesData.TryGet(Values, out BlittableJsonReaderObject values))
-                {
-                    var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                    for (var i = 0; i < values.Count; i++)
-                    {
-                        values.GetPropertyByIndex(i, ref propertyDetails);
-
-                        counterNames.Add(propertyDetails.Name);
-                    }
-                }
-            }
-
-            return new CounterGroupMetadata
-            {
-                DocumentId = docId,
-                Etag = TableValueToEtag((int)CountersTable.Etag, ref tvr),
-                CounterNames = counterNames,
-                Size = size
-            };
         }
 
         public IEnumerable<CounterGroupDetail> GetCountersFrom(DocumentsOperationContext context, long etag, long skip, long take)
@@ -1903,14 +1805,189 @@ namespace Raven.Server.Documents
 
             return TableValueToEtag((int)CountersTable.Etag, ref result.Reader);
         }
+
+        public class IndexingMethods
+        {
+            private readonly CountersStorage _countersStorage;
+
+            public IndexingMethods(CountersStorage countersStorage)
+            {
+                _countersStorage = countersStorage;
+            }
+
+            public CounterGroupItemMetadata GetCountersMetadata(DocumentsOperationContext context, long etag)
+            {
+                var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+                var index = CountersSchema.FixedSizeIndexes[AllCountersEtagSlice];
+
+                if (table.Read(context.Allocator, index, etag, out var tvr) == false)
+                    return null;
+
+                foreach (var item in TableValueToCounterGroupItemMetadata(context, tvr))
+                    return item;
+
+                return null;
+            }
+
+            public IEnumerable<CounterGroupItemMetadata> GetCountersMetadata(DocumentsOperationContext context, Slice documentId)
+            {
+                var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+                using (ConvertToKeyWithPrefix(out var key))
+                {
+                    foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
+                    {
+                        foreach (var item in TableValueToCounterGroupItemMetadata(context, result.Value.Reader))
+                            yield return item;
+                    }
+                }
+
+                IDisposable ConvertToKeyWithPrefix(out Slice key)
+                {
+                    var scope = context.Allocator.Allocate(documentId.Size + 1, out var keyByte);
+
+                    documentId.CopyTo(keyByte.Ptr);
+                    keyByte.Ptr[documentId.Size] = SpecialChars.RecordSeparator;
+
+                    key = new Slice(keyByte);
+                    return scope;
+                }
+            }
+
+            public IEnumerable<CounterGroupItemMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, long etag, long skip, long take)
+            {
+                var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+                foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    foreach (var item in TableValueToCounterGroupItemMetadata(context, result.Reader))
+                        yield return item;
+                }
+            }
+
+            public IEnumerable<CounterGroupItemMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, string collection, long etag, long skip, long take)
+            {
+                var collectionName = _countersStorage._documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    yield break;
+
+                var table = _countersStorage.GetCountersTable(context.Transaction.InnerTransaction, collectionName);
+
+                if (table == null)
+                    yield break;
+
+                foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag, skip))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    foreach (var item in TableValueToCounterGroupItemMetadata(context, result.Reader))
+                        yield return item;
+                }
+            }
+
+            public static IEnumerable<CounterGroupItemMetadata> TableValueToCounterGroupItemMetadata(DocumentsOperationContext context, TableValueReader tvr)
+            {
+                var etag = TableValueToEtag((int)CountersTable.Etag, ref tvr);
+
+                var valuesData = GetCounterValuesData(context, ref tvr);
+                int size = 0;
+
+                if (valuesData != null)
+                {
+                    size = valuesData.Size;
+
+                    if (valuesData.TryGet(Values, out BlittableJsonReaderObject values))
+                    {
+                        size /= values.Count; // just 'estimating'
+
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < values.Count; i++)
+                        {
+                            var docId = ExtractDocId(context, ref tvr);
+
+                            using (ToDocumentIdPrefix(docId, out var documentIdPrefix))
+                            {
+                                values.GetPropertyByIndex(i, ref propertyDetails);
+
+                                var counterName = propertyDetails.Name;
+                                var keyScope = ToKey(documentIdPrefix, counterName, out var key);
+
+                                yield return new CounterGroupItemMetadata(key, keyScope, docId, counterName, etag, size);
+                            }
+                        }
+
+                        yield break;
+                    }
+                }
+
+                yield return new CounterGroupItemMetadata(null, null, null, null, etag, size);
+
+                IDisposable ToDocumentIdPrefix(LazyStringValue documentId, out Slice documentIdPrefix)
+                {
+                    var p = tvr.Read((int)CountersTable.CounterKey, out _);
+
+                    return Slice.From(context.Allocator, p, documentId.Size + 1, out documentIdPrefix);
+                }
+
+                IDisposable ToKey(Slice documentIdPrefix, LazyStringValue counterName, out LazyStringValue key)
+                {
+                    using (DocumentIdWorker.GetLower(context.Allocator, counterName, out var counterNameSlice))
+                    {
+                        var scope = context.Allocator.Allocate(counterNameSlice.Size + documentIdPrefix.Size, out var buffer);
+                        CreateCounterKeySlice(context, buffer, documentIdPrefix, counterNameSlice, out var counterKeySlice);
+
+                        key = context.AllocateStringValue(null, counterKeySlice.Content.Ptr, counterKeySlice.Content.Length);
+                        return scope;
+                    }
+                }
+            }
+        }
     }
 
-    public class CounterGroupMetadata
+    public class CounterGroupItemMetadata : IDisposable
     {
+        private bool _disposed;
+        private IDisposable _keyScope;
+
+        public LazyStringValue Key;
         public LazyStringValue DocumentId;
-        public long Etag;
-        public HashSet<LazyStringValue> CounterNames;
-        public int Size;
+        public LazyStringValue CounterName;
+        public readonly long Etag;
+        public readonly int Size;
+
+        public CounterGroupItemMetadata(LazyStringValue key, IDisposable keyScope, LazyStringValue documentId, LazyStringValue counterName, long etag, int size)
+        {
+            Key = key;
+            _keyScope = keyScope;
+            DocumentId = documentId;
+            CounterName = counterName;
+            Etag = etag;
+            Size = size;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            Key?.Dispose();
+            Key = null;
+
+            _keyScope.Dispose();
+            _keyScope = null;
+
+            DocumentId?.Dispose();
+            DocumentId = null;
+
+            CounterName?.Dispose();
+            CounterName = null;
+
+            _disposed = true;
+        }
     }
 
     public struct CounterValue
