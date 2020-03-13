@@ -909,12 +909,15 @@ namespace Voron.Data.Tables
                     // couldn't successfully compress the current value
                     
                     ActiveDataSmallSection.CurrentCompressionDictionaryHash(out hash);
-                    var currentDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(this,hash);
+                    var currentDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
+                        .GetCompressionDictionaryFor(this,hash);
 
-                    // TODO: We need to somehow prevent outliers here. A single bad compression may cause us to drop a useful dictionary
-                
                     // We'll replace the dictionary if it is unable to provide us with good compression ratio
-                    // we give it +10 ratio to allow some slippage between training
+                    // we give it +10 ratio to allow some slippage between training. Even after violating the expected
+                    // compression ration, we have to check for compression outliers (a single input that doesn't compress well)
+                    // this is handled inside ShouldReplaceDictionary and ensure that new dictionaries are at least 10%
+                    // better than the previous one. We prefer to use less dictionaries, even if compression
+                    // rate can be slightly improved.
                     if (ActiveDataSmallSection.MinCompressionRatio + 10 > currentDictionary.ExpectedCompressionRatio)
                     {
                         // this will check if we can create a new dictionary that would do better for the current item

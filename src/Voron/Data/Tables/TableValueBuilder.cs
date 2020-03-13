@@ -176,8 +176,9 @@ namespace Voron.Data.Tables
             try
             {
                 var size = ZstdLib.Compress(_raw.ToReadOnlySpan(), newCompressBuffer.ToSpan(), newDic);
-                const int sizeOfHash = 32;
-                if (size >= _compressed.Length)
+                // we want to be conservative about changing dictionaries, we'll only replace it if there
+                // is a > 10% change in the data
+                if (size >= _compressed.Length - (_compressed.Length/10))
                 {
                     // couldn't get better rate, abort and use the current one
                     newCompressBufferScope.Dispose();
