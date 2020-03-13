@@ -33,16 +33,16 @@ namespace Voron.Data.RawData
 
         public byte MinCompressionRatio => _sectionHeader->MinCompressionRatio;
 
-        public ByteStringContext.ExternalScope CompressionDictionaryHashFor(long id,out Slice hash)
+        public static ByteStringContext.ExternalScope CompressionDictionaryHashFor(LowLevelTransaction tx,long id,out Slice hash)
         {
-            long sectionPageNumber = GetSectionPageNumber(id);
-            var page = _tx.GetPage(sectionPageNumber);
+            long sectionPageNumber = GetSectionPageNumber(tx, id);
+            var page = tx.GetPage(sectionPageNumber);
             if ((page.Flags & PageFlags.RawData) != PageFlags.RawData)
                 ThrowInvalidPage(sectionPageNumber);
 
             byte* dataPointer = page.DataPointer;
 
-            return Slice.External(_tx.Allocator, dataPointer, 32, out hash);
+            return Slice.External(tx.Allocator, dataPointer, 32, out hash);
         }
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace Voron.Data.RawData
                 if (AvailableSpace[i] < size)
                     continue;
 
-                var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
+                var pageHeader = PageHeaderFor(_tx, _sectionHeader->PageNumber + i + 1);
                 if (pageHeader->NextAllocation + size > Constants.Storage.PageSize)
                     continue;
 
@@ -96,7 +96,7 @@ namespace Voron.Data.RawData
                 if (AvailableSpace[i] < size)
                     continue;
                 // we have space, but we need to defrag
-                var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
+                var pageHeader = PageHeaderFor(_tx, _sectionHeader->PageNumber + i + 1);
                 pageHeader = DefragPage(pageHeader);
 
                 id = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;
@@ -301,7 +301,7 @@ namespace Voron.Data.RawData
                 pageNumberInSection <= _sectionHeader->PageNumber + _sectionHeader->NumberOfPages)
                 return true;
 
-            var pageHeader = PageHeaderFor(pageNumberInSection);
+            var pageHeader = PageHeaderFor(_tx, pageNumberInSection);
             var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection - 1;
             var idSectionHeader = (RawDataSmallSectionPageHeader*)_tx.GetPage(sectionPageNumber).Pointer;
 
@@ -326,8 +326,8 @@ namespace Voron.Data.RawData
                 return;
             }
 
-            var sectionPageNumber = GetSectionPageNumber(id);
-            var sectionHeader = (RawDataSmallSectionPageHeader*)PageHeaderFor(sectionPageNumber);
+            var sectionPageNumber = GetSectionPageNumber(_tx, id);
+            var sectionHeader = (RawDataSmallSectionPageHeader*)PageHeaderFor(_tx, sectionPageNumber);
             
             
             if (sectionHeader->MinCompressionRatio >= compressionRatio)

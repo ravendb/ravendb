@@ -96,7 +96,7 @@ namespace Voron.Data.RawData
             {
                 var posInPage = (int)(id % Constants.Storage.PageSize);
                 var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
-                var pageHeaderForId = PageHeaderFor(pageNumberInSection);
+                var pageHeaderForId = PageHeaderFor(_tx, pageNumberInSection);
 
                 // this is in another section, cannot free it directly, so we'll forward to the right section
                 var sectionPageNumber = pageHeaderForId->PageNumber - pageHeaderForId->PageNumberInSection - 1;
@@ -132,7 +132,7 @@ namespace Voron.Data.RawData
 
         public void FillAllIdsInPage(long pageNumber, List<long> ids)
         {
-            var pageHeader = PageHeaderFor(pageNumber + 1);
+            var pageHeader = PageHeaderFor(_tx, pageNumber + 1);
             var offset = sizeof(RawDataSmallPageHeader);
             while (offset + sizeof(RawDataEntrySizes) < Constants.Storage.PageSize)
             {
@@ -199,7 +199,7 @@ namespace Voron.Data.RawData
 
             var posInPage = (int)(id % Constants.Storage.PageSize);
             var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
-            var pageHeader = PageHeaderFor(pageNumberInSection);
+            var pageHeader = PageHeaderFor(_tx, pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
                 VoronUnrecoverableErrorException.Raise(_tx, $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
@@ -273,11 +273,11 @@ namespace Voron.Data.RawData
             return sizes;
         }
 
-        public long GetSectionPageNumber(long id)
+        public static long GetSectionPageNumber(LowLevelTransaction tx, long id)
         {
             var posInPage = (int)(id % Constants.Storage.PageSize);
             var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
-            var pageHeader = PageHeaderFor(pageNumberInSection);
+            var pageHeader = PageHeaderFor(tx, pageNumberInSection);
             var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection - 1;
             return sectionPageNumber;
         }
@@ -315,7 +315,7 @@ namespace Voron.Data.RawData
 
             var posInPage = (int)(id % Constants.Storage.PageSize);
             var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
-            var pageHeader = PageHeaderFor(pageNumberInSection);
+            var pageHeader = PageHeaderFor(_tx, pageNumberInSection);
 
             if (Contains(id) == false)
             {
@@ -385,16 +385,6 @@ namespace Voron.Data.RawData
             return (RawDataSmallPageHeader*)page.Pointer;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected RawDataSmallPageHeader* PageHeaderFor(long pageNumber)
-        {
-            var pageHeader = PageHeaderFor(_tx, pageNumber);
-
-            if ((pageHeader->Flags & PageFlags.RawData) != PageFlags.RawData)
-                ThrowInvalidPage(pageNumber);
-            return pageHeader;
-        }
-
         private static void ThrowReadOnlyTransaction(long id)
         {
             throw new InvalidOperationException($"Attempted to modify page {id} in a read only transaction");
@@ -408,7 +398,10 @@ namespace Voron.Data.RawData
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static RawDataSmallPageHeader* PageHeaderFor(LowLevelTransaction tx, long pageNumber)
         {
-            return (RawDataSmallPageHeader*)(tx.GetPage(pageNumber).Pointer);
+            var pageHeader = (RawDataSmallPageHeader*)(tx.GetPage(pageNumber).Pointer);
+            if ((pageHeader->Flags & PageFlags.RawData) != PageFlags.RawData)
+                ThrowInvalidPage(pageNumber);
+            return pageHeader;
         }
 
         protected virtual void OnDataMoved(long previousid, long newid, byte* data, int size)
@@ -421,7 +414,7 @@ namespace Voron.Data.RawData
 
         internal void FreeRawDataSectionPages()
         {
-            var rawDataSmallPageHeader = PageHeaderFor(PageNumber);
+            var rawDataSmallPageHeader = PageHeaderFor(_tx, PageNumber);
             var rawDataSectionPageHeader = (RawDataSmallSectionPageHeader*)rawDataSmallPageHeader;
 
             for (var i = 0; i < rawDataSectionPageHeader->NumberOfPages; i++)

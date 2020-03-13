@@ -342,7 +342,7 @@ namespace Voron.Data.Tables
                 }
                 else
                 {
-                    using var _ = ActiveDataSmallSection.CompressionDictionaryHashFor(id, out var hash);
+                    using var _ = ActiveRawDataSmallSection.CompressionDictionaryHashFor(_tx.LowLevelTransaction ,id, out var hash);
                     return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(this, hash);
                 }
             }
@@ -445,7 +445,7 @@ namespace Voron.Data.Tables
             if (ActiveDataSmallSection.Contains(id) || density > 0.5)
                 return;
 
-            var sectionPageNumber = ActiveDataSmallSection.GetSectionPageNumber(id);
+            var sectionPageNumber = RawDataSection.GetSectionPageNumber(_tx.LowLevelTransaction,id);
             if (density > 0.15)
             {
                 ActiveCandidateSection.Add(sectionPageNumber);
@@ -636,7 +636,7 @@ namespace Voron.Data.Tables
             
             private ZstdLib.CompressionDictionary CreateCompressionDictionary(Table table, Slice hash)
             {
-                var dictionariesTree = table.GetTree(TableSchema.DictionariesSlice, true);
+                var dictionariesTree = table._tx.ReadTree(TableSchema.DictionariesSlice);
                 var readResult = dictionariesTree.Read(hash);
                 if (readResult == null)
                 {
@@ -1001,7 +1001,7 @@ namespace Voron.Data.Tables
 
             compressionDictionary.ExpectedCompressionRatio = builder.CompressionRatio;
             
-            var dictionariesTree = GetTree(TableSchema.DictionariesSlice, true);
+            var dictionariesTree = _tx.ReadTree(TableSchema.DictionariesSlice);
             using var ____ = dictionariesTree.DirectAdd(compressionDictionary.Hash, sizeof(CompressionDictionaryInfo) +dictionaryBufferSpan.Length, out var dest);
             *((CompressionDictionaryInfo*)dest) = new CompressionDictionaryInfo
             {
