@@ -53,7 +53,7 @@ namespace Voron.Data.Tables
                 Slice.From(ctx, "Stats", ByteStringType.Immutable, out StatsSlice);
                 Slice.From(ctx, "Schemas", ByteStringType.Immutable, out SchemasSlice);
                 Slice.From(ctx, "PK", ByteStringType.Immutable, out PkSlice);
-                Slice.From(ctx, "Dictionaries", ByteStringType.Immutable, out DictionariesSlice);
+                Slice.From(ctx, "CompressionDictionaries", ByteStringType.Immutable, out DictionariesSlice);
             }
         }
 
@@ -412,7 +412,7 @@ namespace Voron.Data.Tables
 
             if (_compressed)
             {
-                if(Sodium.crypto_generichash(nullHash, (UIntPtr)32, null, 0, name.Content.Ptr, (UIntPtr)name.Size) != 0)
+                if(Sodium.crypto_generichash(nullHash, (UIntPtr)32, null, 0, null, UIntPtr.Zero) != 0)
                     throw new InvalidOperationException($"Unable to compute hash for buffer when creating null hash");
             }
             
@@ -444,19 +444,16 @@ namespace Voron.Data.Tables
 
                 if (_compressed)
                 {
-                    using (var dictionariesTree = Tree.Create(tx.LowLevelTransaction, tx, DictionariesSlice, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                    var dictionariesTree = tx.CreateTree(DictionariesSlice);
+                    // create default dictionary here for the global system
+                    if (dictionariesTree.State.NumberOfEntries == 0)
                     {
                         using var __ = dictionariesTree.DirectAdd(nullHashSlice, sizeof(CompressionDictionaryInfo), out var dest);
-                                                
+
                         *(CompressionDictionaryInfo*)dest = new CompressionDictionaryInfo
                         {
                             ExpectedCompressionRatio = 0// force next section to train on us
                         };
-                        
-                        using (tableTree.DirectAdd(DictionariesSlice, sizeof(TreeRootHeader), out ptr))
-                        {
-                            dictionariesTree.State.CopyTo((TreeRootHeader*)ptr);
-                        }
                     }
                 }
                 
