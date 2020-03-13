@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
             wrapper.InitializeForEnumeration(mapResults, indexContext, stats);
 
-            return PutMapResults(indexItem.LowerId, indexItem.Id, wrapper, indexContext, stats);
+            return PutMapResults(indexItem.LowerSourceDocumentId, indexItem.SourceDocumentId, wrapper, indexContext, stats);
         }
 
         public override long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)
@@ -76,11 +76,11 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         protected override IndexItem GetItemByEtag(QueryOperationContext queryContext, long etag)
         {
-            var counters = DocumentDatabase.DocumentsStorage.CountersStorage.GetCountersMetadata(queryContext.Documents, etag);
-            if (counters == null)
+            var counter = DocumentDatabase.DocumentsStorage.CountersStorage.Indexing.GetCountersMetadata(queryContext.Documents, etag);
+            if (counter == null)
                 return default;
 
-            return new CounterIndexItem(counters.DocumentId, counters.DocumentId, counters.Etag, counters.CounterNames.FirstOrDefault(), counters.Size);
+            return new CounterIndexItem(counter.Key, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
         }
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)

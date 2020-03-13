@@ -6,23 +6,23 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 {
     public class DynamicCounterEntry : AbstractDynamicObject
     {
-        private CounterEntry _counterEntry;
+        private CounterGroupItemMetadata _counterItemMetadata;
 
         private long _value;
 
         public override dynamic GetId()
         {
-            if (_counterEntry == null)
+            if (_counterItemMetadata == null)
                 return DynamicNullObject.Null;
 
-            Debug.Assert(_counterEntry.DocumentId != null, "_counterEntry.DocumentId != null");
+            Debug.Assert(_counterItemMetadata.DocumentId != null, "_counterEntry.DocumentId != null");
 
-            return _counterEntry.DocumentId;
+            return _counterItemMetadata.DocumentId;
         }
 
         public override bool Set(object item)
         {
-            _counterEntry = (CounterEntry)item;
+            _counterItemMetadata = (CounterGroupItemMetadata)item;
             _value = 0;
 
             var current = CurrentIndexingScope.Current;
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
                 .DocumentDatabase
                 .DocumentsStorage
                 .CountersStorage
-                .GetCounterValue(current.QueryContext.Documents, _counterEntry.DocumentId, _counterEntry.Name);
+                .GetCounterValue(current.QueryContext.Documents, _counterItemMetadata.DocumentId, _counterItemMetadata.CounterName);
 
             if (value == null)
                 return false;
@@ -40,13 +40,13 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return true;
         }
 
-        public dynamic DocumentId => TypeConverter.ToDynamicType(_counterEntry.DocumentId);
+        public dynamic DocumentId => TypeConverter.ToDynamicType(_counterItemMetadata.DocumentId);
 
         public LazyStringValue Name
         {
             get
             {
-                return _counterEntry.Name;
+                return _counterItemMetadata.CounterName;
             }
         }
 
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         protected override bool TryGetByName(string name, out object result)
         {
-            Debug.Assert(_counterEntry != null, "Item cannot be null");
+            Debug.Assert(_counterItemMetadata != null, "Item cannot be null");
 
             result = DynamicNullObject.Null;
             return true;

@@ -1,6 +1,8 @@
 ﻿using System;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Sparrow.Json;
+using Sparrow.Server.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -57,16 +59,16 @@ namespace Raven.Server.Documents.Indexes
 
     public class TimeSeriesIndexItem : IndexItem
     {
-        public TimeSeriesIndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue sourceDocumentId, LazyStringValue lowerSourceDocumentId, long etag, DateTime lastModified, string timeSeriesName, int size, object item)
-            : base(id, lowerId, sourceDocumentId, lowerSourceDocumentId, etag, lastModified, timeSeriesName, size, item, IndexItemType.TimeSeries)
+        public TimeSeriesIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, DateTime lastModified, string timeSeriesName, int size, object item)
+            : base(id, id, sourceDocumentId, sourceDocumentId, etag, lastModified, timeSeriesName, size, item, IndexItemType.TimeSeries)
         {
         }
     }
 
     public class CounterIndexItem : IndexItem
     {
-        public CounterIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, LazyStringValue counterName, int size)
-            : base(id, lowerId, null, null, etag, default, counterName, size, new CounterEntry(id, counterName, etag), IndexItemType.Counters)
+        public CounterIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, LazyStringValue counterName, int size, object item)
+            : base(id, id, sourceDocumentId, sourceDocumentId, etag, default, counterName, size, item, IndexItemType.Counters)
         {
         }
     }

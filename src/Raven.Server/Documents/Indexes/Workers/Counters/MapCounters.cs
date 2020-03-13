@@ -19,19 +19,16 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
 
         protected override IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
         {
-            foreach (var counters in GetCountersEnumerator(queryContext, collection, lastEtag, pageSize))
-            {
-                foreach (var counterName in counters.CounterNames)
-                    yield return new CounterIndexItem(counters.DocumentId, counters.DocumentId, counters.Etag, counterName, counters.Size);
-            }
+            foreach (var counter in GetCountersEnumerator(queryContext, collection, lastEtag, pageSize))
+                yield return new CounterIndexItem(counter.Key, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
         }
 
-        private IEnumerable<CounterGroupMetadata> GetCountersEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
+        private IEnumerable<CounterGroupItemMetadata> GetCountersEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                return _countersStorage.GetCountersMetadataFrom(queryContext.Documents, lastEtag + 1, 0, pageSize);
+                return _countersStorage.Indexing.GetCountersMetadataFrom(queryContext.Documents, lastEtag + 1, 0, pageSize);
 
-            return _countersStorage.GetCountersMetadataFrom(queryContext.Documents, collection, lastEtag + 1, 0, pageSize);
+            return _countersStorage.Indexing.GetCountersMetadataFrom(queryContext.Documents, collection, lastEtag + 1, 0, pageSize);
         }
     }
 }
