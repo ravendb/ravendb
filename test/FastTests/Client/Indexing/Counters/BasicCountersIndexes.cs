@@ -1154,5 +1154,281 @@ namespace FastTests.Client.Indexing.Counters
                 Assert.Equal(0, terms.Length);
             }
         }
+
+        [Fact]
+        public void CanMapAllCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+                    session.CountersFor(company).Increment("HeartRate", 7);
+                    session.CountersFor(company).Increment("Likes", 3);
+
+                    var employee = new Employee();
+                    session.Store(employee, "employees/1");
+                    session.CountersFor(employee).Increment("Dislikes", 1);
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                var result = store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "MyCounterIndex",
+                    Maps = {
+                    "from counter in counters " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name," +
+                    "   User = counter.DocumentId " +
+                    "}" }
+                }));
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
+                Assert.False(staleness.IsStale);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "HeartBeat", null));
+                Assert.Equal(3, terms.Length);
+                Assert.Contains("7", terms);
+                Assert.Contains("3", terms);
+                Assert.Contains("1", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "User", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("companies/1", terms);
+                Assert.Contains("employees/1", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "Name", null));
+                Assert.Equal(3, terms.Length);
+                Assert.Contains("heartrate", terms);
+                Assert.Contains("likes", terms);
+                Assert.Contains("dislikes", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.CountersFor(company).Increment("HeartRate", 2);
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "HeartBeat", null));
+                Assert.Equal(3, terms.Length);
+                Assert.Contains("9", terms);
+                Assert.Contains("3", terms);
+                Assert.Contains("1", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "User", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("companies/1", terms);
+                Assert.Contains("employees/1", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "Name", null));
+                Assert.Equal(3, terms.Length);
+                Assert.Contains("heartrate", terms);
+                Assert.Contains("likes", terms);
+                Assert.Contains("dislikes", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+            }
+        }
+
+        [Fact]
+        public void SupportForEscapedCollectionAndCounterNames()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.FindCollectionName = t =>
+                {
+                    if (t == typeof(Company))
+                        return "Companies With Space";
+
+                    return null;
+                }
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+                    session.CountersFor(company).Increment("Heart Rate", 7);
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                var result = store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = "MyCounterIndex",
+                    Maps = {
+                    "from counter in counters[@ \"Companies With Space\"][@ \"Heart Rate\"] " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name," +
+                    "   User = counter.DocumentId " +
+                    "}" }
+                }));
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
+                Assert.False(staleness.IsStale);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("7", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "User", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("companies/1", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("heart rate", terms);
+            }
+        }
+
+        [Fact]
+        public async Task CanPersist()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false
+            }))
+            {
+                var dbName = store.Database;
+
+                var indexDefinition1 = new CountersIndexDefinition
+                {
+                    Name = "MyCounterIndex",
+                    Maps = {
+                    "from counter in counters.Companies.HeartRate " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name," +
+                    "   User = counter.DocumentId " +
+                    "}" }
+                };
+
+                var indexDefinition2 = new CountersIndexDefinition
+                {
+                    Name = "MyCounterIndex2",
+                    Maps = {
+                    "from counter in counters.Users.HeartRate " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name, " +
+                    "   Count = 1" +
+                    "}" },
+                    Reduce = "from r in results " +
+                             "group r by r.Name into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumHeartBeat / sumCount, " +
+                             "  Name = g.Key, " +
+                             "  Count = sumCount" +
+                             "}"
+                };
+
+                await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition1, indexDefinition2));
+
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
+
+                var indexDefinitions = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 25));
+                Assert.Equal(2, indexDefinitions.Length);
+
+                indexDefinitions = indexDefinitions
+                    .OrderBy(x => x.Name.Length)
+                    .ToArray();
+
+                var index = indexDefinitions[0];
+
+                Assert.Equal(IndexType.Map, index.Type);
+                Assert.Equal(IndexSourceType.Counters, index.SourceType);
+                Assert.Equal("MyCounterIndex", index.Name);
+                Assert.Equal(IndexLockMode.Unlock, index.LockMode);
+                Assert.Equal(IndexPriority.Normal, index.Priority);
+                Assert.True(indexDefinition1.Equals(index));
+
+                index = indexDefinitions[1];
+
+                Assert.Equal(IndexType.MapReduce, index.Type);
+                Assert.Equal(IndexSourceType.Counters, index.SourceType);
+                Assert.Equal("MyCounterIndex2", index.Name);
+                Assert.Equal(IndexLockMode.Unlock, index.LockMode);
+                Assert.Equal(IndexPriority.Normal, index.Priority);
+                Assert.True(indexDefinition2.Equals(index));
+
+                var database = await GetDatabase(dbName);
+
+                var indexes = database
+                    .IndexStore
+                    .GetIndexes()
+                    .OrderBy(x => x.Name.Length)
+                    .ToList();
+
+                Assert.Equal(IndexType.Map, indexes[0].Type);
+                Assert.Equal(IndexSourceType.Counters, indexes[0].SourceType);
+                Assert.Equal("MyCounterIndex", indexes[0].Name);
+                Assert.Equal(1, indexes[0].Definition.Collections.Count);
+                Assert.Equal("Companies", indexes[0].Definition.Collections.Single());
+                Assert.Equal(3, indexes[0].Definition.MapFields.Count);
+                Assert.Contains("Name", indexes[0].Definition.MapFields.Keys);
+                Assert.Contains("HeartBeat", indexes[0].Definition.MapFields.Keys);
+                Assert.Contains("User", indexes[0].Definition.MapFields.Keys);
+                Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
+                Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
+                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition()));
+
+                Assert.Equal(IndexType.MapReduce, indexes[1].Type);
+                Assert.Equal(IndexSourceType.Counters, indexes[1].SourceType);
+                Assert.Equal("MyCounterIndex2", indexes[1].Name);
+                Assert.Equal(1, indexes[1].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[1].Definition.Collections.Single());
+                Assert.Equal(3, indexes[1].Definition.MapFields.Count);
+                Assert.Contains("HeartBeat", indexes[1].Definition.MapFields.Keys);
+                Assert.Contains("Name", indexes[1].Definition.MapFields.Keys);
+                Assert.Contains("Count", indexes[1].Definition.MapFields.Keys);
+                Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
+                Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
+                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition()));
+            }
+        }
     }
 }
