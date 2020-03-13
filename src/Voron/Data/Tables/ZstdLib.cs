@@ -1,18 +1,24 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Sparrow.Server;
 
 namespace Voron.Data.Tables
 {
     public static unsafe class ZstdLib
     {
-        private const string DllName = @"C:\Users\ayende\Downloads\zstd-v1.4.4-win64\dll\libzstd.dll";
+        private const string LIBZSTD = @"libzstd";
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        static ZstdLib()
+        {
+            DynamicNativeLibraryResolver.Register(typeof(ZstdLib).Assembly,LIBZSTD);
+        }
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern UIntPtr ZSTD_compressBound(UIntPtr srcSize);
 
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern ulong ZSTD_getFrameContentSize(void* src, UIntPtr srcSize);
         
         const ulong ZSTD_CONTENTSIZE_UNKNOWN = unchecked(0UL - 1);
@@ -40,38 +46,38 @@ namespace Voron.Data.Tables
             return (int)ZSTD_compressBound((UIntPtr)size);
         }
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern void* ZSTD_createCCtx();
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern UIntPtr ZSTD_freeCCtx(void* cctx);
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern void* ZSTD_createDCtx();
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern UIntPtr ZSTD_freeDCtx(void* dctx);
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern uint ZSTD_isError(UIntPtr code);
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr ZSTD_getErrorName(UIntPtr code);
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_compress_usingCDict(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize, void* cdict);
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_decompress_usingDDict(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize, void * ddict);
         
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern void* ZSTD_createCDict(byte* dictBuffer, UIntPtr dictSize, int compressionLevel);
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_freeCDict(void* CDict);
         
         
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern void* ZSTD_createDDict(void* dictBuffer, UIntPtr dictSize);
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr   ZSTD_freeDDict(void* ddict);
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr  ZDICT_trainFromBuffer(byte* dictBuffer, UIntPtr dictBufferCapacity, byte* samplesBuffer, UIntPtr* samplesSizes, uint nbSamples);
         
         private static void AssertSuccess(UIntPtr v)

@@ -12,7 +12,7 @@ namespace Sparrow.Server
         {
             try
             {
-                DynamicNativeLibraryResolver.Register(LIBSODIUM);
+                DynamicNativeLibraryResolver.Register(typeof(Sodium).Assembly,LIBSODIUM);
 
                 var rc = sodium_init();
                 if (rc != 0)
