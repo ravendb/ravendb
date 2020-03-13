@@ -16,67 +16,18 @@ namespace Sparrow.Server.Platform
 
         static Pal()
         {
-            var toFilename = LIBRVNPAL;
-            string fromFilename;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
-                    RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
-                {
-                    fromFilename = Environment.Is64BitProcess ? $"{toFilename}.linux.x64.so" : $"{toFilename}.linux.x86.so";
-                    toFilename += ".so";
-                }
-                else
-                {
-                    fromFilename = Environment.Is64BitProcess ? $"{toFilename}.arm.64.so" : $"{toFilename}.arm.32.so";
-                    toFilename += ".so";
-                }
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.mac.x64.dylib" : $"{toFilename}.mac.x86.dylib";
-                // in mac we are not : `toFilename += ".so";` as DllImport doesn't assume .so nor .dylib by default
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                var win7 = PlatformDetails.IsWindows8OrNewer ? "" : "7";
-
-                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.win{win7}.x64.dll" : $"{toFilename}.win{win7}.x86.dll";
-                toFilename += ".dll";
-            }
-            else
-            {
-                throw new NotSupportedException("Not supported platform - no Windows/OSX/Linux is detected ");
-            }
-
-            var retries = 0;
-            while (true)
-            {
-                var e = CopyPalFile(toFilename, fromFilename);
-                if (e == null)
-                    break;
-
-                if (++retries < 10)
-                    continue;
-
-                var msg = $"Cannot copy {fromFilename} to {toFilename}";
-                if (e is IOException)
-                {
-                    throw new IOException($"{msg}, make sure appropriate {toFilename} to your platform architecture exists in Raven.Server executable folder.", e);
-                }
-
-                throw new InvalidOperationException($"{msg}.", e);
-            }
-
-            PalFlags.FailCodes rc = PalFlags.FailCodes.None;
+            PalFlags.FailCodes rc;
             int errorCode;
             try
             {
-                var palver = rvn_get_pal_ver();
-                if (palver != 0 && palver != PAL_VER)
+                var mutator = PlatformDetails.IsWindows8OrNewer == false ? (Func<string,string>)ToWin7DllName : default;
+                DynamicNativeLibraryResolver.Register(LIBRVNPAL, mutator);
+
+                var palVer = rvn_get_pal_ver();
+                if (palVer != 0 && palVer != PAL_VER)
                 {
                     throw new IncorrectDllException(
-                        $"{LIBRVNPAL} version '{palver}' mismatches this RavenDB instance version (set to '{PAL_VER}'). Either use correct {fromFilename}, or a new one returning zero in 'rvn_get_pal_ver()'");
+                        $"{LIBRVNPAL} version '{palVer}' mismatches this RavenDB instance version (set to '{PAL_VER}'). Did you forget to set new value in 'rvn_get_pal_ver()'");
                 }
 
                 rc = rvn_get_system_information(out SysInfo, out errorCode);
@@ -96,30 +47,10 @@ namespace Sparrow.Server.Platform
 
             if (rc != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
-        }
 
-        private static Exception CopyPalFile(string toFilename, string fromFilename)
-        {
-            try
+            string ToWin7DllName(string name)
             {
-                var copy = true;
-                if (File.Exists(toFilename))
-                {
-                    var fromHash = FileHelper.CalculateHash(fromFilename);
-                    var toHash = FileHelper.CalculateHash(toFilename);
-
-                    copy = fromHash != toHash;
-                }
-
-                if (copy)
-                    File.Copy(fromFilename, toFilename, overwrite: true);
-
-                return null;
-            }
-            catch (Exception e)
-            {
-                Thread.Sleep(100);
-                return e;
+                return name.Replace("win", "win7");
             }
         }
 

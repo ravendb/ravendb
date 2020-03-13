@@ -10,61 +10,10 @@ namespace Sparrow.Server
     {
         static Sodium()
         {
-            var toFilename = LIBSODIUM;
-            string fromFilename;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
-                    RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
-                {
-                    fromFilename = Environment.Is64BitProcess ? $"{toFilename}.linux.x64.so" : $"{toFilename}.linux.x86.so";
-                    toFilename += ".so";
-                }
-                else
-                {
-                    fromFilename = Environment.Is64BitProcess ? $"{toFilename}.arm.64.so" : $"{toFilename}.arm.32.so";
-                    toFilename += ".so";
-                }
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.mac.x64.dylib" : $"{toFilename}.mac.x86.dylib";
-                // in mac we are not : `toFilename += ".so";` as DllImport doesn't assume .so nor .dylib by default
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.win.x64.dll" : $"{toFilename}.win.x86.dll";
-                toFilename += ".dll";
-            }
-            else
-            {
-                throw new NotSupportedException("Not supported platform - no Linux/OSX/Windows is detected ");
-            }
-
             try
             {
-                var copy = true;
-                if (File.Exists(toFilename))
-                {
-                    var fromHash = FileHelper.CalculateHash(fromFilename);
-                    var toHash = FileHelper.CalculateHash(toFilename);
+                DynamicNativeLibraryResolver.Register(LIBSODIUM);
 
-                    copy = fromHash != toHash;
-                }
-
-                if (copy)
-                    File.Copy(fromFilename, toFilename, overwrite: true);
-            }
-            catch (IOException e)
-            {
-                throw new IOException(
-                    $"Cannot copy {fromFilename} to {toFilename}, " +
-                    $"make sure appropriate {toFilename} to your platform architecture exists in Raven.Server executable folder",
-                    e);
-            }
-
-            try
-            {
                 var rc = sodium_init();
                 if (rc != 0)
                     throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
