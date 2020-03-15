@@ -9,6 +9,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -232,7 +233,8 @@ namespace Raven.Client.Documents.Smuggler
 
                     var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs);
 
-                    var requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
+                    var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
+                    var requestTask = task
                         .ContinueWith(t =>
                         {
                             using (disposeStream)
@@ -257,14 +259,13 @@ namespace Raven.Client.Documents.Smuggler
                         await tcs.Task.ConfigureAwait(false);
                     }
 
-                    return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId);
+                    return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId, nodeTag: null, additionalTask: task);
                 }
             }
-            catch
+            catch (Exception e)
             {
                 disposeStream?.Dispose();
-
-                throw;
+                throw e.ExtractSingleInnerException();
             }
         }
 
@@ -360,6 +361,10 @@ namespace Raven.Client.Documents.Smuggler
 
                 return new HttpRequestMessage
                 {
+                    Headers =
+                    {
+                        TransferEncodingChunked = true
+                    },
                     Method = HttpMethod.Post,
                     Content = form
                 };
