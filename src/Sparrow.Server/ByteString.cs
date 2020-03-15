@@ -332,6 +332,17 @@ namespace Sparrow.Server
             return encoding.GetString(_pointer->Ptr, length);
         }
 
+        public string Substring(int offset, int length)
+        {
+            if (!HasValue)
+                return string.Empty;
+
+            EnsureIsNotBadPointer();
+
+            var encoding = Encodings.Utf8;
+            return encoding.GetString(_pointer->Ptr + offset, length);
+        }
+
         public void Truncate(int newSize)
         {
             EnsureIsNotBadPointer();

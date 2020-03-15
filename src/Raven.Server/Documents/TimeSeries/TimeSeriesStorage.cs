@@ -120,6 +120,16 @@ namespace Raven.Server.Documents.TimeSeries
             _stats = new TimeSeriesStats(tx);
         }
 
+        public IEnumerable<Slice> GetTimeSeriesNameByPolicy(DocumentsOperationContext context, CollectionName collection, string policy, long skip, int take)
+        {
+            return _stats.GetTimeSeriesNameByPolicy(context, collection, policy, skip, take);
+        }
+
+        public IEnumerable<Slice> GetAllPolicies(DocumentsOperationContext context, CollectionName collection)
+        {
+            return _stats.GetAllPolicies(context, collection);
+        }
+
         public (DateTime Start, DateTime End) GetRangeFor(DocumentsOperationContext context, string docId, string name)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
@@ -163,6 +173,11 @@ namespace Raven.Server.Documents.TimeSeries
             var range = GetRangeFor(context, docId, name);
             var count = _stats.GetCount(context, docId, name);
             return (count, range.Start, range.End);
+        }
+
+        public void RemoveStatsFor(DocumentsOperationContext context, CollectionName collection, Slice key)
+        {
+            _stats.DeleteStats(context, collection, key);
         }
 
         public static DateTime ExtractDateTimeFromKey(Slice key)
@@ -306,18 +321,13 @@ namespace Raven.Server.Documents.TimeSeries
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
-            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
-            using (DocumentIdWorker.GetLower(context.Allocator, name, out Slice timeSeriesName))
-            using (context.Allocator.Allocate(documentKeyPrefix.Size + timeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */,
-                out ByteString timeSeriesKeyBuffer))
-            using (CreateTimeSeriesKeyPrefixSlice(context, timeSeriesKeyBuffer, documentKeyPrefix, timeSeriesName, out Slice timeSeriesPrefixSlice))
-            using (CreateTimeSeriesKeySlice(context, timeSeriesKeyBuffer, timeSeriesPrefixSlice, from, out Slice timeSeriesKeySlice))
+            using (var slicer = new TimeSeriesSlicer(context, documentId, name, from))
             {
                 // first try to find the previous segment containing from value
-                if (table.SeekOneBackwardByPrimaryKeyPrefix(timeSeriesPrefixSlice, timeSeriesKeySlice, out var segmentValueReader) == false)
+                if (table.SeekOneBackwardByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, out var segmentValueReader) == false)
                 {
                     // or the first segment _after_ the from value
-                    if (table.SeekOnePrimaryKeyWithPrefix(timeSeriesPrefixSlice, timeSeriesKeySlice, out segmentValueReader) == false)
+                    if (table.SeekOnePrimaryKeyWithPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, out segmentValueReader) == false)
                         return null;
                 }
 
@@ -430,10 +440,10 @@ namespace Raven.Server.Documents.TimeSeries
 
                 Table.TableValueHolder TryGetNextSegment(DateTime baseline)
                 {
-                    var offset = timeSeriesKeySlice.Size - sizeof(long);
-                    *(long*)(timeSeriesKeySlice.Content.Ptr + offset) = Bits.SwapBytes(baseline.Ticks / 10_000);
+                    var offset = slicer.TimeSeriesKeySlice.Size - sizeof(long);
+                    *(long*)(slicer.TimeSeriesKeySlice.Content.Ptr + offset) = Bits.SwapBytes(baseline.Ticks / 10_000);
 
-                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(timeSeriesPrefixSlice, timeSeriesKeySlice, 0))
+                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, 0))
                     {
                         return tvh;
                     }
@@ -450,6 +460,8 @@ namespace Raven.Server.Documents.TimeSeries
                     var tss = _documentDatabase.DocumentsStorage.TimeSeriesStorage;
                     if (tss.GetStatsFor(ctx, docId, tsName).Count > 0)
                         return;
+
+                    tss.RemoveStatsFor(ctx, collectionName, slicer.StatsKey);
 
                     var data = doc.Data;
                     var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);

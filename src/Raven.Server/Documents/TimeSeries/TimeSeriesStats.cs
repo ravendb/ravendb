@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations.TimeSeries;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
 using Voron;
@@ -7,7 +8,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.TimeSeries
 {
-    public unsafe class TimeSeriesStats
+    public class TimeSeriesStats
     {
         private static readonly Slice TimeSeriesStatsKey;
         private static readonly Slice PolicyIndex;
@@ -16,9 +17,8 @@ namespace Raven.Server.Documents.TimeSeries
         private enum StatsColumn
         {
             Key = 0, // documentId, separator, name
-            PolicyName = 1,
-            Count = 2,
-           // Etag = 5 
+            PolicyName = 1, // TODO: need separator here?
+            Count = 2
         }
 
         static TimeSeriesStats()
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private void UpdateCount(DocumentsOperationContext context, TimeSeriesStorage.TimeSeriesSlicer slicer, CollectionName collection, long count)
+        public void UpdateCount(DocumentsOperationContext context, TimeSeriesStorage.TimeSeriesSlicer slicer, CollectionName collection, long count)
         {
             long previousCount = 0;
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
@@ -78,7 +78,6 @@ namespace Raven.Server.Documents.TimeSeries
                 tvb.Add(slicer.StatsKey);
                 tvb.Add(GetPolicy(slicer));
                 tvb.Add(previousCount + count);
-                //tvb.Add(etag)
 
                 table.Set(tvb);
             }
@@ -91,6 +90,47 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 return table.ReadByKey(slicer.StatsKey, out var tvr) ? DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr) : 0;
             }
+        }
+
+        public IEnumerable<Slice> GetTimeSeriesNameByPolicy(DocumentsOperationContext context, CollectionName collection, string policy, long skip, int take)
+        {
+            var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
+            using (DocumentIdWorker.GetLower(context.Allocator, policy, out var name))
+            {
+                foreach (var result in table.SeekForwardFrom(TimeSeriesStatsSchema.Indexes[PolicyIndex], name, skip, startsWith: true))
+                {
+                    var reader = result.Result.Reader;
+                    DocumentsStorage.TableValueToSlice(context, (int)StatsColumn.Key, ref reader, out var slice);
+                    yield return slice;
+
+                    take--;
+                    if (take <= 0)
+                        yield break;
+                }
+            }
+        }
+
+        public IEnumerable<Slice> GetAllPolicies(DocumentsOperationContext context, CollectionName collection)
+        {
+            var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
+
+            var policies = table.GetTree(TimeSeriesStatsSchema.Indexes[PolicyIndex]);
+            using (var it = policies.Iterate(true))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    yield break;
+
+                do
+                {
+                    yield return it.CurrentKey.Clone(context.Allocator);
+                } while (it.MoveNext());
+            }
+        }
+
+        public void DeleteStats(DocumentsOperationContext context, CollectionName collection, Slice key)
+        {
+            var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
+            table.DeleteByKey(key);
         }
 
         private Slice GetPolicy(TimeSeriesStorage.TimeSeriesSlicer slicer)
