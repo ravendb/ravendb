@@ -246,6 +246,12 @@ namespace Raven.Client.Documents.Operations
                         break;
                     case OperationStatus.Faulted:
                         StopProcessing();
+                        if (_additionalTask.IsFaulted)
+                        {
+                            _result.TrySetException(_additionalTask.Exception.ExtractSingleInnerException());
+                            break;
+                        }
+
                         var exceptionResult = (OperationExceptionResult)change.State.Result;
                         Debug.Assert(exceptionResult != null);
                         var ex = new ExceptionDispatcher.ExceptionSchema
