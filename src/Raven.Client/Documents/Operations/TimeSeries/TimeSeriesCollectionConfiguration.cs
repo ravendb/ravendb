@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Sparrow.Json.Parsing;
@@ -23,12 +22,20 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             RollupPolicies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
         }
 
-        internal RollupPolicy GetPolicy(string name)
+        internal RollupPolicy GetPolicyByName(string policy)
+        {
+            if (policy == RollupPolicy.RawPolicyString)
+                return RollupPolicy.RawPolicy;
+
+            return RollupPolicies.SingleOrDefault(p => string.Compare(p.Name,policy, StringComparison.InvariantCultureIgnoreCase) == 0);
+        }
+
+        internal RollupPolicy GetPolicyByTimeSeries(string name)
         {
             if (name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) == false)
                 return RollupPolicy.RawPolicy;
 
-            return RollupPolicies.SingleOrDefault(p => name.Contains(p.Name));
+            return RollupPolicies.SingleOrDefault(p => name.IndexOf(p.Name, StringComparison.InvariantCultureIgnoreCase) > 0);
         }
 
         internal RollupPolicy GetNextPolicy(RollupPolicy policy)
@@ -44,6 +51,21 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 return RollupPolicy.AfterAllPolices;
 
             return RollupPolicies[current + 1];
+        }
+
+        internal RollupPolicy GetPreviousPolicy(RollupPolicy policy)
+        {
+            if (policy == RollupPolicy.RawPolicy)
+                return RollupPolicy.BeforeAllPolices;
+
+            var current = RollupPolicies.FindIndex(p => p == policy);
+            if (current < 0)
+                return null;
+
+            if (current == 0)
+                return RollupPolicy.RawPolicy;
+
+            return RollupPolicies[current - 1];
         }
 
         public DynamicJsonValue ToJson()
@@ -80,8 +102,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public AggregationType Type;
         // TODO: consider Continuous Query approach
 
+        internal const string RawPolicyString = "rawpolicy"; // must be lower case
         internal static RollupPolicy AfterAllPolices = new RollupPolicy();
-        internal static RollupPolicy RawPolicy = new RollupPolicy();
+        internal static RollupPolicy BeforeAllPolices = new RollupPolicy();
+        internal static RollupPolicy RawPolicy = new RollupPolicy
+        {
+            Name = RawPolicyString
+        };
 
         private RollupPolicy()
         {

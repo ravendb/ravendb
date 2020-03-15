@@ -13,6 +13,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 
@@ -45,9 +46,7 @@ namespace Raven.Server.Documents.TimeSeries
                     // no changes
                     if (Equals(policyRunner.Configuration, dbRecord.TimeSeries))
                         return policyRunner;
-                    //TODO: when the policy changed, we need to delete the not relevant ones
                 }
-
                 policyRunner?.Dispose();
                 var runner = new TimeSeriesPolicyRunner(database, dbRecord.TimeSeries);
                 runner.Start();
@@ -68,11 +67,12 @@ namespace Raven.Server.Documents.TimeSeries
                 return null;
             }
         }
+        public static readonly Slice RawPolicySlice;
 
         private static readonly TableSchema RollUpSchema;
-        private static readonly Slice TimeSeriesRollUps;
-        private static readonly Slice Key;
-        private static readonly Slice NextRollUp;
+        public static readonly Slice TimeSeriesRollUps;
+        private static readonly Slice RollUpKey;
+        private static readonly Slice NextRollUpIndex;
         private enum RollUpColumn
         {
             // documentId/Name
@@ -101,8 +101,9 @@ namespace Raven.Server.Documents.TimeSeries
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
                 Slice.From(ctx, "TimeSeriesRollUps", ByteStringType.Immutable, out TimeSeriesRollUps);
-                Slice.From(ctx, "Key", ByteStringType.Immutable, out Key);
-                Slice.From(ctx, "NextRollUp", ByteStringType.Immutable, out NextRollUp);
+                Slice.From(ctx, "RollUpKey", ByteStringType.Immutable, out RollUpKey);
+                Slice.From(ctx, "NextRollUpIndex", ByteStringType.Immutable, out NextRollUpIndex);
+                Slice.From(ctx, RollupPolicy.RawPolicyString, ByteStringType.Immutable, out RawPolicySlice);
             }
 
             RollUpSchema = new TableSchema();
@@ -110,14 +111,14 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 StartIndex = (int)RollUpColumn.Key,
                 Count = 1, 
-                Name = Key
+                Name = RollUpKey
             });
 
             RollUpSchema.DefineIndex(new TableSchema.SchemaIndexDef // this isn't fixed-size since we expect to have duplicates
             {
                 StartIndex = (int)RollUpColumn.NextRollUp, 
                 Count = 1,
-                Name = NextRollUp
+                Name = NextRollUpIndex
             });
         }
 
@@ -128,7 +129,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (config.Disabled)
                 return;
 
-            var current = config.GetPolicy(name);
+            var current = config.GetPolicyByTimeSeries(name);
             if (current == null) // policy not found
                 // TODO: delete this timeseries if not the raw one?
                 return;
@@ -146,18 +147,16 @@ namespace Raven.Server.Documents.TimeSeries
             var integerPart = baseline.Ticks / nextPolicy.AggregationTime.Ticks;
             var nextRollup = nextPolicy.AggregationTime.Ticks * (integerPart + 1);
 
-            var raw = name.Split(TimeSeriesConfiguration.TimeSeriesRollupSeparator)[0];
-
             // mark for rollup
             RollUpSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollUps, 16);
             var table = context.Transaction.InnerTransaction.OpenTable(RollUpSchema, TimeSeriesRollUps);
             using (table.Allocate(out var tvb))
-            using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
+            using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long) - sizeof(byte), ByteStringType.Immutable, out var timeSeriesKey))
             using (Slice.From(context.Allocator,collection, ByteStringType.Immutable,out var collectionSlice))
-            using (Slice.From(context.Allocator, nextPolicy.GetTimeSeriesName(raw), ByteStringType.Immutable, out var policyToApply))
+            using (Slice.From(context.Allocator, nextPolicy.Name, ByteStringType.Immutable, out var policyToApply))
             using (Slice.From(context.Allocator, changeVector, ByteStringType.Immutable, out var changeVectorSlice))
             {
-                if (table.ReadByKey(prefix, out var tvr))
+                if (table.ReadByKey(timeSeriesKey, out var tvr))
                 {
                     // check if we need to update this
                     var existingRollup = Bits.SwapBytes(*(long*)tvr.Read((int)RollUpColumn.NextRollUp, out _));
@@ -165,7 +164,7 @@ namespace Raven.Server.Documents.TimeSeries
                         return; // we have an earlier date to roll up from
                 }
 
-                tvb.Add(prefix);
+                tvb.Add(timeSeriesKey);
                 tvb.Add(collectionSlice);
                 tvb.Add(Bits.SwapBytes(nextRollup));
                 tvb.Add(policyToApply);
@@ -178,11 +177,95 @@ namespace Raven.Server.Documents.TimeSeries
        
         protected override async Task DoWork()
         {
+            // this is explicitly outside the loop
+            await HandleChanges();
+
             while (Cts.IsCancellationRequested == false)
             {
                 await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(60));
 
                 await RunRollUps();
+            }
+        }
+
+        internal async Task HandleChanges()
+        {
+            var policies = new List<RollupPolicy>();
+
+            foreach (var config in Configuration.Collections)
+            {
+                var collection = config.Key;
+                var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    continue;
+
+                policies.Clear();
+                policies.AddRange(config.Value.RollupPolicies);
+
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    List<Slice> currentPolicies;
+                    using (context.OpenReadTransaction())
+                    {
+                        currentPolicies = _database.DocumentsStorage.TimeSeriesStorage.GetAllPolicies(context, collectionName).ToList();
+                    }
+
+                    foreach (var policySlice in currentPolicies)
+                    {
+                        var policyName = policySlice.ToString();
+                        var policy = config.Value.GetPolicyByName(policyName);
+                        if (policy == null)
+                        {
+                            await RemoveTimeSeriesByPolicy(collectionName, policyName);
+                            continue;
+                        }
+
+                        policies.Remove(policy);
+                    }
+
+                    foreach (var policy in policies)
+                    {
+                        var prev = config.Value.GetPreviousPolicy(policy);
+                        if (prev == null || prev == RollupPolicy.BeforeAllPolices)
+                            continue;
+
+                        await AddNewPolicy(collectionName, prev, policy);
+                    }
+                }
+            }
+        }
+
+        private async Task RemoveTimeSeriesByPolicy(CollectionName collectionName, string policyName)
+        {
+            var skip = 0;
+            while (true)
+            {
+                _database.DatabaseShutdown.ThrowIfCancellationRequested();
+
+                var cmd = new RemovePoliciesCommand(collectionName, policyName, skip);
+                await _database.TxMerger.Enqueue(cmd);
+
+                if (cmd.Deleted < RemovePoliciesCommand.BatchSize)
+                    break;
+
+                skip += cmd.Deleted;
+            }
+        }
+
+        private async Task AddNewPolicy(CollectionName collectionName, RollupPolicy prev, RollupPolicy policy)
+        {
+            var skip = 0;
+            while (true)
+            {
+                _database.DatabaseShutdown.ThrowIfCancellationRequested();
+
+                var cmd = new AddedNewRollupPoliciesCommand(collectionName, prev, policy, skip);
+                await _database.TxMerger.Enqueue(cmd);
+
+                if (cmd.Marked < AddedNewRollupPoliciesCommand.BatchSize)
+                    break;
+
+                skip += cmd.Marked;
             }
         }
 
@@ -235,12 +318,15 @@ namespace Raven.Server.Documents.TimeSeries
 
         private void PrepareRollUps(DocumentsOperationContext context, DateTime currentTime, long take, List<RollUpState> states, out Stopwatch duration)
         {
-            RollUpSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollUps, 16);
+            duration = Stopwatch.StartNew();
+
             var table = context.Transaction.InnerTransaction.OpenTable(RollUpSchema, TimeSeriesRollUps);
+            if (table == null)
+                return;
+
             var currentTicks = currentTime.Ticks;
 
-            duration = Stopwatch.StartNew();
-            foreach (var item in table.SeekForwardFrom(RollUpSchema.Indexes[NextRollUp], Slices.BeforeAllKeys, 0))
+            foreach (var item in table.SeekForwardFrom(RollUpSchema.Indexes[NextRollUpIndex], Slices.BeforeAllKeys, 0))
             {
                 if (take <= 0)
                     return;
@@ -250,7 +336,8 @@ namespace Raven.Server.Documents.TimeSeries
                     return;
 
                 DocumentsStorage.TableValueToSlice(context, (int)RollUpColumn.Key, ref item.Result.Reader,out var key);
-                TimeSeriesValuesSegment.ParseTimeSeriesKey(key, context, out var docId, out var name);
+                SplitKey(key, out var docId, out var name);
+
                 var state = new RollUpState
                 {
                     Key = key,
@@ -265,6 +352,117 @@ namespace Raven.Server.Documents.TimeSeries
 
                 states.Add(state);
                 take--;
+            }
+        }
+
+        public static void SplitKey(Slice key, out string docId, out string name)
+        {
+            var separatorIndex = key.Content.IndexOf(SpecialChars.RecordSeparator);
+            docId = key.Content.Substring(separatorIndex);
+            name = key.Content.Substring(separatorIndex + 1, key.Content.Length - separatorIndex - 1);
+        }
+
+        internal class RemovePoliciesCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            public const int BatchSize = 1024;
+
+            private readonly CollectionName _collection;
+            private readonly string _policy;
+            private readonly int _skip;
+
+            public int Deleted;
+
+            public RemovePoliciesCommand(CollectionName collection, string policy, int skip)
+            {
+                _collection = collection;
+                _policy = policy;
+                _skip = skip;
+            }
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
+                RollUpSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollUps, 16);
+                var table = context.Transaction.InnerTransaction.OpenTable(RollUpSchema, TimeSeriesRollUps);
+
+                var toDelete = new List<Slice>(tss.GetTimeSeriesNameByPolicy(context, _collection, _policy, _skip, BatchSize));
+
+                var request = new TimeSeriesStorage.DeletionRangeRequest
+                {
+                    Collection = _collection.Name,
+                    From = DateTime.MinValue,
+                    To = DateTime.MaxValue,
+                };
+
+                foreach (var key in toDelete)
+                {
+                    SplitKey(key, out var docId, out var name);
+                    request.DocumentId = docId;
+                    request.Name = name;
+                    
+                    tss.RemoveTimestampRange(context, request);
+
+                    table.DeleteByKey(key);
+
+                    Deleted++;
+                }
+
+                return Deleted;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        internal class AddedNewRollupPoliciesCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            public const int BatchSize = 1024;
+            private readonly CollectionName _collection;
+            private readonly RollupPolicy _from;
+            private readonly RollupPolicy _to;
+            private readonly int _skip;
+
+            public int Marked;
+
+            public AddedNewRollupPoliciesCommand(CollectionName collection, RollupPolicy from, RollupPolicy to, int skip)
+            {
+                _collection = collection;
+                _from = from;
+                _to = to;
+                _skip = skip;
+            }
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
+                RollUpSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollUps, 16);
+                var table = context.Transaction.InnerTransaction.OpenTable(RollUpSchema, TimeSeriesRollUps);
+                foreach (var key in tss.GetTimeSeriesNameByPolicy(context, _collection, _from.Name, _skip, BatchSize))
+                {
+                    using (table.Allocate(out var tvb))
+                    using (Slice.From(context.Allocator,_collection.Name, ByteStringType.Immutable,out var collectionSlice))
+                    using (Slice.From(context.Allocator, _to.Name, ByteStringType.Immutable, out var policyToApply))
+                    using (Slice.From(context.Allocator, string.Empty, ByteStringType.Immutable, out var changeVectorSlice))
+                    {
+                        tvb.Add(key);
+                        tvb.Add(collectionSlice);
+                        tvb.Add(Bits.SwapBytes(_to.AggregationTime.Ticks));
+                        tvb.Add(policyToApply);
+                        tvb.Add(0);
+                        tvb.Add(changeVectorSlice);
+
+                        table.Set(tvb);
+                    }
+
+                    Marked++;
+                }
+
+                return Marked;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                throw new NotImplementedException();
             }
         }
 
@@ -298,7 +496,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (config.Disabled)
                         continue;
                         
-                    var policy = config.GetPolicy(item.RollUpPolicy);
+                    var policy = config.GetPolicyByName(item.RollUpPolicy);
                     if (policy == null)
                         continue;
 
