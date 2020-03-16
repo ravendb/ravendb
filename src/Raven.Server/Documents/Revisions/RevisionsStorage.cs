@@ -441,7 +441,7 @@ namespace Raven.Server.Documents.Revisions
                 for (var i = 0; i < timeSeriesNames.Length; i++)
                 {
                     var name = timeSeriesNames[i].ToString();
-                    var (count, start, end) = _documentsStorage.TimeSeriesStorage.GetStatsFor(context, id, name);
+                    var (count, start, end) = _documentsStorage.TimeSeriesStorage.Stats.GetStats(context, id, name);
 
                     dvj[name] = new DynamicJsonValue
                     {

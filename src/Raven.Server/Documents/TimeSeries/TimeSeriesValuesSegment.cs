@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
 using System.Text;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -62,13 +63,23 @@ namespace Raven.Server.Documents.TimeSeries
             _buffer = buffer;
             _capacity = capacity;
 
-            if (_capacity > 2048)
+            if (_capacity <= 0 || _capacity > 2048)
                 InvalidCapacity();
         }
 
         public void CopyTo(byte* dest)
         {
             Memory.Copy(dest, _buffer, _capacity);
+        }
+
+        public AllocatedMemoryData Clone(JsonOperationContext context, out TimeSeriesValuesSegment segment)
+        {
+            // for better reuse let use the const size of 'MaxSegmentSize'
+            var memory = context.GetMemory(TimeSeriesStorage.MaxSegmentSize);
+            Memory.Set(memory.Address, 0, TimeSeriesStorage.MaxSegmentSize);
+            CopyTo(memory.Address);
+            segment = new TimeSeriesValuesSegment(memory.Address, _capacity);
+            return memory;
         }
 
         private void InvalidCapacity()
@@ -403,6 +414,11 @@ namespace Raven.Server.Documents.TimeSeries
                 return null;
 
             return context.GetLazyStringValue(tagPointer.Pointer);
+        }
+
+        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(DocumentsOperationContext context, DateTime baseline, bool includeDead = true)
+        {
+            return YieldAllValues(context, context.Allocator, baseline, includeDead);
         }
 
         public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(JsonOperationContext context, ByteStringContext allocator, DateTime baseline, bool includeDead = true)
