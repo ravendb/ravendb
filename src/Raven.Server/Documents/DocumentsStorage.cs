@@ -9,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -52,6 +53,11 @@ namespace Raven.Server.Documents
         private static readonly Slice DeletedEtagsSlice;
 
         public static readonly TableSchema DocsSchema = new TableSchema
+        {
+            TableType = (byte)TableType.Documents
+        };
+
+        public static readonly TableSchema CompressedDocsSchema = new TableSchema
         {
             TableType = (byte)TableType.Documents
         };
@@ -123,25 +129,9 @@ namespace Raven.Server.Documents
                 IsGlobal = false
             });
 
-            DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = (int)DocumentsTable.LowerId,
-                Count = 1,
-                IsGlobal = true,
-                Name = DocsSlice
-            });
-            DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-            {
-                StartIndex = (int)DocumentsTable.Etag,
-                IsGlobal = false,
-                Name = CollectionEtagsSlice
-            });
-            DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-            {
-                StartIndex = (int)DocumentsTable.Etag,
-                IsGlobal = true,
-                Name = AllDocsEtagsSlice
-            });
+            DefineIndexesForDocsSchema(DocsSchema);
+            DefineIndexesForDocsSchema(CompressedDocsSchema);
+            CompressedDocsSchema.CompressValues();
 
             TombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -168,6 +158,13 @@ namespace Raven.Server.Documents
                 IsGlobal = false,
                 Name = DeletedEtagsSlice
             });
+
+            void DefineIndexesForDocsSchema(TableSchema docsSchema)
+            {
+                docsSchema.DefineKey(new TableSchema.SchemaIndexDef {StartIndex = (int)DocumentsTable.LowerId, Count = 1, IsGlobal = true, Name = DocsSlice});
+                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef {StartIndex = (int)DocumentsTable.Etag, IsGlobal = false, Name = CollectionEtagsSlice});
+                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef {StartIndex = (int)DocumentsTable.Etag, IsGlobal = true, Name = AllDocsEtagsSlice});
+            }
         }
 
         private readonly Logger _logger;
@@ -304,6 +301,7 @@ namespace Raven.Server.Documents
                         tx.LowLevelTransaction.RootObjects,
                         tx.LowLevelTransaction);
 
+                    tx.CreateTree(TableSchema.DictionariesSlice);
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
@@ -2193,7 +2191,8 @@ namespace Raven.Server.Documents
 
                 context.Transaction.AddToCache(collectionName, name);
 
-                DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
+                var docsSchema = DocumentPut.GetDocsSchemaForCollection(name);
+                docsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
                 TombstonesSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Tombstones), 16);
 
                 // Add to cache ONLY if the transaction was committed.

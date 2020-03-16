@@ -54,6 +54,8 @@ namespace Raven.Client.ServerWide
 
         public ConflictSolver ConflictSolverConfig;
 
+        public HashSet<string> CompressedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         public Dictionary<string, SorterDefinition> Sorters = new Dictionary<string, SorterDefinition>();
 
         public Dictionary<string, IndexDefinition> Indexes;
