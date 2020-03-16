@@ -573,7 +573,7 @@ namespace Voron.Impl
                     if (it.Seek(long.MinValue))
                     {
                         var sectionPageNumber = it.CurrentKey;
-                        var section = new ActiveRawDataSmallSection(_lowLevelTransaction, sectionPageNumber);
+                        var section = new ActiveRawDataSmallSection(this, sectionPageNumber);
 
                         section.FreeRawDataSectionPages();
                     }

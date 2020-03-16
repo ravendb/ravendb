@@ -22,7 +22,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -30,7 +30,7 @@ namespace FastTests.Voron.RawData
             long id;
             using (var tx = Env.WriteTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
                 Assert.True(section.TryAllocate(15, out id));
                 WriteValue(section, id, "Hello There");
                 tx.Commit();
@@ -38,7 +38,7 @@ namespace FastTests.Voron.RawData
 
             using (var tx = Env.ReadTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
                 
                 AssertValueMatches(section,id, "Hello There");
             }
@@ -53,7 +53,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -63,7 +63,7 @@ namespace FastTests.Voron.RawData
                 long id;
                 using (var tx = Env.WriteTransaction())
                 {
-                    var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                    var section = new ActiveRawDataSmallSection(tx, pageNumber);
                     Assert.True(section.TryAllocate(random.Next(16,256), out id));
                     WriteValue(section, id, i.ToString("0000000000000"));
                     dic[id] = i;
@@ -72,7 +72,7 @@ namespace FastTests.Voron.RawData
 
                 using (var tx = Env.WriteTransaction())
                 {
-                    var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                    var section = new ActiveRawDataSmallSection(tx, pageNumber);
                     AssertValueMatches(section, id, i.ToString("0000000000000"));
                 }
             }
@@ -81,7 +81,7 @@ namespace FastTests.Voron.RawData
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                    var section = new ActiveRawDataSmallSection(tx, pageNumber);
                     AssertValueMatches(section, kvp.Key, kvp.Value.ToString("0000000000000"));
                 }
             }
@@ -93,14 +93,14 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
                 section.DataMoved += (previousId, newId, data, size) => { };
                 int allocationSize = 1020;
 
@@ -116,7 +116,7 @@ namespace FastTests.Voron.RawData
                 Assert.False(section.TryAllocate(allocationSize, out id));
 
                 var idToFree = list[list.Count/2];
-
+                 
                 section.Free(idToFree);
 
                 Assert.True(section.TryAllocate(allocationSize, out id));
@@ -129,14 +129,14 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
 
                 Assert.Throws<InvalidOperationException>(() => section.Free(0));
 
@@ -149,7 +149,7 @@ namespace FastTests.Voron.RawData
             Env.Options.ManualFlushing = true;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
 
                 long id;
             
@@ -173,10 +173,10 @@ namespace FastTests.Voron.RawData
             long id;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
           
-                //var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                //var section = new RawDataSmallSection(tx, pageNumber);
                 Assert.True(section.TryAllocate(15, out id));
                 WriteValue(section, id, "Hello There");
                 tx.Commit();
@@ -185,7 +185,7 @@ namespace FastTests.Voron.RawData
 
             using (var tx = Env.ReadTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
 
                 AssertValueMatches(section, id, "Hello There");
             }
@@ -197,7 +197,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -206,7 +206,7 @@ namespace FastTests.Voron.RawData
 
             using (var tx = Env.WriteTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
 
                 Assert.True(section.TryAllocate(16, out newId));
                 WriteValue(section, newId, 1.ToString("0000000000000"));
@@ -215,7 +215,7 @@ namespace FastTests.Voron.RawData
 
             using (var tx = Env.WriteTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
                 var ids = section.GetAllIdsInSectionContaining(newId);
 
                 Assert.Equal(section.NumberOfEntries, ids.Count);
@@ -232,7 +232,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -243,7 +243,7 @@ namespace FastTests.Voron.RawData
 
             using (var tx = Env.WriteTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
 
                 Assert.True(section.TryAllocate(2000, out idWhichIsGoingToBeDeleted1));
                 WriteValue(section, idWhichIsGoingToBeDeleted1, 1.ToString("0000000000000"));
@@ -257,7 +257,7 @@ namespace FastTests.Voron.RawData
 
             using (var tx = Env.WriteTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
 
                 section.Free(idWhichIsGoingToBeDeleted1);
                 section.Free(idWhichIsGoingToBeDeleted2);
@@ -266,7 +266,7 @@ namespace FastTests.Voron.RawData
 
             using (var tx = Env.WriteTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
                 var ids = section.GetAllIdsInSectionContaining(existingId);
 
                 Assert.Equal(1, ids.Count);

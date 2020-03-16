@@ -500,10 +500,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [InlineData(200, 1000)]
-        [InlineData(1000, 2000)]
+      //  [InlineData(200, 1000)]
+      //  [InlineData(1000, 2000)]
         [InlineData(128, 2048)]
-        [InlineData(null, 1000)]
+    //    [InlineData(null, 1000)]
         public void CanSetMapBatchSize(int? mapBatchSize, int numberOfDocs)
         {
             var indexDefinition = new IndexDefinition

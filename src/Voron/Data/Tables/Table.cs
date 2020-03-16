@@ -21,7 +21,7 @@ namespace Voron.Data.Tables
     {
         private readonly bool _forGlobalReadsOnly;
         private readonly TableSchema _schema;
-        private readonly Transaction _tx;
+        internal readonly Transaction _tx;
         private readonly Tree _tableTree;
 
         private ActiveRawDataSmallSection _activeDataSmallSection;
@@ -57,7 +57,7 @@ namespace Voron.Data.Tables
 
                     long pageNumber = readResult.Reader.ReadLittleEndianInt64();
 
-                    _activeDataSmallSection = new ActiveRawDataSmallSection(_tx.LowLevelTransaction, pageNumber);
+                    _activeDataSmallSection = new ActiveRawDataSmallSection(_tx, pageNumber);
                     _activeDataSmallSection.DataMoved += OnDataMoved;
                 }
                 return _activeDataSmallSection;
@@ -219,7 +219,7 @@ namespace Voron.Data.Tables
             var data = new ReadOnlySpan<byte>(directRead, size);
             var dictionary = GetCompressionDictionaryFor(id, ref data);
             var _ = // we explicitly do *not* dispose the buffer, it lives as long as the tx
-                Decompress(data, dictionary, out var buffer);
+                Decompress(_tx, data, dictionary, out var buffer);
 
             _cachedDecompressedBuffersByStorageId[id] = buffer;
 
@@ -227,12 +227,13 @@ namespace Voron.Data.Tables
             return buffer.Ptr;
         }
 
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope Decompress(
+        internal static ByteStringContext<ByteStringMemoryCache>.InternalScope Decompress(
+            Transaction tx,
             ReadOnlySpan<byte> data, ZstdLib.CompressionDictionary dictionary,
             out ByteString buffer)
         {
             int decompressedSize = ZstdLib.GetDecompressedSize(data);
-            var internalScope = _tx.Allocator.Allocate(decompressedSize, out buffer);
+            var internalScope = tx.Allocator.Allocate(decompressedSize, out buffer);
             var actualSize = ZstdLib.Decompress(data, buffer.ToSpan(), dictionary);
             if (actualSize != decompressedSize)
                 throw new InvalidDataException($"Got decompressed size {actualSize} but expected {decompressedSize}");
@@ -344,12 +345,12 @@ namespace Voron.Data.Tables
                 {
                     using var _ = Slice.External(_tx.Allocator, dataPtr, 32, out var hash);
                     data = data.Slice(32, data.Length - 32);
-                    return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(this, hash);
+                    return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, hash);
                 }
                 else
                 {
                     using var _ = ActiveRawDataSmallSection.CompressionDictionaryHashFor(_tx.LowLevelTransaction ,id, out var hash);
-                    return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(this, hash);
+                    return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, hash);
                 }
             }
         }
@@ -468,7 +469,8 @@ namespace Voron.Data.Tables
             InactiveSections.Delete(sectionPageNumber);
 
             using var _ = ActiveDataSmallSection.CurrentCompressionDictionaryHash(out var hash);
-            var currentCompressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(this, hash);
+            var currentCompressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
+                .GetCompressionDictionaryFor(_tx, hash);
 
             var idsInSection = ActiveDataSmallSection.GetAllIdsInSectionContaining(id);
             foreach (var idToMove in idsInSection)
@@ -483,7 +485,7 @@ namespace Voron.Data.Tables
                 {
                     var data = new ReadOnlySpan<byte>(pos, itemSize);
                     var dictionary = GetCompressionDictionaryFor(idToMove, ref data);
-                    scope1 = Decompress(data, dictionary, out var buffer);
+                    scope1 = Decompress(_tx, data, dictionary, out var buffer);
                     actualSize = buffer.Length;
                     actualPos = buffer.Ptr;
 
@@ -591,7 +593,7 @@ namespace Voron.Data.Tables
             if (_schema.Compressed)
             {
                 using var _ = ActiveDataSmallSection.CurrentCompressionDictionaryHash(out var hash);
-                var compressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(this, hash);
+                var compressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, hash);
                 builder.TryCompression(compressionDictionary);
             }
 
@@ -661,7 +663,7 @@ namespace Voron.Data.Tables
             private readonly ByteStringContext _compressionDictionariesSliceContext = new ByteStringContext(SharedMultipleUseFlag.None);
             private readonly ConcurrentDictionary<Slice, ZstdLib.CompressionDictionary> _compressionDictionaries = new ConcurrentDictionary<Slice, ZstdLib.CompressionDictionary>(SliceComparer.Instance);
 
-            public ZstdLib.CompressionDictionary GetCompressionDictionaryFor(Table table, Slice hash)
+            public ZstdLib.CompressionDictionary GetCompressionDictionaryFor(Transaction tx, Slice hash)
             {
                 if (_compressionDictionaries.TryGetValue(hash, out var current)) 
                     return current;
@@ -673,19 +675,31 @@ namespace Voron.Data.Tables
                     
                     Slice clonedHash = hash.Clone(_compressionDictionariesSliceContext, ByteStringType.Immutable);
 
-                    current = CreateCompressionDictionary(table, clonedHash);
+                    current = CreateCompressionDictionary(tx, clonedHash);
                     _compressionDictionaries.TryAdd(clonedHash, current);
                 }
 
                 return current;
             }
             
-            private ZstdLib.CompressionDictionary CreateCompressionDictionary(Table table, Slice hash)
+            private ZstdLib.CompressionDictionary CreateCompressionDictionary(Transaction tx, Slice hash)
             {
-                var dictionariesTree = table._tx.ReadTree(TableSchema.DictionariesSlice);
-                var readResult = dictionariesTree.Read(hash);
+                Debug.Assert(hash.Size == 32);
+                var dictionariesTree = tx.ReadTree(TableSchema.DictionariesSlice);
+                var readResult = dictionariesTree?.Read(hash);
                 if (readResult == null)
                 {
+                    // we may be checking an empty section, so let's return an empty
+                    // dictionary there
+                    long* l = (long*)hash.Content.Ptr;
+                    if (l[0] == 0 && l[1] == 0 && l[2] == 0 && l[3] == 0)
+                    {
+                        return new ZstdLib.CompressionDictionary(hash, null, 0, 0)
+                        {
+                            ExpectedCompressionRatio = 101
+                        };
+                    }
+
                     string hashStr = Convert.ToBase64String(hash.AsSpan());
                     throw new InvalidOperationException("Trying to read dictionary: " + hashStr + " but it was not found!");
                 }
@@ -921,8 +935,7 @@ namespace Voron.Data.Tables
                         do
                         {
                             var sectionPageNumber = it.CurrentKey;
-                            _activeDataSmallSection = new ActiveRawDataSmallSection(_tx.LowLevelTransaction,
-                                sectionPageNumber);
+                            _activeDataSmallSection = new ActiveRawDataSmallSection(_tx, sectionPageNumber);
                             _activeDataSmallSection.DataMoved += OnDataMoved;
                             if (_activeDataSmallSection.TryAllocate(size, out id))
                             {
@@ -956,7 +969,7 @@ namespace Voron.Data.Tables
                     
                     ActiveDataSmallSection.CurrentCompressionDictionaryHash(out hash);
                     var currentDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
-                        .GetCompressionDictionaryFor(this,hash);
+                        .GetCompressionDictionaryFor(_tx, hash);
 
                     // We'll replace the dictionary if it is unable to provide us with good compression ratio
                     // we give it +10 ratio to allow some slippage between training. Even after violating the expected
@@ -972,7 +985,7 @@ namespace Voron.Data.Tables
                     }
                 }
                 
-                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name, hash, _tableType, newNumberOfPages);
+                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx, Name, hash, _tableType, newNumberOfPages);
                 _activeDataSmallSection.DataMoved += OnDataMoved;
                 var val = _activeDataSmallSection.PageNumber;
                 using (Slice.External(_tx.Allocator, (byte*)&val, sizeof(long), out Slice pageNumber))
