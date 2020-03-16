@@ -23,7 +23,7 @@ namespace FastTests.Voron.Bugs
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
 
                 tx.Commit();
@@ -38,7 +38,7 @@ namespace FastTests.Voron.Bugs
 
             using (var tx = Env.WriteTransaction())
             {
-                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
 
                 section.DeleteSection(pageNumber);
 
@@ -73,7 +73,7 @@ namespace FastTests.Voron.Bugs
                 // ensure below call won't throw 'An item with the same key has already been added'
                 // from ScratchBufferFile.BreakLargeAllocationToSeparatePages
 
-                ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None); 
+                ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None); 
                 tx.Commit();
             }
         }

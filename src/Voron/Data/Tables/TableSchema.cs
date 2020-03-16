@@ -418,7 +418,7 @@ namespace Voron.Data.Tables
             
             // Create raw data. This is where we will actually store the documents
             using (Slice.External(tx.LowLevelTransaction.Allocator, nullHash, 32, out var nullHashSlice))
-            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name, nullHashSlice, TableType, sizeInPages))
+            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx, name, nullHashSlice, TableType, sizeInPages))
             {
                 long val = rawDataActiveSection.PageNumber;
                 using (
@@ -444,7 +444,7 @@ namespace Voron.Data.Tables
 
                 if (_compressed)
                 {
-                    var dictionariesTree = tx.ReadTree(DictionariesSlice);
+                    var dictionariesTree = tx.CreateTree(DictionariesSlice);
                     // create default dictionary here for the global system
                     if (dictionariesTree.State.NumberOfEntries == 0)
                     {
