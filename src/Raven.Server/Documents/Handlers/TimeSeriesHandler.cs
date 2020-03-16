@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Handlers
                         }
                         first = false;
 
-                        var stats = Database.DocumentsStorage.TimeSeriesStorage.GetStatsFor(context, documentId, tsName);
+                        var stats = Database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, tsName);
 
                         writer.WriteStartObject();
                         
@@ -339,7 +339,7 @@ namespace Raven.Server.Documents.Handlers
                     if (addTotalCount)
                     {
                         // add total entries count to the response 
-                        var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetStatsFor(context, documentId, name);
+                        var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
                         writer.WriteInteger(stats.Count);
                     }
                     else

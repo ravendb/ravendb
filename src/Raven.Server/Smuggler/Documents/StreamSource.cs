@@ -520,11 +520,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private unsafe bool ReadSegment(int size, out TimeSeriesValuesSegment segment)
+        private unsafe bool ReadSegment(int segmentSize, out TimeSeriesValuesSegment segment)
         {
-            var mem = _context.GetMemory(size);
+            var mem = _context.GetMemory(segmentSize);
             var offset = 0;
 
+            var size = segmentSize;
             while (size > 0)
             {
                 var read = _parser.Copy(mem.Address + offset, size);
@@ -542,7 +543,7 @@ namespace Raven.Server.Smuggler.Documents
                 size -= read.BytesRead;
             }
 
-            segment = new TimeSeriesValuesSegment(mem.Address, size);
+            segment = new TimeSeriesValuesSegment(mem.Address, segmentSize);
             return true;
         }
 

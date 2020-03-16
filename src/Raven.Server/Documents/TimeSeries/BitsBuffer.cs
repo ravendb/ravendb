@@ -123,6 +123,7 @@ namespace Raven.Server.Documents.TimeSeries
             Header = (BitsBufferHeader*)buffer;
             _buffer = buffer + sizeof(BitsBufferHeader) + Header->CompressedSize;
             Size = size;
+            Debug.Assert(size > 0);
         }
 
         private ushort BitsAvailableInLastByte()

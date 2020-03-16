@@ -128,6 +128,12 @@ namespace Voron.Util
                 return new PtrSize(s.Ptr, (uint)s.Length);
             }
 
+            if (typeof(T) == typeof(DateTime))
+            {
+                var dt = (DateTime) (object) value;
+                return new PtrSize((ulong)dt.Ticks, sizeof(long));
+            }
+
             ThrowNotSupportedException();
             return default(PtrSize);
         }

@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// <summary>
         /// How long the data of this policy will be retained
         /// </summary>
-        public TimeSpan RetentionTime;
+        public TimeSpan? RetentionTime;
 
         /// <summary>
         /// Define the aggregation of this policy
