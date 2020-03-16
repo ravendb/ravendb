@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Utils;
 using Sparrow.Json;

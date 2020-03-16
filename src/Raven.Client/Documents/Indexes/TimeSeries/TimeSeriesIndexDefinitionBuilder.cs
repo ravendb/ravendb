@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes.TimeSeries

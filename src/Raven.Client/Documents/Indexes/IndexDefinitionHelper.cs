@@ -213,6 +213,9 @@ namespace Raven.Client.Documents.Indexes
                 case IndexSourceType.Documents:
                     source = "docs";
                     break;
+                case IndexSourceType.Counters:
+                    source = "counters";
+                    break;
                 case IndexSourceType.TimeSeries:
                     source = "timeSeries";
                     break;

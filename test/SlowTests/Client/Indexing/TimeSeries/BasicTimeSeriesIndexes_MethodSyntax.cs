@@ -12,7 +12,6 @@ using Sparrow.Extensions;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
-using static FastTests.Client.Query;
 
 namespace SlowTests.Client.Indexing.TimeSeries
 {
@@ -20,21 +19,6 @@ namespace SlowTests.Client.Indexing.TimeSeries
     {
         public BasicTimeSeriesIndexes_MethodSyntax(ITestOutputHelper output) : base(output)
         {
-        }
-
-        private class X : AbstractIndexCreationTask<Order>
-        {
-            public X()
-            {
-                Map = orders => from o in orders
-                                from l in o.Lines
-                                let c = LoadDocument<Company>(o.Company)
-                                select new
-                                {
-                                    o.Freight,
-                                    l.Discount
-                                };
-            }
         }
 
         [Fact]

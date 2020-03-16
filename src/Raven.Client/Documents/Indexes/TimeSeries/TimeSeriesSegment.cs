@@ -1,4 +1,6 @@
-﻿namespace Raven.Client.Documents.Session.TimeSeries
+﻿using Raven.Client.Documents.Session.TimeSeries;
+
+namespace Raven.Client.Documents.Indexes.TimeSeries
 {
     public class TimeSeriesSegment
     {
