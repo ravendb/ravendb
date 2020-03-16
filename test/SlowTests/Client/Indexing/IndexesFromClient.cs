@@ -88,7 +88,7 @@ namespace SlowTests.Client.Indexing
                     operation.WaitForCompletion(TimeSpan.FromSeconds(15));
                 });
 
-                Assert.Contains("Query is stale", e.Message);
+                Assert.Contains("Index is stale", e.Message);
             }
         }
 
