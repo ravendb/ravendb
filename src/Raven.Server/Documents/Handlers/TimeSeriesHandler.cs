@@ -605,7 +605,7 @@ namespace Raven.Server.Documents.Handlers
 
                     foreach (var item in items)
                     {
-                        using (var slicer = new TimeSeriesStorage.TimeSeriesSlicer(context, docId, item.Name, item.Baseline))
+                        using (var slicer = new TimeSeriesSliceHolder(context, docId, item.Name).WithBaseline(item.Baseline))
                         {
                             if (tss.TryAppendEntireSegment(context, slicer.TimeSeriesKeySlice, collectionName, item))
                             {

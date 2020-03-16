@@ -373,6 +373,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    Assert.Equal(retries, vals.Count);
 
                     for (int j = 0; j < retries; j++)
                     {
