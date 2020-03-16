@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
 
             var previousCount = DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr);
-            var start = DocumentsStorage.TableValueToDateTime((int)StatsColumn.Start, ref tvr);
+            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumn.Start, ref tvr)));
             var end = DocumentsStorage.TableValueToDateTime((int)StatsColumn.End, ref tvr);
 
             using (table.Allocate(out var tvb))
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.TimeSeries
                 tvb.Add(slicer.StatsKey);
                 tvb.Add(GetPolicy(slicer));
                 tvb.Add(SpecialChars.RecordSeparator);
-                tvb.Add(start);
+                tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
                 tvb.Add(previousCount + count);
                 
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.TimeSeries
                 tvb.Add(slicer.StatsKey);
                 tvb.Add(GetPolicy(slicer));
                 tvb.Add(SpecialChars.RecordSeparator);
-                tvb.Add(start);
+                tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
                 tvb.Add(previousCount);
 
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(slicer.StatsKey, out var tvr))
             {
                 previousCount = DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr);
-                start = DocumentsStorage.TableValueToDateTime((int)StatsColumn.Start, ref tvr);
+                start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumn.Start, ref tvr)));
                 end = DocumentsStorage.TableValueToDateTime((int)StatsColumn.End, ref tvr);
             }
 
@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.TimeSeries
                 tvb.Add(slicer.StatsKey);
                 tvb.Add(GetPolicy(slicer));
                 tvb.Add(SpecialChars.RecordSeparator);
-                tvb.Add(start);
+                tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
                 tvb.Add(previousCount + count);
 
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return default;
 
             var count = DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr);
-            var start = DocumentsStorage.TableValueToDateTime((int)StatsColumn.Start, ref tvr);
+            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumn.Start, ref tvr)));
             var end = DocumentsStorage.TableValueToDateTime((int)StatsColumn.End, ref tvr);
 
             return (count, start, end);
@@ -217,12 +217,12 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<Slice> GetTimeSeriesByPolicyFromStartDate(DocumentsOperationContext context, CollectionName collection, string policy, DateTime start, long skip, int take)
+        public IEnumerable<Slice> GetTimeSeriesByPolicyFromStartDate(DocumentsOperationContext context, CollectionName collection, string policy, DateTime start, int take)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
             using (CombinePolicyNameAndTicks(context, policy, start.Ticks, out var key))
             {
-                foreach (var result in table.SeekForwardFrom(TimeSeriesStatsSchema.Indexes[StartTimeIndex], key, skip))
+                foreach (var result in table.SeekBackwardFrom(TimeSeriesStatsSchema.Indexes[StartTimeIndex], key))
                 {
                     DocumentsStorage.TableValueToSlice(context, (int)StatsColumn.Key, ref result.Result.Reader, out var slice);
                     yield return slice;
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var size = policySlice.Size + sizeof(long);
                 var scope = context.Allocator.Allocate(size, out var str);
                 policySlice.CopyTo(str.Ptr);
-                *(long*)(str.Ptr + policySlice.Size) = *(long*)Bits.SwapBytes(ticks);
+                *(long*)(str.Ptr + policySlice.Size) = Bits.SwapBytes(ticks);
 
                 slice = new Slice(str);
                 return scope;
