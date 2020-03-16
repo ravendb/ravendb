@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var results = await index.Query(query, context, token).ConfigureAwait(false);
                 if (options.AllowStale == false && results.IsStale)
-                    throw new InvalidOperationException("Cannot perform bulk operation. Query is stale.");
+                    throw new InvalidOperationException("Cannot perform bulk operation. Index is stale.");
 
                 resultIds = new Queue<string>(results.Results.Count);
 
