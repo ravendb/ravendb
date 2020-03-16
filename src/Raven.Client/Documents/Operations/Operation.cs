@@ -248,7 +248,7 @@ namespace Raven.Client.Documents.Operations
                         StopProcessing();
                         if (_additionalTask.IsFaulted)
                         {
-                            _result.TrySetException(_additionalTask.Exception.ExtractSingleInnerException());
+                            _result.TrySetException(_additionalTask.Exception);
                             break;
                         }
 
