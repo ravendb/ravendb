@@ -1348,6 +1348,7 @@ namespace Raven.Server.Documents
             ClientConfiguration = record.Client;
             StudioConfiguration = record.Studio;
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
+            DocumentsStorage.DocumentPut.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             PeriodicBackupRunner.UpdateConfigurations(record);

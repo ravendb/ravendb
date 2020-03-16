@@ -444,7 +444,7 @@ namespace Voron.Data.Tables
 
                 if (_compressed)
                 {
-                    var dictionariesTree = tx.CreateTree(DictionariesSlice);
+                    var dictionariesTree = tx.ReadTree(DictionariesSlice);
                     // create default dictionary here for the global system
                     if (dictionariesTree.State.NumberOfEntries == 0)
                     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -12,6 +13,7 @@ using Voron;
 using Voron.Data.Tables;
 using System.Linq;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
@@ -60,7 +62,7 @@ namespace Raven.Server.Documents
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
-                var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                var table = context.Transaction.InnerTransaction.OpenTable(GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
             
                 var oldValue = default(TableValueReader);
                 if (knownNewId == false)
@@ -217,6 +219,24 @@ namespace Raven.Server.Documents
                     LastModified = new DateTime(modifiedTicks)
                 };
             }
+        }
+
+        public void InitializeFromDatabaseRecord(DatabaseRecord record)
+        {
+            if (record.CompressedCollections.SetEquals(_compressedCollections))
+                return;
+
+            _compressedCollections = new HashSet<string>(record.CompressedCollections, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private HashSet<string> _compressedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        public TableSchema GetDocsSchemaForCollection(CollectionName collection)
+        {
+            if(_compressedCollections.Contains(collection.Name))
+            {
+                return CompressedDocsSchema;
+            } 
+            return DocsSchema;
         }
 
         [Conditional("DEBUG")]
