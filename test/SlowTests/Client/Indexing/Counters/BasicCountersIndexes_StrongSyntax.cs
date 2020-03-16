@@ -47,6 +47,76 @@ namespace SlowTests.Client.Indexing.Counters
             }
         }
 
+        private class AverageHeartRate : AbstractCountersIndexCreationTask<User, AverageHeartRate.Result>
+        {
+            public class Result
+            {
+                public double HeartBeat { get; set; }
+
+                public string Name { get; set; }
+
+                public long Count { get; set; }
+            }
+
+            public AverageHeartRate()
+            {
+                AddMap("HeartRate", counters => from counter in counters
+                                                select new Result
+                                                {
+                                                    HeartBeat = counter.Value,
+                                                    Count = 1,
+                                                    Name = counter.Name
+                                                });
+
+                Reduce = results => from r in results
+                                    group r by r.Name into g
+                                    let sumHeartBeat = g.Sum(x => x.HeartBeat)
+                                    let sumCount = g.Sum(x => x.Count)
+                                    select new Result
+                                    {
+                                        HeartBeat = sumHeartBeat / sumCount,
+                                        Name = g.Key,
+                                        Count = sumCount
+                                    };
+            }
+        }
+
+        private class AverageHeartRate_WithLoad : AbstractCountersIndexCreationTask<User, AverageHeartRate_WithLoad.Result>
+        {
+            public class Result
+            {
+                public double HeartBeat { get; set; }
+
+                public string City { get; set; }
+
+                public long Count { get; set; }
+            }
+
+            public AverageHeartRate_WithLoad()
+            {
+                AddMap("HeartRate", counters => from counter in counters
+                                                let user = LoadDocument<User>(counter.DocumentId)
+                                                let address = LoadDocument<Address>(user.AddressId)
+                                                select new Result
+                                                {
+                                                    HeartBeat = counter.Value,
+                                                    Count = 1,
+                                                    City = address.City
+                                                });
+
+                Reduce = results => from r in results
+                                    group r by r.City into g
+                                    let sumHeartBeat = g.Sum(x => x.HeartBeat)
+                                    let sumCount = g.Sum(x => x.Count)
+                                    select new Result
+                                    {
+                                        HeartBeat = sumHeartBeat / sumCount,
+                                        City = g.Key,
+                                        Count = sumCount
+                                    };
+            }
+        }
+
         [Fact]
         public void BasicMapIndex()
         {
@@ -401,6 +471,315 @@ namespace SlowTests.Client.Indexing.Counters
                 }
 
                 WaitForIndexing(store);
+
+                using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var counts = index._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                    Assert.Equal(0, counts.ReferenceTableCount);
+                    Assert.Equal(0, counts.CollectionTableCount);
+                }
+            }
+        }
+
+        [Fact]
+        public void BasicMapReduceIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var user = new User();
+                        session.Store(user, $"users/{i}");
+
+                        session.CountersFor(user).Increment("HeartRate", 180 + i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                var timeSeriesIndex = new AverageHeartRate();
+                var indexName = timeSeriesIndex.IndexName;
+                var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
+                RavenTestHelper.AssertEqualRespectingNewLines("counters.Users.HeartRate.Select(counter => new {\r\n    HeartBeat = ((double) counter.Value),\r\n    Count = 1,\r\n    Name = counter.Name\r\n})", indexDefinition.Maps.First());
+                RavenTestHelper.AssertEqualRespectingNewLines("results.GroupBy(r => r.Name).Select(g => new {\r\n    g = g,\r\n    sumHeartBeat = Enumerable.Sum(g, x => ((double) x.HeartBeat))\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    sumCount = Enumerable.Sum(this0.g, x0 => ((long) x0.Count))\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.sumHeartBeat / ((double) this1.sumCount),\r\n    Name = this1.this0.g.Key,\r\n    Count = this1.sumCount\r\n})", indexDefinition.Reduce);
+
+                timeSeriesIndex.Execute(store);
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("184.5", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Count", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("10", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("heartrate", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // add more heart rates
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 10; i < 20; i++)
+                    {
+                        var user = new User();
+                        session.Store(user, $"users/{i}");
+
+                        session.CountersFor(user).Increment("HeartRate", 200 + i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("199.5", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Count", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("20", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("heartrate", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                //// delete some counters
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var user = session.Load<User>($"users/{i}");
+
+                        session.CountersFor(user).Delete("HeartRate");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("214.5", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Count", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("10", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("heartrate", terms);
+
+                //// delete documents
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 20; i++)
+                        session.Delete($"users/{i}");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                Assert.Equal(0, terms.Length);
+            }
+        }
+
+        [Fact]
+        public async Task BasicMapReduceIndexWithLoad()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var address = new Address { City = "NY" };
+                        session.Store(address, $"addresses/{i}");
+
+                        var user = new User { AddressId = address.Id };
+                        session.Store(user, $"users/{i}");
+
+                        session.CountersFor(user).Increment("HeartRate", 180 + i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                var timeSeriesIndex = new AverageHeartRate_WithLoad();
+                var indexName = timeSeriesIndex.IndexName;
+                var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
+                RavenTestHelper.AssertEqualRespectingNewLines("counters.Users.HeartRate.Select(counter => new {\r\n    counter = counter,\r\n    user = this.LoadDocument(counter.DocumentId, \"Users\")\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    address = this.LoadDocument(this0.user.AddressId, \"Addresses\")\r\n}).Select(this1 => new {\r\n    HeartBeat = ((double) this1.this0.counter.Value),\r\n    Count = 1,\r\n    City = this1.address.City\r\n})", indexDefinition.Maps.First());
+                RavenTestHelper.AssertEqualRespectingNewLines("results.GroupBy(r => r.City).Select(g => new {\r\n    g = g,\r\n    sumHeartBeat = Enumerable.Sum(g, x => ((double) x.HeartBeat))\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    sumCount = Enumerable.Sum(this0.g, x0 => ((long) x0.Count))\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.sumHeartBeat / ((double) this1.sumCount),\r\n    City = this1.this0.g.Key,\r\n    Count = this1.sumCount\r\n})", indexDefinition.Reduce);
+
+                timeSeriesIndex.Execute(store);
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("184.5", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Count", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("10", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("ny", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        var address = session.Load<Address>($"addresses/{i}");
+                        address.City = "LA";
+                    }
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("ny", terms);
+                Assert.Contains("la", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 5; i < 10; i++)
+                        session.Delete($"addresses/{i}");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("la", terms);
+                Assert.Contains("NULL_VALUE", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                        session.Delete($"users/{i}");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(2, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.All(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(0, terms.Length);
+
+                var database = await GetDatabase(store.Database);
+                var index = database.IndexStore.GetIndex(indexName);
 
                 using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
