@@ -237,18 +237,15 @@ namespace Raven.Server.Documents.TimeSeries
 
         private async Task RemoveTimeSeriesByPolicy(CollectionName collectionName, string policyName)
         {
-            var skip = 0;
             while (true)
             {
                 _database.DatabaseShutdown.ThrowIfCancellationRequested();
 
-                var cmd = new RemovePoliciesCommand(collectionName, policyName, skip);
+                var cmd = new RemovePoliciesCommand(collectionName, policyName);
                 await _database.TxMerger.Enqueue(cmd);
 
                 if (cmd.Deleted < RemovePoliciesCommand.BatchSize)
                     break;
-
-                skip += cmd.Deleted;
             }
         }
 
@@ -281,26 +278,27 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         context.Reset();
                         context.Renew();
-                        
+
+                        Stopwatch duration;
                         using (context.OpenReadTransaction())
                         {
-                            PrepareRollUps(context, now, 1024, states, out var duration);
+                            PrepareRollUps(context, now, 1024, states, out duration);
                             if (states.Count == 0)
                                 return;
-
-                            var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
-                            var isFirstInTopology = string.Equals(topology.Members.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
-
-                            var command = new RollupTimeSeriesCommand(Configuration, states, isFirstInTopology);
-                            await _database.TxMerger.Enqueue(command);
-                            if (command.RolledUp == 0)
-                                break;
-
-                            states.Clear();
-
-                            if (Logger.IsInfoEnabled)
-                                    Logger.Info($"Successfully aggregated {command.RolledUp:#,#;;0} time-series within {duration.ElapsedMilliseconds:#,#;;0} ms.");
                         }
+
+                        var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
+                        var isFirstInTopology = string.Equals(topology.Members.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
+
+                        var command = new RollupTimeSeriesCommand(Configuration, states, isFirstInTopology);
+                        await _database.TxMerger.Enqueue(command);
+                        if (command.RolledUp == 0)
+                            break;
+
+                        states.Clear();
+
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Successfully aggregated {command.RolledUp:#,#;;0} time-series within {duration.ElapsedMilliseconds:#,#;;0} ms.");
                     }
                 }
             }
@@ -314,6 +312,11 @@ namespace Raven.Server.Documents.TimeSeries
                 if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Failed to roll-up time series on {_database.Name} which are older than {now}", e);
             }
+        }
+
+        internal async Task DoRetention()
+        {
+
         }
 
         private void PrepareRollUps(DocumentsOperationContext context, DateTime currentTime, long take, List<RollUpState> states, out Stopwatch duration)
@@ -368,15 +371,13 @@ namespace Raven.Server.Documents.TimeSeries
 
             private readonly CollectionName _collection;
             private readonly string _policy;
-            private readonly int _skip;
 
             public int Deleted;
 
-            public RemovePoliciesCommand(CollectionName collection, string policy, int skip)
+            public RemovePoliciesCommand(CollectionName collection, string policy)
             {
                 _collection = collection;
                 _policy = policy;
-                _skip = skip;
             }
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
@@ -384,7 +385,7 @@ namespace Raven.Server.Documents.TimeSeries
                 RollUpSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollUps, 16);
                 var table = context.Transaction.InnerTransaction.OpenTable(RollUpSchema, TimeSeriesRollUps);
 
-                var toDelete = new List<Slice>(tss.GetTimeSeriesNameByPolicy(context, _collection, _policy, _skip, BatchSize));
+                var toDelete = new List<Slice>(tss.GetTimeSeriesNameByPolicy(context, _collection, _policy, 0, BatchSize));
 
                 var request = new TimeSeriesStorage.DeletionRangeRequest
                 {

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
@@ -12,13 +14,16 @@ namespace Raven.Server.Documents.TimeSeries
     {
         private static readonly Slice TimeSeriesStatsKey;
         private static readonly Slice PolicyIndex;
+        private static readonly Slice StartTimeIndex;
         private static readonly TableSchema TimeSeriesStatsSchema = new TableSchema();
 
         private enum StatsColumn
         {
             Key = 0, // documentId, separator, name
             PolicyName = 1, // TODO: need separator here?
-            Count = 2
+            Count = 2,
+            Start = 3,
+            End = 4
         }
 
         static TimeSeriesStats()
@@ -27,6 +32,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 Slice.From(ctx, "TimeSeriesStats", ByteStringType.Immutable, out TimeSeriesStatsKey);
                 Slice.From(ctx, "PolicyIndex", ByteStringType.Immutable, out PolicyIndex);
+                Slice.From(ctx, "StartTimeIndex", ByteStringType.Immutable, out StartTimeIndex);
             }
 
             TimeSeriesStatsSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -58,13 +64,53 @@ namespace Raven.Server.Documents.TimeSeries
 
         public void UpdateCount(DocumentsOperationContext context, string docId, string name, CollectionName collection, long count)
         {
-            using (var slicer = new TimeSeriesStorage.TimeSeriesSlicer(context, docId, name, default))
+            using (var slicer = new TimeSeriesSliceHolder(context, docId, name))
             {
                 UpdateCount(context, slicer, collection, count);
             }
         }
 
-        public void UpdateCount(DocumentsOperationContext context, TimeSeriesStorage.TimeSeriesSlicer slicer, CollectionName collection, long count)
+        public void UpdateStats(DocumentsOperationContext context, string docId, string name, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline)
+        {
+            using (var slicer = new TimeSeriesSliceHolder(context, docId, name))
+            {
+                long previousCount = 0;
+                var start = DateTime.MinValue; 
+                var end = DateTime.MinValue; 
+
+                var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
+                if (table.ReadByKey(slicer.StatsKey, out var tvr))
+                {
+                    previousCount = DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr);
+                    start = DocumentsStorage.TableValueToDateTime((int)StatsColumn.Start, ref tvr);
+                    end = DocumentsStorage.TableValueToDateTime((int)StatsColumn.End, ref tvr);
+                }
+
+                var count = segment.NumberOfLiveEntries;
+                if (count > 0)
+                {
+                    var last = segment.GetLastTimestamp(baseline);
+                    if (last > end)
+                        end = last;
+
+                    var first = segment.YieldAllValues(context, context.Allocator, baseline, includeDead: false).First().Timestamp;
+                    if (first < start)
+                        start = first;
+                }
+
+                using (table.Allocate(out var tvb))
+                {
+                    tvb.Add(slicer.StatsKey);
+                    tvb.Add(GetPolicy(slicer));
+                    tvb.Add(previousCount + count);
+                    tvb.Add(start);
+                    tvb.Add(end);
+                    table.Set(tvb);
+                }
+            }
+        }
+
+        public void UpdateCount(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, long count)
         {
             long previousCount = 0;
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
@@ -83,10 +129,11 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+
         public long GetCount(DocumentsOperationContext context, string docId, string name)
         {
             var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
-            using (var slicer = new TimeSeriesStorage.TimeSeriesSlicer(context, docId, name, default))
+            using (var slicer = new TimeSeriesSliceHolder(context, docId, name))
             {
                 return table.ReadByKey(slicer.StatsKey, out var tvr) ? DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr) : 0;
             }
@@ -133,7 +180,7 @@ namespace Raven.Server.Documents.TimeSeries
             table.DeleteByKey(key);
         }
 
-        private Slice GetPolicy(TimeSeriesStorage.TimeSeriesSlicer slicer)
+        private Slice GetPolicy(TimeSeriesSliceHolder slicer)
         {
             var name = slicer.LowerTimeSeriesName;
             var index = name.Content.IndexOf((byte)TimeSeriesConfiguration.TimeSeriesRollupSeparator);
