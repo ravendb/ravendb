@@ -32,7 +32,7 @@ namespace EmbeddedTests
                 });
 
                 const string databaseName = "test";
-                var dummyDump = CreateDummyDump(100000);
+                var dummyDump = CreateDummyDump(10000);
 
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var bjro = ctx.ReadObject(dummyDump, "dump"))
@@ -44,8 +44,9 @@ namespace EmbeddedTests
 
                 using (var store = embedded.GetDocumentStore(new DatabaseOptions(databaseName)))
                 {
-                    using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(1000), databaseName))
+                    using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(500), databaseName))
                     {
+                        Exception e = null;
                         try
                         {
                             var operation = await store.Smuggler.ForDatabase(databaseName).ImportAsync(new DatabaseSmugglerImportOptions
@@ -55,12 +56,13 @@ namespace EmbeddedTests
 
                             await operation.WaitForCompletionAsync();
                         }
-                        catch (Exception e)
+                        catch (Exception exception)
                         {
-                            Assert.Equal(typeof(RavenException), e.GetType());
-                            Assert.NotNull(e.InnerException);
-                            Assert.Equal(typeof(TimeoutException), e.InnerException.GetType());
+                            e = exception;
                         }
+
+                        Assert.NotNull(e);
+                        AssertException(e);
                     }
                 }
             }
@@ -80,7 +82,7 @@ namespace EmbeddedTests
                 });
 
                 const string databaseName = "test";
-                var dummyDump = CreateDummyDump(100000);
+                var dummyDump = CreateDummyDump(10000);
 
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var bjro = ctx.ReadObject(dummyDump, "dump"))
@@ -95,6 +97,7 @@ namespace EmbeddedTests
                     {
                         using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(500), databaseName))
                         {
+                            Exception e = null;
                             try
                             {
                                 var operation = await store.Smuggler.ForDatabase(databaseName).ImportAsync(new DatabaseSmugglerImportOptions
@@ -104,16 +107,27 @@ namespace EmbeddedTests
 
                                 await operation.WaitForCompletionAsync();
                             }
-                            catch (Exception e)
+                            catch (Exception exception)
                             {
-                                Assert.Equal(typeof(RavenException), e.GetType());
-                                Assert.NotNull(e.InnerException);
-                                Assert.Equal(typeof(TimeoutException), e.InnerException.GetType());
+                                e = exception;
                             }
+
+                            Assert.NotNull(e);
+                            AssertException(e);
                         }
                     }
                 }
             }
+        }
+
+        private static void AssertException(Exception e)
+        {
+            if (e is AggregateException ae)
+                e = Raven.Client.Extensions.ExceptionExtensions.ExtractSingleInnerException(ae);
+
+            Assert.Equal(typeof(RavenException), e.GetType());
+            Assert.NotNull(e.InnerException);
+            Assert.Equal(typeof(TimeoutException), e.InnerException.GetType());
         }
 
         private static DynamicJsonValue CreateDummyDump(int count)
