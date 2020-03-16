@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (command.AttachmentStreams == null)
                 {
-                    command.AttachmentStreams = new Queue<MergedBatchCommand.AttachmentStream>();
+                    command.AttachmentStreams = new List<MergedBatchCommand.AttachmentStream>();
                     command.AttachmentStreamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("batch");
                 }
 
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Handlers
                 };
                 attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, bodyStream, attachmentStream.Stream, Database.DatabaseShutdown);
                 attachmentStream.Stream.Flush();
-                command.AttachmentStreams.Enqueue(attachmentStream);
+                command.AttachmentStreams.Add(attachmentStream);
             }
         }
 
@@ -674,7 +674,7 @@ namespace Raven.Server.Documents.Handlers
         public class MergedBatchCommand : TransactionMergedCommand, IDisposable
         {
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
-            public Queue<AttachmentStream> AttachmentStreams;
+            public List<AttachmentStream> AttachmentStreams;
             public StreamsTempFile AttachmentStreamsTempFile;
 
             private Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>> _documentsToUpdateAfterAttachmentChange;
@@ -742,9 +742,11 @@ namespace Raven.Server.Documents.Handlers
 
                 DocumentsStorage.PutOperationResults? lastPutResult = null;
 
+                using IEnumerator<AttachmentStream> attachmentIterator = AttachmentStreams?.GetEnumerator();
+                
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
-                    var cmd = ParsedCommands.Array[ParsedCommands.Offset + i];
+                    var cmd = ParsedCommands.Array[i];
 
                     switch (cmd.Type)
                     {
@@ -845,7 +847,8 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         
                         case CommandType.AttachmentPUT:
-                            var attachmentStream = AttachmentStreams.Dequeue();
+                            attachmentIterator.MoveNext();
+                            var attachmentStream = attachmentIterator.Current;
                             var stream = attachmentStream.Stream;
                             _disposables.Add(stream);
 
@@ -1161,7 +1164,7 @@ namespace Raven.Server.Documents.Handlers
     public class MergedBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.MergedBatchCommand>
     {
         public BatchRequestParser.CommandData[] ParsedCommands { get; set; }
-        public Queue<BatchHandler.MergedBatchCommand.AttachmentStream> AttachmentStreams;
+        public List<BatchHandler.MergedBatchCommand.AttachmentStream> AttachmentStreams;
 
         public BatchHandler.MergedBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {

@@ -6,8 +6,11 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -514,6 +517,86 @@ namespace SlowTests.Client.Attachments
                     Assert.False(session.Advanced.Attachments.Exists("users/2", "profile"));
                 }
             }
+        }
+
+        [Fact]
+        public async Task AttachmentsStore_TransactionMergerRerunBecauseFailureOfAnotherCommand_ShouldStoreTheAttahments()
+        {
+            const int attachmentsCount = 10;
+
+            var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = doc =>
+                {
+                    doc.Settings[RavenConfiguration.GetKey(x => x.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTx)] = int.MaxValue.ToString();
+                }
+            });
+            const string attachmentName = "someName";
+
+            const string documentId = "users/1";
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User {Name = "Fitzchak"}, documentId);
+                await session.SaveChangesAsync();
+            }
+
+
+            var tasks = Enumerable.Range(0, attachmentsCount).Select(i => Task.Run(async () =>
+                {
+                    using (var session = store.OpenAsyncSession())
+                    await using (var stream0 = new MemoryStream(new byte[1_000_000]))
+                    await using (var stream1 = new MemoryStream(new byte[1_000_000]))
+                    await using (var stream2 = new MemoryStream(new byte[1_000_000]))
+                    {
+                        session.Advanced.Attachments.Store(documentId, attachmentName + i + '-' + 0, stream0, "image/png");
+                        session.Advanced.Attachments.Store(documentId, attachmentName + i + '-' + 1, stream1, "image/png");
+                        session.Advanced.Attachments.Store(documentId, attachmentName + i + '-' + 2, stream2, "image/png");
+
+                        await session.SaveChangesAsync();
+                    }
+                })
+            );
+
+            var all = Task.WhenAll(tasks);
+
+            var database = await GetDocumentDatabaseInstanceFor(store);
+
+            while (true)
+            {
+                try
+                {
+                    await database.TxMerger.Enqueue(new ThrowCommand());
+                }
+                catch (Exception e)
+                {
+                    if (all.IsCompleted)
+                        break;
+                    await Task.Delay(attachmentsCount);
+                }
+            }
+
+            
+            await all;
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<User>(documentId);
+                var attachmentNames = session.Advanced.Attachments.GetNames(doc).Select(n => n.Name).ToArray();
+                for (int i = 0; i < attachmentsCount; i++)
+                {
+                    for (int j = 0; j < 3; j++)
+                    {
+                        Assert.Contains(attachmentNames, s1 => s1.Equals(attachmentName + i + '-' + j));
+                    }
+                }
+            }
+        }
+
+        private class ThrowCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            protected override long ExecuteCmd(DocumentsOperationContext context) => throw new Exception();
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context) 
+                => throw new NotImplementedException();
+            
         }
     }
 }
