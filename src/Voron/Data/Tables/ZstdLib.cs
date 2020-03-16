@@ -82,8 +82,11 @@ namespace Voron.Data.Tables
         
         private static void AssertSuccess(UIntPtr v)
         {
-            if (ZSTD_isError(v) != 0)
-                throw new InvalidOperationException(Marshal.PtrToStringAnsi(ZSTD_getErrorName(v)));
+            if (ZSTD_isError(v) == 0) 
+                return;
+
+            string ptrToStringAnsi = Marshal.PtrToStringAnsi(ZSTD_getErrorName(v));
+            throw new InvalidOperationException(ptrToStringAnsi);
         }
 
         private class CompressContext
@@ -167,12 +170,15 @@ namespace Voron.Data.Tables
             public CompressionDictionary(Slice hash, byte* buffer, int size, int compressionLevel)
             {
                 Hash = hash;
-                Compression = ZSTD_createCDict(buffer, (UIntPtr)size, compressionLevel);
-                Decompression = ZSTD_createDDict(buffer, (UIntPtr)size);
-                if (Compression == null || Decompression == null)
+                if (buffer != null)
                 {
-                    Dispose();
-                    throw new OutOfMemoryException("Unable to allocate memory fro dictionary");
+                    Compression = ZSTD_createCDict(buffer, (UIntPtr)size, compressionLevel);
+                    Decompression = ZSTD_createDDict(buffer, (UIntPtr)size);
+                    if (Compression == null || Decompression == null)
+                    {
+                        Dispose();
+                        throw new OutOfMemoryException("Unable to allocate memory fro dictionary");
+                    }
                 }
             }
 

@@ -214,23 +214,29 @@ namespace Voron.Data.Tables
                 return t.Ptr;
             }
 
-
             //TODO: For encrypted databases, we need to allocate on locked memory
 
             var data = new ReadOnlySpan<byte>(directRead, size);
             var dictionary = GetCompressionDictionaryFor(id, ref data);
-
-            int decompressedSize = ZstdLib.GetDecompressedSize(data);
-            var _ = // we explicitly ignore this value, the memory is live for the whole tx
-                _tx.Allocator.Allocate(decompressedSize, out var buffer);
-            var actualSize = ZstdLib.Decompress(data, buffer.ToSpan(), dictionary);
-            if (actualSize != decompressedSize)
-                throw new InvalidDataException($"Got decompressed size {actualSize} but expected {decompressedSize}");
+            var _ = // we explicitly do *not* dispose the buffer, it lives as long as the tx
+                Decompress(data, dictionary, out var buffer);
 
             _cachedDecompressedBuffersByStorageId[id] = buffer;
 
             size = buffer.Length;
             return buffer.Ptr;
+        }
+
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope Decompress(
+            ReadOnlySpan<byte> data, ZstdLib.CompressionDictionary dictionary,
+            out ByteString buffer)
+        {
+            int decompressedSize = ZstdLib.GetDecompressedSize(data);
+            var internalScope = _tx.Allocator.Allocate(decompressedSize, out buffer);
+            var actualSize = ZstdLib.Decompress(data, buffer.ToSpan(), dictionary);
+            if (actualSize != decompressedSize)
+                throw new InvalidDataException($"Got decompressed size {actualSize} but expected {decompressedSize}");
+            return internalScope;
         }
 
         public int GetAllocatedSize(long id)
@@ -461,13 +467,53 @@ namespace Voron.Data.Tables
             // need to remove it from the inactive tracking because it is going to be freed in a bit
             InactiveSections.Delete(sectionPageNumber);
 
+            using var _ = ActiveDataSmallSection.CurrentCompressionDictionaryHash(out var hash);
+            var currentCompressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(this, hash);
+
             var idsInSection = ActiveDataSmallSection.GetAllIdsInSectionContaining(id);
             foreach (var idToMove in idsInSection)
             {
                 var pos = ActiveDataSmallSection.DirectRead(idToMove, out int itemSize, out bool compressed);
+
+                var actualPos = pos;
+                var actualSize = itemSize;
+                ByteStringContext<ByteStringMemoryCache>.InternalScope scope1 = default;
+                ByteStringContext<ByteStringMemoryCache>.InternalScope scope2 = default;
+                if (compressed)
+                {
+                    var data = new ReadOnlySpan<byte>(pos, itemSize);
+                    var dictionary = GetCompressionDictionaryFor(idToMove, ref data);
+                    scope1 = Decompress(data, dictionary, out var buffer);
+                    actualSize = buffer.Length;
+                    actualPos = buffer.Ptr;
+
+                    if (dictionary != currentCompressionDictionary)
+                    {
+                        // different dictionaries need to compress again
+                        scope2 = _tx.Allocator.Allocate(ZstdLib.GetMaxCompression(actualSize), out var compressedBuffer);
+                        int newlyCompressedSize = ZstdLib.Compress(buffer.ToReadOnlySpan(), 
+                            compressedBuffer.ToSpan(), currentCompressionDictionary);
+                        if (newlyCompressedSize > actualSize)
+                        {
+                            // couldn't compress well enough, use raw data
+                            compressed = false;
+                            pos = actualPos;
+                            itemSize = actualSize;
+                        }
+                        else
+                        {
+                            pos = compressedBuffer.Ptr;
+                            itemSize = newlyCompressedSize;
+                        }
+                    }
+                }
+
                 var newId = AllocateFromSmallActiveSection(null, ref itemSize);
 
-                OnDataMoved(idToMove, newId, pos, itemSize);
+                OnDataMoved(idToMove, newId, actualPos, actualSize);
+
+                scope1.Dispose();
+                scope2.Dispose();
 
                 if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, compressed, out byte* writePos) == false)
                     throw new VoronErrorException($"Cannot write to newly allocated size in {Name} during delete");
@@ -2129,7 +2175,7 @@ namespace Voron.Data.Tables
                     throw new InvalidOperationException("Cannot use a cached table value builder when it is already in use");
 #endif
                 Builder = environmentWriteTransactionPool.TableValueBuilder;
-                Builder.SetCurrentTransaction(_tx);
+                Builder.SetCurrentTransaction(tx);
             }
 
             public TableValueBuilder Builder { get; }
