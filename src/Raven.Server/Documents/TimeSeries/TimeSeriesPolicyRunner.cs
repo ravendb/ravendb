@@ -136,10 +136,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var nextPolicy = config.GetNextPolicy(current);
             if (nextPolicy == null)
-            {
-                Debug.Assert(false,"shouldn't happened, this mean the current policy doesn't exists");
                 return;
-            }
             
             if (nextPolicy == RollupPolicy.AfterAllPolices)
                 return; // this is the last policy
@@ -183,6 +180,8 @@ namespace Raven.Server.Documents.TimeSeries
             while (Cts.IsCancellationRequested == false)
             {
                 await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(60));
+
+                await DoRetention();
 
                 await RunRollUps();
             }
@@ -317,68 +316,56 @@ namespace Raven.Server.Documents.TimeSeries
         internal async Task DoRetention()
         {
             var now = DateTime.UtcNow;
+            var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var configuration = Configuration.Collections;
-            foreach (var collection in configuration)
+
+            foreach (var collectionConfig in configuration)
             {
-                var name = collection.Key;
-                var config = collection.Value;
+                var collection = collectionConfig.Key;
+
+                var config = collectionConfig.Value;
                 if (config.Disabled)
                     continue;
-
-                foreach (var policy in config.RollupPolicies)
-                {
-                    if (policy.RetentionTime == null)
-                        continue;
-
-                    var deleteFrom = now.Add(-policy.RetentionTime.Value);
-
-
-
-                }
-            }
-
-            try
-            {
-                var states = new List<RollUpState>();
+                
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var tx = context.OpenReadTransaction())
                 {
-                    while (true)
+                    var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, collection);
+
+                    var request = new TimeSeriesStorage.DeletionRangeRequest
                     {
-                        context.Reset();
-                        context.Renew();
+                        Collection = collection,
+                        From = DateTime.MinValue
+                    };
 
-                        Stopwatch duration;
-                        using (context.OpenReadTransaction())
-                        {
-                            PrepareRollUps(context, now, 1024, states, out duration);
-                            if (states.Count == 0)
-                                return;
-                        }
+                    if (config.RawDataRetentionTime != null)
+                    {
+                        var deleteFrom = now.Add(-config.RawDataRetentionTime.Value);
+                        var list = tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, RollupPolicy.RawPolicyString, deleteFrom, TimeSeriesRetentionCommand.BatchSize).ToList();
+                        if (list.Count == 0)
+                            continue;
 
-                        var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
-                        var isFirstInTopology = string.Equals(topology.Members.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
+                        request.To = deleteFrom;
+                        var cmd = new TimeSeriesRetentionCommand(list, request);
+                        await _database.TxMerger.Enqueue(cmd);
+                    }
 
-                        var command = new RollupTimeSeriesCommand(Configuration, states, isFirstInTopology);
-                        await _database.TxMerger.Enqueue(command);
-                        if (command.RolledUp == 0)
-                            break;
+                    foreach (var policy in config.RollupPolicies)
+                    {
+                        if (policy.RetentionTime == null)
+                            continue;
 
-                        states.Clear();
+                        var deleteFrom = now.Add(-policy.RetentionTime.Value);
+                        
+                        var list = tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, policy.Name, deleteFrom, TimeSeriesRetentionCommand.BatchSize).ToList();
+                        if (list.Count == 0)
+                            continue;
 
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Successfully aggregated {command.RolledUp:#,#;;0} time-series within {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                        request.To = deleteFrom;
+                        var cmd = new TimeSeriesRetentionCommand(list, request);
+                        await _database.TxMerger.Enqueue(cmd);
                     }
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                // this will stop processing
-                throw;
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to roll-up time series on {_database.Name} which are older than {now}", e);
             }
         }
 
@@ -430,9 +417,31 @@ namespace Raven.Server.Documents.TimeSeries
 
         internal class TimeSeriesRetentionCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
+            public const int BatchSize = 1024;
+
+            private readonly List<Slice> _keys;
+            private readonly TimeSeriesStorage.DeletionRangeRequest _request;
+
+            public TimeSeriesRetentionCommand(List<Slice> keys, TimeSeriesStorage.DeletionRangeRequest request)
+            {
+                _keys = keys;
+                _request = request;
+            }
+
+
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                throw new NotImplementedException();
+                foreach (var key in _keys)
+                {
+                    SplitKey(key, out var docId, out var name);
+                         
+                    _request.Name = name;
+                    _request.DocumentId = docId;
+
+                    context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(context, _request);
+                }
+
+                return _keys.Count;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)

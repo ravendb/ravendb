@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Sparrow.Json.Parsing;
@@ -40,12 +41,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         internal RollupPolicy GetNextPolicy(RollupPolicy policy)
         {
+            if (RollupPolicies.Count == 0)
+                return null;
+
             if (policy == RollupPolicy.RawPolicy)
                 return RollupPolicies[0];
 
             var current = RollupPolicies.FindIndex(p => p == policy);
             if (current < 0)
+            {
+                Debug.Assert(false,"shouldn't happened, this mean the current policy doesn't exists");
                 return null;
+            }
 
             if (current == RollupPolicies.Count - 1)
                 return RollupPolicy.AfterAllPolices;
