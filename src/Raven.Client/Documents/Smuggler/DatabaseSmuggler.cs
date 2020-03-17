@@ -232,7 +232,7 @@ namespace Raven.Client.Documents.Smuggler
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     token.Register(() => tcs.TrySetCanceled(token));
 
-                    var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs);
+                    var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this);
 
                     var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
                     var requestTask = task
@@ -328,10 +328,11 @@ namespace Raven.Client.Documents.Smuggler
             private readonly Stream _stream;
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
+            private readonly DatabaseSmuggler _parent;
 
             public override bool IsReadRequest => false;
 
-            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs)
+            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent)
             {
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
                 if (conventions == null)
@@ -343,6 +344,7 @@ namespace Raven.Client.Documents.Smuggler
                 _options = EntityToBlittable.ConvertCommandToBlittable(options, context);
                 _operationId = operationId;
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
+                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             }
 
             public override void OnResponseFailure(HttpResponseMessage response)
@@ -357,7 +359,7 @@ namespace Raven.Client.Documents.Smuggler
                 var form = new MultipartFormDataContent
                 {
                     {new BlittableJsonContent(stream => { ctx.Write(stream, _options); }), Constants.Smuggler.ImportOptions},
-                    {new StreamContentWithConfirmation(_stream, _tcs), "file", "name"}
+                    {new StreamContentWithConfirmation(_stream, _tcs, _parent), "file", "name"}
                 };
 
                 return new HttpRequestMessage
@@ -375,15 +377,17 @@ namespace Raven.Client.Documents.Smuggler
         private class StreamContentWithConfirmation : StreamContent
         {
             private readonly TaskCompletionSource<object> _tcs;
+            private readonly DatabaseSmuggler _parent;
 
-            public StreamContentWithConfirmation(Stream content, TaskCompletionSource<object> tcs) : base(content)
+            public StreamContentWithConfirmation(Stream content, TaskCompletionSource<object> tcs, DatabaseSmuggler parent) : base(content)
             {
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
+                _parent = parent;
             }
 
             protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
-                ForTestingPurposes?.BeforeSerializeToStreamAsync?.Invoke();
+                _parent.ForTestingPurposes?.BeforeSerializeToStreamAsync?.Invoke();
 
                 await base.SerializeToStreamAsync(stream, context).ConfigureAwait(false);
                 _tcs.TrySetResult(null);
@@ -420,7 +424,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        internal static TestingStuff ForTestingPurposes;
+        internal TestingStuff ForTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
