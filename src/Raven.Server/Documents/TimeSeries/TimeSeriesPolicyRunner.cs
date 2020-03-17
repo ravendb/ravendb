@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Slice.From(ctx, "TimeSeriesRollUps", ByteStringType.Immutable, out TimeSeriesRollUps);
                 Slice.From(ctx, "RollUpKey", ByteStringType.Immutable, out RollUpKey);
                 Slice.From(ctx, "NextRollUpIndex", ByteStringType.Immutable, out NextRollUpIndex);
-                Slice.From(ctx, RollupPolicy.RawPolicyString, ByteStringType.Immutable, out RawPolicySlice);
+                Slice.From(ctx, RawTimeSeriesPolicy.PolicyString, ByteStringType.Immutable, out RawPolicySlice);
             }
 
             RollUpSchema = new TableSchema();
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (nextPolicy == null)
                 return;
             
-            if (nextPolicy == RollupPolicy.AfterAllPolices)
+            if (nextPolicy == TimeSeriesPolicy.AfterAllPolices)
                 return; // this is the last policy
 
             var integerPart = baseline.Ticks / nextPolicy.AggregationTime.Ticks;
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         internal async Task HandleChanges()
         {
-            var policies = new List<RollupPolicy>();
+            var policies = new List<TimeSeriesPolicy>();
 
             foreach (var config in Configuration.Collections)
             {
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.TimeSeries
                     continue;
 
                 policies.Clear();
-                policies.AddRange(config.Value.RollupPolicies);
+                policies.AddRange(config.Value.Policies);
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.TimeSeries
                     foreach (var policy in policies)
                     {
                         var prev = config.Value.GetPreviousPolicy(policy);
-                        if (prev == null || prev == RollupPolicy.BeforeAllPolices)
+                        if (prev == null || prev == TimeSeriesPolicy.BeforeAllPolices)
                             continue;
 
                         await AddNewPolicy(collectionName, prev, policy);
@@ -248,14 +248,14 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private async Task AddNewPolicy(CollectionName collectionName, RollupPolicy prev, RollupPolicy policy)
+        private async Task AddNewPolicy(CollectionName collectionName, TimeSeriesPolicy prev, TimeSeriesPolicy andRetentionPolicy)
         {
             var skip = 0;
             while (true)
             {
                 _database.DatabaseShutdown.ThrowIfCancellationRequested();
 
-                var cmd = new AddedNewRollupPoliciesCommand(collectionName, prev, policy, skip);
+                var cmd = new AddedNewRollupPoliciesCommand(collectionName, prev, andRetentionPolicy, skip);
                 await _database.TxMerger.Enqueue(cmd);
 
                 if (cmd.Marked < AddedNewRollupPoliciesCommand.BatchSize)
@@ -315,6 +315,11 @@ namespace Raven.Server.Documents.TimeSeries
 
         internal async Task DoRetention()
         {
+            var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
+            var isFirstInTopology = string.Equals(topology.Members.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
+            if (isFirstInTopology == false)
+                return;
+
             var now = DateTime.UtcNow;
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var configuration = Configuration.Collections;
@@ -328,7 +333,7 @@ namespace Raven.Server.Documents.TimeSeries
                     continue;
                 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var tx = context.OpenReadTransaction())
+                using (context.OpenReadTransaction())
                 {
                     var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, collection);
 
@@ -338,35 +343,30 @@ namespace Raven.Server.Documents.TimeSeries
                         From = DateTime.MinValue
                     };
 
-                    if (config.RawDataRetentionTime != null)
+                    await ApplyRetention(context, collectionName, config.RawPolicy, now, request);
+
+                    foreach (var policy in config.Policies)
                     {
-                        var deleteFrom = now.Add(-config.RawDataRetentionTime.Value);
-                        var list = tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, RollupPolicy.RawPolicyString, deleteFrom, TimeSeriesRetentionCommand.BatchSize).ToList();
-                        if (list.Count == 0)
-                            continue;
-
-                        request.To = deleteFrom;
-                        var cmd = new TimeSeriesRetentionCommand(list, request);
-                        await _database.TxMerger.Enqueue(cmd);
-                    }
-
-                    foreach (var policy in config.RollupPolicies)
-                    {
-                        if (policy.RetentionTime == null)
-                            continue;
-
-                        var deleteFrom = now.Add(-policy.RetentionTime.Value);
-                        
-                        var list = tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, policy.Name, deleteFrom, TimeSeriesRetentionCommand.BatchSize).ToList();
-                        if (list.Count == 0)
-                            continue;
-
-                        request.To = deleteFrom;
-                        var cmd = new TimeSeriesRetentionCommand(list, request);
-                        await _database.TxMerger.Enqueue(cmd);
+                        await ApplyRetention(context, collectionName, policy, now, request);
                     }
                 }
             }
+        }
+
+        private async Task ApplyRetention(DocumentsOperationContext context, CollectionName collectionName, TimeSeriesPolicy andRetentionPolicy, DateTime now, TimeSeriesStorage.DeletionRangeRequest request)
+        {
+            var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
+            if (andRetentionPolicy.RetentionTime == null)
+                return;
+
+            var deleteFrom = now.Add(-andRetentionPolicy.RetentionTime.Value);
+            var list = tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, andRetentionPolicy.Name, deleteFrom, TimeSeriesRetentionCommand.BatchSize).ToList();
+            if (list.Count == 0)
+                return;
+
+            request.To = deleteFrom;
+            var cmd = new TimeSeriesRetentionCommand(list, request);
+            await _database.TxMerger.Enqueue(cmd);
         }
 
         private void PrepareRollUps(DocumentsOperationContext context, DateTime currentTime, long take, List<RollUpState> states, out Stopwatch duration)
@@ -504,13 +504,13 @@ namespace Raven.Server.Documents.TimeSeries
         {
             public const int BatchSize = 1024;
             private readonly CollectionName _collection;
-            private readonly RollupPolicy _from;
-            private readonly RollupPolicy _to;
+            private readonly TimeSeriesPolicy _from;
+            private readonly TimeSeriesPolicy _to;
             private readonly int _skip;
 
             public int Marked;
 
-            public AddedNewRollupPoliciesCommand(CollectionName collection, RollupPolicy from, RollupPolicy to, int skip)
+            public AddedNewRollupPoliciesCommand(CollectionName collection, TimeSeriesPolicy from, TimeSeriesPolicy to, int skip)
             {
                 _collection = collection;
                 _from = from;

@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -31,14 +29,14 @@ namespace SlowTests.Client.TimeSeries.Policies
                     {
                         ["Users"] = new TimeSeriesCollectionConfiguration
                         {
-                            RollupPolicies = new List<RollupPolicy>
+                            Policies = new List<TimeSeriesPolicy>
                             {
-                                new RollupPolicy(TimeSpan.FromHours(1),TimeSpan.FromHours(12)),
-                                new RollupPolicy(TimeSpan.FromMinutes(1),TimeSpan.FromMinutes(180)),
-                                new RollupPolicy(TimeSpan.FromSeconds(1),TimeSpan.FromSeconds(60)),
-                                new RollupPolicy(TimeSpan.FromDays(1),TimeSpan.FromDays(2)),
+                                new TimeSeriesPolicy(TimeSpan.FromHours(1),TimeSpan.FromHours(12)),
+                                new TimeSeriesPolicy(TimeSpan.FromMinutes(1),TimeSpan.FromMinutes(180)),
+                                new TimeSeriesPolicy(TimeSpan.FromSeconds(1),TimeSpan.FromSeconds(60)),
+                                new TimeSeriesPolicy(TimeSpan.FromDays(1),TimeSpan.FromDays(2)),
                             },
-                            RawDataRetentionTime = TimeSpan.FromHours(96)
+                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
                         },
                         
                     }
@@ -48,7 +46,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
                 var collection = updated.Collections["Users"];
 
-                var policies = collection.RollupPolicies;
+                var policies = collection.Policies;
                 Assert.Equal(4, policies.Count);
 
                 Assert.Equal(TimeSpan.FromSeconds(60), policies[0].RetentionTime);
@@ -75,10 +73,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                 ReplicationFactor = 3
             }))
             {
-                var p1 = new RollupPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new RollupPolicy(TimeSpan.FromSeconds(10));
-                var p3 = new RollupPolicy(TimeSpan.FromMinutes(1));
-                var p4 = new RollupPolicy(TimeSpan.FromMinutes(5));
+                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(10));
+                var p3 = new TimeSeriesPolicy(TimeSpan.FromMinutes(1));
+                var p4 = new TimeSeriesPolicy(TimeSpan.FromMinutes(5));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -86,11 +84,11 @@ namespace SlowTests.Client.TimeSeries.Policies
                     {
                         ["Users"] = new TimeSeriesCollectionConfiguration
                         {
-                            RollupPolicies = new List<RollupPolicy>
+                            Policies = new List<TimeSeriesPolicy>
                             {
                                 p1,p2,p3,p4
                             },
-                            RawDataRetentionTime = TimeSpan.FromHours(96)
+                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
                         },
                     }
                 };
@@ -151,9 +149,9 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                var p1 = new RollupPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new RollupPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new RollupPolicy(TimeSpan.FromSeconds(3));
+                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -161,11 +159,11 @@ namespace SlowTests.Client.TimeSeries.Policies
                     {
                         ["Users"] = new TimeSeriesCollectionConfiguration
                         {
-                            RollupPolicies = new List<RollupPolicy>
+                            Policies = new List<TimeSeriesPolicy>
                             {
                                 p1,p2,p3
                             },
-                            RawDataRetentionTime = TimeSpan.FromHours(96)
+                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
                         },
                     }
                 };
@@ -218,7 +216,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     {
                         ["Users"] = new TimeSeriesCollectionConfiguration
                         {
-                            RawDataRetentionTime = retention
+                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
                         },
                     }
                 };
@@ -254,9 +252,9 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                var p1 = new RollupPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new RollupPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new RollupPolicy(TimeSpan.FromSeconds(3));
+                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -264,11 +262,11 @@ namespace SlowTests.Client.TimeSeries.Policies
                     {
                         ["Users"] = new TimeSeriesCollectionConfiguration
                         {
-                            RollupPolicies = new List<RollupPolicy>
+                            Policies = new List<TimeSeriesPolicy>
                             {
                                 p1,p2,p3
                             },
-                            RawDataRetentionTime = TimeSpan.FromHours(96)
+                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
                         },
                     }
                 };
@@ -327,9 +325,9 @@ namespace SlowTests.Client.TimeSeries.Policies
             {
                 var baseline = DateTime.Today.AddDays(-1);
 
-                var p1 = new RollupPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new RollupPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new RollupPolicy(TimeSpan.FromSeconds(3));
+                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -337,11 +335,11 @@ namespace SlowTests.Client.TimeSeries.Policies
                     {
                         ["Users"] = new TimeSeriesCollectionConfiguration
                         {
-                            RollupPolicies = new List<RollupPolicy>
+                            Policies = new List<TimeSeriesPolicy>
                             {
                                 p1, p2 ,p3
                             },
-                            RawDataRetentionTime = TimeSpan.FromHours(96)
+                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
                         },
                     }
                 };
@@ -364,8 +362,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollUps();
 
-                config.Collections["Users"].RollupPolicies.Remove(p3);
-                config.Collections["Users"].RollupPolicies.Remove(p2);
+                config.Collections["Users"].Policies.Remove(p3);
+                config.Collections["Users"].Policies.Remove(p2);
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 await database.TimeSeriesPolicyRunner.HandleChanges();
@@ -409,20 +407,20 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var p1 = new RollupPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new RollupPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new RollupPolicy(TimeSpan.FromSeconds(3));
+                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
                 var config = new TimeSeriesConfiguration
                 {
                     Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
                     {
                         ["Users"] = new TimeSeriesCollectionConfiguration
                         {
-                            RollupPolicies = new List<RollupPolicy>
+                            Policies = new List<TimeSeriesPolicy>
                             {
                                 p1, p2 ,p3
                             },
-                            RawDataRetentionTime = TimeSpan.FromHours(96)
+                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
                         },
                     }
                 };
