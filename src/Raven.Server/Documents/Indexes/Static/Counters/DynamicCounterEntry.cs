@@ -15,9 +15,9 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             if (_counterItemMetadata == null)
                 return DynamicNullObject.Null;
 
-            Debug.Assert(_counterItemMetadata.DocumentId != null, "_counterEntry.DocumentId != null");
+            Debug.Assert(_counterItemMetadata.Key != null, "_counterItemMetadata.Key != null");
 
-            return _counterItemMetadata.DocumentId;
+            return _counterItemMetadata.Key;
         }
 
         public override bool Set(object item)

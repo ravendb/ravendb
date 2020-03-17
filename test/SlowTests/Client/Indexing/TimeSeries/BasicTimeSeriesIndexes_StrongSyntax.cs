@@ -236,6 +236,57 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
+        private class MyMultiMapTsIndex_Load : AbstractMultiMapTimeSeriesIndexCreationTask
+        {
+            public class Result
+            {
+                public double HeartBeat { get; set; }
+
+                public DateTime Date { get; set; }
+
+                public string User { get; set; }
+            }
+
+            public MyMultiMapTsIndex_Load()
+            {
+                AddMap<Company>(
+                    "HeartRate",
+                    timeSeries => from ts in timeSeries
+                                  from entry in ts.Entries
+                                  let address = LoadDocument<Address>("addresses/" + entry.Value)
+                                  select new
+                                  {
+                                      HeartBeat = entry.Values[0],
+                                      entry.Timestamp.Date,
+                                      User = ts.DocumentId
+                                  });
+
+                AddMap<Company>(
+                    "HeartRate2",
+                    timeSeries => from ts in timeSeries
+                                  from entry in ts.Entries
+                                  let address = LoadDocument<Address>("addresses/" + entry.Value)
+                                  select new
+                                  {
+                                      HeartBeat = entry.Values[0],
+                                      entry.Timestamp.Date,
+                                      User = ts.DocumentId
+                                  });
+
+                AddMap<User>(
+                    "HeartRate",
+                    timeSeries => from ts in timeSeries
+                                  from entry in ts.Entries
+                                  let address = LoadDocument<Address>("addresses/" + entry.Value)
+                                  select new
+                                  {
+                                      HeartBeat = entry.Values[0],
+                                      entry.Timestamp.Date,
+                                      User = ts.DocumentId
+                                  });
+            }
+        }
+
         private class Companies_ByTimeSeriesNames : AbstractIndexCreationTask<Company>
         {
             public Companies_ByTimeSeriesNames()
@@ -1469,6 +1520,103 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 Assert.Equal(2, terms.Length);
                 Assert.Contains("heartrate", terms);
                 Assert.Contains("heartrate2", terms);
+            }
+        }
+
+        [Fact]
+        public async Task CanCalculateNumberOfReferencesCorrectly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var countersIndex = new MyMultiMapTsIndex_Load();
+                var indexName = countersIndex.IndexName;
+                await countersIndex.ExecuteAsync(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var address1 = new Address { Id = "addresses/1" };
+                    var address2 = new Address { Id = "addresses/11" };
+                    var address3 = new Address { Id = "addresses/2" };
+
+                    session.Store(address1);
+                    session.Store(address2);
+                    session.Store(address3);
+
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+
+                    session.TimeSeriesFor(company).Append("HeartRate", DateTime.UtcNow, null, new double[] { 1 });
+                    session.TimeSeriesFor(company).Append("HeartRate2", DateTime.UtcNow, null, new double[] { 11 });
+
+                    var user = new User();
+                    session.Store(user, "companies/11");
+                    session.TimeSeriesFor(user).Append("HeartRate", DateTime.UtcNow, null, new double[] { 1 });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var indexInstance = database.IndexStore.GetIndex(indexName);
+
+                using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                    Assert.Equal(3, counts.ReferenceTableCount);
+                    Assert.Equal(2, counts.CollectionTableCount);
+
+                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Users", tx);
+
+                    Assert.Equal(3, counts.ReferenceTableCount);
+                    Assert.Equal(1, counts.CollectionTableCount);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("companies/1");
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                    Assert.Equal(1, counts.ReferenceTableCount);
+                    Assert.Equal(0, counts.CollectionTableCount);
+
+                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Users", tx);
+
+                    Assert.Equal(1, counts.ReferenceTableCount);
+                    Assert.Equal(1, counts.CollectionTableCount);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("companies/11");
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                    Assert.Equal(0, counts.ReferenceTableCount);
+                    Assert.Equal(0, counts.CollectionTableCount);
+
+                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Users", tx);
+
+                    Assert.Equal(0, counts.ReferenceTableCount);
+                    Assert.Equal(0, counts.CollectionTableCount);
+                }
             }
         }
     }
