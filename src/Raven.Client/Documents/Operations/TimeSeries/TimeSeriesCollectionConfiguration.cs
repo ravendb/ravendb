@@ -9,89 +9,111 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesCollectionConfiguration : IDynamicJson
     {
+
         public bool Disabled;
+        
+        /// <summary>
+        /// Specify roll up and retention policy.
+        /// Each policy will create a new time-series aggregated from the previous one
+        /// </summary>
+        public List<TimeSeriesPolicy> Policies;
 
-        public List<RollupPolicy> RollupPolicies;
-
-        public TimeSpan? RawDataRetentionTime;
+        /// <summary>
+        /// Specify a policy for the original time-series
+        /// </summary>
+        public RawTimeSeriesPolicy RawPolicy;
 
         public void Validate()
         {
-            if (RollupPolicies.Count == 0)
+            if (Policies.Count == 0)
                 return;
 
-            RollupPolicies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
+            Policies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
         }
 
-        internal RollupPolicy GetPolicyByName(string policy)
+        internal TimeSeriesPolicy GetPolicyByName(string policy)
         {
-            if (policy == RollupPolicy.RawPolicyString)
-                return RollupPolicy.RawPolicy;
+            if (policy == RawTimeSeriesPolicy.PolicyString)
+                return RawPolicy;
 
-            return RollupPolicies.SingleOrDefault(p => string.Compare(p.Name,policy, StringComparison.InvariantCultureIgnoreCase) == 0);
+            return Policies.SingleOrDefault(p => string.Compare(p.Name,policy, StringComparison.InvariantCultureIgnoreCase) == 0);
         }
 
-        internal RollupPolicy GetPolicyByTimeSeries(string name)
+        internal TimeSeriesPolicy GetPolicyByTimeSeries(string name)
         {
             if (name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) == false)
-                return RollupPolicy.RawPolicy;
+                return RawPolicy;
 
-            return RollupPolicies.SingleOrDefault(p => name.IndexOf(p.Name, StringComparison.InvariantCultureIgnoreCase) > 0);
+            return Policies.SingleOrDefault(p => name.IndexOf(p.Name, StringComparison.InvariantCultureIgnoreCase) > 0);
         }
 
-        internal RollupPolicy GetNextPolicy(RollupPolicy policy)
+        internal TimeSeriesPolicy GetNextPolicy(TimeSeriesPolicy andRetentionPolicy)
         {
-            if (RollupPolicies.Count == 0)
+            if (Policies.Count == 0)
                 return null;
 
-            if (policy == RollupPolicy.RawPolicy)
-                return RollupPolicies[0];
+            if (andRetentionPolicy == RawPolicy)
+                return Policies[0];
 
-            var current = RollupPolicies.FindIndex(p => p == policy);
+            var current = Policies.FindIndex(p => p == andRetentionPolicy);
             if (current < 0)
             {
                 Debug.Assert(false,"shouldn't happened, this mean the current policy doesn't exists");
                 return null;
             }
 
-            if (current == RollupPolicies.Count - 1)
-                return RollupPolicy.AfterAllPolices;
+            if (current == Policies.Count - 1)
+                return TimeSeriesPolicy.AfterAllPolices;
 
-            return RollupPolicies[current + 1];
+            return Policies[current + 1];
         }
 
-        internal RollupPolicy GetPreviousPolicy(RollupPolicy policy)
+        internal TimeSeriesPolicy GetPreviousPolicy(TimeSeriesPolicy andRetentionPolicy)
         {
-            if (policy == RollupPolicy.RawPolicy)
-                return RollupPolicy.BeforeAllPolices;
+            if (andRetentionPolicy == RawPolicy)
+                return TimeSeriesPolicy.BeforeAllPolices;
 
-            var current = RollupPolicies.FindIndex(p => p == policy);
+            var current = Policies.FindIndex(p => p == andRetentionPolicy);
             if (current < 0)
                 return null;
 
             if (current == 0)
-                return RollupPolicy.RawPolicy;
+                return RawPolicy;
 
-            return RollupPolicies[current - 1];
+            return Policies[current - 1];
         }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(RollupPolicies)] = new DynamicJsonArray(RollupPolicies.Select(p=>p.ToJson())),
-                [nameof(RawDataRetentionTime)] = RawDataRetentionTime,
+                [nameof(Policies)] = new DynamicJsonArray(Policies.Select(p=>p.ToJson())),
+                [nameof(RawPolicy)] = RawPolicy.ToJson(),
                 [nameof(Disabled)] = Disabled
             };
         }
     }
 
-    public class RollupPolicy : IDynamicJson, IComparable<RollupPolicy>
+    public class RawTimeSeriesPolicy : TimeSeriesPolicy
+    {
+        internal const string PolicyString = "rawpolicy"; // must be lower case
+        public RawTimeSeriesPolicy()
+        {
+        }
+
+        public RawTimeSeriesPolicy(TimeSpan? retentionTime)
+        {
+            Name = PolicyString;
+            RetentionTime = retentionTime;
+        }
+    }
+
+    public class TimeSeriesPolicy : IDynamicJson, IComparable<TimeSeriesPolicy>
     {
         /// <summary>
         /// Name of the time series policy, defined by convention
         /// </summary>
-        public string Name;
+        public string Name { get; protected set; }
 
         /// <summary>
         /// How long the data of this policy will be retained
@@ -109,15 +131,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public AggregationType Type;
         // TODO: consider Continuous Query approach
 
-        internal const string RawPolicyString = "rawpolicy"; // must be lower case
-        internal static RollupPolicy AfterAllPolices = new RollupPolicy();
-        internal static RollupPolicy BeforeAllPolices = new RollupPolicy();
-        internal static RollupPolicy RawPolicy = new RollupPolicy
-        {
-            Name = RawPolicyString
-        };
-
-        private RollupPolicy()
+        internal static TimeSeriesPolicy AfterAllPolices = new TimeSeriesPolicy();
+        internal static TimeSeriesPolicy BeforeAllPolices = new TimeSeriesPolicy();
+        
+        protected TimeSeriesPolicy()
         {
         }
 
@@ -126,11 +143,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return $"{rawName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{Name}";
         }
 
-        public RollupPolicy(TimeSpan aggregationTime, AggregationType type = AggregationType.Avg) : this(aggregationTime, TimeSpan.MaxValue, type)
+
+        public TimeSeriesPolicy(TimeSpan aggregationTime, AggregationType type = AggregationType.Avg) : this(aggregationTime, TimeSpan.MaxValue, type)
         {
         }
 
-        public RollupPolicy(TimeSpan aggregationTime, TimeSpan retentionTime, AggregationType type = AggregationType.Avg)
+        public TimeSeriesPolicy(TimeSpan aggregationTime, TimeSpan retentionTime, AggregationType type = AggregationType.Avg)
         {
             RetentionTime = retentionTime;
             AggregationTime = aggregationTime;
@@ -151,14 +169,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             };
         }
 
-        protected bool Equals(RollupPolicy other)
+        protected bool Equals(TimeSeriesPolicy other)
         {
             return RetentionTime == other.RetentionTime &&
                    AggregationTime == other.AggregationTime && 
                    Type == other.Type;
         }
 
-        public int CompareTo(RollupPolicy other)
+        public int CompareTo(TimeSeriesPolicy other)
         {
             return TimeSeriesDownSamplePolicyComparer.Instance.Compare(this, other);
         }
@@ -168,7 +186,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((RollupPolicy)obj);
+            return Equals((TimeSeriesPolicy)obj);
         }
 
         public override int GetHashCode()
@@ -177,11 +195,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
     }
 
-    internal class TimeSeriesDownSamplePolicyComparer : IComparer<RollupPolicy>
+    internal class TimeSeriesDownSamplePolicyComparer : IComparer<TimeSeriesPolicy>
     {
         public static TimeSeriesDownSamplePolicyComparer Instance = new TimeSeriesDownSamplePolicyComparer();
 
-        public int Compare(RollupPolicy x, RollupPolicy y)
+        public int Compare(TimeSeriesPolicy x, TimeSeriesPolicy y)
         {
             if (x == null && y == null)
                 return 0;

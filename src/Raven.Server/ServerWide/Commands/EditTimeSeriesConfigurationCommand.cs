@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Raven.Client.Documents.Operations.TimeSeries;
+﻿using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.ServerWide;
-using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -16,7 +11,6 @@ namespace Raven.Server.ServerWide.Commands
         public EditTimeSeriesConfigurationCommand()
         {
         }
-
 
         public EditTimeSeriesConfigurationCommand(TimeSeriesConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
