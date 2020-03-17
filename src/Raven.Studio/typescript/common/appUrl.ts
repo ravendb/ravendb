@@ -195,7 +195,7 @@ class appUrl {
 
     static forEditCmpXchg(key: string, db: database | databaseInfo) {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
-        const keyUrlPart = key ? "&key=" + encodeURI(key) : "";
+        const keyUrlPart = key ? "&key=" + encodeURIComponent(key) : "";
         return "#databases/cmpXchg/edit?" + databaseUrlPart + keyUrlPart;
     }
     
