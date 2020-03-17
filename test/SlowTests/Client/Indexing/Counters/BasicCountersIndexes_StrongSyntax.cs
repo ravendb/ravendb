@@ -191,6 +191,54 @@ namespace SlowTests.Client.Indexing.Counters
             }
         }
 
+        private class MyMultiMapCounterIndex_Load : AbstractMultiMapCountersIndexCreationTask
+        {
+            public class Result
+            {
+                public double HeartBeat { get; set; }
+
+                public string Name { get; set; }
+
+                public string User { get; set; }
+            }
+
+            public MyMultiMapCounterIndex_Load()
+            {
+                AddMap<Company>(
+                    "HeartRate",
+                    counters => from counter in counters
+                                let address = LoadDocument<Address>("addresses/" + counter.Value)
+                                select new
+                                {
+                                    HeartBeat = counter.Value,
+                                    Name = counter.Name,
+                                    User = counter.DocumentId
+                                });
+
+                AddMap<Company>(
+                    "HeartRate2",
+                    counters => from counter in counters
+                                let address = LoadDocument<Contact>("addresses/" + counter.Value)
+                                select new
+                                {
+                                    HeartBeat = counter.Value,
+                                    Name = counter.Name,
+                                    User = counter.DocumentId
+                                });
+
+                AddMap<User>(
+                    "HeartRate",
+                    counters => from counter in counters
+                                let address = LoadDocument<Contact>("addresses/" + counter.Value)
+                                select new
+                                {
+                                    HeartBeat = counter.Value,
+                                    Name = counter.Name,
+                                    User = counter.DocumentId
+                                });
+            }
+        }
+
         [Fact]
         public void BasicMapIndex()
         {
@@ -1187,6 +1235,103 @@ namespace SlowTests.Client.Indexing.Counters
                         .ToListAsync();
 
                     Assert.Equal(3, results.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanCalculateNumberOfReferencesCorrectly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var countersIndex = new MyMultiMapCounterIndex_Load();
+                var indexName = countersIndex.IndexName;
+                await countersIndex.ExecuteAsync(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var address1 = new Address { Id = "addresses/1" };
+                    var address2 = new Address { Id = "addresses/11" };
+                    var address3 = new Address { Id = "addresses/2" };
+
+                    session.Store(address1);
+                    session.Store(address2);
+                    session.Store(address3);
+
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+
+                    session.CountersFor(company).Increment("HeartRate", 1);
+                    session.CountersFor(company).Increment("HeartRate2", 11);
+
+                    var user = new User();
+                    session.Store(user, "companies/11");
+                    session.CountersFor(user).Increment("HeartRate", 1);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var indexInstance = database.IndexStore.GetIndex(indexName);
+
+                using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                    Assert.Equal(3, counts.ReferenceTableCount);
+                    Assert.Equal(2, counts.CollectionTableCount);
+
+                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Users", tx);
+
+                    Assert.Equal(3, counts.ReferenceTableCount);
+                    Assert.Equal(1, counts.CollectionTableCount);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("companies/1");
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                    Assert.Equal(1, counts.ReferenceTableCount);
+                    Assert.Equal(0, counts.CollectionTableCount);
+
+                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Users", tx);
+
+                    Assert.Equal(1, counts.ReferenceTableCount);
+                    Assert.Equal(1, counts.CollectionTableCount);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("companies/11");
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                    Assert.Equal(0, counts.ReferenceTableCount);
+                    Assert.Equal(0, counts.CollectionTableCount);
+
+                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Users", tx);
+
+                    Assert.Equal(0, counts.ReferenceTableCount);
+                    Assert.Equal(0, counts.CollectionTableCount);
                 }
             }
         }

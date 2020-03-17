@@ -1889,7 +1889,19 @@ namespace Raven.Server.Documents
                 }
             }
 
-            public static IEnumerable<CounterGroupItemMetadata> TableValueToCounterGroupItemMetadata(DocumentsOperationContext context, TableValueReader tvr)
+            public IDisposable ExtractDocumentIdFromKey(DocumentsOperationContext context, Slice key, out Slice documentId)
+            {
+                int sizeOfDocId = 0;
+                for (; sizeOfDocId < key.Size; sizeOfDocId++)
+                {
+                    if (key[sizeOfDocId] == SpecialChars.RecordSeparator)
+                        break;
+                }
+
+                return Slice.External(context.Allocator, key, sizeOfDocId, out documentId);
+            }
+
+            private static IEnumerable<CounterGroupItemMetadata> TableValueToCounterGroupItemMetadata(DocumentsOperationContext context, TableValueReader tvr)
             {
                 var etag = TableValueToEtag((int)CountersTable.Etag, ref tvr);
 

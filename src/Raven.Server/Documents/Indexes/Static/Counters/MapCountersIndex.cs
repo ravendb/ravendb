@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         private bool? _isSideBySide;
 
         private HandleCountersReferences _handleReferences;
-        private /*HandleCompareExchangeTimeSeriesReferences*/ object _handleCompareExchangeReferences;
+        private HandleCompareExchangeCountersReferences _handleCompareExchangeReferences;
 
         protected MapCountersIndex(MapIndexDefinition definition, StaticCountersIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
@@ -88,8 +88,8 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
                 new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
             };
 
-            //if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
-            //    workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeTimeSeriesReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+            if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
+                workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeCountersReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage.CountersStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleCountersReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage.CountersStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
@@ -101,8 +101,8 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            //if (_handleCompareExchangeReferences != null)
-            //    _handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+            if (_handleCompareExchangeReferences != null)
+                _handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
 
             if (_handleReferences != null)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
