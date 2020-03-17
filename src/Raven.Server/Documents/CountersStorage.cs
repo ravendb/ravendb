@@ -1907,7 +1907,7 @@ namespace Raven.Server.Documents
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                         for (var i = 0; i < values.Count; i++)
                         {
-                            var docId = ExtractDocId(context, ref tvr);
+                            var docId = ExtractDocId();
 
                             using (ToDocumentIdPrefix(docId, out var documentIdPrefix))
                             {
@@ -1925,6 +1925,19 @@ namespace Raven.Server.Documents
                 }
 
                 yield return new CounterGroupItemMetadata(null, null, null, null, etag, size);
+
+                LazyStringValue ExtractDocId()
+                {
+                    var p = tvr.Read((int)CountersTable.CounterKey, out var size);
+                    int sizeOfDocId = 0;
+                    for (; sizeOfDocId < size; sizeOfDocId++)
+                    {
+                        if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
+                            break;
+                    }
+
+                    return context.GetLazyString(p, sizeOfDocId);
+                }
 
                 IDisposable ToDocumentIdPrefix(LazyStringValue documentId, out Slice documentIdPrefix)
                 {
