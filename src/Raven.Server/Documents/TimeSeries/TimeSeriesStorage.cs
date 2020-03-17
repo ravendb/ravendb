@@ -622,6 +622,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 foreach (var cur in items)
                 {
+                    if (cur.Status == TimeSeriesValuesSegment.Dead)
+                        continue;
+
                     MaybeMoveToNextRange(cur.Timestamp);
 
                     for (int i = 0; i < aggStates.Length; i++)
@@ -787,7 +790,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     if (segmentResult.Start >= _from &&
                         segmentResult.End <= _to &&
-                        _currentSegment.NumberOfEntries > 0)
+                        _currentSegment.NumberOfLiveEntries > 0)
                     {
                         // we can yield the whole segment in one go
                         segmentResult.Summary = _currentSegment.SegmentValues;

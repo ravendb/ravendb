@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var current = config.GetPolicyByTimeSeries(name);
             if (current == null) // policy not found
-                // TODO: delete this timeseries if not the raw one?
+                // TODO: delete this time-series if not the raw one?
                 return;
 
             var nextPolicy = config.GetNextPolicy(current);
@@ -181,9 +181,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(60));
 
-                await DoRetention();
-
                 await RunRollUps();
+
+                await DoRetention();
             }
         }
 
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             while (true)
             {
-                _database.DatabaseShutdown.ThrowIfCancellationRequested();
+                Cts.Token.ThrowIfCancellationRequested();
 
                 var cmd = new RemovePoliciesCommand(collectionName, policyName);
                 await _database.TxMerger.Enqueue(cmd);
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.TimeSeries
             var skip = 0;
             while (true)
             {
-                _database.DatabaseShutdown.ThrowIfCancellationRequested();
+                Cts.Token.ThrowIfCancellationRequested();
 
                 var cmd = new AddedNewRollupPoliciesCommand(collectionName, prev, andRetentionPolicy, skip);
                 await _database.TxMerger.Enqueue(cmd);
@@ -286,6 +286,8 @@ namespace Raven.Server.Documents.TimeSeries
                                 return;
                         }
 
+                        Cts.Token.ThrowIfCancellationRequested();
+
                         var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
                         var isFirstInTopology = string.Equals(topology.Members.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
 
@@ -309,7 +311,7 @@ namespace Raven.Server.Documents.TimeSeries
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to roll-up time series on {_database.Name} which are older than {now}", e);
+                        Logger.Operations($"Failed to roll-up time series for '{_database.Name}' which are older than {now}", e);
             }
         }
 
@@ -321,52 +323,79 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
 
             var now = DateTime.UtcNow;
-            var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var configuration = Configuration.Collections;
 
-            foreach (var collectionConfig in configuration)
+            try
             {
-                var collection = collectionConfig.Key;
-
-                var config = collectionConfig.Value;
-                if (config.Disabled)
-                    continue;
-                
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                foreach (var collectionConfig in configuration)
                 {
-                    var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, collection);
+                    var collection = collectionConfig.Key;
 
-                    var request = new TimeSeriesStorage.DeletionRangeRequest
+                    var config = collectionConfig.Value;
+                    if (config.Disabled)
+                        continue;
+                
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        Collection = collection,
-                        From = DateTime.MinValue
-                    };
+                        CollectionName collectionName;
+                        using (context.OpenReadTransaction())
+                        {
+                            collectionName = _database.DocumentsStorage.ExtractCollectionName(context, collection);
+                        }
 
-                    await ApplyRetention(context, collectionName, config.RawPolicy, now, request);
+                        var request = new TimeSeriesStorage.DeletionRangeRequest
+                        {
+                            Collection = collection,
+                            From = DateTime.MinValue
+                        };
 
-                    foreach (var policy in config.Policies)
-                    {
-                        await ApplyRetention(context, collectionName, policy, now, request);
+                        await ApplyRetention(context, collectionName, config.RawPolicy, now, request);
+
+                        foreach (var policy in config.Policies)
+                        {
+                            await ApplyRetention(context, collectionName, policy, now, request);
+                        }
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // this will stop processing
+                throw;
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to execute time series retention for database '{_database.Name}'", e);
+            }
         }
 
-        private async Task ApplyRetention(DocumentsOperationContext context, CollectionName collectionName, TimeSeriesPolicy andRetentionPolicy, DateTime now, TimeSeriesStorage.DeletionRangeRequest request)
+        private async Task ApplyRetention(DocumentsOperationContext context, CollectionName collectionName, TimeSeriesPolicy policy, DateTime now, TimeSeriesStorage.DeletionRangeRequest request)
         {
             var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
-            if (andRetentionPolicy.RetentionTime == null)
+            if (policy.RetentionTime == null)
                 return;
 
-            var deleteFrom = now.Add(-andRetentionPolicy.RetentionTime.Value);
-            var list = tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, andRetentionPolicy.Name, deleteFrom, TimeSeriesRetentionCommand.BatchSize).ToList();
-            if (list.Count == 0)
-                return;
+            var deleteFrom = now.Add(-policy.RetentionTime.Value);
 
-            request.To = deleteFrom;
-            var cmd = new TimeSeriesRetentionCommand(list, request);
-            await _database.TxMerger.Enqueue(cmd);
+            while (true)
+            {
+                Cts.Token.ThrowIfCancellationRequested();
+
+                context.Reset();
+                context.Renew();
+
+                using (context.OpenReadTransaction())
+                {
+                    var list = tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, policy.Name, deleteFrom, TimeSeriesRetentionCommand.BatchSize).ToList();
+                    if (list.Count == 0)
+                        return;
+
+                    request.To = deleteFrom;
+                    var cmd = new TimeSeriesRetentionCommand(list, request);
+                    await _database.TxMerger.Enqueue(cmd);
+                }
+            }
         }
 
         private void PrepareRollUps(DocumentsOperationContext context, DateTime currentTime, long take, List<RollUpState> states, out Stopwatch duration)
@@ -427,7 +456,6 @@ namespace Raven.Server.Documents.TimeSeries
                 _keys = keys;
                 _request = request;
             }
-
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
@@ -599,7 +627,7 @@ namespace Raven.Server.Documents.TimeSeries
                     var intoTimeSeries = policy.GetTimeSeriesName(rawTimeSeries);
                     
                     var intoReader = tss.GetReader(context, item.DocId, intoTimeSeries, startFrom, startFrom);
-                    var previouslyAggregated = intoReader.Init();
+                    var previouslyAggregated = intoReader.AllValues().Any();
                     if (previouslyAggregated)
                     {
                         var changeVector = intoReader.GetCurrentSegmentChangeVector();
