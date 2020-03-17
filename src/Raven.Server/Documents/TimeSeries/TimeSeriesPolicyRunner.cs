@@ -248,14 +248,14 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private async Task AddNewPolicy(CollectionName collectionName, TimeSeriesPolicy prev, TimeSeriesPolicy andRetentionPolicy)
+        private async Task AddNewPolicy(CollectionName collectionName, TimeSeriesPolicy prev, TimeSeriesPolicy policy)
         {
             var skip = 0;
             while (true)
             {
                 Cts.Token.ThrowIfCancellationRequested();
 
-                var cmd = new AddedNewRollupPoliciesCommand(collectionName, prev, andRetentionPolicy, skip);
+                var cmd = new AddedNewRollupPoliciesCommand(collectionName, prev, policy, skip);
                 await _database.TxMerger.Enqueue(cmd);
 
                 if (cmd.Marked < AddedNewRollupPoliciesCommand.BatchSize)
@@ -373,7 +373,7 @@ namespace Raven.Server.Documents.TimeSeries
         private async Task ApplyRetention(DocumentsOperationContext context, CollectionName collectionName, TimeSeriesPolicy policy, DateTime now, TimeSeriesStorage.DeletionRangeRequest request)
         {
             var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
-            if (policy.RetentionTime == null)
+            if (policy.RetentionTime == null || policy.RetentionTime == TimeSpan.MaxValue)
                 return;
 
             var deleteFrom = now.Add(-policy.RetentionTime.Value);

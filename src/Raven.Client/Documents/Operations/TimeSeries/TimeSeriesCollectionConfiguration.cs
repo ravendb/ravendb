@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// <summary>
         /// Specify a policy for the original time-series
         /// </summary>
-        public RawTimeSeriesPolicy RawPolicy;
+        public RawTimeSeriesPolicy RawPolicy = new RawTimeSeriesPolicy(null);
 
         public void Validate()
         {
@@ -47,15 +47,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return Policies.SingleOrDefault(p => name.IndexOf(p.Name, StringComparison.InvariantCultureIgnoreCase) > 0);
         }
 
-        internal TimeSeriesPolicy GetNextPolicy(TimeSeriesPolicy andRetentionPolicy)
+        internal TimeSeriesPolicy GetNextPolicy(TimeSeriesPolicy policy)
         {
             if (Policies.Count == 0)
                 return null;
 
-            if (andRetentionPolicy == RawPolicy)
+            if (policy == RawPolicy)
                 return Policies[0];
 
-            var current = Policies.FindIndex(p => p == andRetentionPolicy);
+            var current = Policies.FindIndex(p => p == policy);
             if (current < 0)
             {
                 Debug.Assert(false,"shouldn't happened, this mean the current policy doesn't exists");
@@ -68,12 +68,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return Policies[current + 1];
         }
 
-        internal TimeSeriesPolicy GetPreviousPolicy(TimeSeriesPolicy andRetentionPolicy)
+        internal TimeSeriesPolicy GetPreviousPolicy(TimeSeriesPolicy policy)
         {
-            if (andRetentionPolicy == RawPolicy)
+            if (policy == RawPolicy)
                 return TimeSeriesPolicy.BeforeAllPolices;
 
-            var current = Policies.FindIndex(p => p == andRetentionPolicy);
+            var current = Policies.FindIndex(p => p == policy);
             if (current < 0)
                 return null;
 
@@ -99,10 +99,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal const string PolicyString = "rawpolicy"; // must be lower case
         public RawTimeSeriesPolicy()
         {
+            // for de-serializer
         }
 
         public RawTimeSeriesPolicy(TimeSpan? retentionTime)
         {
+            if (retentionTime <= TimeSpan.Zero)
+                throw new ArgumentException("Must be greater than zero", nameof(retentionTime));
+
             Name = PolicyString;
             RetentionTime = retentionTime;
         }
@@ -118,17 +122,17 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// <summary>
         /// How long the data of this policy will be retained
         /// </summary>
-        public TimeSpan? RetentionTime;
+        public TimeSpan? RetentionTime { get; protected set; }
 
         /// <summary>
         /// Define the aggregation of this policy
         /// </summary>
-        public TimeSpan AggregationTime;
+        public TimeSpan AggregationTime { get; private set; }
 
         /// <summary>
         /// Define the aggregation type
         /// </summary>
-        public AggregationType Type;
+        public AggregationType Type { get; private set; }
         // TODO: consider Continuous Query approach
 
         internal static TimeSeriesPolicy AfterAllPolices = new TimeSeriesPolicy();
@@ -143,13 +147,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return $"{rawName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{Name}";
         }
 
-
         public TimeSeriesPolicy(TimeSpan aggregationTime, AggregationType type = AggregationType.Avg) : this(aggregationTime, TimeSpan.MaxValue, type)
         {
         }
-
+        
         public TimeSeriesPolicy(TimeSpan aggregationTime, TimeSpan retentionTime, AggregationType type = AggregationType.Avg)
         {
+            if (aggregationTime <= TimeSpan.Zero)
+                throw new ArgumentException("Must be greater than zero", nameof(aggregationTime));
+
+            if (retentionTime <= TimeSpan.Zero)
+                throw new ArgumentException("Must be greater than zero", nameof(retentionTime));
+
             RetentionTime = retentionTime;
             AggregationTime = aggregationTime;
             Type = type;
