@@ -12,6 +12,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -382,6 +383,8 @@ namespace Raven.Client.Documents.Smuggler
 
             protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
+                ForTestingPurposes?.BeforeSerializeToStreamAsync?.Invoke();
+
                 await base.SerializeToStreamAsync(stream, context).ConfigureAwait(false);
                 _tcs.TrySetResult(null);
             }
@@ -414,6 +417,28 @@ namespace Raven.Client.Documents.Smuggler
                     {
                     }
                 }
+            }
+        }
+
+        internal static TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action BeforeSerializeToStreamAsync;
+
+            internal IDisposable CallBeforeSerializeToStreamAsync(Action action)
+            {
+                BeforeSerializeToStreamAsync = action;
+
+                return new DisposableAction(() => BeforeSerializeToStreamAsync = null);
             }
         }
     }

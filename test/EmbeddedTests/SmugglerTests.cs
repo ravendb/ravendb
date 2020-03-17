@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -19,12 +20,11 @@ namespace EmbeddedTests
         [Fact]
         public async Task SmugglerImportFileShouldThrowTimeout()
         {
-            const string fileName = "dump.cmp";
-
             var paths = CopyServer();
 
             using (var embedded = new EmbeddedServer())
             {
+                const string fileName = "dump.cmp";
                 embedded.StartServer(new ServerOptions
                 {
                     ServerDirectory = paths.ServerDirectory,
@@ -32,7 +32,7 @@ namespace EmbeddedTests
                 });
 
                 const string databaseName = "test";
-                var dummyDump = CreateDummyDump(10000);
+                var dummyDump = CreateDummyDump(1);
 
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var bjro = ctx.ReadObject(dummyDump, "dump"))
@@ -44,15 +44,20 @@ namespace EmbeddedTests
 
                 using (var store = embedded.GetDocumentStore(new DatabaseOptions(databaseName)))
                 {
-                    using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(500), databaseName))
+                    var testingStuff = store.Smuggler.ForTestingPurposesOnly();
+                    using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(1000), databaseName))
+                    using (testingStuff.CallBeforeSerializeToStreamAsync(() =>
+                    {
+                        Thread.Sleep(2000);
+                    }))
                     {
                         Exception e = null;
                         try
                         {
                             var operation = await store.Smuggler.ForDatabase(databaseName).ImportAsync(new DatabaseSmugglerImportOptions
                             {
-                                OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Identities | DatabaseItemType.CompareExchange,
-                            }, "dump.cmp");
+                                OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Identities | DatabaseItemType.CompareExchange
+                            }, fileName);
 
                             await operation.WaitForCompletionAsync();
                         }
@@ -82,7 +87,7 @@ namespace EmbeddedTests
                 });
 
                 const string databaseName = "test";
-                var dummyDump = CreateDummyDump(10000);
+                var dummyDump = CreateDummyDump(1);
 
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var bjro = ctx.ReadObject(dummyDump, "dump"))
@@ -95,7 +100,12 @@ namespace EmbeddedTests
 
                     using (var store = embedded.GetDocumentStore(new DatabaseOptions(databaseName)))
                     {
-                        using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(500), databaseName))
+                        var testingStuff = store.Smuggler.ForTestingPurposesOnly();
+                        using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(1000), databaseName))
+                        using (testingStuff.CallBeforeSerializeToStreamAsync(() =>
+                        {
+                            Thread.Sleep(2000);
+                        }))
                         {
                             Exception e = null;
                             try
