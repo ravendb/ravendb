@@ -220,11 +220,15 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<Slice> GetTimeSeriesByPolicyFromStartDate(DocumentsOperationContext context, CollectionName collection, string policy, DateTime start, int take)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
-            using (CombinePolicyNameAndTicks(context, policy, start.Ticks, out var key))
+            using (CombinePolicyNameAndTicks(context, policy, start.Ticks, out var key,out var policySlice))
             {
-                foreach (var result in table.SeekBackwardFrom(TimeSeriesStatsSchema.Indexes[StartTimeIndex], key))
+                foreach (var result in table.SeekBackwardFrom(TimeSeriesStatsSchema.Indexes[StartTimeIndex], policySlice, key))
                 {
                     DocumentsStorage.TableValueToSlice(context, (int)StatsColumn.Key, ref result.Result.Reader, out var slice);
+                    var currentStart = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumn.Start, ref result.Result.Reader)));
+                    if (currentStart > start)
+                        yield break;
+
                     yield return slice;
 
                     take--;
@@ -234,9 +238,9 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CombinePolicyNameAndTicks(DocumentsOperationContext context, string policy, long ticks, out Slice slice)
+        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CombinePolicyNameAndTicks(DocumentsOperationContext context, string policy, long ticks, out Slice slice, out Slice policySlice)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, policy, out var policySlice, SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetSliceFromId(context, policy, out policySlice, SpecialChars.RecordSeparator))
             {
                 var size = policySlice.Size + sizeof(long);
                 var scope = context.Allocator.Allocate(size, out var str);
