@@ -3,7 +3,6 @@ using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,8 +21,15 @@ namespace FastTests.Client.Queries.Counters
             public string User { get; set; }
         }
 
+        private class CounterMapReduceIndexResult
+        {
+            public double HeartBeat { get; set; }
+            public string Name { get; set; }
+            public long Count { get; set; }
+        }
+
         [Fact]
-        public void BasicMapIndex()
+        public void BasicMapIndex_Query()
         {
             using (var store = GetDocumentStore())
             {
@@ -292,5 +298,211 @@ namespace FastTests.Client.Queries.Counters
             }
         }
 
+        [Fact]
+        public void BasicMapReduceIndex_Query()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var user = new User();
+                        session.Store(user, $"users/{i}");
+
+                        session.CountersFor(user).Increment("HeartRate", 180 + i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                string indexName = "AverageHeartRate";
+
+                var result = store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                {
+                    Name = indexName,
+                    Maps = {
+                    "from counter in counters.Users.HeartRate " +
+                    "select new { " +
+                    "   HeartBeat = counter.Value, " +
+                    "   Name = counter.Name, " +
+                    "   Count = 1" +
+                    "}" },
+                    Reduce = "from r in results " +
+                             "group r by r.Name into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumHeartBeat / sumCount, " +
+                             "  Name = g.Key, " +
+                             "  Count = sumCount" +
+                             "}"
+                }));
+
+                using (var session = (DocumentSession)store.OpenSession())
+                {
+                    var results = session.Query<CounterMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(0, results.Count);
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = (DocumentSession)store.OpenSession())
+                {
+                    var results = session.Query<CounterMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(184.5, results[0].HeartBeat);
+                    Assert.Equal("HeartRate", results[0].Name);
+                    Assert.Equal(10, results[0].Count);
+
+                    // check if we are tracking the results
+                    Assert.Equal(0, session.DocumentsById.Count);
+                    Assert.Equal(0, session.DocumentsByEntity.Count);
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // add more heart rates
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 10; i < 20; i++)
+                    {
+                        var user = new User();
+                        session.Store(user, $"users/{i}");
+
+                        session.CountersFor(user).Increment("HeartRate", 200 + i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = (DocumentSession)store.OpenSession())
+                {
+                    var results = session.Query<CounterMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(184.5, results[0].HeartBeat);
+                    Assert.Equal("HeartRate", results[0].Name);
+                    Assert.Equal(10, results[0].Count);
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = (DocumentSession)store.OpenSession())
+                {
+                    var results = session.Query<CounterMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(199.5, results[0].HeartBeat);
+                    Assert.Equal("HeartRate", results[0].Name);
+                    Assert.Equal(20, results[0].Count);
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                //// delete some counters
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var user = session.Load<User>($"users/{i}");
+
+                        session.CountersFor(user).Delete("HeartRate");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = (DocumentSession)store.OpenSession())
+                {
+                    var results = session.Query<CounterMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(199.5, results[0].HeartBeat);
+                    Assert.Equal("HeartRate", results[0].Name);
+                    Assert.Equal(20, results[0].Count);
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = (DocumentSession)store.OpenSession())
+                {
+                    var results = session.Query<CounterMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(214.5, results[0].HeartBeat);
+                    Assert.Equal("HeartRate", results[0].Name);
+                    Assert.Equal(10, results[0].Count);
+                }
+
+                //// delete documents
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 20; i++)
+                        session.Delete($"users/{i}");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = (DocumentSession)store.OpenSession())
+                {
+                    var results = session.Query<CounterMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(214.5, results[0].HeartBeat);
+                    Assert.Equal("HeartRate", results[0].Name);
+                    Assert.Equal(10, results[0].Count);
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = (DocumentSession)store.OpenSession())
+                {
+                    var results = session.Query<CounterMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(0, results.Count);
+                }
+            }
+        }
     }
 }
