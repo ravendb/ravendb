@@ -162,8 +162,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                             Policies = new List<TimeSeriesPolicy>
                             {
                                 p1,p2,p3
-                            },
-                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
+                            }
                         },
                     }
                 };
@@ -454,9 +453,9 @@ namespace SlowTests.Client.TimeSeries.Policies
             using (var store = GetDocumentStore())
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
-                
+
                 var p1 = new TimeSeriesPolicy(TimeSpan.FromHours(6), raw.RetentionTime.Value * 4);
-                var p2 = new TimeSeriesPolicy(TimeSpan.FromDays(1),raw.RetentionTime.Value * 5);
+                var p2 = new TimeSeriesPolicy(TimeSpan.FromDays(1), raw.RetentionTime.Value * 5);
                 var p3 = new TimeSeriesPolicy(TimeSpan.FromMinutes(30), raw.RetentionTime.Value * 2);
                 var p4 = new TimeSeriesPolicy(TimeSpan.FromMinutes(60), raw.RetentionTime.Value * 3);
 
