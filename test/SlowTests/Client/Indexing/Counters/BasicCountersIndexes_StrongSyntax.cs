@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -142,6 +143,51 @@ namespace SlowTests.Client.Indexing.Counters
                                              Name = counter.Name,
                                              User = counter.DocumentId
                                          });
+            }
+        }
+
+        private class MyMultiMapCounterIndex : AbstractMultiMapCountersIndexCreationTask
+        {
+            public class Result
+            {
+                public double HeartBeat { get; set; }
+
+                public string Name { get; set; }
+
+                public string User { get; set; }
+            }
+
+            public MyMultiMapCounterIndex()
+            {
+                AddMap<Company>(
+                    "HeartRate",
+                    counters => from counter in counters
+                                select new
+                                {
+                                    HeartBeat = counter.Value,
+                                    Name = counter.Name,
+                                    User = counter.DocumentId
+                                });
+
+                AddMap<Company>(
+                    "HeartRate2",
+                    counters => from counter in counters
+                                select new
+                                {
+                                    HeartBeat = counter.Value,
+                                    Name = counter.Name,
+                                    User = counter.DocumentId
+                                });
+
+                AddMap<User>(
+                    "HeartRate",
+                    counters => from counter in counters
+                                select new
+                                {
+                                    HeartBeat = counter.Value,
+                                    Name = counter.Name,
+                                    User = counter.DocumentId
+                                });
             }
         }
 
@@ -1083,6 +1129,65 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Contains("dislikes", terms);
 
                 store.Maintenance.Send(new StopIndexingOperation());
+            }
+        }
+
+        [Fact]
+        public async Task BasicMultiMapIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var timeSeriesIndex = new MyMultiMapCounterIndex();
+                await timeSeriesIndex.ExecuteAsync(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company);
+
+                    session.CountersFor(company).Increment("HeartRate", 3);
+                    session.CountersFor(company).Increment("HeartRate2", 5);
+
+                    var user = new User();
+                    session.Store(user);
+                    session.CountersFor(user).Increment("HeartRate", 2);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<MyMultiMapCounterIndex.Result, MyMultiMapCounterIndex>()
+                        .ToList();
+
+                    Assert.Equal(3, results.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var results = await session.Query<MyMultiMapCounterIndex.Result, MyMultiMapCounterIndex>()
+                        .ToListAsync();
+
+                    Assert.Equal(3, results.Count);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.DocumentQuery<MyMultiMapCounterIndex.Result, MyMultiMapCounterIndex>()
+                        .ToList();
+
+                    Assert.Equal(3, results.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var results = await session.Advanced.AsyncDocumentQuery<MyMultiMapCounterIndex.Result, MyMultiMapCounterIndex>()
+                        .ToListAsync();
+
+                    Assert.Equal(3, results.Count);
+                }
             }
         }
     }

@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Counters;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Results.Counters;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -45,8 +46,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
         {
-            throw new NotImplementedException("TODO ppekrol");
-            //return new TimeSeriesQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand);
+            return new CountersQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand);
         }
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
