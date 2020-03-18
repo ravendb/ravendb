@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 foreach (var config in Configuration.Collections.Values)
                 {
-                    config.Validate();
+                    config?.Validate();
                 }
             }
 

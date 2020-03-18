@@ -10,19 +10,21 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public class TimeSeriesCollectionConfiguration : IDynamicJson
     {
 
-        public bool Disabled;
+        public bool Disabled { get; set; }
         
         /// <summary>
         /// Specify roll up and retention policy.
         /// Each policy will create a new time-series aggregated from the previous one
         /// </summary>
-        public List<TimeSeriesPolicy> Policies;
+        public List<TimeSeriesPolicy> Policies { get; set; } = new List<TimeSeriesPolicy>();
 
         /// <summary>
         /// Specify a policy for the original time-series
         /// </summary>
-        public RawTimeSeriesPolicy RawPolicy = new RawTimeSeriesPolicy(null);
+        public RawTimeSeriesPolicy RawPolicy { get; set; } = DefaultRawPolicy;
 
+        internal static RawTimeSeriesPolicy DefaultRawPolicy = new RawTimeSeriesPolicy();
+        
         public void Validate()
         {
             if (Policies.Count == 0)
@@ -31,56 +33,61 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             Policies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
         }
 
-        internal TimeSeriesPolicy GetPolicyByName(string policy)
+        internal TimeSeriesPolicy GetPolicyByName(string policy, out int policyIndex)
         {
             if (policy == RawTimeSeriesPolicy.PolicyString)
+            {
+                policyIndex = 0;
                 return RawPolicy;
+            }
 
-            return Policies.SingleOrDefault(p => string.Compare(p.Name,policy, StringComparison.InvariantCultureIgnoreCase) == 0);
+            for (var index = 0; index < Policies.Count; index++)
+            {
+                var p = Policies[index];
+                policyIndex = index + 1;
+                if (policy.IndexOf(p.Name, StringComparison.InvariantCultureIgnoreCase) == 0)
+                    return p;
+            }
+
+            policyIndex = -1;
+            return null;
         }
 
-        internal TimeSeriesPolicy GetPolicyByTimeSeries(string name)
+        internal int GetPolicyIndexByTimeSeries(string name)
         {
             if (name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) == false)
-                return RawPolicy;
+                return 0;
 
-            return Policies.SingleOrDefault(p => name.IndexOf(p.Name, StringComparison.InvariantCultureIgnoreCase) > 0);
+            for (var index = 0; index < Policies.Count; index++)
+            {
+                var policy = Policies[index];
+                if (name.IndexOf(policy.Name, StringComparison.InvariantCultureIgnoreCase) > 0)
+                    return index + 1;
+            }
+
+            return -1;
         }
 
-        internal TimeSeriesPolicy GetNextPolicy(TimeSeriesPolicy policy)
+        internal TimeSeriesPolicy GetNextPolicy(int policyIndex)
         {
             if (Policies.Count == 0)
                 return null;
 
-            if (policy == RawPolicy)
-                return Policies[0];
-
-            var current = Policies.FindIndex(p => p == policy);
-            if (current < 0)
-            {
-                Debug.Assert(false,"shouldn't happened, this mean the current policy doesn't exists");
-                return null;
-            }
-
-            if (current == Policies.Count - 1)
+            if (policyIndex == Policies.Count)
                 return TimeSeriesPolicy.AfterAllPolices;
 
-            return Policies[current + 1];
+            return Policies[policyIndex];
         }
 
-        internal TimeSeriesPolicy GetPreviousPolicy(TimeSeriesPolicy policy)
+        internal TimeSeriesPolicy GetPreviousPolicy(int policyIndex)
         {
-            if (policy == RawPolicy)
+            if (policyIndex == 0)
                 return TimeSeriesPolicy.BeforeAllPolices;
 
-            var current = Policies.FindIndex(p => p == policy);
-            if (current < 0)
-                return null;
-
-            if (current == 0)
+            if (policyIndex == 1)
                 return RawPolicy;
 
-            return Policies[current - 1];
+            return Policies[policyIndex - 1];
         }
 
         public DynamicJsonValue ToJson()
@@ -99,10 +106,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal const string PolicyString = "rawpolicy"; // must be lower case
         public RawTimeSeriesPolicy()
         {
-            // for de-serializer
+            Name = PolicyString;
+            RetentionTime = TimeSpan.MaxValue;
         }
 
-        public RawTimeSeriesPolicy(TimeSpan? retentionTime)
+        public RawTimeSeriesPolicy(TimeSpan retentionTime)
         {
             if (retentionTime <= TimeSpan.Zero)
                 throw new ArgumentException("Must be greater than zero", nameof(retentionTime));
@@ -122,7 +130,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// <summary>
         /// How long the data of this policy will be retained
         /// </summary>
-        public TimeSpan? RetentionTime { get; protected set; }
+        public TimeSpan RetentionTime { get; protected set; }
 
         /// <summary>
         /// Define the aggregation of this policy
@@ -133,7 +141,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// Define the aggregation type
         /// </summary>
         public AggregationType Type { get; private set; }
-        // TODO: consider Continuous Query approach
 
         internal static TimeSeriesPolicy AfterAllPolices = new TimeSeriesPolicy();
         internal static TimeSeriesPolicy BeforeAllPolices = new TimeSeriesPolicy();
@@ -147,11 +154,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return $"{rawName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{Name}";
         }
 
-        public TimeSeriesPolicy(TimeSpan aggregationTime, AggregationType type = AggregationType.Avg) : this(aggregationTime, TimeSpan.MaxValue, type)
+        public TimeSeriesPolicy(TimeSpan aggregationTime, AggregationType type = AggregationType.Average) : this(aggregationTime, TimeSpan.MaxValue, type)
         {
         }
         
-        public TimeSeriesPolicy(TimeSpan aggregationTime, TimeSpan retentionTime, AggregationType type = AggregationType.Avg)
+        public TimeSeriesPolicy(TimeSpan aggregationTime, TimeSpan retentionTime, AggregationType type = AggregationType.Average)
         {
             if (aggregationTime <= TimeSpan.Zero)
                 throw new ArgumentException("Must be greater than zero", nameof(aggregationTime));

@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public ConfigureTimeSeriesOperation(TimeSeriesConfiguration configuration)
         {
-            _configuration = configuration;
+            _configuration = configuration ?? new TimeSeriesConfiguration();
         }
 
         public RavenCommand<ConfigureTimeSeriesOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)

@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.TimeSeries
         private static readonly Slice StartTimeIndex;
         private static readonly TableSchema TimeSeriesStatsSchema = new TableSchema();
 
-        private enum StatsColumn
+        private enum StatsColumns
         {
             Key = 0, // documentId, separator, name
             PolicyName = 1,
@@ -34,14 +34,14 @@ namespace Raven.Server.Documents.TimeSeries
         {
             using (StorageEnvironment.GetStaticContext(out ByteStringContext ctx))
             {
-                Slice.From(ctx, "TimeSeriesStats", ByteStringType.Immutable, out TimeSeriesStatsKey);
-                Slice.From(ctx, "PolicyIndex", ByteStringType.Immutable, out PolicyIndex);
-                Slice.From(ctx, "StartTimeIndex", ByteStringType.Immutable, out StartTimeIndex);
+                Slice.From(ctx, nameof(TimeSeriesStatsKey), ByteStringType.Immutable, out TimeSeriesStatsKey);
+                Slice.From(ctx, nameof(PolicyIndex), ByteStringType.Immutable, out PolicyIndex);
+                Slice.From(ctx, nameof(StartTimeIndex), ByteStringType.Immutable, out StartTimeIndex);
             }
 
             TimeSeriesStatsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)StatsColumn.Key,
+                StartIndex = (int)StatsColumns.Key,
                 Count = 1, 
                 Name = TimeSeriesStatsKey,
                 IsGlobal = true
@@ -49,14 +49,14 @@ namespace Raven.Server.Documents.TimeSeries
 
             TimeSeriesStatsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)StatsColumn.PolicyName,
+                StartIndex = (int)StatsColumns.PolicyName,
                 Name = PolicyIndex
             });
 
             TimeSeriesStatsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 // policy/start
-                StartIndex = (int)StatsColumn.PolicyName,
+                StartIndex = (int)StatsColumns.PolicyName,
                 Count = 3, 
                 Name = StartTimeIndex
             });
@@ -94,9 +94,9 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(slicer.StatsKey, out var tvr) == false)
                 return;
 
-            var previousCount = DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr);
-            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumn.Start, ref tvr)));
-            var end = DocumentsStorage.TableValueToDateTime((int)StatsColumn.End, ref tvr);
+            var previousCount = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
+            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
+            var end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
 
             using (table.Allocate(out var tvb))
             {
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(slicer.StatsKey, out var tvr) == false)
                 return;
 
-            var previousCount = DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr);
+            var previousCount = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
             using (table.Allocate(out var tvb))
             {
                 tvb.Add(slicer.StatsKey);
@@ -148,9 +148,9 @@ namespace Raven.Server.Documents.TimeSeries
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
             if (table.ReadByKey(slicer.StatsKey, out var tvr))
             {
-                previousCount = DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr);
-                start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumn.Start, ref tvr)));
-                end = DocumentsStorage.TableValueToDateTime((int)StatsColumn.End, ref tvr);
+                previousCount = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
+                start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
+                end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
             }
 
             var count = segment.NumberOfLiveEntries;
@@ -192,9 +192,9 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(slicer.StatsKey, out var tvr) == false)
                 return default;
 
-            var count = DocumentsStorage.TableValueToLong((int)StatsColumn.Count, ref tvr);
-            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumn.Start, ref tvr)));
-            var end = DocumentsStorage.TableValueToDateTime((int)StatsColumn.End, ref tvr);
+            var count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
+            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
+            var end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
 
             return (count, start, end);
         }
@@ -207,7 +207,7 @@ namespace Raven.Server.Documents.TimeSeries
                 foreach (var result in table.SeekForwardFrom(TimeSeriesStatsSchema.Indexes[PolicyIndex], name, skip, startsWith: true))
                 {
                     var reader = result.Result.Reader;
-                    DocumentsStorage.TableValueToSlice(context, (int)StatsColumn.Key, ref reader, out var slice);
+                    DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Key, ref reader, out var slice);
                     yield return slice;
 
                     take--;
@@ -224,8 +224,8 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 foreach (var result in table.SeekBackwardFrom(TimeSeriesStatsSchema.Indexes[StartTimeIndex], policySlice, key))
                 {
-                    DocumentsStorage.TableValueToSlice(context, (int)StatsColumn.Key, ref result.Result.Reader, out var slice);
-                    var currentStart = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumn.Start, ref result.Result.Reader)));
+                    DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Key, ref result.Result.Reader, out var slice);
+                    var currentStart = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref result.Result.Reader)));
                     if (currentStart > start)
                         yield break;
 
