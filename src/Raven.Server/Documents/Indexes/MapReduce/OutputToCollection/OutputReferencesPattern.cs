@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
@@ -10,8 +10,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
     public class OutputReferencesPattern
     {
         public string ReferencesCollectionName { get; }
-        public string Pattern => _builder?.Pattern; 
-        
+        public string Pattern => _builder?.Pattern;
+
         private static readonly Regex FieldsRegex = new Regex(@"\{([^\:}]*)\:?([^}]*)\}", RegexOptions.Compiled);
 
         private readonly DocumentIdBuilder _builder;
@@ -19,17 +19,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         public OutputReferencesPattern(DocumentDatabase database, string pattern, string referencesCollectionName = null)
         {
             ReferencesCollectionName = referencesCollectionName;
+
+            var fieldToFormatPosition = ValidatePattern(pattern, out var formattedPattern);
+            _builder = new DocumentIdBuilder(database, pattern, formattedPattern, fieldToFormatPosition);
+        }
+
+        public static Dictionary<string, int> ValidatePattern(string pattern, out string formattedPattern)
+        {
             var matches = FieldsRegex.Matches(pattern);
 
             if (matches.Count == 0)
-                throw new InvalidOperationException("Provided pattern is not supported: " + pattern);
-            
+                throw new IndexInvalidException("Provided pattern is not supported: " + pattern);
+
             var fieldToFormatPosition = new Dictionary<string, int>(matches.Count);
             int numberOfFields = 0;
 
-            var formattedPattern = FieldsRegex.Replace(pattern, StringFormatEvaluator);
+            formattedPattern = FieldsRegex.Replace(pattern, StringFormatEvaluator);
 
-            _builder = new DocumentIdBuilder(database, pattern, formattedPattern, fieldToFormatPosition);
+            return fieldToFormatPosition;
 
             string StringFormatEvaluator(Match m)
             {
@@ -56,13 +63,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     string fieldName = groups[1].ToString();
 
                     if (fieldToFormatPosition.ContainsKey(fieldName))
-                        throw new NotSupportedException($"Pattern should contain unique fields only. Duplicated field: '{fieldName}'");
+                        throw new IndexInvalidException($"Pattern should contain unique fields only. Duplicated field: '{fieldName}'");
 
                     fieldToFormatPosition.Add(fieldName, numberOfFields);
                     numberOfFields++;
                 }
-                
-                throw new NotSupportedException("Provided pattern is not supported: " + pattern);
+
+                throw new IndexInvalidException("Provided pattern is not supported: " + pattern);
             }
         }
 
@@ -87,7 +94,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             public string Pattern => _pattern;
 
             public Dictionary<string, int>.KeyCollection PatternFields => _fieldToFormatPosition.Keys;
-            
+
             public DocumentIdBuilder(DocumentDatabase database, string pattern, string formattedPattern, Dictionary<string, int> fieldToFormatPosition)
             {
                 _database = database;
@@ -110,7 +117,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     ThrowNumberOfProcessedFieldsMismatch();
 
                 var id = _id.AppendFormat(_formattedPattern, _values).ToString();
-                
+
                 ValidateId(id);
 
                 return id;
@@ -136,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             public void Add(string fieldName, object fieldValue)
             {
                 if (fieldValue == null || fieldValue is DynamicNullObject)
-                     ThrowEncounteredNullValueInPattern(fieldName);
+                    ThrowEncounteredNullValueInPattern(fieldName);
 
                 var pos = _fieldToFormatPosition[fieldName];
 

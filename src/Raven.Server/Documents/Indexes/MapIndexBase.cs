@@ -39,7 +39,8 @@ namespace Raven.Server.Documents.Indexes
                 ? CollectionOfBloomFilters.Mode.X86
                 : CollectionOfBloomFilters.Mode.X64;
 
-            _filters = CollectionOfBloomFilters.Load(mode, indexContext);
+            if (_filters == null || _filters.Consumed == false)
+                _filters =  CollectionOfBloomFilters.Load(mode, indexContext);
 
             return _filters;
         }

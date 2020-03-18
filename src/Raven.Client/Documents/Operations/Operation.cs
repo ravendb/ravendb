@@ -61,21 +61,7 @@ namespace Raven.Client.Documents.Operations
             }
             catch (Exception e)
             {
-                await _lock.WaitAsync().ConfigureAwait(false);
-
-                try
-                {
-                    StopProcessing();
-                }
-                catch
-                {
-                    // ignoring
-                }
-                finally
-                {
-                    _result.TrySetException(e);
-                    _lock.Release();
-                }
+                await StopProcessingUnderLock(e).ConfigureAwait(false);
             }
         }
 
@@ -138,21 +124,27 @@ namespace Raven.Client.Documents.Operations
             }
             catch (Exception e)
             {
-                await _lock.WaitAsync().ConfigureAwait(false);
+                await StopProcessingUnderLock(e).ConfigureAwait(false);
+            }
+        }
 
-                try
-                {
-                    StopProcessing();
-                }
-                catch
-                {
-                    // ignoring
-                }
-                finally
-                {
+        private async Task StopProcessingUnderLock(Exception e = null)
+        {
+            await _lock.WaitAsync().ConfigureAwait(false);
+
+            try
+            {
+                StopProcessing();
+            }
+            catch
+            {
+                // ignoring
+            }
+            finally
+            {
+                if (e != null)
                     _result.TrySetException(e);
-                    _lock.Release();
-                }
+                _lock.Release();
             }
         }
 
@@ -246,6 +238,12 @@ namespace Raven.Client.Documents.Operations
                         break;
                     case OperationStatus.Faulted:
                         StopProcessing();
+                        if (_additionalTask.IsFaulted)
+                        {
+                            _result.TrySetException(_additionalTask.Exception);
+                            break;
+                        }
+
                         var exceptionResult = (OperationExceptionResult)change.State.Result;
                         Debug.Assert(exceptionResult != null);
                         var ex = new ExceptionDispatcher.ExceptionSchema
@@ -301,25 +299,20 @@ namespace Raven.Client.Documents.Operations
 #pragma warning disable 4014
                 Task.Factory.StartNew(Initialize);
 #pragma warning restore 4014
+                bool completed;
+                try
+                {
+                    completed = await result.Task.WaitWithTimeout(timeout).ConfigureAwait(false);
+                }
+                catch 
+                {
+                    await StopProcessingUnderLock().ConfigureAwait(false);
+                    completed = true;
+                }
 
-                var completed = await result.Task.WaitWithTimeout(timeout).ConfigureAwait(false);
                 if (completed == false)
                 {
-                    await _lock.WaitAsync().ConfigureAwait(false);
-
-                    try
-                    {
-                        StopProcessing();
-                    }
-                    catch
-                    {
-                        // ignoring
-                    }
-                    finally
-                    {
-                        _lock.Release();
-                    }
-
+                    await StopProcessingUnderLock().ConfigureAwait(false);
                     throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
                 }
 
