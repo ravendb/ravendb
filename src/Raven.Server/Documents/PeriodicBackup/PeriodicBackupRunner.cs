@@ -685,9 +685,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var config = record.GetPeriodicBackupConfiguration(taskId);
                     if (config.IncrementalBackupFrequency == null)
-                        continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
-
+                    {
+                        // if there is no status for this, we don't need to take into account tombstones
+                        min = 0; // cannot delete the tombstones until we've done a full backup
+                         continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
+                    }
                     var status = GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId);
+                    if (status == null)
+                    {
+                        min = 0; // cannot delete the tombstones until we've done a full backup
+                        continue;// if there is no status for this, we don't need to take into account tombstones
+                    }
                     var etag = ChangeVectorUtils.GetEtagById(status.LastDatabaseChangeVector, _database.DbBase64Id);
                     min = Math.Min(etag, min);
                 }
