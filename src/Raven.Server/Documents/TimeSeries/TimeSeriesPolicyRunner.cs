@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.ServerWide;
@@ -29,13 +30,17 @@ namespace Raven.Server.Documents.TimeSeries
         {
             _database = database;
             Configuration = configuration;
+
+            if (configuration.Collections != null)
+                Configuration.Collections =
+                    new Dictionary<string, TimeSeriesCollectionConfiguration>(Configuration.Collections, StringComparer.InvariantCultureIgnoreCase);
         }
 
         public static TimeSeriesPolicyRunner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, TimeSeriesPolicyRunner policyRunner)
         {
             try
             {
-                if (dbRecord.TimeSeries == null)
+                if (dbRecord.TimeSeries?.Collections == null || dbRecord.TimeSeries.Collections.Count == 0)
                 {
                     policyRunner?.Dispose();
                     return null;
@@ -54,6 +59,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
             catch (Exception e)
             {
+                
                 const string msg = "Cannot enable retention policy runner as the configuration record is not valid.";
                 database.NotificationCenter.Add(AlertRaised.Create(
                     database.Name,
@@ -64,6 +70,16 @@ namespace Raven.Server.Documents.TimeSeries
                 if (logger.IsOperationsEnabled)
                     logger.Operations(msg, e);
 
+                try
+                {
+                    policyRunner?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    if (logger.IsOperationsEnabled)
+                        logger.Operations("Failed to dispose previous time-series policy runner", ex);
+                }
+
                 return null;
             }
         }
@@ -73,7 +89,7 @@ namespace Raven.Server.Documents.TimeSeries
         public static readonly Slice TimeSeriesRollUps;
         private static readonly Slice RollUpKey;
         private static readonly Slice NextRollUpIndex;
-        private enum RollUpColumn
+        private enum RollUpColumns
         {
             // documentId/Name
             Key,
@@ -100,38 +116,38 @@ namespace Raven.Server.Documents.TimeSeries
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                Slice.From(ctx, "TimeSeriesRollUps", ByteStringType.Immutable, out TimeSeriesRollUps);
-                Slice.From(ctx, "RollUpKey", ByteStringType.Immutable, out RollUpKey);
-                Slice.From(ctx, "NextRollUpIndex", ByteStringType.Immutable, out NextRollUpIndex);
+                Slice.From(ctx, nameof(TimeSeriesRollUps), ByteStringType.Immutable, out TimeSeriesRollUps);
+                Slice.From(ctx, nameof(RollUpKey), ByteStringType.Immutable, out RollUpKey);
+                Slice.From(ctx, nameof(NextRollUpIndex), ByteStringType.Immutable, out NextRollUpIndex);
                 Slice.From(ctx, RawTimeSeriesPolicy.PolicyString, ByteStringType.Immutable, out RawPolicySlice);
             }
 
             RollUpSchema = new TableSchema();
             RollUpSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)RollUpColumn.Key,
+                StartIndex = (int)RollUpColumns.Key,
                 Count = 1, 
                 Name = RollUpKey
             });
 
             RollUpSchema.DefineIndex(new TableSchema.SchemaIndexDef // this isn't fixed-size since we expect to have duplicates
             {
-                StartIndex = (int)RollUpColumn.NextRollUp, 
+                StartIndex = (int)RollUpColumns.NextRollUp, 
                 Count = 1,
                 Name = NextRollUpIndex
             });
         }
 
-        public unsafe void MarkForPolicy(DocumentsOperationContext context, Slice key, string collection, string name, long etag, DateTime baseline, string changeVector)
+        public unsafe void MarkForPolicy(DocumentsOperationContext context,TimeSeriesSliceHolder slicerHolder, string collection, string name, long etag, DateTime baseline, string changeVector)
         {
-            var config = Configuration.Collections[collection];
+            if (Configuration.Collections.TryGetValue(collection, out var config) == false)
+                return;
 
             if (config.Disabled)
                 return;
 
-            var current = config.GetPolicyByTimeSeries(name);
-            if (current == null) // policy not found
-                // TODO: delete this time-series if not the raw one?
+            var current = config.GetPolicyIndexByTimeSeries(name);
+            if (current == -1) // policy not found
                 return;
 
             var nextPolicy = config.GetNextPolicy(current);
@@ -148,21 +164,19 @@ namespace Raven.Server.Documents.TimeSeries
             RollUpSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollUps, 16);
             var table = context.Transaction.InnerTransaction.OpenTable(RollUpSchema, TimeSeriesRollUps);
             using (table.Allocate(out var tvb))
-            using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long) - sizeof(byte), ByteStringType.Immutable, out var timeSeriesKey))
-            using (Slice.From(context.Allocator,collection, ByteStringType.Immutable,out var collectionSlice))
             using (Slice.From(context.Allocator, nextPolicy.Name, ByteStringType.Immutable, out var policyToApply))
             using (Slice.From(context.Allocator, changeVector, ByteStringType.Immutable, out var changeVectorSlice))
             {
-                if (table.ReadByKey(timeSeriesKey, out var tvr))
+                if (table.ReadByKey(slicerHolder.StatsKey, out var tvr))
                 {
                     // check if we need to update this
-                    var existingRollup = Bits.SwapBytes(*(long*)tvr.Read((int)RollUpColumn.NextRollUp, out _));
+                    var existingRollup = Bits.SwapBytes(*(long*)tvr.Read((int)RollUpColumns.NextRollUp, out _));
                     if (existingRollup <= nextRollup)
                         return; // we have an earlier date to roll up from
                 }
 
-                tvb.Add(timeSeriesKey);
-                tvb.Add(collectionSlice);
+                tvb.Add(slicerHolder.StatsKey);
+                tvb.Add(slicerHolder.CollectionSlice);
                 tvb.Add(Bits.SwapBytes(nextRollup));
                 tvb.Add(policyToApply);
                 tvb.Add(etag);
@@ -189,7 +203,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         internal async Task HandleChanges()
         {
-            var policies = new List<TimeSeriesPolicy>();
+            var policies = new List<(TimeSeriesPolicy Policy, int Index)>();
 
             foreach (var config in Configuration.Collections)
             {
@@ -199,7 +213,11 @@ namespace Raven.Server.Documents.TimeSeries
                     continue;
 
                 policies.Clear();
-                policies.AddRange(config.Value.Policies);
+                for (int i = 0; i < config.Value.Policies.Count; i++)
+                {
+                    var p = config.Value.Policies[i];
+                    policies.Add((p, i + 1));
+                }
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
@@ -212,23 +230,23 @@ namespace Raven.Server.Documents.TimeSeries
                     foreach (var policySlice in currentPolicies)
                     {
                         var policyName = policySlice.ToString();
-                        var policy = config.Value.GetPolicyByName(policyName);
+                        var policy = config.Value.GetPolicyByName(policyName, out var index);
                         if (policy == null)
                         {
                             await RemoveTimeSeriesByPolicy(collectionName, policyName);
                             continue;
                         }
 
-                        policies.Remove(policy);
+                        policies.Remove((policy, index));
                     }
 
                     foreach (var policy in policies)
                     {
-                        var prev = config.Value.GetPreviousPolicy(policy);
+                        var prev = config.Value.GetPreviousPolicy(policy.Index);
                         if (prev == null || prev == TimeSeriesPolicy.BeforeAllPolices)
                             continue;
 
-                        await AddNewPolicy(collectionName, prev, policy);
+                        await AddNewPolicy(collectionName, prev, policy.Policy);
                     }
                 }
             }
@@ -275,6 +293,8 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     while (true)
                     {
+                        states.Clear();
+
                         context.Reset();
                         context.Renew();
 
@@ -295,8 +315,6 @@ namespace Raven.Server.Documents.TimeSeries
                         await _database.TxMerger.Enqueue(command);
                         if (command.RolledUp == 0)
                             break;
-
-                        states.Clear();
 
                         if (Logger.IsInfoEnabled)
                             Logger.Info($"Successfully aggregated {command.RolledUp:#,#;;0} time-series within {duration.ElapsedMilliseconds:#,#;;0} ms.");
@@ -373,10 +391,10 @@ namespace Raven.Server.Documents.TimeSeries
         private async Task ApplyRetention(DocumentsOperationContext context, CollectionName collectionName, TimeSeriesPolicy policy, DateTime now, TimeSeriesStorage.DeletionRangeRequest request)
         {
             var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
-            if (policy.RetentionTime == null || policy.RetentionTime == TimeSpan.MaxValue)
+            if (policy.RetentionTime == TimeSpan.MaxValue)
                 return;
 
-            var deleteFrom = now.Add(-policy.RetentionTime.Value);
+            var deleteFrom = now.Add(-policy.RetentionTime);
 
             while (true)
             {
@@ -413,11 +431,11 @@ namespace Raven.Server.Documents.TimeSeries
                 if (take <= 0)
                     return;
 
-                var rollUpTime = DocumentsStorage.TableValueToEtag((int)RollUpColumn.NextRollUp, ref item.Result.Reader);
+                var rollUpTime = DocumentsStorage.TableValueToEtag((int)RollUpColumns.NextRollUp, ref item.Result.Reader);
                 if (rollUpTime > currentTicks)
                     return;
 
-                DocumentsStorage.TableValueToSlice(context, (int)RollUpColumn.Key, ref item.Result.Reader,out var key);
+                DocumentsStorage.TableValueToSlice(context, (int)RollUpColumns.Key, ref item.Result.Reader,out var key);
                 SplitKey(key, out var docId, out var name);
 
                 var state = new RollUpState
@@ -425,11 +443,11 @@ namespace Raven.Server.Documents.TimeSeries
                     Key = key,
                     DocId = docId,
                     Name = name,
-                    Collection = DocumentsStorage.TableValueToString(context, (int)RollUpColumn.Collection, ref item.Result.Reader),
+                    Collection = DocumentsStorage.TableValueToId(context, (int)RollUpColumns.Collection, ref item.Result.Reader),
                     NextRollUp = new DateTime(rollUpTime),
-                    RollUpPolicy = DocumentsStorage.TableValueToString(context, (int)RollUpColumn.PolicyToApply, ref item.Result.Reader),
-                    Etag = DocumentsStorage.TableValueToLong((int)RollUpColumn.Etag, ref item.Result.Reader),
-                    ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollUpColumn.ChangeVector, ref item.Result.Reader)
+                    RollUpPolicy = DocumentsStorage.TableValueToString(context, (int)RollUpColumns.PolicyToApply, ref item.Result.Reader),
+                    Etag = DocumentsStorage.TableValueToLong((int)RollUpColumns.Etag, ref item.Result.Reader),
+                    ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollUpColumns.ChangeVector, ref item.Result.Reader)
                 };
 
                 states.Add(state);
@@ -439,9 +457,12 @@ namespace Raven.Server.Documents.TimeSeries
 
         public static void SplitKey(Slice key, out string docId, out string name)
         {
+            var bytes = key.AsSpan();
             var separatorIndex = key.Content.IndexOf(SpecialChars.RecordSeparator);
-            docId = key.Content.Substring(separatorIndex);
-            name = key.Content.Substring(separatorIndex + 1, key.Content.Length - separatorIndex - 1);
+
+            docId = Encoding.UTF8.GetString(bytes.Slice(0, separatorIndex));
+            var index = separatorIndex + 1;
+            name = Encoding.UTF8.GetString(bytes.Slice(index, bytes.Length - index));
         }
 
         internal class TimeSeriesRetentionCommand : TransactionOperationsMerger.MergedTransactionCommand
@@ -553,7 +574,7 @@ namespace Raven.Server.Documents.TimeSeries
                 foreach (var key in tss.Stats.GetTimeSeriesNameByPolicy(context, _collection, _from.Name, _skip, BatchSize))
                 {
                     using (table.Allocate(out var tvb))
-                    using (Slice.From(context.Allocator,_collection.Name, ByteStringType.Immutable,out var collectionSlice))
+                    using (DocumentIdWorker.GetStringPreserveCase(context, _collection.Name, out var collectionSlice))
                     using (Slice.From(context.Allocator, _to.Name, ByteStringType.Immutable, out var policyToApply))
                     using (Slice.From(context.Allocator, string.Empty, ByteStringType.Immutable, out var changeVectorSlice))
                     {
@@ -605,11 +626,13 @@ namespace Raven.Server.Documents.TimeSeries
                     if (_configuration == null)
                         return RolledUp;
 
-                    var config = _configuration.Collections[item.Collection];
+                    if (_configuration.Collections.TryGetValue(item.Collection, out var config) == false)
+                        continue;
+
                     if (config.Disabled)
                         continue;
                         
-                    var policy = config.GetPolicyByName(item.RollUpPolicy);
+                    var policy = config.GetPolicyByName(item.RollUpPolicy, out _);
                     if (policy == null)
                         continue;
 
@@ -619,7 +642,7 @@ namespace Raven.Server.Documents.TimeSeries
                         continue;
                     }
 
-                    if (item.Etag != DocumentsStorage.TableValueToLong((int)RollUpColumn.Etag, ref current))
+                    if (item.Etag != DocumentsStorage.TableValueToLong((int)RollUpColumns.Etag, ref current))
                         continue; // concurrency check
 
                     var startFrom = item.NextRollUp.Add(-policy.AggregationTime);

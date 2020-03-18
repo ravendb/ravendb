@@ -23,25 +23,27 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                var config = new TimeSeriesConfiguration
+                var config = new TimeSeriesConfiguration();
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                config.Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>();
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                config.Collections["Users"] = new TimeSeriesCollectionConfiguration();
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                config.Collections["Users"].Policies = new List<TimeSeriesPolicy>
                 {
-                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
-                    {
-                        ["Users"] = new TimeSeriesCollectionConfiguration
-                        {
-                            Policies = new List<TimeSeriesPolicy>
-                            {
-                                new TimeSeriesPolicy(TimeSpan.FromHours(1),TimeSpan.FromHours(12)),
-                                new TimeSeriesPolicy(TimeSpan.FromMinutes(1),TimeSpan.FromMinutes(180)),
-                                new TimeSeriesPolicy(TimeSpan.FromSeconds(1),TimeSpan.FromSeconds(60)),
-                                new TimeSeriesPolicy(TimeSpan.FromDays(1),TimeSpan.FromDays(2)),
-                            },
-                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
-                        },
-                        
-                    }
+                    new TimeSeriesPolicy(TimeSpan.FromHours(1), TimeSpan.FromHours(12)),
+                    new TimeSeriesPolicy(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(180)),
+                    new TimeSeriesPolicy(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60)),
+                    new TimeSeriesPolicy(TimeSpan.FromDays(1), TimeSpan.FromDays(2)),
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                
+                config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96));
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
 
                 var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
                 var collection = updated.Collections["Users"];
@@ -368,8 +370,6 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollUps();
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
@@ -383,6 +383,72 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                     var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(0, ts3.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanRemoveConfigurationEntirely()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.AddDays(-1);
+
+                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1, p2 ,p3
+                            },
+                            RawPolicy = new RawTimeSeriesPolicy(TimeSpan.FromHours(96))
+                        },
+                    }
+                };
+                
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+
+                    for (int i = 0; i < 100; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel")
+                            .Append("Heartrate", baseline.AddSeconds(0.2 * i), "watches/fitbit", new[] {29d * i});
+                    }
+                    session.SaveChanges();
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollUps();
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(null));
+
+                Assert.True(await WaitForValueAsync(() => database.TimeSeriesPolicyRunner == null, true));
+
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(100, ts.Count);
+
+                    var ts1 = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(20, ts1.Count);
+
+                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(10, ts2.Count);
+
+                    var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(7, ts3.Count);
                 }
             }
         }
@@ -454,10 +520,10 @@ namespace SlowTests.Client.TimeSeries.Policies
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
-                var p1 = new TimeSeriesPolicy(TimeSpan.FromHours(6), raw.RetentionTime.Value * 4);
-                var p2 = new TimeSeriesPolicy(TimeSpan.FromDays(1), raw.RetentionTime.Value * 5);
-                var p3 = new TimeSeriesPolicy(TimeSpan.FromMinutes(30), raw.RetentionTime.Value * 2);
-                var p4 = new TimeSeriesPolicy(TimeSpan.FromMinutes(60), raw.RetentionTime.Value * 3);
+                var p1 = new TimeSeriesPolicy(TimeSpan.FromHours(6), raw.RetentionTime * 4);
+                var p2 = new TimeSeriesPolicy(TimeSpan.FromDays(1), raw.RetentionTime * 5);
+                var p3 = new TimeSeriesPolicy(TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
+                var p4 = new TimeSeriesPolicy(TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -475,13 +541,14 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var baseline = DateTime.UtcNow.AddDays(-12);
+                var now = DateTime.UtcNow;
+                var baseline = DateTime.Today.AddHours(now.Hour).AddMinutes(now.Minute).AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User {Name = "Karmel"}, "users/karmel");
-
-                    for (int i = 0; i < TimeSpan.FromDays(12).TotalMinutes; i++)
+                    for (int i = 0; i < total; i++)
                     {
                         session.TimeSeriesFor("users/karmel")
                             .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i});
@@ -505,7 +572,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(72, ts.Count);
 
                     ts = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(17, ts.Count);
+                    Assert.Equal(16, ts.Count);
 
                     ts = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(5, ts.Count);

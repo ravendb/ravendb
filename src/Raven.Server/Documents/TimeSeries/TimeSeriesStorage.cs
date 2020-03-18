@@ -531,7 +531,7 @@ namespace Raven.Server.Documents.TimeSeries
                 case AggregationType.Count:
                     return end;
                 case AggregationType.Mean:
-                case AggregationType.Avg:
+                case AggregationType.Average:
                     return new DateTime(checked(start.Ticks + end.Ticks) / 2);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -999,22 +999,24 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
                 var newTimeSeries = tss.Stats.GetStats(context, docId, name).Count == 0;
-
-                Stats.UpdateStats(context, docId, name, collectionName, segment, baseline);
-                _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, key, collectionName.Name, name, newEtag, baseline, changeVector);
-
-                using (Slice.From(context.Allocator, changeVector, out Slice cv))
-                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out var collectionSlice))
-                using (table.Allocate(out TableValueBuilder tvb))
+                
+                using (var slicer = new TimeSeriesSliceHolder(context, docId, name).WithCollection(collectionName.Name))
                 {
-                    tvb.Add(key);
-                    tvb.Add(Bits.SwapBytes(newEtag));
-                    tvb.Add(cv);
-                    tvb.Add(segment.Ptr, segment.NumberOfBytes);
-                    tvb.Add(collectionSlice);
-                    tvb.Add(context.GetTransactionMarker());
+                    Stats.UpdateStats(context, slicer, collectionName, segment, baseline);
+                    _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, slicer, collectionName.Name, name, newEtag, baseline, changeVector);
 
-                    table.Set(tvb);
+                    using (Slice.From(context.Allocator, changeVector, out Slice cv))
+                    using (table.Allocate(out TableValueBuilder tvb))
+                    {
+                        tvb.Add(key);
+                        tvb.Add(Bits.SwapBytes(newEtag));
+                        tvb.Add(cv);
+                        tvb.Add(segment.Ptr, segment.NumberOfBytes);
+                        tvb.Add(slicer.CollectionSlice);
+                        tvb.Add(context.GetTransactionMarker());
+
+                        table.Set(tvb);
+                    }
                 }
 
                 if (newTimeSeries)
@@ -1119,8 +1121,8 @@ namespace Raven.Server.Documents.TimeSeries
                 _docId = docId;
                 _name = name;
 
-                SliceHolder = new TimeSeriesSliceHolder(_context, docId, name).WithBaseline(timeStamp);
-                SliceHolder.WithCollection(_collection.Name).CreateSegmentBuffer();
+                SliceHolder = new TimeSeriesSliceHolder(_context, docId, name).WithBaseline(timeStamp).WithCollection(_collection.Name);
+                SliceHolder.CreateSegmentBuffer();
 
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context, null);
             }
@@ -1188,7 +1190,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate);
 
                 var keySlice = SliceHolder.TimeSeriesKeySlice;
-                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, keySlice, _collection.Name, _name, _currentEtag, BaselineDate, _currentChangeVector);
+                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, _collection.Name, _name, _currentEtag, BaselineDate, _currentChangeVector);
 
                 using (Table.Allocate(out var tvb))
                 using (Slice.From(_context.Allocator, _currentChangeVector, out var cv))
@@ -1228,7 +1230,7 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureSegmentSize(newSegment.NumberOfBytes);
 
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate);
-                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder.TimeSeriesKeySlice, _collection.Name, _name, _currentEtag, BaselineDate, _currentChangeVector);
+                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, _collection.Name, _name, _currentEtag, BaselineDate, _currentChangeVector);
 
                 SliceHolder.WithCollection(_collection.Name);
 
