@@ -192,6 +192,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, string, string, string, string> _findProjectedPropertyNameForIndex;
 
         private Func<dynamic, string> _findCollectionNameForDynamic;
+        private Func<dynamic, string> _findTypeNameForDynamic;
         private Func<Type, string> _findCollectionName;
         private IContractResolver _jsonContractResolver;
         private Func<Type, string> _findClrTypeName;
@@ -489,6 +490,19 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _findCollectionNameForDynamic = value;
+            }
+        }
+        
+        /// <summary>
+        ///     Gets or sets the function to find the collection name for dynamic type.
+        /// </summary>
+        public Func<dynamic, string> FindTypeNameForDynamic
+        {
+            get => _findTypeNameForDynamic;
+            set
+            {
+                AssertNotFrozen();
+                _findTypeNameForDynamic = value;
             }
         }
 
@@ -904,6 +918,27 @@ namespace Raven.Client.Documents.Conventions
             return FindClrType(id, document);
         }
 
+        /// <summary>
+        ///     Get the CLR type name to be stored in the entity metadata
+        /// </summary>
+        public string GetClrTypeName(object entity)
+        {
+            if (FindTypeNameForDynamic != null && entity is IDynamicMetaObjectProvider)
+            {
+                try
+                {
+                    return FindTypeNameForDynamic(entity);
+                }
+                catch (RuntimeBinderException)
+                {
+                    // if we can't find it, we'll just assume that the property
+                    // isn't there
+                }
+            }
+            
+            return FindClrTypeName(entity.GetType());
+        }
+        
         /// <summary>
         ///     Get the CLR type name to be stored in the entity metadata
         /// </summary>
