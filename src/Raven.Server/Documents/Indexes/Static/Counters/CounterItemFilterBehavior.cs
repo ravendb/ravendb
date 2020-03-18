@@ -1,11 +1,15 @@
 ﻿using System.Collections.Generic;
-using Sparrow.Json;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
     public class CounterItemFilterBehavior : IIndexItemFilterBehavior
     {
-        private readonly HashSet<LazyStringValue> _seenIds = new HashSet<LazyStringValue>();
+        private static int MaxCapacity = PlatformDetails.Is32Bits
+            ? 1024
+            : 1024 * 1024;
+
+        private readonly HashSet<string> _seenIds = new HashSet<string>();
 
         public bool ShouldFilter(IndexItem item)
         {
@@ -13,7 +17,12 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             if (key == null)
                 return true;
 
-            return _seenIds.Add(key) == false;
+            var shouldFilter = _seenIds.Add(key) == false;
+
+            if (shouldFilter == false && _seenIds.Count > MaxCapacity)
+                _seenIds.Clear();
+
+            return shouldFilter;
         }
     }
 }
