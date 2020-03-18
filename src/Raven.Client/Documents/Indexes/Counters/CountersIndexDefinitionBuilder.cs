@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Indexes.Counters
         private (string Counter, Expression<Func<IEnumerable<CounterEntry>, IEnumerable>> Map) _map;
 
         /// <summary>
-        /// Sets map function for all TimeSeries
+        /// Sets map function for all Counters
         /// </summary>
         public void AddMapForAll(Expression<Func<IEnumerable<CounterEntry>, IEnumerable>> map)
         {
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Indexes.Counters
         }
 
         /// <summary>
-        /// Sets map function for specified TimeSeries
+        /// Sets map function for specified Counters
         /// </summary>
         public void AddMap(string counter, Expression<Func<IEnumerable<CounterEntry>, IEnumerable>> map)
         {
