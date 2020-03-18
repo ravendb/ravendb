@@ -674,7 +674,7 @@ more responsive application.
             if (collectionName != null)
                 metadata[Constants.Documents.Metadata.Collection] = collectionName;
 
-            var clrType = _requestExecutor.Conventions.GetClrTypeName(entity.GetType());
+            var clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
             if (clrType != null)
                 metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
 
