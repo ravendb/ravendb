@@ -4,6 +4,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             {
                 var index = new IndexWithMultipleStringInterpolationsInPatternNonUniqueFields();
 
-                var ex = Assert.Throws<RavenException>(() => index.Execute(store));
+                var ex = Assert.Throws<IndexInvalidException>(() => index.Execute(store));
 
                 Assert.Contains("Pattern should contain unique fields only. Duplicated field: 'OrderedAt'", ex.Message);
             }

@@ -57,7 +57,7 @@ namespace SlowTests.Issues
                     .Operations
                     .Send(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{new People_ByName().IndexName}'" }, options: null)).WaitForCompletion(TimeSpan.FromSeconds(15)));
 
-                Assert.Contains("Cannot perform bulk operation. Query is stale.", e.Message);
+                Assert.Contains("Cannot perform bulk operation. Index is stale.", e.Message);
             }
         }
     }

@@ -61,7 +61,7 @@ namespace SlowTests.Issues
                     op.WaitForCompletion(TimeSpan.FromSeconds(15));
                 });
 
-                Assert.Contains("Cannot perform bulk operation. Query is stale.", exception.Message);
+                Assert.Contains("Cannot perform bulk operation. Index is stale.", exception.Message);
             }
         }
     }

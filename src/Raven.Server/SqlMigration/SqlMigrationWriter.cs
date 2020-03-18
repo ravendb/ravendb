@@ -76,7 +76,7 @@ namespace Raven.Server.SqlMigration
                 return;
 
             _command.ParsedCommands = new ArraySegment<BatchRequestParser.CommandData>(_commands.ToArray(), 0, _commands.Count);
-            _command.AttachmentStreams = new Queue<BatchHandler.MergedBatchCommand.AttachmentStream>(_attachmentStreams);
+            _command.AttachmentStreams = new List<BatchHandler.MergedBatchCommand.AttachmentStream>(_attachmentStreams);
 
             try
             {

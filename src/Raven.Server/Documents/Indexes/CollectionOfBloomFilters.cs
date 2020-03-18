@@ -37,6 +37,8 @@ namespace Raven.Server.Documents.Indexes
         private BloomFilter _currentFilter;
         private Mode _mode;
         private readonly Tree _tree;
+        public bool Consumed;
+        private static readonly long _consumed = -1L;
 
         private CollectionOfBloomFilters(Mode mode, Tree tree, TransactionOperationContext context)
         {
@@ -62,6 +64,18 @@ namespace Raven.Server.Documents.Indexes
         {
             var tree = indexContext.Transaction.InnerTransaction.CreateTree("BloomFilters");
             var count = GetCount(tree, ref mode);
+            if (count == _consumed)
+            {
+                Debug.Assert(mode == Mode.X86, "BloomFilters in x64 mode got consumed, should not happen and likely a bug!");
+
+                var consumedCollection = new CollectionOfBloomFilters(mode, tree: null, context: null)
+                {
+                    Consumed = true
+                };
+
+                return consumedCollection;
+            }
+
             var collection = new CollectionOfBloomFilters(mode, tree, indexContext);
 
             for (var i = 0; i < count; i++)
@@ -162,6 +176,9 @@ namespace Raven.Server.Documents.Indexes
 
         public bool Add(LazyStringValue key)
         {
+            if (Consumed)
+                return false;
+
             if (_filters.Length == 1)
             {
                 if (_currentFilter.Add(key))
@@ -193,6 +210,12 @@ namespace Raven.Server.Documents.Indexes
             if (_currentFilter.Count < _currentFilter.Capacity)
                 return;
 
+            if (_mode == Mode.X86 && _filters.Length >= 20)
+            {
+                Consumed = true;
+                return;
+            }
+
             AddFilter(CreateNewFilter(_filters.Length, _mode));
         }
 
@@ -200,6 +223,19 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_filters == null || _filters.Length == 0)
                 return;
+
+            if (Consumed)
+            {
+                foreach (var filter in _filters)
+                    filter.Delete();
+
+                // mark as consumed in the storage
+                _tree.Add(Count32Slice, _consumed);
+
+                _filters = null;
+                _currentFilter = null;
+                return;
+            }
 
             foreach (var filter in _filters)
                 filter.Flush();
@@ -439,6 +475,14 @@ namespace Raven.Server.Documents.Indexes
                     return; // avoid re-throwing it
 
                 _tree.Increment(_keySlice, Count - _initialCount);
+            }
+
+            internal void Delete()
+            {
+                if (_tree.Llt.Environment.Options.IsCatastrophicFailureSet)
+                    return; // avoid re-throwing it
+
+                _tree.Delete(_keySlice);
             }
 
             public void Dispose()

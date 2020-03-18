@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -190,6 +192,36 @@ namespace FastTests.Client
                 {
                     rq1.Execute(cmd, ctx);
                 }
+            }
+        }
+        
+        private class ToStore
+        {
+            public IEnumerable<string> Prop { get; set; }
+        }
+        
+        private class ContainEnumerableEmpty
+        {
+            public IEnumerable<string> Prop { get; set; } = Enumerable.Empty<string>();
+        }
+        
+        [Fact]
+        public async Task LoadDoc_WhenContainEnumerableEmpty_ShouldWork()
+        {
+            const string id = "someId";
+            var prop = new []{"something"};
+            
+            using var store = GetDocumentStore();
+             
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new ToStore{Prop = prop}, id);
+                await session.SaveChangesAsync();
+            }
+            using (var session = store.OpenAsyncSession())
+            {
+                var load = await session.LoadAsync<ContainEnumerableEmpty>(id);
+                Assert.Equal(prop, load.Prop);
             }
         }
     }

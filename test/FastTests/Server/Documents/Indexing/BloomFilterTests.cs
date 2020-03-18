@@ -230,5 +230,40 @@ namespace FastTests.Server.Documents.Indexing
                 }
             }
         }
+
+        [Fact]
+        public void WillGetConsumedFromStorage()
+        {
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, SharedMultipleUseFlag.None))
+            {
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    using (var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context))
+                    {
+                        var i = 0;
+                        while (collection.Consumed == false)
+                        {
+                            var key = context.GetLazyString($"orders/{i++}");
+                            collection.Add(key);
+                        }
+
+                        Assert.Equal(20, collection.Count);
+                        collection.Flush();
+                        Assert.Equal(0, collection.Count);
+                    }
+
+                    tx.Commit();
+                }
+
+                using (context.OpenWriteTransaction())
+                {
+                    using (var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context))
+                    {
+                        Assert.Equal(0, collection.Count);
+                        Assert.True(collection.Consumed);
+                    }
+                }
+            }
+        }
     }
 }

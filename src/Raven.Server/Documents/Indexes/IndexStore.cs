@@ -718,7 +718,12 @@ namespace Raven.Server.Documents.Indexes
             var instance = IndexCompilationCache.GetIndexInstance(definition, _documentDatabase.Configuration); // pre-compile it and validate
 
             if (definition.Type == IndexType.MapReduce)
+            {
                 MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, NeedToCheckIfCollectionEmpty(definition));
+
+                if (string.IsNullOrEmpty(definition.PatternForOutputReduceToCollectionReferences) == false)
+                    OutputReferencesPattern.ValidatePattern(definition.PatternForOutputReduceToCollectionReferences, out _);
+            }
         }
 
         public bool HasChanged(IndexDefinition definition)

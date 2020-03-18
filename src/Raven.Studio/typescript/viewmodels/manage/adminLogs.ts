@@ -21,7 +21,7 @@ class heightCalculator {
         const lines = item.split(/\r?\n/);
         const totalLinesCount = _.sum(lines.map(l => {
             if (l.length > this.charactersPerLine) {
-                return Math.ceil(l.length  * 1.0 / this.charactersPerLine);
+                return Math.ceil(l.length / this.charactersPerLine);
             }
             return 1;
         }));
@@ -192,13 +192,16 @@ class adminLogs extends viewModelBase {
     
     private hasError(item: string): boolean {
         return item.includes("EXCEPTION:") || item.includes("Exception:") || item.includes("FATAL ERROR:");
-    }    
+    }
     
     // noinspection JSMethodCanBeStatic
     itemHtmlProvider(item: string) {
+        const errorClass = this.hasError(item) ? "class='bg-danger'" : "";
+
         return $("<pre class='item'></pre>")
-            .toggleClass("bg-danger", this.hasError(item))
-            .text(item);
+            .addClass("flex-horizontal")
+            .prepend(`<span ${errorClass}>${generalUtils.escapeHtml(item)}</span>`)
+            .prepend("<a href='#' class='copy-item-button margin-right margin-right-sm flex-start' title='Copy log msg to clipboard'><i class='icon-copy'></i></a>");
     }
     
     compositionComplete() {
@@ -211,6 +214,12 @@ class adminLogs extends viewModelBase {
             }
             
             this.duringManualScrollEvent = false;
+        });
+      
+        $(".list-view").on("click", ".copy-item-button", function(event) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            copyToClipboard.copy($(this).next().text(), "Log message has been copied to clipboard");
         });
     }
     
