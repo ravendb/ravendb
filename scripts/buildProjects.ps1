@@ -24,7 +24,9 @@ function BuildServer ( $srcDir, $outDir, $target, $debug) {
 
     if ($target -and [string]::IsNullOrEmpty($target.Arch) -eq $false) {
         $commandArgs += "/p:Platform=$($target.Arch)"
-    } else {
+    }
+
+    if (!$target) {
         $commandArgs += "/p:UseAppHost=false"
     }
 
