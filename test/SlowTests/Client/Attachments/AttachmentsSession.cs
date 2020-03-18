@@ -567,7 +567,7 @@ namespace SlowTests.Client.Attachments
                 {
                     await database.TxMerger.Enqueue(new ThrowCommand());
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     if (all.IsCompleted)
                         break;
