@@ -374,7 +374,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                     {
                         var item = bloodPressure.Results[index];
                         Assert.Equal(360, item.Count[0]);
-                        Assert.Equal(index * 360 + 180 + 0.5, item.Avg[0]);
+                        Assert.Equal(index * 360 + 180 + 0.5, item.Average[0]);
                         Assert.Equal((index + 1) * 360, item.Max[0]);
                         Assert.Equal(index * 360 + 1, item.Min[0]);
                         Assert.Equal(index * 360 + 1, item.First[0]);
@@ -411,7 +411,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                     var index = 0;
                     var item = bloodPressure.Results[index];
                     Assert.Equal(359, item.Count[0]);
-                    Assert.Equal(180, item.Avg[0]);
+                    Assert.Equal(180, item.Average[0]);
                     Assert.Equal(359, item.Max[0]);
                     Assert.Equal(1, item.Min[0]);
                     Assert.Equal(1, item.First[0]);
@@ -423,7 +423,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                         var realIndex = index + 9;
 
                         Assert.Equal(360, item.Count[0]);
-                        Assert.Equal(realIndex * 360 + 180 + 0.5, item.Avg[0]);
+                        Assert.Equal(realIndex * 360 + 180 + 0.5, item.Average[0]);
                         Assert.Equal((realIndex + 1) * 360, item.Max[0]);
                         Assert.Equal(realIndex * 360 + 1, item.Min[0]);
                         Assert.Equal(realIndex * 360 + 1, item.First[0]);

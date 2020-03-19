@@ -545,7 +545,7 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 
                         double expectedAvg = (159 + 168 + 179) / 3.0;
 
-                        Assert.Equal(expectedAvg, val.Avg[0]);
+                        Assert.Equal(expectedAvg, val.Average[0]);
 
                         Assert.Equal(baseline2.AddMinutes(60), val.From);
                         Assert.Equal(baseline2.AddMinutes(120), val.To);
@@ -623,7 +623,7 @@ select out(Company)
                         Assert.Equal(1279.62d, val.Max[0]);
 
                         double expectedAvg = (1259.51d + 1279.62d + 1269.73d) / 3.0;
-                        Assert.Equal(expectedAvg, val.Avg[0]);
+                        Assert.Equal(expectedAvg, val.Average[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -1072,7 +1072,7 @@ as BloodPressure
 
                         double expectedAvg = (159 + 168 + 179) / 3.0;
 
-                        Assert.Equal(expectedAvg, val.Avg[0]);
+                        Assert.Equal(expectedAvg, val.Average[0]);
 
                         Assert.Equal(baseline2.AddMinutes(60), val.From);
                         Assert.Equal(baseline2.AddMinutes(120), val.To);
@@ -1227,7 +1227,7 @@ as Stocks
                         Assert.Equal(1279.62d, val.Max[0]);
 
                         double expectedAvg = (1259.51d + 1279.62d + 1269.73d) / 3.0;
-                        Assert.Equal(expectedAvg, val.Avg[0]);
+                        Assert.Equal(expectedAvg, val.Average[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -1297,7 +1297,7 @@ select timeseries(from doc.HeartRate between $start and $end
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(64, val.Avg[0]);
+                        Assert.Equal(64, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -1309,7 +1309,7 @@ select timeseries(from doc.HeartRate between $start and $end
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(174, val.Avg[0]);
+                        Assert.Equal(174, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -1866,15 +1866,15 @@ select heart_rate(p)
 
                         Assert.Equal(2, val.Min.Length);
                         Assert.Equal(2, val.Max.Length);
-                        Assert.Equal(2, val.Avg.Length);
+                        Assert.Equal(2, val.Average.Length);
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(69, val.Avg[0]);
+                        Assert.Equal(69, val.Average[0]);
 
                         Assert.Equal(159, val.Min[1]);
                         Assert.Equal(179, val.Max[1]);
-                        Assert.Equal(169, val.Avg[1]);
+                        Assert.Equal(169, val.Average[1]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -1886,15 +1886,15 @@ select heart_rate(p)
 
                         Assert.Equal(2, val.Min.Length);
                         Assert.Equal(2, val.Max.Length);
-                        Assert.Equal(2, val.Avg.Length);
+                        Assert.Equal(2, val.Average.Length);
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
 
                         Assert.Equal(259, val.Min[1]);
                         Assert.Equal(279, val.Max[1]);
-                        Assert.Equal(269, val.Avg[1]);
+                        Assert.Equal(269, val.Average[1]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -1976,13 +1976,13 @@ select heart_rate(p)
 
                         Assert.Equal(3, val.Min.Length);
                         Assert.Equal(3, val.Max.Length);
-                        Assert.Equal(3, val.Avg.Length);
+                        Assert.Equal(3, val.Average.Length);
                         Assert.Equal(3, val.First.Length);
                         Assert.Equal(3, val.Last.Length);
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(69, val.Avg[0]);
+                        Assert.Equal(69, val.Average[0]);
                         Assert.Equal(59, val.First[0]);
                         Assert.Equal(69, val.Last[0]);
                         Assert.Equal(3, val.Count[0]);
@@ -1990,14 +1990,14 @@ select heart_rate(p)
                         Assert.Equal(169, val.Min[1]);
                         Assert.Equal(179, val.Max[1]);
                         Assert.Equal(2, val.Count[1]);
-                        Assert.Equal((169 + 179) / 2, val.Avg[1]);
+                        Assert.Equal((169 + 179) / 2, val.Average[1]);
                         Assert.Equal(179, val.First[1]);
                         Assert.Equal(169, val.Last[1]);
 
                         Assert.Equal(269, val.Min[2]);
                         Assert.Equal(269, val.Max[2]);
                         Assert.Equal(1, val.Count[2]);
-                        Assert.Equal(269, val.Avg[2]);
+                        Assert.Equal(269, val.Average[2]);
                         Assert.Equal(269, val.First[2]);
                         Assert.Equal(269, val.Last[2]);
 
@@ -2011,13 +2011,13 @@ select heart_rate(p)
 
                         Assert.Equal(3, val.Min.Length);
                         Assert.Equal(3, val.Max.Length);
-                        Assert.Equal(3, val.Avg.Length);
+                        Assert.Equal(3, val.Average.Length);
                         Assert.Equal(3, val.First.Length);
                         Assert.Equal(3, val.Last.Length);
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
                         Assert.Equal(159, val.First[0]);
                         Assert.Equal(169, val.Last[0]);
                         Assert.Equal(3, val.Count[0]);
@@ -2025,14 +2025,14 @@ select heart_rate(p)
                         Assert.Equal(259, val.Min[1]);
                         Assert.Equal(279, val.Max[1]);
                         Assert.Equal(2, val.Count[1]);
-                        Assert.Equal((259d + 279) / 2, val.Avg[1]);
+                        Assert.Equal((259d + 279) / 2, val.Average[1]);
                         Assert.Equal(259, val.First[1]);
                         Assert.Equal(279, val.Last[1]);
 
                         Assert.Equal(379, val.Min[2]);
                         Assert.Equal(379, val.Max[2]);
                         Assert.Equal(1, val.Count[2]);
-                        Assert.Equal(379, val.Avg[2]);
+                        Assert.Equal(379, val.Average[2]);
                         Assert.Equal(379, val.First[2]);
                         Assert.Equal(379, val.Last[2]);
 
@@ -2046,13 +2046,13 @@ select heart_rate(p)
 
                         Assert.Equal(4, val.Min.Length);
                         Assert.Equal(4, val.Max.Length);
-                        Assert.Equal(4, val.Avg.Length);
+                        Assert.Equal(4, val.Average.Length);
                         Assert.Equal(4, val.First.Length);
                         Assert.Equal(4, val.Last.Length);
 
                         Assert.Equal(259, val.Min[0]);
                         Assert.Equal(279, val.Max[0]);
-                        Assert.Equal(269, val.Avg[0]);
+                        Assert.Equal(269, val.Average[0]);
                         Assert.Equal(259, val.First[0]);
                         Assert.Equal(269, val.Last[0]);
                         Assert.Equal(3, val.Count[0]);
@@ -2060,21 +2060,21 @@ select heart_rate(p)
                         Assert.Equal(359, val.Min[1]);
                         Assert.Equal(369, val.Max[1]);
                         Assert.Equal(2, val.Count[1]);
-                        Assert.Equal((359d + 369) / 2, val.Avg[1]);
+                        Assert.Equal((359d + 369) / 2, val.Average[1]);
                         Assert.Equal(359, val.First[1]);
                         Assert.Equal(369, val.Last[1]);
 
                         Assert.Equal(459, val.Min[2]);
                         Assert.Equal(469, val.Max[2]);
                         Assert.Equal(2, val.Count[2]);
-                        Assert.Equal((459d + 469) / 2, val.Avg[2]);
+                        Assert.Equal((459d + 469) / 2, val.Average[2]);
                         Assert.Equal(459, val.First[2]);
                         Assert.Equal(469, val.Last[2]);
 
                         Assert.Equal(569, val.Min[3]);
                         Assert.Equal(569, val.Max[3]);
                         Assert.Equal(1, val.Count[3]);
-                        Assert.Equal(569, val.Avg[3]);
+                        Assert.Equal(569, val.Average[3]);
                         Assert.Equal(569, val.First[3]);
                         Assert.Equal(569, val.Last[3]);
 
@@ -2402,7 +2402,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(64, val.Avg[0]);
+                        Assert.Equal(64, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2414,7 +2414,7 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(174, val.Avg[0]);
+                        Assert.Equal(174, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2491,7 +2491,7 @@ select out(doc)
 
                         Assert.Equal(79, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(79, val.Avg[0]);
+                        Assert.Equal(79, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2503,7 +2503,7 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2580,7 +2580,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(64, val.Avg[0]);
+                        Assert.Equal(64, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2592,7 +2592,7 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(174, val.Avg[0]);
+                        Assert.Equal(174, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2669,11 +2669,11 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(69, val.Avg[0]);
+                        Assert.Equal(69, val.Average[0]);
 
                         Assert.Equal(141.5, val.Min[1]);
                         Assert.Equal(142.82, val.Max[1]);
-                        Assert.Equal((141.5 + 142.82) / 2, val.Avg[1]);
+                        Assert.Equal((141.5 + 142.82) / 2, val.Average[1]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2685,11 +2685,11 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(169, val.Max[0]);
-                        Assert.Equal(164, val.Avg[0]);
+                        Assert.Equal(164, val.Average[0]);
 
                         Assert.Equal(138.12, val.Min[1]);
                         Assert.Equal(142.57, val.Max[1]);
-                        Assert.Equal((138.12 + 142.57) / 2, val.Avg[1]);
+                        Assert.Equal((138.12 + 142.57) / 2, val.Average[1]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2766,13 +2766,13 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(69, val.Avg[0]);
+                        Assert.Equal(69, val.Average[0]);
                         Assert.Equal(3, val.Count[0]);
 
                         Assert.Equal(141.5, val.Min[1]);
                         Assert.Equal(142.82, val.Max[1]);
                         Assert.Equal(2, val.Count[1]);
-                        Assert.Equal((141.5 + 142.82) / 2, val.Avg[1]);
+                        Assert.Equal((141.5 + 142.82) / 2, val.Average[1]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2784,13 +2784,13 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(169, val.Max[0]);
-                        Assert.Equal(164, val.Avg[0]);
+                        Assert.Equal(164, val.Average[0]);
                         Assert.Equal(2, val.Count[0]);
 
                         Assert.Equal(138.12, val.Min[1]);
                         Assert.Equal(142.57, val.Max[1]);
                         Assert.Equal(2, val.Count[1]);
-                        Assert.Equal((138.12 + 142.57) / 2, val.Avg[1]);
+                        Assert.Equal((138.12 + 142.57) / 2, val.Average[1]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2867,13 +2867,13 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(69, val.Avg[0]);
+                        Assert.Equal(69, val.Average[0]);
                         Assert.Equal(2, val.Count[0]);
 
                         Assert.Equal(141.5, val.Min[1]);
                         Assert.Equal(142.82, val.Max[1]);
                         Assert.Equal(2, val.Count[1]);
-                        Assert.Equal((141.5 + 142.82) / 2, val.Avg[1]);
+                        Assert.Equal((141.5 + 142.82) / 2, val.Average[1]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2885,12 +2885,12 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(169, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
                         Assert.Equal(1, val.Count[0]);
 
                         Assert.Equal(142.57, val.Min[1]);
                         Assert.Equal(142.57, val.Max[1]);
-                        Assert.Equal(142.57, val.Avg[1]);
+                        Assert.Equal(142.57, val.Average[1]);
                         Assert.Equal(1, val.Count[1]);
 
                         expectedFrom = expectedTo;
@@ -2970,7 +2970,7 @@ select out(doc)
 
                         Assert.Equal(79, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(79, val.Avg[0]);
+                        Assert.Equal(79, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2982,7 +2982,7 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3067,7 +3067,7 @@ select out(doc, c.AccountsReceivable)
 
                         Assert.Equal(79, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(79, val.Avg[0]);
+                        Assert.Equal(79, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3079,7 +3079,7 @@ select out(doc, c.AccountsReceivable)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3164,7 +3164,7 @@ select out(doc, c)
 
                         Assert.Equal(79, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(79, val.Avg[0]);
+                        Assert.Equal(79, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3176,7 +3176,7 @@ select out(doc, c)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3254,7 +3254,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(69, val.Avg[0]);
+                        Assert.Equal(69, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3266,7 +3266,7 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(169, val.Max[0]);
-                        Assert.Equal(164, val.Avg[0]);
+                        Assert.Equal(164, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3344,7 +3344,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(69, val.Avg[0]);
+                        Assert.Equal(69, val.Average[0]);
                         Assert.Equal(2, val.Count[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
@@ -3357,7 +3357,7 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
                         Assert.Equal(2, val.Count[0]);
 
                         expectedFrom = expectedTo;
@@ -3454,7 +3454,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(64, val.Avg[0]);
+                        Assert.Equal(64, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3466,7 +3466,7 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(169, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3574,7 +3574,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(64, val.Avg[0]);
+                        Assert.Equal(64, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3586,7 +3586,7 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(169, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3691,7 +3691,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(64, val.Avg[0]);
+                        Assert.Equal(64, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3703,7 +3703,7 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(174, val.Avg[0]);
+                        Assert.Equal(174, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3808,7 +3808,7 @@ select out(doc)
 
                         Assert.Equal(79, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(79, val.Avg[0]);
+                        Assert.Equal(79, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3820,7 +3820,7 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(159, val.Max[0]);
-                        Assert.Equal(159, val.Avg[0]);
+                        Assert.Equal(159, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3925,7 +3925,7 @@ select out(doc)
 
                         Assert.Equal(79, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(79, val.Avg[0]);
+                        Assert.Equal(79, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3937,7 +3937,7 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(159, val.Max[0]);
-                        Assert.Equal(159, val.Avg[0]);
+                        Assert.Equal(159, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -4039,7 +4039,7 @@ select out(doc)
 
                         Assert.Equal(79, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(79, val.Avg[0]);
+                        Assert.Equal(79, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -4051,7 +4051,7 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -4152,7 +4152,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(64, val.Avg[0]);
+                        Assert.Equal(64, val.Average[0]);
                         Assert.Equal(2, val.Count[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
@@ -4165,7 +4165,7 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(174, val.Avg[0]);
+                        Assert.Equal(174, val.Average[0]);
                         Assert.Equal(2, val.Count[0]);
 
                         expectedFrom = expectedTo;
@@ -4244,7 +4244,7 @@ select out(doc)
 
                         Assert.Equal(79, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(79, val.Avg[0]);
+                        Assert.Equal(79, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -4256,7 +4256,7 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(169, val.Max[0]);
-                        Assert.Equal(164, val.Avg[0]);
+                        Assert.Equal(164, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -4358,7 +4358,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(64, val.Avg[0]);
+                        Assert.Equal(64, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -4370,7 +4370,7 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(174, val.Avg[0]);
+                        Assert.Equal(174, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -4474,7 +4474,7 @@ select out(doc)
 
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(64, val.Avg[0]);
+                        Assert.Equal(64, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -4486,7 +4486,7 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(174, val.Avg[0]);
+                        Assert.Equal(174, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -4591,7 +4591,7 @@ select out(doc)
 
                         Assert.Equal(69, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
-                        Assert.Equal(74, val.Avg[0]);
+                        Assert.Equal(74, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -4603,7 +4603,7 @@ select out(doc)
 
                         Assert.Equal(159, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(169, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -4712,7 +4712,7 @@ select out(doc)
 
                         Assert.Equal(69, val.Min[0]);
                         Assert.Equal(69, val.Max[0]);
-                        Assert.Equal(69, val.Avg[0]);
+                        Assert.Equal(69, val.Average[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -4724,7 +4724,7 @@ select out(doc)
 
                         Assert.Equal(169, val.Min[0]);
                         Assert.Equal(179, val.Max[0]);
-                        Assert.Equal(174, val.Avg[0]);
+                        Assert.Equal(174, val.Average[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -4809,7 +4809,7 @@ select out(doc, e)
 
                     Assert.Equal(159, val.Min[0]);
                     Assert.Equal(179, val.Max[0]);
-                    Assert.Equal(169, val.Avg[0]);
+                    Assert.Equal(169, val.Average[0]);
 
                     var expectedFrom = baseline.AddMonths(1).AddHours(1);
                     var expectedTo = expectedFrom.AddHours(1);
@@ -4821,7 +4821,7 @@ select out(doc, e)
 
                     Assert.Equal(259, val.Min[0]);
                     Assert.Equal(279, val.Max[0]);
-                    Assert.Equal(269, val.Avg[0]);
+                    Assert.Equal(269, val.Average[0]);
 
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
@@ -4839,7 +4839,7 @@ select out(doc, e)
 
                     Assert.Equal(259, val.Min[0]);
                     Assert.Equal(279, val.Max[0]);
-                    Assert.Equal(269, val.Avg[0]);
+                    Assert.Equal(269, val.Average[0]);
 
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
@@ -4927,7 +4927,7 @@ select out(doc)
 
                     Assert.Equal(159, val.Min[0]);
                     Assert.Equal(179, val.Max[0]);
-                    Assert.Equal(169, val.Avg[0]);
+                    Assert.Equal(169, val.Average[0]);
 
                     var expectedFrom = baseline.AddMonths(1).AddHours(1);
                     var expectedTo = expectedFrom.AddHours(1);
@@ -4939,7 +4939,7 @@ select out(doc)
 
                     Assert.Equal(259, val.Min[0]);
                     Assert.Equal(279, val.Max[0]);
-                    Assert.Equal(269, val.Avg[0]);
+                    Assert.Equal(269, val.Average[0]);
 
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
@@ -4957,7 +4957,7 @@ select out(doc)
 
                     Assert.Equal(259, val.Min[0]);
                     Assert.Equal(279, val.Max[0]);
-                    Assert.Equal(269, val.Avg[0]);
+                    Assert.Equal(269, val.Average[0]);
 
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
@@ -5039,7 +5039,7 @@ select out(doc, c)
 
                     Assert.Equal(69, val.Min[0]);
                     Assert.Equal(79, val.Max[0]);
-                    Assert.Equal(74, val.Avg[0]);
+                    Assert.Equal(74, val.Average[0]);
 
                     var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                     var expectedTo = expectedFrom.AddMonths(1);
@@ -5051,7 +5051,7 @@ select out(doc, c)
 
                     Assert.Equal(159, val.Min[0]);
                     Assert.Equal(179, val.Max[0]);
-                    Assert.Equal(169, val.Avg[0]);
+                    Assert.Equal(169, val.Average[0]);
 
                     expectedFrom = expectedTo;
                     expectedTo = expectedFrom.AddMonths(1);
@@ -5069,7 +5069,7 @@ select out(doc, c)
                     
                     Assert.Equal(159, val.Min[0]);
                     Assert.Equal(179, val.Max[0]);
-                    Assert.Equal(169, val.Avg[0]);
+                    Assert.Equal(169, val.Average[0]);
 
                     expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0).AddMonths(1);
                     expectedTo = expectedFrom.AddMonths(1);
@@ -5148,7 +5148,7 @@ select out(p)
 
                     Assert.Equal(59, val.Min[0]);
                     Assert.Equal(59, val.Max[0]);
-                    Assert.Equal(59, val.Avg[0]);
+                    Assert.Equal(59, val.Average[0]);
 
                     var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                     var expectedTo = expectedFrom.AddMonths(1);
@@ -5160,7 +5160,7 @@ select out(p)
 
                     Assert.Equal(169, val.Min[0]);
                     Assert.Equal(169, val.Max[0]);
-                    Assert.Equal(169, val.Avg[0]);
+                    Assert.Equal(169, val.Average[0]);
 
                     expectedFrom = expectedTo;
                     expectedTo = expectedFrom.AddMonths(1);

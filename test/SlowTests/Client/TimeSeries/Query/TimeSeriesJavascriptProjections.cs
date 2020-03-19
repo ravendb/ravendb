@@ -886,7 +886,7 @@ select foo(heartrate(p))
         var current = arr[i];
         result[i] = {
             Max : current.Max[0],
-            Avg : current.Avg[0]
+            Avg : current.Average[0]
         };
     }
     return {
@@ -987,10 +987,10 @@ select foo(heartrate(p))
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(179, agg[1].Avg[0]);
+                    Assert.Equal(179, agg[1].Average[0]);
 
                 }
             }
@@ -1062,10 +1062,10 @@ select foo(heartrate(p))
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(12.79, agg[0].Max[0]);
-                    Assert.Equal(12.69, agg[0].Avg[0]);
+                    Assert.Equal(12.69, agg[0].Average[0]);
 
                     Assert.Equal(13.69, agg[1].Max[0]);
-                    Assert.Equal(13.64, agg[1].Avg[0]);
+                    Assert.Equal(13.64, agg[1].Average[0]);
 
                 }
             }
@@ -1140,10 +1140,10 @@ select foo(heartrate(p))
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(79, agg[0].Avg[0]);
+                    Assert.Equal(79, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(174, agg[1].Avg[0]);
+                    Assert.Equal(174, agg[1].Average[0]);
 
                 }
             }
@@ -1286,10 +1286,10 @@ select foo(heartrate(p))
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(179, agg[1].Avg[0]);
+                    Assert.Equal(179, agg[1].Average[0]);
 
                 }
             }
@@ -1358,10 +1358,10 @@ select foo(heartrate(p))
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(179, agg[1].Avg[0]);
+                    Assert.Equal(179, agg[1].Average[0]);
 
                 }
             }
@@ -1517,7 +1517,7 @@ select foo(heartrate(p))
                                 {
                                     TotalMax = ranges.Max(range => range.Max[0]) ?? double.NaN,
                                     TotalMin = ranges.Min(range => range.Min[0]) ?? double.NaN,
-                                    AvgOfAvg = ranges.Average(range => range.Avg[0]) ?? double.NaN,
+                                    AvgOfAvg = ranges.Average(range => range.Average[0]) ?? double.NaN,
                                     MaxGroupSize = ranges.Max(r => r.Count[0])
                                 })
                                 let tsQuery = RavenQuery.TimeSeries(person, series, baseline, baseline.AddMonths(2))
@@ -1547,12 +1547,12 @@ select foo(heartrate(p))
 
                     Assert.Equal(79d, agg[0].Max[0]);
                     Assert.Equal(79d, agg[0].Min[0]);
-                    Assert.Equal(79d, agg[0].Avg[0]);
+                    Assert.Equal(79d, agg[0].Average[0]);
                     Assert.Equal(1, agg[0].Count[0]);
 
                     Assert.Equal(169d, agg[1].Max[0]);
                     Assert.Equal(159d, agg[1].Min[0]);
-                    Assert.Equal(164d, agg[1].Avg[0]);
+                    Assert.Equal(164d, agg[1].Average[0]);
                     Assert.Equal(2, agg[1].Count[0]);
 
                     var custom = result.Custom;
@@ -2047,7 +2047,7 @@ select foo(heartrate(p))
                                 .Select(x => new {Max = x.Max(), Avg = x.Average()})
                                 .ToList()
                                 .Results
-                                .Where(range => range.Avg[0] > estimatedAvg))
+                                .Where(range => range.Average[0] > estimatedAvg))
                         select new
                         {
                             Name = p.Name + " " + p.LastName,
@@ -2055,7 +2055,7 @@ select foo(heartrate(p))
                                 .Select(r => new
                                 {
                                     Max = r.Max[0], 
-                                    Avg = r.Avg[0]
+                                    Avg = r.Average[0]
                                 })
                                 .ToList()
                         };

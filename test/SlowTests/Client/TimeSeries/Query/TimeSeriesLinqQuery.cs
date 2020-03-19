@@ -117,10 +117,10 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
 
                 }
             }
@@ -184,10 +184,10 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
 
                 }
             }
@@ -259,10 +259,10 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
 
                 }
             }
@@ -326,10 +326,10 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
 
                 }
             }
@@ -385,11 +385,11 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
                     Assert.Equal(3, agg[0].Count[0]);
 
                     Assert.Equal(169, agg[1].Max[0]);
-                    Assert.Equal(164, agg[1].Avg[0]);
+                    Assert.Equal(164, agg[1].Average[0]);
 
                 }
             }
@@ -461,11 +461,11 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
                     Assert.Equal(3, agg[0].Count[0]);
 
                     Assert.Equal(169, agg[1].Max[0]);
-                    Assert.Equal(164, agg[1].Avg[0]);
+                    Assert.Equal(164, agg[1].Average[0]);
 
                 }
             }
@@ -529,10 +529,10 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(12.79, agg[0].Max[0]);
-                    Assert.Equal(12.69, agg[0].Avg[0]);
+                    Assert.Equal(12.69, agg[0].Average[0]);
 
                     Assert.Equal(13.69, agg[1].Max[0]);
-                    Assert.Equal(13.64, agg[1].Avg[0]);
+                    Assert.Equal(13.64, agg[1].Average[0]);
 
                 }
             }
@@ -604,11 +604,11 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
                     Assert.Equal(3, agg[0].Count[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(179, agg[1].Avg[0]);
+                    Assert.Equal(179, agg[1].Average[0]);
 
                 }
             }
@@ -672,10 +672,10 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
 
                 }
             }
@@ -747,11 +747,11 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(69, agg[0].Max[0]);
                     Assert.Equal(59, agg[0].Min[0]);
-                    Assert.Equal(64, agg[0].Avg[0]);
+                    Assert.Equal(64, agg[0].Average[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Min[0]);
-                    Assert.Equal(174, agg[1].Avg[0]);
+                    Assert.Equal(174, agg[1].Average[0]);
 
                 }
             }
@@ -824,11 +824,11 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(69, aggregation[0].Max[0]);
                     Assert.Equal(59, aggregation[0].Min[0]);
-                    Assert.Equal(64, aggregation[0].Avg[0]);
+                    Assert.Equal(64, aggregation[0].Average[0]);
 
                     Assert.Equal(179, aggregation[1].Max[0]);
                     Assert.Equal(169, aggregation[1].Min[0]);
-                    Assert.Equal(174, aggregation[1].Avg[0]);
+                    Assert.Equal(174, aggregation[1].Average[0]);
 
                 }
             }
@@ -908,10 +908,10 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, aggregation.Length);
 
                     Assert.Equal(69, aggregation[0].Max[0]);
-                    Assert.Equal(64, aggregation[0].Avg[0]);
+                    Assert.Equal(64, aggregation[0].Average[0]);
 
                     Assert.Equal(179, aggregation[1].Max[0]);
-                    Assert.Equal(174, aggregation[1].Avg[0]);
+                    Assert.Equal(174, aggregation[1].Average[0]);
 
                     Assert.Equal(2, result.BloodPressure.Count);
 
@@ -920,10 +920,10 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, aggregation.Length);
 
                     Assert.Equal(79, aggregation[0].Max[0]);
-                    Assert.Equal(79, aggregation[0].Avg[0]);
+                    Assert.Equal(79, aggregation[0].Average[0]);
 
                     Assert.Equal(159, aggregation[1].Max[0]);
-                    Assert.Equal(159, aggregation[1].Avg[0]);
+                    Assert.Equal(159, aggregation[1].Average[0]);
 
                 }
             }
@@ -981,11 +981,11 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(79, agg[0].Avg[0]);
+                    Assert.Equal(79, agg[0].Average[0]);
                     Assert.Equal(79, agg[0].Min[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
                     Assert.Equal(159, agg[1].Min[0]);
 
 
@@ -1042,11 +1042,11 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(79, agg[0].Avg[0]);
+                    Assert.Equal(79, agg[0].Average[0]);
                     Assert.Equal(79, agg[0].Min[0]);
 
                     Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
                     Assert.Equal(159, agg[1].Min[0]);
 
 
@@ -1102,11 +1102,11 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
                     Assert.Equal(59, agg[0].Min[0]);
 
                     Assert.Equal(159, agg[1].Max[0]);
-                    Assert.Equal(159, agg[1].Avg[0]);
+                    Assert.Equal(159, agg[1].Average[0]);
                     Assert.Equal(159, agg[1].Min[0]);
 
 
@@ -1172,11 +1172,11 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(59, agg[0].Max[0]);
-                    Assert.Equal(59, agg[0].Avg[0]);
+                    Assert.Equal(59, agg[0].Average[0]);
                     Assert.Equal(59, agg[0].Min[0]);
 
                     Assert.Equal(169, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
                     Assert.Equal(169, agg[1].Min[0]);
 
 
@@ -1312,11 +1312,11 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(69, agg[0].Average[0]);
                     Assert.Equal(59, agg[0].Min[0]);
 
                     Assert.Equal(169, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
                     Assert.Equal(169, agg[1].Min[0]);
 
                 }

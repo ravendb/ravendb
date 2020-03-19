@@ -365,15 +365,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesGrouping.Count):
                 case nameof(ITimeSeriesGrouping.First):
                 case nameof(ITimeSeriesGrouping.Last):
+                case nameof(ITimeSeriesGrouping.Average):
                 case nameof(ITimeSeriesGrouping.Mean):
                     if (_selectFields.Length > 0)
                         _selectFields.Append(", ");
                     _selectFields.Append($"{name.ToLower()}()");
-                    break;
-                case nameof(ITimeSeriesGrouping.Average):
-                    if (_selectFields.Length > 0)
-                        _selectFields.Append(", ");
-                    _selectFields.Append("avg()");
                     break;
                 default:
                     throw new NotSupportedException("Unsupported aggregation method " + name);
