@@ -917,17 +917,29 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void InitializeSegment(out long baselineMilliseconds, out TimeSeriesValuesSegment readOnlySegment)
             {
-                byte* key = _tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
-                baselineMilliseconds = Bits.SwapBytes(
-                    *(long*)(key + keySize - sizeof(long))
-                );
+                baselineMilliseconds = ReadBaseline();
                 var segmentReadOnlyBuffer = _tvr.Read((int)TimeSeriesTable.Segment, out int size);
                 readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
+            }
+
+            private long ReadBaseline()
+            {
+                var key = _tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
+                return Bits.SwapBytes(*(long*)(key + keySize - sizeof(long)));
             }
 
             internal string GetCurrentSegmentChangeVector()
             {
                 return DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, ref _tvr);
+            }
+
+            internal (long Etag, string ChangeVector, DateTime Baseline) GetSegmentInfo()
+            {
+                var changeVector = GetCurrentSegmentChangeVector();
+                var etag = DocumentsStorage.TableValueToEtag( (int)TimeSeriesTable.Etag, ref _tvr);
+                var baseline = new DateTime(ReadBaseline());
+
+                return (etag, changeVector, baseline);
             }
         }
 
@@ -1730,7 +1742,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<ReplicationBatchItem> GetSegmentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<TimeSeriesReplicationItem> GetSegmentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
@@ -1741,7 +1753,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static ReplicationBatchItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
+        private static TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
