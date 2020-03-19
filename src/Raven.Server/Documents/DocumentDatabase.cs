@@ -37,6 +37,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
+using Raven.Server.Utils.IoMetrics;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -80,6 +81,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
+        private long _ioMetricsCleanerTicks;
         private long _lastTopologyIndex = -1;
         private long _lastClientConfigurationIndex = -1;
         private long _preventUnloadCounter;
@@ -99,6 +101,7 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
+            _ioMetricsCleanerTicks = DateTime.UtcNow.AddHours(Configuration.Databases.IoMetricsCleanTimeInterval).Ticks;
             StartTime = Time.GetUtcNow();
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
@@ -171,6 +174,7 @@ namespace Raven.Server.Documents
         public ServerStore ServerStore => _serverStore;
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
+        public DateTime IoMetricsCleanTime => new DateTime(_ioMetricsCleanerTicks);
 
         public DateTime LastAccessTime;
 
@@ -906,8 +910,10 @@ namespace Raven.Server.Documents
             try
             {
                 var sp = Stopwatch.StartNew();
+                var utcNow = DateTime.UtcNow;
+                var ranIoMetricsCleaner = false;
 
-                _lastIdleTicks = DateTime.UtcNow.Ticks;
+                _lastIdleTicks = utcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
                 SubscriptionStorage?.CleanupSubscriptions();
@@ -915,8 +921,18 @@ namespace Raven.Server.Documents
                 DocumentsStorage.Environment.Cleanup();
                 ConfigurationStorage.Environment.Cleanup();
 
+                if (utcNow.Ticks >= _ioMetricsCleanerTicks)
+                {
+                    IoMetricsUtil.CleanIoMetrics(GetAllStoragesEnvironment(), _ioMetricsCleanerTicks);
+                    _ioMetricsCleanerTicks = utcNow.AddHours(Configuration.Databases.IoMetricsCleanTimeInterval).Ticks;
+                    ranIoMetricsCleaner = true;
+                }
+
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Ran idle operations for database '{Name}', took: {sp.ElapsedMilliseconds}ms");
+                {
+                    var msg = ranIoMetricsCleaner ? " with IO Metrics Cleaner" : string.Empty;
+                    _logger.Info($"Ran idle operations{msg} for database '{Name}', took: {sp.ElapsedMilliseconds}ms");
+                }
             }
             finally
             {
