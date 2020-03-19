@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Config;
-using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.MapReduce.Workers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -20,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected new internal readonly StaticTimeSeriesIndexBase _compiled;
+        protected internal new readonly StaticTimeSeriesIndexBase _compiled;
 
         public MapReduceTimeSeriesIndex(MapReduceIndexDefinition definition, StaticTimeSeriesIndexBase compiled) : base(definition, compiled)
         {
@@ -41,6 +38,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             var workers = new List<IIndexingWork>();
 
             workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
+
+            if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
+                workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeTimeSeriesReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleTimeSeriesReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
