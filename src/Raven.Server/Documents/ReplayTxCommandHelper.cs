@@ -14,6 +14,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Json.Converters;
 using Raven.Server.ServerWide;
@@ -224,6 +225,14 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<ClusterTransactionMergedCommandDto>(reader);
                 case nameof(CountersHandler.ExecuteCounterBatchCommand):
                     return jsonSerializer.Deserialize<ExecuteCounterBatchCommandDto>(reader);
+                case nameof(TimeSeriesRollups.AddedNewRollupPoliciesCommand):
+                    return jsonSerializer.Deserialize<TimeSeriesRollups.AddedNewRollupPoliciesCommand.AddedNewRollupPoliciesCommandDto>(reader);
+                case nameof(TimeSeriesRollups.RemovePoliciesCommand):
+                    return jsonSerializer.Deserialize<TimeSeriesRollups.RemovePoliciesCommand.RemovePoliciesCommandDto>(reader);
+                case nameof(TimeSeriesRollups.RollupTimeSeriesCommand):
+                    return jsonSerializer.Deserialize<TimeSeriesRollups.RollupTimeSeriesCommand.RollupTimeSeriesCommandDto>(reader);
+                case nameof(TimeSeriesRollups.TimeSeriesRetentionCommand):
+                    return jsonSerializer.Deserialize<TimeSeriesRollups.TimeSeriesRetentionCommand.TimeSeriesRetentionCommandDto>(reader);
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }

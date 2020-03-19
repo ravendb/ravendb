@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Operations.TransactionsRecording;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -514,6 +519,134 @@ namespace SlowTests.Client.TimeSeries.Policies
         }
 
         [Fact]
+        public async Task CanRetainAndRollup()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var now = DateTime.UtcNow;
+                var baseline = now.AddMinutes(-120);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+                    for (int i = 0; i <= 120; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel")
+                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i});
+                    }
+                    session.SaveChanges();
+                }
+
+                var raw = new RawTimeSeriesPolicy(TimeSpan.FromMinutes(30));
+                var p = new TimeSeriesPolicy(TimeSpan.FromMinutes(10), TimeSpan.FromHours(1));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p
+                            }
+                        },
+                    }
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+                
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(30, ts.Count);
+
+                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(p.RetentionTime.TotalMinutes / p.AggregationTime.TotalMinutes, ts2.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanRecordAndReplay()
+        {
+            var recordFilePath = NewDataPath();
+
+            var raw = new RawTimeSeriesPolicy(TimeSpan.FromMinutes(30));
+            var p = new TimeSeriesPolicy(TimeSpan.FromMinutes(10), TimeSpan.FromHours(1));
+            var config = new TimeSeriesConfiguration
+            {
+                Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                {
+                    ["Users"] = new TimeSeriesCollectionConfiguration {RawPolicy = raw, Policies = new List<TimeSeriesPolicy> {p}},
+                }
+            };
+
+            int count1, count2;
+            using (var store = GetDocumentStore())
+            {
+                var now = DateTime.UtcNow;
+                var baseline = now.AddHours(-2);
+
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+                    for (int i = 0; i < 120; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel")
+                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i});
+                    }
+                    session.SaveChanges();
+                }
+               
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    count1 = ts.Count;
+
+                    ts = session.TimeSeriesFor("users/karmel").Get(p.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    count2 = ts.Count;
+                }
+            }
+
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(count1, ts.Count);
+                    ts = session.TimeSeriesFor("users/karmel").Get(p.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(count2, ts.Count);
+
+                }
+            }
+        }
+
+        [Fact]
         public async Task FullRetentionAndRollup()
         {
             using (var store = GetDocumentStore())
@@ -542,13 +675,13 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 var now = DateTime.UtcNow;
-                var baseline = DateTime.Today.AddHours(now.Hour).AddMinutes(now.Minute).AddDays(-12);
+                var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User {Name = "Karmel"}, "users/karmel");
-                    for (int i = 0; i < total; i++)
+                    for (int i = 0; i <= total; i++)
                     {
                         session.TimeSeriesFor("users/karmel")
                             .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i});
@@ -563,20 +696,19 @@ namespace SlowTests.Client.TimeSeries.Policies
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(1439, ts.Count);
+                    Assert.Equal(raw.RetentionTime.TotalMinutes, ts.Count);
 
                     ts = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(97, ts.Count);
+                    Assert.Equal(p3.RetentionTime.TotalMinutes / p3.AggregationTime.TotalMinutes, ts.Count);
 
                     ts = session.TimeSeriesFor("users/karmel").Get(p4.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(72, ts.Count);
+                    Assert.Equal(p4.RetentionTime.TotalMinutes / p4.AggregationTime.TotalMinutes, ts.Count);
 
                     ts = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(16, ts.Count);
+                    Assert.Equal(p1.RetentionTime.TotalMinutes / p1.AggregationTime.TotalMinutes, ts.Count);
 
                     ts = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(5, ts.Count);
-
+                    Assert.Equal(p2.RetentionTime.TotalMinutes / p2.AggregationTime.TotalMinutes, ts.Count);
                 }
             }
         }
