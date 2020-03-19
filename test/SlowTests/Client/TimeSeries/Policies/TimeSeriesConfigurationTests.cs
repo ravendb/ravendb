@@ -580,5 +580,57 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
             }
         }
+
+         [Fact]
+        public async Task RollupLargeTime()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                var p = new TimeSeriesPolicy(TimeSpan.FromDays(1));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p
+                            }
+                        },
+                    }
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                var baseline = DateTime.UtcNow.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalHours;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+                    for (int i = 0; i < total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel")
+                            .Append("Heartrate", baseline.AddHours(i), "watches/fitbit", new[] {29d * i});
+                    }
+                    session.SaveChanges();
+                }
+                
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+                
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(288, ts.Count);
+
+                    ts = session.TimeSeriesFor("users/karmel").Get(p.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(12, ts.Count);
+                }
+            }
+        }
     }
 }

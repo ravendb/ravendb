@@ -14,8 +14,9 @@ namespace Raven.Server.Documents.TimeSeries
     public unsafe class TimeSeriesSliceHolder : IDisposable
     {
         private readonly DocumentsOperationContext _context;
-        private readonly string _docId;
-        private readonly string _name;
+        public readonly string DocId;
+        public readonly string Name;
+        public readonly string Collection;
 
         private readonly Dictionary<LazyStringValue, Slice> CachedTags = new Dictionary<LazyStringValue, Slice>();
         private readonly List<ByteStringContext.InternalScope> _internalScopesToDispose = new List<ByteStringContext.InternalScope>();
@@ -25,11 +26,12 @@ namespace Raven.Server.Documents.TimeSeries
         public Slice TimeSeriesKeySlice, TimeSeriesPrefixSlice, LowerTimeSeriesName, DocumentKeyPrefix, StatsKey, CollectionSlice;
         public DateTime CurrentBaseline;
 
-        public TimeSeriesSliceHolder(DocumentsOperationContext context, string documentId, string name)
+        public TimeSeriesSliceHolder(DocumentsOperationContext context, string documentId, string name, string collection = null)
         {
             _context = context;
-            _docId = documentId;
-            _name = name;
+            DocId = documentId;
+            Name = name;
+            Collection = collection;
 
             Initialize();
         }
@@ -55,16 +57,10 @@ namespace Raven.Server.Documents.TimeSeries
             return this;
         }
 
-        public TimeSeriesSliceHolder WithCollection(string collection)
-        {
-            _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(_context, collection, out CollectionSlice));
-            return this;
-        }
-
         public void Initialize()
         {
-            _internalScopesToDispose.Add(DocumentIdWorker.GetSliceFromId(_context, _docId, out DocumentKeyPrefix, SpecialChars.RecordSeparator)); // documentId/
-            _internalScopesToDispose.Add(DocumentIdWorker.GetLower(_context.Allocator, _name, out LowerTimeSeriesName));
+            _internalScopesToDispose.Add(DocumentIdWorker.GetSliceFromId(_context, DocId, out DocumentKeyPrefix, SpecialChars.RecordSeparator)); // documentId/
+            _internalScopesToDispose.Add(DocumentIdWorker.GetLower(_context.Allocator, Name, out LowerTimeSeriesName));
 
             var keyBufferSize = DocumentKeyPrefix.Size + LowerTimeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */;
             _internalScopesToDispose.Add(_context.Allocator.Allocate(keyBufferSize, out TimeSeriesKeyBuffer));
@@ -74,6 +70,9 @@ namespace Raven.Server.Documents.TimeSeries
 
             _externalScopesToDispose.Add(Slice.External(_context.Allocator, TimeSeriesKeyBuffer, 0, DocumentKeyPrefix.Size + LowerTimeSeriesName.Size,
                 out StatsKey)); // documentId/timeseries
+
+            if (Collection != null)
+                _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(_context, Collection, out CollectionSlice));
         }
 
         public void SetBaselineToKey(DateTime time)
@@ -111,7 +110,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (tagSlice.Size > byte.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(tag),
-                    $"Tag '{tag}' is too big (max 255 bytes) for document '{_docId}' in time series: {_name}");
+                    $"Tag '{tag}' is too big (max 255 bytes) for document '{DocId}' in time series: {Name}");
 
             return tagSlice.AsSpan();
         }
