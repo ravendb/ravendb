@@ -74,11 +74,11 @@ select min(), max(), avg()
 
                     Assert.Equal(69, agg[0].Max[0]);
                     Assert.Equal(59, agg[0].Min[0]);
-                    Assert.Equal(64, agg[0].Avg[0]);
+                    Assert.Equal(64, agg[0].Average[0]);
 
                     Assert.Equal(169, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Min[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
 
                 }
             }
@@ -216,11 +216,11 @@ select min(), max(), avg()
 
                     Assert.Equal(69, agg[0].Max[0]);
                     Assert.Equal(59, agg[0].Min[0]);
-                    Assert.Equal(64, agg[0].Avg[0]);
+                    Assert.Equal(64, agg[0].Average[0]);
 
                     Assert.Equal(169, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Min[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Average[0]);
 
                 }
             }

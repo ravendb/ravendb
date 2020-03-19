@@ -799,6 +799,12 @@ namespace Raven.Server.Documents.Queries.Results
                         continue;
                     }
 
+                    if (me.Name.Value == "avg")
+                    {
+                        aggStates[i] = new TimeSeriesAggregation(AggregationType.Average);
+                        continue;
+                    }
+
                     throw new ArgumentException("Unknown method in timeseries query: " + me);
                 }
 
