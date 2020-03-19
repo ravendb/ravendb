@@ -1289,7 +1289,7 @@ namespace SlowTests.Issues
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.Contains("There are still some counter items to process from collection", staleness.StalenessReasons[0]);
+                Assert.Contains("There are still some counters to process from collection", staleness.StalenessReasons[0]);
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
@@ -1353,7 +1353,7 @@ namespace SlowTests.Issues
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.True(staleness.IsStale);
                 Assert.Equal(2, staleness.StalenessReasons.Count);
-                Assert.Contains("There are still some counter items to process from collection", staleness.StalenessReasons[0]);
+                Assert.Contains("There are still some counters to process from collection", staleness.StalenessReasons[0]);
                 Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[1]);
 
                 store.Maintenance.Send(new StartIndexingOperation());
