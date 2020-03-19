@@ -439,11 +439,11 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.CounterIncludes));
-                await writer.WriteCountersAsync(context, counters);
+                await writer.WriteCountersAsync(counters);
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.IncludedCounterNames));
-                WriteIncludedCounterNames(writer, result);
+                writer.WriteIncludedCounterNames(result.IncludedCounterNames);
             }
 
             var timeSeries = result.GetTimeSeriesIncludes();
@@ -468,12 +468,12 @@ namespace Raven.Server.Json
             return numberOfResults;
         }
 
-        private static void WriteIncludedCounterNames(AsyncBlittableJsonTextWriter writer, DocumentQueryResult result)
+        public static void WriteIncludedCounterNames(this AbstractBlittableJsonTextWriter writer, Dictionary<string, string[]> includedCounterNames)
         {
             writer.WriteStartObject();
 
             var first = true;
-            foreach (var kvp in result.IncludedCounterNames)
+            foreach (var kvp in includedCounterNames)
             {
                 if (first == false)
                     writer.WriteComma();
@@ -1333,7 +1333,7 @@ namespace Raven.Server.Json
                 return;
             }
 
-            // Explicitly not disposing it, a single document can be
+            // Explicitly not disposing it, a single document can be 
             // used multiple times in a single query, for example, due to projections
             // so we will let the context handle it, rather than handle it directly ourselves
             //using (document.Data)
@@ -1483,7 +1483,27 @@ namespace Raven.Server.Json
             return numberOfResults;
         }
 
-        public static async Task WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, List<CounterDetail>> counters)
+        public static void WriteCounters(this BlittableJsonTextWriter writer, Dictionary<string, List<CounterDetail>> counters)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in counters)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+
+                writer.WriteCountersForDocument(kvp.Value);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        public static async Task WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, List<CounterDetail>> counters)
         {
             writer.WriteStartObject();
 
@@ -1501,6 +1521,36 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndObject();
+        }
+
+        private static void WriteCountersForDocument(this BlittableJsonTextWriter writer, List<CounterDetail> counters)
+        {
+            writer.WriteStartArray();
+
+            var first = true;
+            foreach (var counter in counters)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(CounterDetail.DocumentId));
+                writer.WriteString(counter.DocumentId);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(CounterDetail.CounterName));
+                writer.WriteString(counter.CounterName);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(CounterDetail.TotalValue));
+                writer.WriteInteger(counter.TotalValue);
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
         }
 
         private static async Task WriteCountersForDocumentAsync(this AsyncBlittableJsonTextWriter writer, List<CounterDetail> counters)

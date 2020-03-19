@@ -66,12 +66,13 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ReplicationWithPullOption = 42_300;
         public static readonly int SubscriptionBaseLine = 40;
         public static readonly int SubscriptionIncludes = 41_400;
+        public static readonly int SubscriptionCounterIncludes = 50_000;
         public static readonly int TestConnectionBaseLine = 50;
 
         public static readonly int ClusterTcpVersion = ClusterBaseLine;
         public static readonly int HeartbeatsTcpVersion = Heartbeats42000;
         public static readonly int ReplicationTcpVersion = ReplicationWithPullOption;
-        public static readonly int SubscriptionTcpVersion = SubscriptionIncludes;
+        public static readonly int SubscriptionTcpVersion = SubscriptionCounterIncludes;
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
         static TcpConnectionHeaderMessage()
@@ -190,6 +191,8 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool BaseLine = true;
 
                 public bool Includes;
+
+                public bool CounterIncludes;
             }
             public class ClusterFeatures
             {
@@ -233,6 +236,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Subscription] = new List<int>
                 {
+                    SubscriptionCounterIncludes,
                     SubscriptionIncludes,
                     SubscriptionBaseLine
                 },
@@ -285,6 +289,14 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Subscription] = new Dictionary<int, SupportedFeatures>
                 {
+                    [SubscriptionCounterIncludes] = new SupportedFeatures(SubscriptionCounterIncludes)
+                    {
+                        Subscription = new SupportedFeatures.SubscriptionFeatures
+                        {
+                            CounterIncludes = true,
+                            Includes = true
+                        }
+                    },
                     [SubscriptionIncludes] = new SupportedFeatures(SubscriptionIncludes)
                     {
                         Subscription = new SupportedFeatures.SubscriptionFeatures
