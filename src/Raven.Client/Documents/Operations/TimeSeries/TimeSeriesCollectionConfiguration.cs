@@ -33,10 +33,23 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             Policies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
         }
 
+        private Dictionary<string, int> _indexCache;
+
         internal TimeSeriesPolicy GetPolicyByName(string policy, out int policyIndex)
         {
+            if (_indexCache == null)
+                _indexCache = new Dictionary<string, int>();
+
+            if (_indexCache.TryGetValue(policy, out policyIndex))
+            {
+                if (policyIndex == 0)
+                    return RawPolicy;
+                return Policies[policyIndex - 1];
+            }
+
             if (policy == RawTimeSeriesPolicy.PolicyString)
             {
+                _indexCache[policy] = 0;
                 policyIndex = 0;
                 return RawPolicy;
             }
@@ -46,7 +59,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 var p = Policies[index];
                 policyIndex = index + 1;
                 if (policy.IndexOf(p.Name, StringComparison.InvariantCultureIgnoreCase) == 0)
+                {
+                    _indexCache[policy] = policyIndex;
                     return p;
+                }
             }
 
             policyIndex = -1;
@@ -55,17 +71,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         internal int GetPolicyIndexByTimeSeries(string name)
         {
-            if (name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) == false)
+            var separatorIndex = name.IndexOf(TimeSeriesConfiguration.TimeSeriesRollupSeparator);
+            if (separatorIndex <= 0)
                 return 0;
 
-            for (var index = 0; index < Policies.Count; index++)
-            {
-                var policy = Policies[index];
-                if (name.IndexOf(policy.Name, StringComparison.InvariantCultureIgnoreCase) > 0)
-                    return index + 1;
-            }
+            var startIndex = separatorIndex + 1;
+            var policyName = name.Substring(startIndex, name.Length - startIndex);
 
-            return -1;
+            GetPolicyByName(policyName, out var index);
+            return index;
         }
 
         internal TimeSeriesPolicy GetNextPolicy(int policyIndex)
