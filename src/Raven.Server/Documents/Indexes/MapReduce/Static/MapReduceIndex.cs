@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private bool? _isSideBySide;
 
         protected HandleReferences _handleReferences;
-        private HandleCompareExchangeReferences _handleCompareExchangeReferences;
+        protected HandleCompareExchangeReferences _handleCompareExchangeReferences;
 
         protected readonly Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper>();
 
