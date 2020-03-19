@@ -93,7 +93,7 @@ namespace SlowTests.Core.Session
                         var dicMetadata = (IDictionary<string, object>)dicEntity["@metadata"];
                         return (string)dicMetadata["@collection"];
                     };
-                    s.Conventions.FindTypeNameForDynamic = (entity) => 
+                    s.Conventions.FindClrTypeNameForDynamic = (entity) => 
                     {
                         var dicEntity = (IDictionary<string, object>)entity;
                         var dicMetadata = (IDictionary<string, object>)dicEntity["@metadata"];
