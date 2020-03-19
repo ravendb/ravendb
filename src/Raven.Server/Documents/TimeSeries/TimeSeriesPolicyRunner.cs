@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(60));
 
-                await RunRollUps();
+                await RunRollups();
 
                 await DoRetention();
             }
@@ -195,12 +195,12 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal async Task RunRollUps()
+        internal async Task RunRollups()
         {
             var now = _database.Time.GetUtcNow();
             try
             {
-                var states = new List<TimeSeriesRollups.RollUpState>();
+                var states = new List<TimeSeriesRollups.RollupState>();
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     while (true)
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.TimeSeries
                         Stopwatch duration;
                         using (context.OpenReadTransaction())
                         {
-                            _database.DocumentsStorage.TimeSeriesStorage.Rollups.PrepareRollUps(context, now, 1024, states, out duration);
+                            _database.DocumentsStorage.TimeSeriesStorage.Rollups.PrepareRollups(context, now, 1024, states, out duration);
                             if (states.Count == 0)
                                 return;
                         }

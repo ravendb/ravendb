@@ -115,7 +115,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 var primary = cluster.Nodes.Single(n => n.ServerStore.NodeTag == record.Topology.Members[0]);
 
                 var database = await primary.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
                 {
@@ -185,7 +185,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
                 {
@@ -288,7 +288,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
                 {
@@ -300,7 +300,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
                 {
@@ -361,14 +361,14 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
 
                 config.Collections["Users"].Policies.Remove(p3);
                 config.Collections["Users"].Policies.Remove(p2);
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 await database.TimeSeriesPolicyRunner.HandleChanges();
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
                 {
@@ -429,7 +429,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(null));
 
@@ -494,7 +494,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
                 await database.TimeSeriesPolicyRunner.HandleChanges();
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
                 {
@@ -557,7 +557,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
                 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
                 
                 using (var session = store.OpenSession())
@@ -619,7 +619,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
                 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await database.TimeSeriesPolicyRunner.RunRollUps();
+                await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
                 
                 using (var session = store.OpenSession())
