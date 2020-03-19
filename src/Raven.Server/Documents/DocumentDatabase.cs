@@ -101,10 +101,10 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
-            _ioMetricsCleanerRun = DateTime.UtcNow.Add(Configuration.Databases.IoMetricsCleanTimeInterval.AsTimeSpan);
             StartTime = Time.GetUtcNow();
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
+            _ioMetricsCleanerRun = DateTime.UtcNow.Add(Configuration.Databases.IoMetricsCleanTimeInterval.AsTimeSpan);
             Scripts = new ScriptRunnerCache(this, Configuration);
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
