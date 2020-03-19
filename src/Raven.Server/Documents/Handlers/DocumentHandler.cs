@@ -222,42 +222,42 @@ namespace Raven.Server.Documents.Handlers
 
             using (includeCompareExchangeValues)
             {
-                foreach (var id in ids)
+            foreach (var id in ids)
+            {
+                var document = Database.DocumentsStorage.Get(context, id);
+                if (document == null && ids.Count == 1)
                 {
-                    var document = Database.DocumentsStorage.Get(context, id);
-                    if (document == null && ids.Count == 1)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-                    documents.Add(document);
-                    includeDocs.Gather(document);
-                    includeCounters?.Fill(document);
-                    includeTimeSeries?.Fill(document);
-                    includeCompareExchangeValues?.Gather(document);
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
                 }
 
-                includeDocs.Fill(includes);
+                documents.Add(document);
+                includeDocs.Gather(document);
+                includeCounters?.Fill(document);
+                includeTimeSeries?.Fill(document);
+                    includeCompareExchangeValues?.Gather(document);
+            }
+
+            includeDocs.Fill(includes);
                 includeCompareExchangeValues?.Materialize();
 
                 var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);
 
-                var etag = GetStringFromHeaders("If-None-Match");
-                if (etag == actualEtag)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
-                }
+            var etag = GetStringFromHeaders("If-None-Match");
+            if (etag == actualEtag)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return;
+            }
 
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
+            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-                int numberOfResults = 0;
+            int numberOfResults = 0;
 
                 numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeTimeSeries?.Results, includeCompareExchangeValues?.Results, numberOfResults);
 
-                AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
-            }
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
+        }
         }
 
         private void GetCompareExchangeValueQueryString(DocumentDatabase database, out IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
-                    await writer.WriteCountersAsync(context, counters);
+                    await writer.WriteCountersAsync(counters);
                 }
 
                 if (timeseries?.Count > 0)
@@ -390,7 +390,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 // We HAVE to read the document in full, trying to parallelize the doc read
-                // and the identity generation needs to take into account that the identity
+                // and the identity generation needs to take into account that the identity 
                 // generation can fail and will leave the reading task hanging if we abort
                 // easier to just do in synchronously
                 var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
@@ -652,11 +652,11 @@ namespace Raven.Server.Documents.Handlers
             }
             catch (Voron.Exceptions.VoronConcurrencyErrorException)
             {
-                // RavenDB-10581 - If we have a concurrency error on "doc-id/"
+                // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
                 // this means that we have existing values under the current etag
-                // we'll generate a new (random) id for them.
+                // we'll generate a new (random) id for them. 
 
-                // The TransactionMerger will re-run us when we ask it to as a
+                // The TransactionMerger will re-run us when we ask it to as a 
                 // separate transaction
                 if (_id?.EndsWith(_database.IdentityPartsSeparator) == true)
                 {

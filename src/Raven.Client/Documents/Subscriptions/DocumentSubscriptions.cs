@@ -46,9 +46,7 @@ namespace Raven.Client.Documents.Subscriptions
                 ChangeVector = options.ChangeVector,
                 MentorNode = options.MentorNode
             }, options.Filter, options.Projection, options.Includes), database);
-
         }
-
 
         /// <summary>
         /// Creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
@@ -61,7 +59,6 @@ namespace Raven.Client.Documents.Subscriptions
         {
             return Create(CreateSubscriptionOptionsFromGeneric(_store.Conventions, options, predicate, null, includes: null), database);
         }
-
 
         /// <summary>
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options.
@@ -88,7 +85,7 @@ namespace Raven.Client.Documents.Subscriptions
             string database = null,
             CancellationToken token = default)
         {
-            return CreateAsync(CreateSubscriptionOptionsFromGeneric(_store.Conventions,options, predicate, null, includes: null), database, token);
+            return CreateAsync(CreateSubscriptionOptionsFromGeneric(_store.Conventions, options, predicate, null, includes: null), database, token);
         }
 
         internal static SubscriptionCreationOptions CreateSubscriptionOptionsFromGeneric<T>(
@@ -166,22 +163,53 @@ namespace Raven.Client.Documents.Subscriptions
                 var builder = new IncludeBuilder<T>(conventions);
                 includes(builder);
 
-                if (builder.DocumentsToInclude != null && builder.DocumentsToInclude.Count > 0)
+                var numberOfIncludesAdded = 0;
+
+                if (builder.DocumentsToInclude?.Count > 0)
                 {
                     criteria.Query += Environment.NewLine + "include ";
 
-                    var first = true;
                     foreach (var inc in builder.DocumentsToInclude)
                     {
                         var include = "doc." + inc;
-                        if (first == false)
+
+                        if (numberOfIncludesAdded > 0)
                             criteria.Query += ",";
-                        first = false;
 
                         if (IncludesUtil.RequiresQuotes(include, out var escapedInclude))
                             criteria.Query += $"'{escapedInclude}'";
                         else
                             criteria.Query += include;
+
+                        numberOfIncludesAdded++;
+                    }
+                }
+
+                if (builder.AllCounters)
+                {
+                    if (numberOfIncludesAdded == 0)
+                        criteria.Query += Environment.NewLine + "include ";
+
+                    criteria.Query += $"counters()";
+
+                    numberOfIncludesAdded++;
+                }
+                else if (builder.CountersToInclude?.Count > 0)
+                {
+                    if (numberOfIncludesAdded == 0)
+                        criteria.Query += Environment.NewLine + "include ";
+
+                    foreach (var counterName in builder.CountersToInclude)
+                    {
+                        if (numberOfIncludesAdded > 0)
+                            criteria.Query += ",";
+
+                        if (IncludesUtil.RequiresQuotes(counterName, out var escapedCounterName))
+                            criteria.Query += $"counters({escapedCounterName})";
+                        else
+                            criteria.Query += $"counters({counterName})";
+
+                        numberOfIncludesAdded++;
                     }
                 }
             }
@@ -199,7 +227,6 @@ namespace Raven.Client.Documents.Subscriptions
         {
             return AsyncHelpers.RunSync(() => CreateAsync(options, database));
         }
-
 
         /// <summary>
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options.
@@ -225,7 +252,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription.
         /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
-        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
+        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.
         /// There can be only a single client that is connected to a subscription.
         /// </summary>
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
@@ -238,7 +265,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription.
         /// Although this overload does not an <c>SubscriptionConnectionOptions</c> object as a parameter, it uses it's default values.
         /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
-        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
+        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.
         /// There can be only a single client that is connected to a subscription.
         /// </summary>
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
@@ -250,7 +277,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription.
         /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
-        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
+        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.
         /// There can be only a single client that is connected to a subscription.
         /// </summary>
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
@@ -271,7 +298,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription.
         /// Although this overload does not an <c>SubscriptionConnectionOptions</c> object as a parameter, it uses it's default values.
         /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
-        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
+        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.
         /// There can be only a single client that is connected to a subscription.
         /// </summary>
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
@@ -311,7 +338,6 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-
         /// <summary>
         /// Delete a subscription.
         /// </summary>
@@ -319,7 +345,6 @@ namespace Raven.Client.Documents.Subscriptions
         {
             AsyncHelpers.RunSync(() => DeleteAsync(name, database));
         }
-
 
         /// <summary>
         /// Returns subscription definition and it's current state
@@ -340,7 +365,6 @@ namespace Raven.Client.Documents.Subscriptions
         /// <returns></returns>
         public async Task<SubscriptionState> GetSubscriptionStateAsync(string subscriptionName, string database = null, CancellationToken token = default)
         {
-
             if (string.IsNullOrEmpty(subscriptionName))
                 throw new ArgumentNullException("SubscriptionName");
 

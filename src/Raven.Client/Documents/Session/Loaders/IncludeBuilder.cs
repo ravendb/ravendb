@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Session.Loaders
     {
     }
 
-    public interface ISubscriptionIncludeBuilder<T> : IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>
+    public interface ISubscriptionIncludeBuilder<T> : IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>, ICounterIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>
     {
     }
 
@@ -111,7 +111,6 @@ namespace Raven.Client.Documents.Session.Loaders
         internal Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
 
         internal Dictionary<string, HashSet<TimeSeriesRange>> TimeSeriesToIncludeBySourceAlias;
-
         internal HashSet<string> CompareExchangeValuesToInclude;
     }
 
@@ -155,6 +154,24 @@ namespace Raven.Client.Documents.Session.Loaders
         }
 
         IQueryIncludeBuilder<T> ICounterIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllCounters()
+        {
+            IncludeAllCounters(string.Empty);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> ICounterIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeCounter(string name)
+        {
+            IncludeCounter(string.Empty, name);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> ICounterIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeCounters(string[] names)
+        {
+            IncludeCounters(string.Empty, names);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> ICounterIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllCounters()
         {
             IncludeAllCounters(string.Empty);
             return this;
@@ -393,11 +410,8 @@ namespace Raven.Client.Documents.Session.Loaders
                     (bool, HashSet<string>)>(StringComparer.OrdinalIgnoreCase);
             }
 
-            if (CountersToIncludeBySourcePath.TryGetValue(sourcePath, out var val) &&
-                val.CountersToInclude != null)
-
-                throw new InvalidOperationException("IIncludeBuilder : You cannot use AllCounters() after using " +
-                                                    "Counter(string name) or Counters(string[] names)");
+            if (CountersToIncludeBySourcePath.TryGetValue(sourcePath, out var val) && val.CountersToInclude != null)
+                throw new InvalidOperationException("IIncludeBuilder : You cannot use AllCounters() after using Counter(string name) or Counters(string[] names)");
 
             CountersToIncludeBySourcePath[sourcePath] = (true, null);
         }

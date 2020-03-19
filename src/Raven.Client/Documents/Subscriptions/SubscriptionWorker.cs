@@ -36,6 +36,7 @@ namespace Raven.Client.Documents.Subscriptions
     public class SubscriptionWorker<T> : IAsyncDisposable, IDisposable where T : class
     {
         public delegate Task AfterAcknowledgmentAction(SubscriptionBatch<T> batch);
+
         private readonly Logger _logger;
         private readonly DocumentStore _store;
         private readonly string _dbName;
@@ -47,7 +48,6 @@ namespace Raven.Client.Documents.Subscriptions
         private Task _subscriptionTask;
         private Stream _stream;
         private int _forcedTopologyUpdateAttempts = 0;
-
 
         /// <summary>
         /// allows the user to define stuff that happens after the confirm was received from the server (this way we know we won't
@@ -109,7 +109,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (Exception)
                     {
-                        // just need to wait for it to end                        
+                        // just need to wait for it to end
                     }
                 }
 
@@ -153,7 +153,6 @@ namespace Raven.Client.Documents.Subscriptions
             }
 
             return _subscriptionTask = RunSubscriptionAsync();
-
         }
 
         private ServerNode _redirectNode;
@@ -187,7 +186,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (Exception)
                     {
-                        // if we failed to talk to a node, we'll forget about it and let the topology to 
+                        // if we failed to talk to a node, we'll forget about it and let the topology to
                         // redirect us to the current node
                         _redirectNode = null;
                         throw;
@@ -433,7 +432,6 @@ namespace Raven.Client.Documents.Subscriptions
                                     CloseTcpClient();
                                     using ((await readFromServer.ConfigureAwait(false)).ReturnContext)
                                     {
-
                                     }
                                 }
                                 catch (Exception)
@@ -447,7 +445,6 @@ namespace Raven.Client.Documents.Subscriptions
                             _processingCts.Token.ThrowIfCancellationRequested();
 
                             var lastReceivedChangeVector = batch.Initialize(incomingBatch);
-
 
                             notifiedSubscriber = Task.Run(async () =>
                             {
@@ -472,7 +469,6 @@ namespace Raven.Client.Documents.Subscriptions
                                         if (_options.IgnoreSubscriberErrors == false)
                                             throw new SubscriberErrorException($"Subscriber threw an exception in subscription '{_options.SubscriptionName}'", ex);
                                     }
-
                                 }
 
                                 try
@@ -503,11 +499,11 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-
         private async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.ManagedPinnedBuffer buffer, SubscriptionBatch<T> batch)
         {
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
             var includes = new List<BlittableJsonReaderObject>();
+            var counterIncludes = new List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)>();
             IDisposable returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
             bool endOfBatch = false;
             while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
@@ -525,6 +521,9 @@ namespace Raven.Client.Documents.Subscriptions
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.Includes:
                         includes.Add(receivedMessage.Includes);
+                        break;
+                    case SubscriptionConnectionServerMessage.MessageType.CounterIncludes:
+                        counterIncludes.Add((receivedMessage.CounterIncludes, receivedMessage.IncludedCounterNames));
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
                         endOfBatch = true;
@@ -551,7 +550,8 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 Messages = incomingBatch,
                 ReturnContext = returnContext,
-                Includes = includes
+                Includes = includes,
+                CounterIncludes = counterIncludes
             };
         }
 
@@ -589,7 +589,6 @@ namespace Raven.Client.Documents.Subscriptions
                 return null;
             }
         }
-
 
         private void SendAck(string lastReceivedChangeVector, Stream networkStream)
         {
@@ -692,10 +691,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 throw new SubscriptionInvalidStateException(
                     $"Subscription connection was in invalid state for more than {_options.MaxErroneousPeriod} and therefore will be terminated");
-
             }
-
-
         }
 
         private bool ShouldTryToReconnect(Exception ex)
@@ -721,7 +717,7 @@ namespace Raven.Client.Documents.Subscriptions
                     return true;
                 case NodeIsPassiveException e:
                     {
-                        // if we failed to talk to a node, we'll forget about it and let the topology to 
+                        // if we failed to talk to a node, we'll forget about it and let the topology to
                         // redirect us to the current node
                         _redirectNode = null;
                         return true;
@@ -744,7 +740,6 @@ namespace Raven.Client.Documents.Subscriptions
                     return true;
             }
         }
-
 
         private void CloseTcpClient()
         {

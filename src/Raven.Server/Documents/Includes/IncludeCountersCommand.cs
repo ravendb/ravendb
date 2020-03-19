@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Includes
         public Dictionary<string, string[]> CountersToGetByDocId { get; }
         public Dictionary<string, List<CounterDetail>> Results { get; }
 
-        public IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context)
+        private IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context)
         {
             _database = database;
             _context = context;

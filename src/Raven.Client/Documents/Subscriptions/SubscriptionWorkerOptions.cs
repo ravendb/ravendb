@@ -28,6 +28,7 @@ namespace Raven.Client.Documents.Subscriptions
         public List<SubscriptionConnectionServerMessage> Messages;
         public IDisposable ReturnContext;
         public List<BlittableJsonReaderObject> Includes;
+        public List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> CounterIncludes;
     }
     internal class SubscriptionConnectionServerMessage
     {
@@ -38,6 +39,7 @@ namespace Raven.Client.Documents.Subscriptions
             EndOfBatch,
             Data,
             Includes,
+            CounterIncludes,
             Confirm,
             Error
         }
@@ -68,6 +70,8 @@ namespace Raven.Client.Documents.Subscriptions
         public BlittableJsonReaderObject Data { get; set; }
 
         public BlittableJsonReaderObject Includes { get; set; }
+        public BlittableJsonReaderObject CounterIncludes { get; set; }
+        public Dictionary<string, string[]> IncludedCounterNames { get; set; }
         public string Exception { get; set; }
         public string Message { get; set; }
     }

@@ -5,8 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes;
@@ -112,18 +112,19 @@ namespace SlowTests.Issues
                 Assert.NotNull(indexStoragePath1);
                 Assert.NotNull(indexStoragePath2);
 
-                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
-
-                using (var stream1 = GetFile("Orders_ByOrderBy.zip"))
-                using (var stream2 = GetFile("Auto_Orders_ByOrderedAt.zip"))
-                using (var archive1 = new ZipArchive(stream1))
-                using (var archive2 = new ZipArchive(stream2))
+                using (await Server.ServerStore.DatabasesLandlord.UnloadAndLockDatabase(store.Database, nameof(RavenDB_13759)))
                 {
-                    IOExtensions.DeleteDirectory(indexStoragePath1);
-                    IOExtensions.DeleteDirectory(indexStoragePath2);
+                    using (var stream1 = GetFile("Orders_ByOrderBy.zip"))
+                    using (var stream2 = GetFile("Auto_Orders_ByOrderedAt.zip"))
+                    using (var archive1 = new ZipArchive(stream1))
+                    using (var archive2 = new ZipArchive(stream2))
+                    {
+                        IOExtensions.DeleteDirectory(indexStoragePath1);
+                        IOExtensions.DeleteDirectory(indexStoragePath2);
 
-                    archive1.ExtractToDirectory(indexStoragePath1);
-                    archive2.ExtractToDirectory(indexStoragePath2);
+                        archive1.ExtractToDirectory(indexStoragePath1);
+                        archive2.ExtractToDirectory(indexStoragePath2);
+                    }
                 }
 
                 database = await GetDocumentDatabaseInstanceFor(store);
