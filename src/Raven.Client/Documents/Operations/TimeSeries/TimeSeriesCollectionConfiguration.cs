@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -8,7 +9,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesCollectionConfiguration : IDynamicJson
     {
-
         public bool Disabled { get; set; }
         
         /// <summary>
@@ -30,13 +30,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             Policies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
         }
 
-        private Dictionary<string, int> _indexCache;
+        private readonly ConcurrentDictionary<string, int> _indexCache = new ConcurrentDictionary<string, int>();
 
         internal TimeSeriesPolicy GetPolicyByName(string policy, out int policyIndex)
         {
-            if (_indexCache == null)
-                _indexCache = new Dictionary<string, int>();
-
             if (_indexCache.TryGetValue(policy, out policyIndex))
             {
                 if (policyIndex == 0)

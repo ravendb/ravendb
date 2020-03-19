@@ -181,7 +181,37 @@ namespace Raven.Server.Documents.TimeSeries
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                throw new NotImplementedException();
+                return new TimeSeriesRetentionCommandDto(_keys, _request);
+            }
+
+            public class TimeSeriesRetentionCommandDto : TransactionOperationsMerger.IReplayableCommandDto<TimeSeriesRetentionCommand>
+            {
+                public List<Slice> _keys;
+                public TimeSeriesStorage.DeletionRangeRequest _request;
+
+                public TimeSeriesRetentionCommandDto(List<Slice> keys, TimeSeriesStorage.DeletionRangeRequest request)
+                {
+                    _keys = keys;
+                    _request = request;
+                }
+                public TimeSeriesRetentionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    var request = new TimeSeriesStorage.DeletionRangeRequest
+                    {
+                        Collection = _request.Collection,
+                        DocumentId = _request.DocumentId,
+                        From = _request.From,
+                        To = _request.To,
+                        Name = _request.Name
+                    };
+                    var keys = new List<Slice>();
+                    foreach (var key in _keys)
+                    {
+                        keys.Add(key.Clone(context.Allocator));
+                    }
+
+                    return new TimeSeriesRetentionCommand(keys, request);
+                }
             }
         }
         internal class RemovePoliciesCommand : TransactionOperationsMerger.MergedTransactionCommand
@@ -231,7 +261,24 @@ namespace Raven.Server.Documents.TimeSeries
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                throw new NotImplementedException();
+                return new RemovePoliciesCommandDto(_collection, _policy);
+            }
+
+            public class RemovePoliciesCommandDto : TransactionOperationsMerger.IReplayableCommandDto<RemovePoliciesCommand>
+            {
+                public CollectionName _collectionName;
+                public string _policy;
+
+                public RemovePoliciesCommandDto(CollectionName collectionName, string policy)
+                {
+                    _collectionName = collectionName;
+                    _policy = policy;
+                }
+
+                public RemovePoliciesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    return new RemovePoliciesCommand(_collectionName, _policy);
+                }
             }
         }
 
@@ -282,7 +329,28 @@ namespace Raven.Server.Documents.TimeSeries
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                throw new NotImplementedException();
+                return new AddedNewRollupPoliciesCommandDto(_collection, _from, _to, _skip);
+            }
+
+            public class AddedNewRollupPoliciesCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AddedNewRollupPoliciesCommand>
+            {
+                public CollectionName _name;
+                public TimeSeriesPolicy _from;
+                public TimeSeriesPolicy _to;
+                public int _skip;
+
+                public AddedNewRollupPoliciesCommandDto(CollectionName name, TimeSeriesPolicy from, TimeSeriesPolicy to, int skip)
+                {
+                    _name = name;
+                    _from = @from;
+                    _to = to;
+                    _skip = skip;
+                }
+
+                public AddedNewRollupPoliciesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    return new AddedNewRollupPoliciesCommand(_name, _from, _to, _skip);
+                }
             }
         }
 
@@ -402,7 +470,28 @@ namespace Raven.Server.Documents.TimeSeries
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                throw new NotImplementedException();
+                return new RollupTimeSeriesCommandDto(_configuration, _now, _states, _isFirstInTopology);
+            }
+
+            public class RollupTimeSeriesCommandDto : TransactionOperationsMerger.IReplayableCommandDto<RollupTimeSeriesCommand>
+            {
+                public TimeSeriesConfiguration _configuration;
+                public DateTime _now;
+                public List<RollupState> _states;
+                public bool _isFirstInTopology;
+
+                public RollupTimeSeriesCommandDto(TimeSeriesConfiguration configuration, DateTime now, List<RollupState> states, bool isFirstInTopology)
+                {
+                    _configuration = configuration;
+                    _now = now;
+                    _states = states;
+                    _isFirstInTopology = isFirstInTopology;
+                }
+
+                public RollupTimeSeriesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    return new RollupTimeSeriesCommand(_configuration, _now, _states, _isFirstInTopology);
+                }
             }
         }
 
