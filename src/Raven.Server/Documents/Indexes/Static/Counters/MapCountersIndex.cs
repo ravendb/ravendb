@@ -189,7 +189,11 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
         {
-            throw new NotImplementedException();
+            var staticEntries = _compiled.OutputFields.ToHashSet();
+
+            var dynamicEntries = GetDynamicEntriesFields(staticEntries);
+
+            return (staticEntries, dynamicEntries);
         }
 
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
