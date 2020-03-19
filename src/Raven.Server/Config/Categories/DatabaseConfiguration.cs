@@ -83,6 +83,6 @@ namespace Raven.Server.Config.Categories
         [Description("Retention time (in hours) for IO Metrics data")]
         [DefaultValue(4)]
         [ConfigurationEntry("Databases.IoMetricsCleanTimeInterval", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int IoMetricsCleanTimeInterval { get; set; }
+        public TimeSetting IoMetricsCleanTimeInterval { get; set; }
     }
 }

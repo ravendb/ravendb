@@ -81,7 +81,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
-        private long _ioMetricsCleanerTicks;
+        private DateTime _ioMetricsCleanerRun;
         private long _lastTopologyIndex = -1;
         private long _lastClientConfigurationIndex = -1;
         private long _preventUnloadCounter;
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
-            _ioMetricsCleanerTicks = DateTime.UtcNow.AddHours(Configuration.Databases.IoMetricsCleanTimeInterval).Ticks;
+            _ioMetricsCleanerRun = DateTime.UtcNow.Add(Configuration.Databases.IoMetricsCleanTimeInterval.AsTimeSpan);
             StartTime = Time.GetUtcNow();
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
@@ -174,7 +174,6 @@ namespace Raven.Server.Documents
         public ServerStore ServerStore => _serverStore;
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
-        public DateTime IoMetricsCleanTime => new DateTime(_ioMetricsCleanerTicks);
 
         public DateTime LastAccessTime;
 
@@ -921,10 +920,10 @@ namespace Raven.Server.Documents
                 DocumentsStorage.Environment.Cleanup();
                 ConfigurationStorage.Environment.Cleanup();
 
-                if (utcNow.Ticks >= _ioMetricsCleanerTicks)
+                if (utcNow >= _ioMetricsCleanerRun)
                 {
-                    IoMetricsUtil.CleanIoMetrics(GetAllStoragesEnvironment(), _ioMetricsCleanerTicks);
-                    _ioMetricsCleanerTicks = utcNow.AddHours(Configuration.Databases.IoMetricsCleanTimeInterval).Ticks;
+                    IoMetricsUtil.CleanIoMetrics(GetAllStoragesEnvironment(), _ioMetricsCleanerRun.Ticks);
+                    _ioMetricsCleanerRun = utcNow.Add(Configuration.Databases.IoMetricsCleanTimeInterval.AsTimeSpan);
                     ranIoMetricsCleaner = true;
                 }
 
