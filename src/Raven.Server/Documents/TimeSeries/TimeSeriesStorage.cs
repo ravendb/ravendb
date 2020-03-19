@@ -52,6 +52,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public readonly TimeSeriesStats Stats;
+        public readonly TimeSeriesRollups Rollups;
 
         static TimeSeriesStorage()
         {
@@ -118,6 +119,7 @@ namespace Raven.Server.Documents.TimeSeries
             tx.CreateTree(DeletedRangesKey);
 
             Stats = new TimeSeriesStats(tx);
+            Rollups = new TimeSeriesRollups();
         }
 
         public static DateTime ExtractDateTimeFromKey(Slice key)
@@ -221,7 +223,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var (changeVector, etag) = GenerateChangeVector(context, remoteChangeVector);
 
-            using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name).WithEtag(etag).WithCollection(collectionName.Name))
+            using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithEtag(etag))
             using (table.Allocate(out var tvb))
             using (Slice.From(context.Allocator, remoteChangeVector ?? changeVector, out var cv))
             {
@@ -1000,10 +1002,10 @@ namespace Raven.Server.Documents.TimeSeries
                 var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
                 var newTimeSeries = tss.Stats.GetStats(context, docId, name).Count == 0;
                 
-                using (var slicer = new TimeSeriesSliceHolder(context, docId, name).WithCollection(collectionName.Name))
+                using (var slicer = new TimeSeriesSliceHolder(context, docId, name, collectionName.Name))
                 {
                     Stats.UpdateStats(context, slicer, collectionName, segment, baseline);
-                    _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, slicer, collectionName.Name, name, newEtag, baseline, changeVector);
+                    _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, slicer, newEtag, baseline, changeVector);
 
                     using (Slice.From(context.Allocator, changeVector, out Slice cv))
                     using (table.Allocate(out TableValueBuilder tvb))
@@ -1121,7 +1123,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _docId = docId;
                 _name = name;
 
-                SliceHolder = new TimeSeriesSliceHolder(_context, docId, name).WithBaseline(timeStamp).WithCollection(_collection.Name);
+                SliceHolder = new TimeSeriesSliceHolder(_context, docId, name, _collection.Name).WithBaseline(timeStamp);
                 SliceHolder.CreateSegmentBuffer();
 
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context, null);
@@ -1144,7 +1146,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _name = name;
                 FromReplication = fromReplicationChangeVector != null;
                 BaselineDate = allocator.CurrentBaseline;
-                allocator.WithCollection(_collection.Name).CreateSegmentBuffer();
+                allocator.CreateSegmentBuffer();
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context, fromReplicationChangeVector);
             }
 
@@ -1190,7 +1192,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate);
 
                 var keySlice = SliceHolder.TimeSeriesKeySlice;
-                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, _collection.Name, _name, _currentEtag, BaselineDate, _currentChangeVector);
+                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, _currentEtag, BaselineDate, _currentChangeVector);
 
                 using (Table.Allocate(out var tvb))
                 using (Slice.From(_context.Allocator, _currentChangeVector, out var cv))
@@ -1230,9 +1232,7 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureSegmentSize(newSegment.NumberOfBytes);
 
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate);
-                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, _collection.Name, _name, _currentEtag, BaselineDate, _currentChangeVector);
-
-                SliceHolder.WithCollection(_collection.Name);
+                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, _currentEtag, BaselineDate, _currentChangeVector);
 
                 using (Slice.From(_context.Allocator, _currentChangeVector, out Slice cv))
                 using (Table.Allocate(out TableValueBuilder tvb))
@@ -1370,7 +1370,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         current.Timestamp = EnsureMillisecondsPrecision(current.Timestamp);
 
-                        using (var slicer = new TimeSeriesSliceHolder(context, documentId, name).WithBaseline(current.Timestamp))
+                        using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection).WithBaseline(current.Timestamp))
                         {
                             var segmentHolder = new TimeSeriesSegmentHolder(this, context, slicer, documentId, name, collectionName, changeVectorFromReplication);
                             if (segmentHolder.LoadCurrentSegment() == false)

@@ -192,8 +192,6 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, CsvImportOptions> CsvImportOptions = GenerateJsonDeserializationRoutine<CsvImportOptions>();
 
-        public static readonly Func<BlittableJsonReaderObject, TimeSeriesPolicyRunner.RollUpState> RollUpState = GenerateJsonDeserializationRoutine<TimeSeriesPolicyRunner.RollUpState>();
-
         public class Parameters
         {
             private Parameters()

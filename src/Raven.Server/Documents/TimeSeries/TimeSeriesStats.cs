@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.TimeSeries
             var name = slicer.LowerTimeSeriesName;
             var index = name.Content.IndexOf((byte)TimeSeriesConfiguration.TimeSeriesRollupSeparator);
             if (index < 0)
-                return TimeSeriesPolicyRunner.RawPolicySlice;
+                return TimeSeriesRollups.RawPolicySlice;
             var offset = index + 1;
             return slicer.External(name, offset, name.Content.Length - offset);
         }
