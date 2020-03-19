@@ -68,6 +68,33 @@ namespace Sparrow.Server.Meters
             }
         }
 
+        public void RemoveUntil(long ticks)
+        {
+            if (_bufferPos != -1)
+            {
+                for (var pos = 0; pos < _buffer.Length; pos++)
+                {
+                    if (_buffer[pos] == null)
+                        continue;
+
+                    if (_buffer[pos].End.Ticks < ticks)
+                        Interlocked.Exchange(ref _buffer[pos], null);
+                }
+            }
+
+            if (_summerizedPos != -1)
+            {
+                for (var pos = 0; pos < _summerizedBuffer.Length; pos++)
+                {
+                    if (_summerizedBuffer[pos] == null)
+                        continue;
+
+                    if (_summerizedBuffer[pos].TotalTimeEnd.Ticks < ticks)
+                        Interlocked.Exchange(ref _summerizedBuffer[pos], null);
+                }
+            }
+        }
+
         public struct DurationMeasurement : IDisposable
         {
             public readonly IoMeterBuffer Parent;

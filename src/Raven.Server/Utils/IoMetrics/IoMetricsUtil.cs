@@ -107,8 +107,21 @@ namespace Raven.Server.Utils.IoMetrics
                 Type = recentMetric.Type
             };
         }
-    }
 
+        public static void CleanIoMetrics(IEnumerable<StorageEnvironmentWithType> environments, long ioMetricsCleanerTicks)
+        {
+            foreach (var storageEnvironment in environments)
+            {
+                foreach (var fileMetric in storageEnvironment.Environment.Options.IoMetrics.Files)
+                {
+                    fileMetric.Compression.RemoveUntil(ioMetricsCleanerTicks);
+                    fileMetric.DataFlush.RemoveUntil(ioMetricsCleanerTicks);
+                    fileMetric.DataSync.RemoveUntil(ioMetricsCleanerTicks);
+                    fileMetric.JournalWrite.RemoveUntil(ioMetricsCleanerTicks);
+                }
+            }
+        }
+    }
 
     public class IOMetricsHistoryStats
     {
