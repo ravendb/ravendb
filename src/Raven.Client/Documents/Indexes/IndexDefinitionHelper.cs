@@ -245,7 +245,7 @@ namespace Raven.Client.Documents.Indexes
 
             if (map.StartsWith("counters", StringComparison.OrdinalIgnoreCase))
             {
-                return IndexSourceType.TimeSeries;
+                return IndexSourceType.Counters;
             }
 
             if (map.StartsWith("from"))
