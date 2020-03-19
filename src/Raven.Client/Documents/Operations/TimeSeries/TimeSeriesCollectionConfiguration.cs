@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Sparrow.Json.Parsing;
@@ -21,10 +20,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// <summary>
         /// Specify a policy for the original time-series
         /// </summary>
-        public RawTimeSeriesPolicy RawPolicy { get; set; } = DefaultRawPolicy;
+        public RawTimeSeriesPolicy RawPolicy { get; set; } = RawTimeSeriesPolicy.Default;
 
-        internal static RawTimeSeriesPolicy DefaultRawPolicy = new RawTimeSeriesPolicy();
-        
         public void Validate()
         {
             if (Policies.Count == 0)
@@ -118,6 +115,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public class RawTimeSeriesPolicy : TimeSeriesPolicy
     {
         internal const string PolicyString = "rawpolicy"; // must be lower case
+
+        public static RawTimeSeriesPolicy Default => new RawTimeSeriesPolicy();
+
         public RawTimeSeriesPolicy()
         {
             Name = PolicyString;
