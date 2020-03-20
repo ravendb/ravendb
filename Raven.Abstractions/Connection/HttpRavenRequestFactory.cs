@@ -3,10 +3,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http;
-
+using System.Security.Cryptography.X509Certificates;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
 using Raven.Abstractions.OAuth;
 
 namespace Raven.Abstractions.Connection
@@ -16,7 +15,11 @@ namespace Raven.Abstractions.Connection
     {
         public int? RequestTimeoutInMs { get; set; }
 
+        public X509Certificate2 Certificate { get; set; }
+
         readonly ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator> authenticators = new ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator>();
+
+        private static bool setSecurityProtocol;
 
         public void ConfigureRequest(RavenConnectionStringOptions options, HttpWebRequest request)
         {
@@ -41,6 +44,17 @@ namespace Raven.Abstractions.Connection
                     {
                         credentialsToUse = options.Credentials;
                     }
+                }
+
+                if (Certificate != null)
+                {
+                    if (setSecurityProtocol == false)
+                    {
+                        ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+                        setSecurityProtocol = true;
+                    }
+
+                    request.ClientCertificates = new X509Certificate2Collection(Certificate);
                 }
 
                 request.Credentials = credentialsToUse;

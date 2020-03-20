@@ -366,6 +366,8 @@ namespace Raven.Database.Config
             Replication.ForceReplicationRequestBuffering = ravenSettings.Replication.ForceReplicationRequestBuffering.Value;
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
             Replication.ReplicationPropagationDelayInSeconds = ravenSettings.Replication.ReplicationPropagationDelayInSeconds.Value;
+            Replication.ReplicationToV4CertificatePath = ravenSettings.Replication.ReplicationToV4CertificatePath.Value;
+            Replication.ReplicationToV4CertificatePassword = ravenSettings.Replication.ReplicationToV4CertificatePassword.Value;
 
             SqlReplication.CommandTimeoutInSec = ravenSettings.SqlReplication.CommandTimeoutInSec.Value;
 
@@ -1588,6 +1590,10 @@ namespace Raven.Database.Config
             /// Indicates how many seconds replication task will wait before propagating replication documents
             /// </summary>
             public int ReplicationPropagationDelayInSeconds { get; set; }
+
+            public string ReplicationToV4CertificatePath { get; set; }
+
+            public string ReplicationToV4CertificatePassword { get; set; }
         }
 
         public class SqlReplicationConfiguration

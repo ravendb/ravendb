@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -186,6 +187,10 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 RequestTimeoutInMs = replicationRequestTimeoutInMs
             };
+
+            var certificatePath = docDb.Configuration.Replication.ReplicationToV4CertificatePath;
+            if (certificatePath != null)
+                httpRavenRequestFactory.Certificate = new X509Certificate2(certificatePath, docDb.Configuration.Replication.ReplicationToV4CertificatePassword);
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
             var disposableAction = new DisposableAction(task.Wait);
