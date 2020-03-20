@@ -14,7 +14,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public DeleteServerWideBackupConfigurationCommand(string configurationName, string uniqueRequestId) : base(uniqueRequestId)
         {
-            Name = ClusterStateMachine.ServerWideBackupConfigurationsKey;
+            Name = ClusterStateMachine.ServerWideConfigurationKey.Backup;
             Value = configurationName;
         }
 
@@ -32,8 +32,7 @@ namespace Raven.Server.ServerWide.Commands
             if (propertyIndex == -1)
                 return null;
 
-            if (previousValue.Modifications == null)
-                previousValue.Modifications = new DynamicJsonValue();
+            previousValue.Modifications ??= new DynamicJsonValue();
 
             previousValue.Modifications.Removals = new HashSet<int>{ propertyIndex };
             return context.ReadObject(previousValue, Name);

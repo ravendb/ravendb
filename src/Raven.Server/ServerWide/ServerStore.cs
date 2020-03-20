@@ -1762,9 +1762,16 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(command);
         }
 
-        public Task<(long Index, object Result)> DeleteServerWideBackupConfigurationAsync(string configurationName, string raftRequestId)
+        public Task<(long Index, object Result)> DeleteServerWideTaskAsync(DeleteServerWideTaskCommand.DeleteConfiguration configuration, string raftRequestId)
         {
-            var command = new DeleteServerWideBackupConfigurationCommand(configurationName, raftRequestId);
+            var command = new DeleteServerWideTaskCommand(configuration, raftRequestId);
+
+            return SendToLeaderAsync(command);
+        }
+
+        public Task<(long Index, object Result)> PutServerWideExternalReplicationAsync(ServerWideExternalReplication configuration, string raftRequestId)
+        {
+            var command = new PutServerWideExternalReplicationCommand(configuration, raftRequestId);
 
             return SendToLeaderAsync(command);
         }

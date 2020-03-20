@@ -109,16 +109,18 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateUnusedDatabaseIdsCommand)] = 42_002,
             [nameof(UpdateLicenseLimitsCommand)] = 42_002,
             [nameof(EditRefreshCommand)] = 42_003,
-
             [nameof(EditRevisionsForConflictsConfigurationCommand)] = 42_004,
             [nameof(ToggleDatabasesStateCommand)] = 42_005,
+
             [nameof(EditTimeSeriesConfigurationCommand)] = 50_000,
             [nameof(DeleteExpiredCompareExchangeCommand)] = 50_000,
             [nameof(EditDocumentsCompressionCommand)] = 50_000,
 
-            [nameof(RegisterReplicationHubAccessCommand)] = 51_001,
-            [nameof(BulkRegisterReplicationHubAccessCommand)] = 51_001,
-            [nameof(UnregisterReplicationHubAccessCommand)] = 51_001
+            [nameof(RegisterReplicationHubAccessCommand)] = 51_000,
+            [nameof(BulkRegisterReplicationHubAccessCommand)] = 51_000,
+            [nameof(UnregisterReplicationHubAccessCommand)] = 51_000,
+			[nameof(PutServerWideExternalReplicationCommand)] = 51_000,
+            [nameof(DeleteServerWideTaskCommand)] = 51_000
         };
 
         public static bool CanPutCommand(string command)

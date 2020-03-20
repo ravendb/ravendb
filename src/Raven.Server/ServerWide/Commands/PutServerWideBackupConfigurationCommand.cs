@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public PutServerWideBackupConfigurationCommand(ServerWideBackupConfiguration configuration, string uniqueRequestId) : base(uniqueRequestId)
         {
-            Name = ClusterStateMachine.ServerWideBackupConfigurationsKey;
+            Name = ClusterStateMachine.ServerWideConfigurationKey.Backup;
             Value = configuration;
         }
 
@@ -112,14 +112,14 @@ namespace Raven.Server.ServerWide.Commands
             AssertClusterAdmin(isClusterAdmin);
         }
 
-        public static string GetTaskNameForDatabase(string backupConfigurationName)
+        public static string GetTaskName(string backupConfigurationName)
         {
             return $"{ServerWideBackupConfiguration.NamePrefix}, {backupConfigurationName}";
         }
 
         public static void UpdateTemplateForDatabase(PeriodicBackupConfiguration configuration, string databaseName, bool isDatabaseEncrypted)
         {
-            configuration.Name = GetTaskNameForDatabase(configuration.Name);
+            configuration.Name = GetTaskName(configuration.Name);
 
             UpdateSettingsForLocal(configuration.LocalSettings, databaseName);
 
