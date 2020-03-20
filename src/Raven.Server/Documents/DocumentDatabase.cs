@@ -104,7 +104,7 @@ namespace Raven.Server.Documents
             StartTime = Time.GetUtcNow();
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
-            _nextIoMetricsCleanupTime = DateTime.UtcNow.Add(Configuration.Storage.IoMetricsCleanupIntervalInHrs.AsTimeSpan);
+            _nextIoMetricsCleanupTime = DateTime.UtcNow.Add(Configuration.Storage.IoMetricsCleanupInterval.AsTimeSpan);
             Scripts = new ScriptRunnerCache(this, Configuration);
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
@@ -922,7 +922,7 @@ namespace Raven.Server.Documents
                 if (utcNow >= _nextIoMetricsCleanupTime)
                 {
                     IoMetricsUtil.CleanIoMetrics(GetAllStoragesEnvironment(), _nextIoMetricsCleanupTime.Ticks);
-                    _nextIoMetricsCleanupTime = utcNow.Add(Configuration.Storage.IoMetricsCleanupIntervalInHrs.AsTimeSpan);
+                    _nextIoMetricsCleanupTime = utcNow.Add(Configuration.Storage.IoMetricsCleanupInterval.AsTimeSpan);
                 }
 
                 if (_logger.IsInfoEnabled)

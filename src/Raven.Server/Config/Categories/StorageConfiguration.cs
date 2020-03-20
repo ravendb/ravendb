@@ -92,7 +92,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(24)]
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Storage.IoMetricsCleanupIntervalInHrs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting IoMetricsCleanupIntervalInHrs { get; set; }
+        public TimeSetting IoMetricsCleanupInterval { get; set; }
 
         [Description("EXPERT: A command or executable to run when creating/opening a directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <data-dir-path> <temp-dir-path> <journal-dir-path>")]
         [DefaultValue(null)]
