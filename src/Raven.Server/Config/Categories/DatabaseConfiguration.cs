@@ -76,14 +76,5 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Databases.PulseReadTransactionLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PulseReadTransactionLimit { get; set; }
-
-        /// <summary>
-        /// Specifies the time interval between each IoMetrics Cleaner run
-        /// </summary>
-        [Description("Retention time (in hours) for IO Metrics data")]
-        [DefaultValue(24)]
-        [TimeUnit(TimeUnit.Hours)]
-        [ConfigurationEntry("Databases.IoMetricsCleanTimeInterval", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting IoMetricsCleanTimeInterval { get; set; }
     }
 }

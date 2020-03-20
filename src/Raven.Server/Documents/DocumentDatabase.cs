@@ -81,7 +81,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
-        private DateTime _ioMetricsCleanerRun;
+        private DateTime _nextIoMetricsCleanupTime;
         private long _lastTopologyIndex = -1;
         private long _lastClientConfigurationIndex = -1;
         private long _preventUnloadCounter;
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents
             StartTime = Time.GetUtcNow();
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
-            _ioMetricsCleanerRun = DateTime.UtcNow.Add(Configuration.Databases.IoMetricsCleanTimeInterval.AsTimeSpan);
+            _nextIoMetricsCleanupTime = DateTime.UtcNow.Add(Configuration.Storage.IoMetricsCleanupIntervalInHrs.AsTimeSpan);
             Scripts = new ScriptRunnerCache(this, Configuration);
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
@@ -910,7 +910,6 @@ namespace Raven.Server.Documents
             {
                 var sp = Stopwatch.StartNew();
                 var utcNow = DateTime.UtcNow;
-                var ranIoMetricsCleaner = false;
 
                 _lastIdleTicks = utcNow.Ticks;
                 IndexStore?.RunIdleOperations();
@@ -920,18 +919,14 @@ namespace Raven.Server.Documents
                 DocumentsStorage.Environment.Cleanup();
                 ConfigurationStorage.Environment.Cleanup();
 
-                if (utcNow >= _ioMetricsCleanerRun)
+                if (utcNow >= _nextIoMetricsCleanupTime)
                 {
-                    IoMetricsUtil.CleanIoMetrics(GetAllStoragesEnvironment(), _ioMetricsCleanerRun.Ticks);
-                    _ioMetricsCleanerRun = utcNow.Add(Configuration.Databases.IoMetricsCleanTimeInterval.AsTimeSpan);
-                    ranIoMetricsCleaner = true;
+                    IoMetricsUtil.CleanIoMetrics(GetAllStoragesEnvironment(), _nextIoMetricsCleanupTime.Ticks);
+                    _nextIoMetricsCleanupTime = utcNow.Add(Configuration.Storage.IoMetricsCleanupIntervalInHrs.AsTimeSpan);
                 }
 
                 if (_logger.IsInfoEnabled)
-                {
-                    var msg = ranIoMetricsCleaner ? " with IO Metrics Cleaner" : string.Empty;
-                    _logger.Info($"Ran idle operations{msg} for database '{Name}', took: {sp.ElapsedMilliseconds}ms");
-                }
+                    _logger.Info($"Ran idle operations for database '{Name}', took: {sp.ElapsedMilliseconds}ms");
             }
             finally
             {
