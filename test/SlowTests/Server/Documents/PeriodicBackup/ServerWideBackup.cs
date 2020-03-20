@@ -125,7 +125,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 2 * * 1"
                 };
 
-                var taskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(putConfiguration.GetDefaultTaskName());
+                var taskName = PutServerWideBackupConfigurationCommand.GetTaskName(putConfiguration.GetDefaultTaskName());
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
                 var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server-wide backup task";
                 Assert.Contains(expectedError, e.Message);
@@ -193,7 +193,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 2 * * 1"
                 };
 
-                var taskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(putConfiguration.GetDefaultTaskName());
+                var taskName = PutServerWideBackupConfigurationCommand.GetTaskName(putConfiguration.GetDefaultTaskName());
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
                 var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server-wide backup task";
                 Assert.Contains(expectedError, e.Message);
@@ -723,7 +723,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private static void ValidateBackupConfiguration(ServerWideBackupConfiguration serverWideConfiguration, PeriodicBackupConfiguration backupConfiguration, string databaseName)
         {
-            Assert.Equal(PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(serverWideConfiguration.Name), backupConfiguration.Name);
+            Assert.Equal(PutServerWideBackupConfigurationCommand.GetTaskName(serverWideConfiguration.Name), backupConfiguration.Name);
             Assert.Equal(serverWideConfiguration.Disabled, backupConfiguration.Disabled);
             Assert.Equal(serverWideConfiguration.FullBackupFrequency, backupConfiguration.FullBackupFrequency);
             Assert.Equal(serverWideConfiguration.IncrementalBackupFrequency, backupConfiguration.IncrementalBackupFrequency);

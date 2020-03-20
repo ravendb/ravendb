@@ -11,7 +11,6 @@ namespace Raven.Client.ServerWide.Operations.Configuration
         {
             var json = base.ToJson();
             json[nameof(NamePrefix)] = NamePrefix;
-
             return json;
         }
     }

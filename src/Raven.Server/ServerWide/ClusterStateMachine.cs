@@ -72,7 +72,12 @@ namespace Raven.Server.ServerWide
         public static readonly TableSchema IdentitiesSchema;
         public static readonly TableSchema CertificatesSchema;
 
-        public static string ServerWideBackupConfigurationsKey = "server-wide/backup/configurations";
+        public class ServerWideConfigurationKey
+        {
+            public static string Backup = "server-wide/backup/configurations";
+
+            public static string ExternalReplication = "server-wide/external-replication/configurations";
+        }
 
         public enum CompareExchangeTable
         {
@@ -382,11 +387,25 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
+                        UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
                         break;
                     case nameof(DeleteServerWideBackupConfigurationCommand):
                         UpdateValue<string>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        DeleteServerWideBackupConfigurationFromAllDatabases(context, type, cmd, index);
+                        cmd.TryGet(nameof(DeleteServerWideBackupConfigurationCommand.Name), out string name);
+                        var deleteServerWideTaskConfiguration = new DeleteServerWideTaskCommand.DeleteConfiguration
+                        {
+                            Name = name,
+                            Type = DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.Backup
+                        };
+                        DeleteServerWideBackupConfigurationFromAllDatabases(deleteServerWideTaskConfiguration, context, type, index);
+                        break;
+                    case nameof(PutServerWideExternalReplicationCommand):
+                        var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
+                        break;
+                    case nameof(DeleteServerWideTaskCommand):
+                        var deleteConfiguration = UpdateValue<DeleteServerWideTaskCommand.DeleteConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        DeleteServerWideBackupConfigurationFromAllDatabases(deleteConfiguration, context, type, index);
                         break;
                     case nameof(PutCertificateWithSamePinningHashCommand):
                         PutCertificate(context, type, cmd, index, serverStore);
@@ -1253,11 +1272,12 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
                 using (var currentDatabaseRecord = EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context))
                 {
+                    var databaseExists = items.ReadByKey(valueNameLowered, out TableValueReader reader);
                     if (addDatabaseCommand.RaftCommandIndex != null)
                     {
-                        if (items.ReadByKey(valueNameLowered, out TableValueReader reader) == false && addDatabaseCommand.RaftCommandIndex != 0)
+                        if (databaseExists == false && addDatabaseCommand.RaftCommandIndex != 0)
                             throw new RachisConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name +
-                                                           " does not exists, but had a non zero etag");
+                                                           " does not exist, but had a non zero etag");
 
                         var actualEtag = Bits.SwapBytes(*(long*)reader.Read(3, out int size));
                         Debug.Assert(size == sizeof(long));
@@ -1269,7 +1289,7 @@ namespace Raven.Server.ServerWide
 
                     VerifyUnchangedTasks();
 
-                    using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded())
+                    using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, addDatabaseCommand, currentDatabaseRecord, context))
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
                         SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
@@ -1335,37 +1355,6 @@ namespace Raven.Server.ServerWide
                             }
                         }
                     }
-
-                    BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded()
-                    {
-                        if (items.ReadByKey(valueNameLowered, out _) && addDatabaseCommand.IsRestore == false)
-                        {
-                            // the backup tasks cannot be changed by modifying the database record
-                            // (only by using the dedicated UpdatePeriodicBackup command)
-                            return currentDatabaseRecord;
-                        }
-
-                        var serverWideBackups = Read(context, ServerWideBackupConfigurationsKey);
-                        if (serverWideBackups == null)
-                            return currentDatabaseRecord;
-
-                        var propertyNames = serverWideBackups.GetPropertyNames();
-                        if (propertyNames.Length == 0)
-                            return currentDatabaseRecord;
-
-                        // add the server-wide backup configurations
-                        foreach (var propertyName in propertyNames)
-                        {
-                            if (serverWideBackups.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
-                                continue;
-
-                            var backupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configurationBlittable);
-                            PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name, addDatabaseCommand.Encrypted);
-                            addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
-                        }
-
-                        return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
-                    }
                 }
             }
             catch (Exception e)
@@ -1378,6 +1367,72 @@ namespace Raven.Server.ServerWide
                 LogCommand(nameof(AddDatabaseCommand), index, exception, addDatabaseCommand.AdditionalDebugInformation(exception));
                 NotifyDatabaseAboutChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand),
                     DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+            }
+        }
+
+        private BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded(bool databaseExists, AddDatabaseCommand addDatabaseCommand, BlittableJsonReaderObject currentDatabaseRecord, ClusterOperationContext context)
+        {
+            if (databaseExists && addDatabaseCommand.IsRestore == false)
+            {
+                // the backup tasks cannot be changed by modifying the database record
+                // (only by using the dedicated UpdatePeriodicBackup command)
+                return currentDatabaseRecord;
+            }
+
+            var hasChanges = false;
+            UpdatePeriodicBackups();
+            UpdateExternalReplications();
+
+            return hasChanges
+                ? EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context)
+                : currentDatabaseRecord;
+
+            void UpdatePeriodicBackups()
+            {
+                var serverWideBackups = Read(context, ServerWideConfigurationKey.Backup);
+                if (serverWideBackups == null)
+                    return;
+
+                var propertyNames = serverWideBackups.GetPropertyNames();
+                if (propertyNames.Length == 0)
+                    return;
+
+                foreach (var propertyName in propertyNames)
+                {
+                    if (serverWideBackups.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
+                        continue;
+
+                    var backupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configurationBlittable);
+                    PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name, addDatabaseCommand.Encrypted);
+                    addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
+                    hasChanges = true;
+                }
+            }
+
+            void UpdateExternalReplications()
+            {
+                var externalReplications = Read(context, ServerWideConfigurationKey.ExternalReplication);
+                if (externalReplications == null)
+                    return;
+
+                var propertyNames = externalReplications.GetPropertyNames();
+                if (propertyNames.Length == 0)
+                    return;
+
+                foreach (var propertyName in propertyNames)
+                {
+                    if (externalReplications.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
+                        continue;
+
+                    if (configurationBlittable.TryGet(nameof(ServerWideExternalReplication.TopologyDiscoveryUrls), out string[] topologyDiscoveryUrls) == false)
+                        continue;
+
+                    var externalReplication = JsonDeserializationCluster.ExternalReplication(configurationBlittable);
+                    var connectionString = PutServerWideExternalReplicationCommand.UpdateExternalReplicationTemplateForDatabase(externalReplication, addDatabaseCommand.Name, topologyDiscoveryUrls);
+                    addDatabaseCommand.Record.ExternalReplications.Add(externalReplication);
+                    addDatabaseCommand.Record.RavenConnectionStrings[connectionString.Name] = connectionString;
+                    hasChanges = true;
+                }
             }
         }
 
@@ -1559,24 +1614,24 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public string GetServerWideBackupNameByTaskId(TransactionOperationContext context, long taskId)
+        public string GetServerWideTaskNameByTaskId(TransactionOperationContext context, string key, long taskId)
         {
-            var configurationsBlittable = Read(context, ServerWideBackupConfigurationsKey);
+            var configurationsBlittable = Read(context, key);
             if (configurationsBlittable == null)
                 return null;
 
             foreach (var propertyName in configurationsBlittable.GetPropertyNames())
             {
-                if (configurationsBlittable.TryGet(propertyName, out BlittableJsonReaderObject serverWideBackupBlittable) == false)
+                if (configurationsBlittable.TryGet(propertyName, out BlittableJsonReaderObject serverWideBlittable) == false)
                     continue;
 
-                if (serverWideBackupBlittable.TryGet(nameof(ServerWideBackupConfiguration.TaskId), out long taskIdFromBackup) == false)
+                if (serverWideBlittable.TryGet(nameof(ServerWideBackupConfiguration.TaskId), out long taskIdFromConfiguration) == false)
                     continue;
 
-                if (taskId == taskIdFromBackup)
+                if (taskId == taskIdFromConfiguration)
                 {
-                    serverWideBackupBlittable.TryGet(nameof(ServerWideBackupConfiguration.Name), out string backupName);
-                    return backupName;
+                    serverWideBlittable.TryGet(nameof(ServerWideBackupConfiguration.Name), out string taskName);
+                    return taskName;
                 }
             }
 
@@ -1585,7 +1640,7 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<BlittableJsonReaderObject> GetServerWideBackupConfigurations(TransactionOperationContext context, string name)
         {
-            var configurationsBlittable = Read(context, ServerWideBackupConfigurationsKey);
+            var configurationsBlittable = Read(context, ServerWideConfigurationKey.Backup);
             if (configurationsBlittable == null)
                 yield break;
 
@@ -3055,14 +3110,12 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
-
-        private void UpdateDatabasesWithNewServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
-        {
+        private void UpdateDatabasesWithServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)        {
             if (serverWideBackupConfiguration == null)
                 throw new RachisInvalidOperationException($"Server-wide backup configuration is null for command type: {type}");
 
             if (serverWideBackupConfiguration.Name == null)
-                throw new RachisInvalidOperationException($"Server-wide backup configuration name is null or empty for command type: {type}");
+                throw new RachisInvalidOperationException($"`{nameof(ServerWideExternalReplication.Name)}` is null or empty for command type: {type}");
 
             // the server-wide backup name might have changed
             var serverWideBlittable = context.ReadObject(serverWideBackupConfiguration.ToJson(), "server-wide-configuration");
@@ -3089,7 +3142,7 @@ namespace Raven.Server.ServerWide
                     {
                         foreach (BlittableJsonReaderObject backup in backups)
                         {
-                            if (IsServerWideBackupWithTaskName(backup, periodicBackupConfiguration.Name))
+                            if (IsServerWideTaskWithName(backup, nameof(PeriodicBackupConfiguration.Name), periodicBackupConfiguration.Name))
                             {
                                 if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
                                     oldTaskId = taskId;
@@ -3120,19 +3173,105 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
 
-        private void DeleteServerWideBackupConfigurationFromAllDatabases(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        private void UpdateDatabasesWithExternalReplication(ClusterOperationContext context, string type, ServerWideExternalReplication serverWideExternalReplication, long index)
         {
-            if (cmd.TryGet(nameof(DeleteServerWideBackupConfigurationCommand.Value), out string backupNameToDelete) == false)
-                throw new RachisInvalidOperationException($"Cannot find backup name to delete for command: {type}");
+            if (serverWideExternalReplication == null)
+                throw new RachisInvalidOperationException($"Server-wide external replication is null for command type: {type}");
 
-            if (string.IsNullOrWhiteSpace(backupNameToDelete))
-                throw new RachisInvalidOperationException($"Backup name to delete cannot be null or white space for command type: {type}");
+            if (serverWideExternalReplication.Name == null)
+                throw new RachisInvalidOperationException($"`{nameof(ServerWideExternalReplication.Name)}` is null or empty for command type: {type}");
+
+            var topologyDiscoveryUrls = serverWideExternalReplication.TopologyDiscoveryUrls;
+            if (topologyDiscoveryUrls == null || topologyDiscoveryUrls.Length == 0)
+                throw new RachisInvalidOperationException($"`{nameof(ServerWideExternalReplication.TopologyDiscoveryUrls)}` is null or empty for command type: {type}");
+
+            // the external replication name might have changed
+            var serverWideBlittable = context.ReadObject(serverWideExternalReplication.ToJson(), "server-wide-configuration");
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            const string dbKey = "db/";
+            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
+
+            using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
+            {
+                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+                {
+                    var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
+                    long? oldTaskId = null;
+
+                    var externalReplication = JsonDeserializationCluster.ExternalReplication(serverWideBlittable);
+                    var databaseName = key.Substring(dbKey.Length);
+                    var ravenConnectionString = PutServerWideExternalReplicationCommand.UpdateExternalReplicationTemplateForDatabase(externalReplication, databaseName, topologyDiscoveryUrls);
+
+                    var updatedExternalReplications = new DynamicJsonArray();
+                    if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray externalReplications))
+                    {
+                        foreach (BlittableJsonReaderObject externalReplicationBlittable in externalReplications)
+                        {
+                            if (IsServerWideTaskWithName(externalReplicationBlittable, nameof(ExternalReplication.Name), externalReplication.Name))
+                            {
+                                if (externalReplicationBlittable.TryGet(nameof(ExternalReplication.TaskId), out long taskId))
+                                    oldTaskId = taskId;
+
+                                continue;
+                            }
+
+                            updatedExternalReplications.Add(externalReplication);
+                        }
+                    }
+
+                    externalReplication.TaskId = oldTaskId ?? index;
+                    updatedExternalReplications.Add(externalReplication.ToJson());
+
+                    if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings))
+                    {
+                        if (ravenConnectionStrings.Modifications == null)
+                            ravenConnectionStrings.Modifications = new DynamicJsonValue();
+
+                        ravenConnectionStrings.Modifications = new DynamicJsonValue
+                        {
+                            [ravenConnectionString.Name] = ravenConnectionString.ToJson()
+                        };
+
+                        ravenConnectionStrings = context.ReadObject(ravenConnectionStrings, nameof(DatabaseRecord.RavenConnectionStrings));
+                    }
+                    else
+                    {
+                        var djv = new DynamicJsonValue
+                        {
+                            [ravenConnectionString.Name] = ravenConnectionString.ToJson()
+                        };
+
+                        ravenConnectionStrings = context.ReadObject(djv, nameof(DatabaseRecord.RavenConnectionStrings));
+                    }
+
+                    using (oldDatabaseRecord)
+                    {
+                        oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                        {
+                            [nameof(DatabaseRecord.ExternalReplications)] = updatedExternalReplications,
+                            [nameof(DatabaseRecord.RavenConnectionStrings)] = ravenConnectionStrings
+                        };
+
+                        var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
+                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName));
+                    }
+                }
+            }
+
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+        }
+
+        private void DeleteServerWideBackupConfigurationFromAllDatabases(DeleteServerWideTaskCommand.DeleteConfiguration deleteConfiguration, ClusterOperationContext context, string type, long index)
+        {
+            if (string.IsNullOrWhiteSpace(deleteConfiguration.Name))
+                throw new RachisInvalidOperationException($"Task name to delete cannot be null or white space for command type: {type}");
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             const string dbKey = "db/";
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
-            var databaseRecordTaskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(backupNameToDelete);
+            var databaseRecordTaskName = DeleteServerWideTaskCommand.GetDatabaseRecordTaskName(deleteConfiguration);
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
@@ -3140,33 +3279,85 @@ namespace Raven.Server.ServerWide
                 {
                     var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
 
-                    var updatedBackups = new DynamicJsonArray();
+                    var hasChanges = false;
 
-                    if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups) == false)
-                        continue;
-
-                    var removedServerWideBackup = false;
-                    foreach (BlittableJsonReaderObject backup in backups)
+                    switch (deleteConfiguration.Type)
                     {
-                        if (IsServerWideBackupWithTaskName(backup, databaseRecordTaskName))
-                        {
-                            removedServerWideBackup = true;
-                            continue;
-                        }
+                        case DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.Backup:
+                            if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups) == false)
+                                continue;
 
-                        updatedBackups.Add(backup);
+                            var updatedBackups = new DynamicJsonArray();
+                            foreach (BlittableJsonReaderObject backup in backups)
+                            {
+                                if (IsServerWideTaskWithName(backup, nameof(PeriodicBackupConfiguration.Name), databaseRecordTaskName))
+                                {
+                                    hasChanges = true;
+                                    break;
+                                }
+
+                                updatedBackups.Add(backup);
+                            }
+
+                            oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                            {
+                                [nameof(DatabaseRecord.PeriodicBackups)] = updatedBackups
+                            };
+
+                            break;
+                        case DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.ExternalReplication:
+                            if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.ExternalReplications), out BlittableJsonReaderArray externalReplications) == false)
+                                continue;
+
+                            var updatedExternalReplication = new DynamicJsonArray();
+                            foreach (BlittableJsonReaderObject externalReplication in externalReplications)
+                            {
+                                if (IsServerWideTaskWithName(externalReplication, nameof(PeriodicBackupConfiguration.Name), databaseRecordTaskName))
+                                {
+                                    hasChanges = true;
+                                    continue;
+                                }
+
+                                updatedExternalReplication.Add(externalReplication);
+                            }
+
+                            if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings))
+                            {
+                                var connectionStringName = PutServerWideExternalReplicationCommand.GetRavenConnectionStringName(deleteConfiguration.Name);
+                                var propertyIndex = ravenConnectionStrings.GetPropertyIndex(connectionStringName);
+                                if (propertyIndex != -1)
+                                {
+                                    if (ravenConnectionStrings.Modifications == null)
+                                        ravenConnectionStrings.Modifications = new DynamicJsonValue();
+
+                                    ravenConnectionStrings.Modifications.Removals = new HashSet<int>
+                                    {
+                                        propertyIndex
+                                    };
+
+                                    ravenConnectionStrings = context.ReadObject(ravenConnectionStrings, nameof(DatabaseRecord.RavenConnectionStrings));
+                                }
+                            }
+                            else
+                            {
+                                ravenConnectionStrings = context.ReadObject(new DynamicJsonValue(), nameof(DatabaseRecord.RavenConnectionStrings));
+                            }
+
+                            oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                            {
+                                [nameof(DatabaseRecord.ExternalReplications)] = externalReplications,
+                                [nameof(DatabaseRecord.RavenConnectionStrings)] = ravenConnectionStrings
+                            };
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
 
-                    if (removedServerWideBackup == false)
+                    if (hasChanges == false)
                         continue;
 
                     using (oldDatabaseRecord)
                     {
-                        oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
-                        {
-                            [nameof(DatabaseRecord.PeriodicBackups)] = updatedBackups
-                        };
-
                         var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
                         toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: key.Substring(dbKey.Length)));
                     }
@@ -3176,11 +3367,11 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
 
-        private bool IsServerWideBackupWithTaskName(BlittableJsonReaderObject backup, string backupNameToFind)
+        private static bool IsServerWideTaskWithName(BlittableJsonReaderObject blittable, string namePropertyName, string taskNameToFind)
         {
-            return backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string backupName) &&
-                   backupName != null &&
-                   backupNameToFind.Equals(backupName, StringComparison.OrdinalIgnoreCase);
+            return blittable.TryGet(namePropertyName, out string foundTaskName) &&
+                   foundTaskName != null &&
+                   taskNameToFind.Equals(foundTaskName, StringComparison.OrdinalIgnoreCase);
         }
 
         private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long index, Table items, ClusterOperationContext context)

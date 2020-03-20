@@ -22,10 +22,11 @@ using Raven.Server.Rachis;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminServerWideBackupHandler : ServerRequestHandler
+    public class AdminServerWideHandler : ServerRequestHandler
     {
         [RavenAction("/admin/configuration/server-wide", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task GetConfigurationServerWide()
@@ -70,11 +71,11 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
-                    var backupName = ServerStore.Cluster.GetServerWideBackupNameByTaskId(context, newIndex);
+                    var backupName = ServerStore.Cluster.GetServerWideTaskNameByTaskId(context, ClusterStateMachine.ServerWideConfigurationKey.Backup, newIndex);
                     if (backupName == null)
                         throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
                     
-                    var putResponse = new PutServerWideBackupConfigurationResponse()
+                    var putResponse = new PutServerWideBackupConfigurationResponse
                     {
                         Name = backupName,
                         RaftCommandIndex = newIndex 
@@ -87,30 +88,49 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
-        public async Task DeleteServerWideBackupConfigurationCommand()
+        [RavenAction("/admin/configuration/server-wide/external-replication", "PUT", AuthorizationStatus.ClusterAdmin)]
+        public async Task PutServerWideExternalReplicationCommand()
         {
-            var name = GetStringQueryString("name", required: true);
-      
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (newIndex, _) = await ServerStore.DeleteServerWideBackupConfigurationAsync(name, GetRaftRequestIdFromQuery());
+                var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-external-replication-configuration");
+                var configuration = JsonDeserializationCluster.ServerWideExternalReplication(configurationBlittable);
+
+                ServerStore.LicenseManager.AssertCanAddExternalReplication();
+
+                var (newIndex, _) = await ServerStore.PutServerWideExternalReplicationAsync(configuration, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
-               
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
-                    var deleteResponse = new PutServerWideBackupConfigurationResponse()
+                    var taskName = ServerStore.Cluster.GetServerWideTaskNameByTaskId(context, ClusterStateMachine.ServerWideConfigurationKey.Backup, newIndex);
+                    if (taskName == null)
+                        throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
+
+                    var putResponse = new PutServerWideBackupConfigurationResponse
                     {
-                        Name = name,
-                        RaftCommandIndex = newIndex 
+                        Name = taskName,
+                        RaftCommandIndex = newIndex
                     };
 
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    context.Write(writer, deleteResponse.ToJson());
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                    context.Write(writer, putResponse.ToJson());
                     writer.Flush();
                 }
             }
+        }
+
+        [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
+        public async Task DeleteServerWideExternalReplicationConfigurationCommand()
+        {
+            await DeleteServerWideTaskCommand(ServerWide.Commands.DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.Backup);
+        }
+
+        [RavenAction("/admin/configuration/server-wide/external-replication", "DELETE", AuthorizationStatus.ClusterAdmin)]
+        public async Task DeleteServerWideBackupConfigurationCommand()
+        {
+            await DeleteServerWideTaskCommand(ServerWide.Commands.DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.ExternalReplication);
         }
 
         // Get all server-wide backups -OR- specific task by the task name... 
@@ -119,7 +139,7 @@ namespace Raven.Server.Web.System
         public Task GetServerWideBackupConfigurationCommand()
         {
             var taskName = GetStringQueryString("name", required: false);
-
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -143,10 +163,9 @@ namespace Raven.Server.Web.System
                 return Task.CompletedTask;
             }
         }
-        
-        // Toggle Disable/Enable for specified task
+
         [RavenAction("/admin/configuration/server-wide/backup/state", "POST", AuthorizationStatus.ClusterAdmin)]
-        public async Task ToggleTaskState()
+        public async Task ToggleServerWideBackupTaskState()
         {
             var disable = GetBoolValueQueryString("disable") ?? true;
             var taskName = GetStringQueryString("taskName", required: false);
@@ -190,6 +209,36 @@ namespace Raven.Server.Web.System
 
             var pathSetting = new PathSetting(path);
             await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, databaseName: null, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
+        }
+
+        private async Task DeleteServerWideTaskCommand(DeleteServerWideTaskCommand.DeleteConfiguration.TaskType taskType)
+        {
+            var name = GetStringQueryString("name", required: true);
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var deleteConfiguration = new DeleteServerWideTaskCommand.DeleteConfiguration
+                {
+                    Name = name,
+                    Type = taskType
+                };
+
+                var (newIndex, _) = await ServerStore.DeleteServerWideTaskAsync(deleteConfiguration, GetRaftRequestIdFromQuery());
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (context.OpenReadTransaction())
+                {
+                    var deleteResponse = new PutServerWideBackupConfigurationResponse
+                    {
+                        Name = name,
+                        RaftCommandIndex = newIndex
+                    };
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    context.Write(writer, deleteResponse.ToJson());
+                    writer.Flush();
+                }
+            }
         }
     }
     
