@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Context;
@@ -104,7 +103,6 @@ namespace Raven.Server.Smuggler.Migration
             destination.Initialize(options, parametersResult, buildVersion: default);
 
             using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var documentActions = destination.Documents())
             {
                 var sp = Stopwatch.StartNew();
@@ -188,11 +186,12 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
+            const string propertyName = "Attachments";
             using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (var attachmentsListStream = new ArrayStream(responseStream, "Attachments"))
+            using (var attachmentsListStream = new ArrayStream(responseStream, propertyName))
             {
                 var attachmentsList = await context.ReadForMemoryAsync(attachmentsListStream, "attachments-list");
-                if (attachmentsList.TryGet("Attachments", out BlittableJsonReaderArray attachments) == false)
+                if (attachmentsList.TryGet(propertyName, out BlittableJsonReaderArray attachments) == false)
                     throw new InvalidDataException("Response is invalid");
 
                 return attachments;
@@ -257,144 +256,6 @@ namespace Raven.Server.Smuggler.Migration
                 var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 smuggler.Execute();
-            }
-        }
-
-        private class ArrayStream : Stream
-        {
-            private Stream _baseStream;
-            private readonly long _length;
-            private long _position;
-
-            private readonly MemoryStream _beginningStream;
-
-            private readonly MemoryStream _endingStream =
-                new MemoryStream(Encoding.UTF8.GetBytes("}"));
-
-            public ArrayStream(Stream baseStream, string propertyName)
-            {
-                if (baseStream == null)
-                    throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream.CanRead == false)
-                    throw new ArgumentException("can't read base stream");
-                if (baseStream.CanSeek == false)
-                    throw new ArgumentException("can't seek in base stream");
-
-                _beginningStream = new MemoryStream(Encoding.UTF8.GetBytes($"{{ \"{propertyName}\" : "));
-                _baseStream = baseStream;
-                _length = _beginningStream.Length + baseStream.Length + _endingStream.Length;
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                CheckDisposed();
-
-                var remaining = _length - _position;
-                if (remaining <= 0)
-                    return 0;
-
-                if (remaining < count)
-                    count = (int)remaining;
-
-                int read;
-                if (_beginningStream.Position < _beginningStream.Length)
-                {
-                    read = _beginningStream.Read(buffer, offset, count);
-                }
-                else
-                {
-                    read = _baseStream.Read(buffer, offset, count);
-                    if (read == 0)
-                    {
-                        read = _endingStream.Read(buffer, offset, count);
-                    }
-                }
-
-                _position += read;
-                return read;
-            }
-
-            private void CheckDisposed()
-            {
-                if (_baseStream == null)
-                    throw new ObjectDisposedException(GetType().Name);
-            }
-
-            public override long Length
-            {
-                get
-                {
-                    CheckDisposed();
-                    return _length;
-                }
-            }
-
-            public override bool CanRead
-            {
-                get
-                {
-                    CheckDisposed();
-                    return true;
-                }
-            }
-
-            public override bool CanWrite
-            {
-                get
-                {
-                    CheckDisposed();
-                    return false;
-                }
-            }
-
-            public override bool CanSeek
-            {
-                get
-                {
-                    CheckDisposed();
-                    return false;
-                }
-            }
-
-            public override long Position
-            {
-                get
-                {
-                    CheckDisposed();
-                    return _position;
-                }
-                set => throw new NotSupportedException();
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void SetLength(long value)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void Flush()
-            {
-                CheckDisposed();
-                _baseStream.Flush();
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                base.Dispose(disposing);
-                if (disposing == false)
-                    return;
-
-                // the caller is responsible for disposing the base stream
-                _baseStream = null;
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
             }
         }
     }
