@@ -1501,7 +1501,7 @@ namespace SlowTests.Issues
                 long? previousResultEtag = 0L;
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1526,7 +1526,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1545,7 +1545,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1570,7 +1570,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1589,7 +1589,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1624,7 +1624,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1644,7 +1644,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1674,7 +1674,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1695,7 +1695,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1723,7 +1723,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1744,7 +1744,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1770,7 +1770,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var terms = session.Query<IndexResult, Counters_Index_With_CompareExchange>()
+                    var terms = session.Query<MapIndexResult, Counters_Index_With_CompareExchange>()
                         .Statistics(out var statistics)
                         .Select(x => x.City)
                         .ToArray();
@@ -1786,7 +1786,6 @@ namespace SlowTests.Issues
                 }
             }
         }
-
 
         [Fact]
         public void CanLoadCompareExchangeInIndexes_MapReduce_Query()
@@ -2062,6 +2061,301 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var terms = session.Query<MapReduceIndexResult, TIndex>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.False(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(2, terms.Length);
+                    Assert.Contains("Torun", terms.Select(x => x.City));
+                    Assert.Contains("Tel Aviv", terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+            }
+        }
+
+        [Fact]
+        public void CanLoadCompareExchangeInIndexes_MapReduce_Counters_Query()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new Counters_Index_With_CompareExchange_MapReduce();
+                var indexName = index.IndexName;
+                index.Execute(store);
+
+                WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                long? previousResultEtag = 0L;
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.False(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(0, terms.Length);
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                // add doc
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Name = "CF", ExternalId = "companies/cf" };
+                    session.Store(company, "companies/cf");
+                    session.CountersFor(company).Increment("HeartRate", 3);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.True(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(0, terms.Length);
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.False(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains(null, terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // add compare
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", new Address { City = "Torun" });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.True(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains(null, terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.False(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("Torun", terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // add doc and compare
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Name = "HR", ExternalId = "companies/hr" };
+                    session.Store(company, "companies/hr");
+                    session.CountersFor(company).Increment("HeartRate", 5);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", new Address { City = "Cesarea" });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.True(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("Torun", terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.False(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(2, terms.Length);
+                    Assert.Contains("Torun", terms.Select(x => x.City));
+                    Assert.Contains("Cesarea", terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // update
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
+                    value.Value.City = "Hadera";
+
+                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(value);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.True(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(2, terms.Length);
+                    Assert.Contains("Torun", terms.Select(x => x.City));
+                    Assert.Contains("Cesarea", terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.False(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(2, terms.Length);
+                    Assert.Contains("Torun", terms.Select(x => x.City));
+                    Assert.Contains("Hadera", terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // delete
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
+                    session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(value);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.True(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(2, terms.Length);
+                    Assert.Contains("Torun", terms.Select(x => x.City));
+                    Assert.Contains("Hadera", terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
+                        .Statistics(out var statistics)
+                        .ToArray();
+
+                    Assert.False(statistics.IsStale);
+                    Assert.True(statistics.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(previousResultEtag, statistics.ResultEtag);
+                    Assert.Equal(2, terms.Length);
+                    Assert.Contains("Torun", terms.Select(x => x.City));
+                    Assert.Contains(null, terms.Select(x => x.City));
+
+                    previousResultEtag = statistics.ResultEtag;
+                }
+
+                // live add compare without stopping indexing
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", new Address { City = "Tel Aviv" });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+
+                using (var session = store.OpenSession())
+                {
+                    var terms = session.Query<MapReduceIndexResult, Counters_Index_With_CompareExchange_MapReduce>()
                         .Statistics(out var statistics)
                         .ToArray();
 
@@ -2488,6 +2782,32 @@ namespace SlowTests.Issues
                                 {
                                     address.City
                                 });
+            }
+        }
+
+        private class Counters_Index_With_CompareExchange_MapReduce : AbstractCountersIndexCreationTask<Company, MapReduceIndexResult>
+        {
+            public Counters_Index_With_CompareExchange_MapReduce()
+            {
+                AddMap(
+                    "HeartRate",
+                    counters => from counter in counters
+                                let address = LoadCompareExchangeValue<Address>(counter.DocumentId)
+                                select new
+                                {
+                                    address.City,
+                                    Count = 1
+                                });
+
+                Reduce = results => from r in results
+                                    group r by r.City into g
+                                    select new
+                                    {
+                                        City = g.Key,
+                                        Count = g.Sum(x => x.Count)
+                                    };
+            }
+        }
 
         private class TimeSeries_Index_With_CompareExchange_MapReduce : AbstractTimeSeriesIndexCreationTask<Company, MapReduceIndexResult>
         {

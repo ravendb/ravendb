@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -18,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected new internal readonly StaticCountersIndexBase _compiled;
+        protected internal new readonly StaticCountersIndexBase _compiled;
 
         public MapReduceCountersIndex(MapReduceIndexDefinition definition, StaticCountersIndexBase compiled) : base(definition, compiled)
         {
@@ -39,6 +38,9 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             var workers = new List<IIndexingWork>();
 
             workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
+
+            if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
+                workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeCountersReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage.CountersStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleCountersReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage.CountersStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
