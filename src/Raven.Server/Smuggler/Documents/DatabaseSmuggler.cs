@@ -628,11 +628,15 @@ namespace Raven.Server.Smuggler.Documents
 
                     SetDocumentFlags(item, buildType);
 
-                    if (SkipDocument(item, buildType))
+                    if (SkipDocument(item, buildType, actions, result.Tombstones, out var isLegacyDelete))
                     {
-                        result.Documents.SkippedCount++;
-                        if (result.Documents.SkippedCount % 1000 == 0)
-                            AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
+                        if (isLegacyDelete == false)
+                        {
+                            result.Documents.SkippedCount++;
+                            if (result.Documents.SkippedCount % 1000 == 0)
+                                AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
+                        }
+                        
                         continue;
                     }
 
@@ -672,12 +676,22 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private bool SkipDocument(DocumentItem item, BuildVersionType buildType)
+        private bool SkipDocument(DocumentItem item, BuildVersionType buildType, IDocumentActions actions, SmugglerProgressBase.CountsWithLastEtag resultTombstones, out bool isLegacyDelete)
         {
-            if (buildType == BuildVersionType.V3 && _options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
+            isLegacyDelete = false;
+            if (buildType == BuildVersionType.V3 == false)
+                return false;
+
+            if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false &&
+                IsPreV4Revision(buildType, item.Document.Id, item.Document))
+                return true;
+
+            if ((item.Document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyDeleteMarker) == NonPersistentDocumentFlags.LegacyDeleteMarker)
             {
-                if (IsPreV4Revision(buildType, item.Document.Id, item.Document))
-                    return true;
+                actions.DeleteDocument(item.Document.Id);
+                resultTombstones.ReadCount++;
+                isLegacyDelete = true;
+                return true;
             }
 
             return false;
