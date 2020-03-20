@@ -21,14 +21,14 @@ namespace Raven.Client.ServerWide.Operations.Configuration
 
         public RavenCommand<PutServerWideBackupConfigurationResponse> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutServerWideClientConfigurationCommand(context, _configuration);
+            return new PutServerWideBackupConfigurationCommand(context, _configuration);
         }
 
-        private class PutServerWideClientConfigurationCommand : RavenCommand<PutServerWideBackupConfigurationResponse>, IRaftCommand
+        private class PutServerWideBackupConfigurationCommand : RavenCommand<PutServerWideBackupConfigurationResponse>, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _configuration;
 
-            public PutServerWideClientConfigurationCommand(JsonOperationContext context, ServerWideBackupConfiguration configuration)
+            public PutServerWideBackupConfigurationCommand(JsonOperationContext context, ServerWideBackupConfiguration configuration)
             {
                 if (configuration == null)
                     throw new ArgumentNullException(nameof(configuration));
@@ -63,9 +63,10 @@ namespace Raven.Client.ServerWide.Operations.Configuration
         }
     }
 
-    public class PutServerWideBackupConfigurationResponse : IDynamicJson
+    public class PutServerWideConfigurationResponse : IDynamicJson
     {
         public string Name { get; set; }
+
         public long RaftCommandIndex { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -76,5 +77,10 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                 [nameof(RaftCommandIndex)] = RaftCommandIndex
             };
         }
+    }
+
+    public class PutServerWideBackupConfigurationResponse : PutServerWideConfigurationResponse
+    {
+
     }
 }
