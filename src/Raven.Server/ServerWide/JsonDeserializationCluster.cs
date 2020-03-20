@@ -61,6 +61,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerWideBackupConfiguration> ServerWideBackupConfiguration = GenerateJsonDeserializationRoutine<ServerWideBackupConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, ServerWideExternalReplication> ServerWideExternalReplication = GenerateJsonDeserializationRoutine<ServerWideExternalReplication>();
 
         public static readonly Func<BlittableJsonReaderObject, ExternalReplicationState> ExternalReplicationState = GenerateJsonDeserializationRoutine<ExternalReplicationState>();
 
@@ -202,7 +204,8 @@ namespace Raven.Server.ServerWide
             [nameof(PutSortersCommand)] = GenerateJsonDeserializationRoutine<PutSortersCommand>(),
             [nameof(DeleteSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteSorterCommand>(),
             [nameof(UpdateUnusedDatabaseIdsCommand)] = GenerateJsonDeserializationRoutine<UpdateUnusedDatabaseIdsCommand>(),
-            [nameof(ToggleDatabasesStateCommand)] = GenerateJsonDeserializationRoutine<ToggleDatabasesStateCommand>()
-        };
+            [nameof(ToggleDatabasesStateCommand)] = GenerateJsonDeserializationRoutine<ToggleDatabasesStateCommand>(),
+            [nameof(PutServerWideExternalReplicationCommand)] = GenerateJsonDeserializationRoutine<PutServerWideExternalReplicationCommand>(),
+            [nameof(DeleteServerWideTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideTaskCommand>()        };
     }
 }
