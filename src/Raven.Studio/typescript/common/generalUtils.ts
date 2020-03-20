@@ -25,6 +25,7 @@ class genUtils {
     }
 
     static regexIPv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    static readonly urlRegex = /^(https?:\/\/)([^\s]+)$/; // allow any char, exclude white space
     
     static isHostname(address: string): boolean {
         const info = genUtils.getAddressInfo(address);

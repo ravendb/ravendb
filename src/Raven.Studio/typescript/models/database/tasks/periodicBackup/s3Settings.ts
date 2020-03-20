@@ -1,14 +1,19 @@
 ﻿import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
 import jsonUtil = require("common/jsonUtil");
+import genUtils = require("common/generalUtils");
 
 class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
-
+    useCustomS3Host = ko.observable<boolean>(true);
+    customServerUrl = ko.observable<string>();    
+    
     constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>) {
         super(dto, "S3", allowedRegions);
 
         this.bucketName(dto.BucketName);
-
+        this.customServerUrl(dto.CustomServerUrl);
+        this.useCustomS3Host(!!dto.CustomServerUrl);
+        
         this.initValidation();
 
         this.dirtyFlag = new ko.DirtyFlag([
@@ -19,8 +24,17 @@ class s3Settings extends amazonSettings {
             this.awsRegionName,
             this.remoteFolderName,
             this.selectedAwsRegion,
+            this.customServerUrl,
+            this.useCustomS3Host,
+            
             this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
+
+        this.useCustomS3Host.subscribe(() => {
+            if (this.testConnectionResult()) {
+                this.testConnectionResult(null);
+            }
+        });
     }
 
     initValidation() {
@@ -68,18 +82,44 @@ class s3Settings extends amazonSettings {
                 }
             ]
         });
+        
+        this.customServerUrl.extend({
+            required: {
+                onlyIf: () => this.useCustomS3Host()
+            },            
+            validation: [
+                {
+                    validator: (customServerUrl: string) => !this.useCustomS3Host() ||
+                                                            (!this.hasConfigurationScript() && customServerUrl && genUtils.urlRegex.test(customServerUrl)),                    
+                    message: "Expected format: 'http(s)://<yourHostAddress>'"
+                }
+            ]
+        });
 
         this.localConfigValidationGroup = ko.validatedObservable({
             awsAccessKey: this.awsAccessKey,
             awsSecretKey: this.awsSecretKey,
             awsRegionName: this.awsRegionName,
-            bucketName: this.bucketName
+            bucketName: this.bucketName,
+            customServerUrl: this.customServerUrl
         });
+    }
+    
+    isRegionRequired() {
+        if (!!this.useCustomS3Host) {
+            return this.enabled() && !this.hasConfigurationScript() && !this.useCustomS3Host();     
+        }
+        else {
+            return this.enabled() && !this.hasConfigurationScript();
+        }       
     }
 
     toDto(): Raven.Client.Documents.Operations.Backups.S3Settings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.S3Settings;
+        
         dto.BucketName = this.bucketName();
+        dto.CustomServerUrl = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.customServerUrl() : undefined;
+        
         return dto;
     }
 
@@ -93,7 +133,6 @@ class s3Settings extends amazonSettings {
             BucketName: null,
             RemoteFolderName: null,
             GetBackupConfigurationScript: null,
-            //TODO RavenDB-14716
             CustomServerUrl: null,
         }, allowedRegions);
     }

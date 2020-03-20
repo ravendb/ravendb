@@ -84,13 +84,18 @@ abstract class amazonSettings extends backupSettings {
 
     initAmazonValidation() {
         const self = this;
+        
         this.awsRegionName.extend({
             required: {
-                onlyIf: () => this.enabled()
+                onlyIf: () => self.isRegionRequired()
             },
             validation: [
                 {
                     validator: function (awsRegionName: string) {
+                        if (!self.isRegionRequired()) {
+                            return true;
+                        }                        
+                        
                         if (!awsRegionName) {
                             return false;
                         }
@@ -133,6 +138,10 @@ abstract class amazonSettings extends backupSettings {
         });
     }
 
+    isRegionRequired() {
+        return this.enabled();
+    }
+    
     createAwsRegionAutoCompleter(hasS3: boolean) {
         return ko.pureComputed(() => {
             let key = this.selectedAwsRegion();
