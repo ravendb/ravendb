@@ -31,7 +31,6 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -51,9 +50,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
 using Voron.Util.Settings;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -840,17 +837,18 @@ namespace Raven.Server.Web.System
             await ToggleDisableDatabases(disable: false);
         }
 
-        [RavenAction("/admin/databases/toggle-indexing", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/databases/indexing", "POST", AuthorizationStatus.Operator)]
         public async Task ToggleIndexing()
         {
+            var raftRequestId = GetRaftRequestIdFromQuery();
+            var enable = GetBoolValueQueryString("enable") ?? true;
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var raftRequestId = GetRaftRequestIdFromQuery();
-                var disable = GetBoolValueQueryString("disable") ?? false;
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "indexes/toggle");
                 var parameters = JsonDeserializationServer.Parameters.DisableDatabaseToggleParameters(json);
 
-                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleType.Indexes, parameters.DatabaseNames, disable, $"{raftRequestId}");
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.Indexes, parameters.DatabaseNames, enable == false, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 NoContentStatus();
@@ -872,7 +870,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleType.DynamicDatabaseDistribution, new []{name}, enable, $"{raftRequestId}");
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution, new []{name}, enable == false, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 NoContentStatus();
@@ -915,7 +913,7 @@ namespace Raven.Server.Web.System
                     });
                 }
 
-                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleType.Databases, parameters.DatabaseNames, disable, $"{raftRequestId}");
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.Databases, parameters.DatabaseNames, disable, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

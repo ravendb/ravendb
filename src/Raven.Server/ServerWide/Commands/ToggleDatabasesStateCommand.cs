@@ -4,16 +4,16 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class ToggleDatabasesStateCommand : UpdateValueCommand<ToggleParameters>
+    public class ToggleDatabasesStateCommand : UpdateValueCommand<ToggleDatabasesStateCommand.Parameters>
     {
         protected ToggleDatabasesStateCommand()
         {
             // for deserialization
         }
 
-        public ToggleDatabasesStateCommand(ToggleParameters toggleParameters, string uniqueRequestId) : base(uniqueRequestId)
+        public ToggleDatabasesStateCommand(Parameters parameters, string uniqueRequestId) : base(uniqueRequestId)
         {
-            Value = toggleParameters;
+            Value = parameters;
         }
 
         public override object ValueToJson()
@@ -25,31 +25,31 @@ namespace Raven.Server.ServerWide.Commands
         {
             return null;
         }
-    }
 
-    public class ToggleParameters : IDynamicJson
-    {
-        public ToggleType ToggleType { get; set; }
-
-        public string[] DatabaseNames { get; set; }
-
-        public bool State { get; set; }
-
-        public DynamicJsonValue ToJson()
+        public class Parameters : IDynamicJson
         {
-            return new DynamicJsonValue
-            {
-                [nameof(ToggleType)] = ToggleType,
-                [nameof(DatabaseNames)] = TypeConverter.ToBlittableSupportedType(DatabaseNames),
-                [nameof(State)] = State
-            };
-        }
-    }
+            public ToggleType Type { get; set; }
 
-    public enum ToggleType
-    {
-        Databases,
-        Indexes,
-        DynamicDatabaseDistribution
+            public string[] DatabaseNames { get; set; }
+
+            public bool Disable { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Type)] = Type,
+                    [nameof(DatabaseNames)] = TypeConverter.ToBlittableSupportedType(DatabaseNames),
+                    [nameof(Disable)] = Disable
+                };
+            }
+
+            public enum ToggleType
+            {
+                Databases,
+                Indexes,
+                DynamicDatabaseDistribution
+            }
+        }
     }
 }

@@ -10,7 +10,7 @@ class toggleDisableIndexingCommand extends commandBase {
 
     execute(): JQueryPromise<void> {
         const args = {
-            disable: !this.start
+            enable: this.start
         }
 
         const url = endpoints.global.adminDatabases.adminDatabasesToggleIndexing + this.urlEncodeArgs(args);

@@ -1705,13 +1705,13 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editExpiration);
         }
 
-        public Task<(long Index, object Result)> ToggleDatabasesStateAsync(ToggleType toggleType, string[] databaseNames, bool state, string raftRequestId)
+        public Task<(long Index, object Result)> ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType toggleType, string[] databaseNames, bool disable, string raftRequestId)
         {
-            var command = new ToggleDatabasesStateCommand(new ToggleParameters
+            var command = new ToggleDatabasesStateCommand(new ToggleDatabasesStateCommand.Parameters
             {
-                ToggleType = toggleType,
+                Type = toggleType,
                 DatabaseNames = databaseNames,
-                State = state
+                Disable = disable
             }, raftRequestId);
 
             return SendToLeaderAsync(command);
