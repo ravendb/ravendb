@@ -75,7 +75,6 @@ namespace Raven.Server.Documents.Handlers
             };
             destination.Initialize(options, null, buildVersion: default);
 
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var documentActions = destination.Documents())
             using (var buffered = new BufferedStream(RequestBodyStream()))
             using (var reader = new BsonReader(buffered))
@@ -149,13 +148,13 @@ namespace Raven.Server.Documents.Handlers
                             Stream = documentActions.GetTempStream()
                         };
 
-                        var attachmentDetails = StreamSource.GenerateLegacyAttachmentDetails(context, dataStream, attachmentKey, metadataBlittable, ref attachment);
+                        var attachmentDetails = StreamSource.GenerateLegacyAttachmentDetails(contextToUse, dataStream, attachmentKey, metadataBlittable, ref attachment);
 
                         var documentItem = new DocumentItem
                         {
                             Document = new Document
                             {
-                                Data = StreamSource.WriteDummyDocumentForAttachment(context, attachmentDetails),
+                                Data = StreamSource.WriteDummyDocumentForAttachment(contextToUse, attachmentDetails),
                                 Id = attachmentDetails.Id,
                                 ChangeVector = string.Empty,
                                 Flags = DocumentFlags.HasAttachments,
@@ -171,12 +170,15 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
 
-                var replicationSource = GetSourceReplicationInformation(context, GetRemoteServerInstanceId(), out var documentId);
-                replicationSource.LastAttachmentEtag = lastAttachmentEtag;
-                replicationSource.Source = GetFromServer();
-                replicationSource.LastModified = DateTime.UtcNow;
+                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    var replicationSource = GetSourceReplicationInformation(context, GetRemoteServerInstanceId(), out var documentId);
+                    replicationSource.LastAttachmentEtag = lastAttachmentEtag;
+                    replicationSource.Source = GetFromServer();
+                    replicationSource.LastModified = DateTime.UtcNow;
 
-                await SaveSourceReplicationInformation(replicationSource, context, documentId);
+                    await SaveSourceReplicationInformation(replicationSource, context, documentId);
+                }
             }
         }
         
