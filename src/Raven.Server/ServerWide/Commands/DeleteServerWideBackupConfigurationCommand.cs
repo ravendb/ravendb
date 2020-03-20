@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -12,11 +13,10 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
+        [Obsolete]
         public DeleteServerWideBackupConfigurationCommand(string configurationName, string uniqueRequestId) : base(uniqueRequestId)
         {
-            Name = ClusterStateMachine.ServerWideConfigurationKey.Backup;
-            Value = configurationName;
-        }
+            throw new InvalidOperationException($"This command is obsolete, please use `{nameof(DeleteServerWideTaskCommand)}` instead");        }
 
         public override object ValueToJson()
         {
