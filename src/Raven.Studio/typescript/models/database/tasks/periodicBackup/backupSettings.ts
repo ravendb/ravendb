@@ -76,6 +76,12 @@ abstract class backupSettings {
             }
             return generalUtils.trimMessage(result.Error);
         });
+        
+        this.hasConfigurationScript.subscribe(overrideWithScript => {
+            if (overrideWithScript) {
+                this.testConnectionResult(null);
+            }
+        });
     }
 
     toDto(): Raven.Client.Documents.Operations.Backups.BackupSettings {
