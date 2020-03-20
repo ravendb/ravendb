@@ -13,7 +13,7 @@ class toggleDisableIndexingCommand extends commandBase {
             enable: this.start
         }
 
-        const url = endpoints.global.adminDatabases.adminDatabasesToggleIndexing + this.urlEncodeArgs(args);
+        const url = endpoints.global.adminDatabases.adminDatabasesIndexing + this.urlEncodeArgs(args);
 
         const payload = {
             DatabaseNames: [this.db.name]
