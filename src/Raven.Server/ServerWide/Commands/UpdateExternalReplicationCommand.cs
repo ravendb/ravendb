@@ -1,4 +1,6 @@
-﻿using Raven.Client.Documents.Operations.Replication;
+﻿using System;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
@@ -40,7 +42,15 @@ namespace Raven.Server.ServerWide.Commands
                 Watcher.Name = record.EnsureUniqueTaskName(Watcher.GetDefaultTaskName());
             }
 
+            if (Watcher.Name.StartsWith(ServerWideExternalReplication.NamePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var isNewTask = record.ExternalReplications.Exists(x => x.Name.Equals(Watcher.Name, StringComparison.OrdinalIgnoreCase));
+                throw new InvalidOperationException($"Can't {(isNewTask ? "create" : "update")} task: '{Watcher.Name}'. " +
+                                                    $"A regular (non server-wide) external replication name can't start with prefix '{ServerWideExternalReplication.NamePrefix}'");
+            }
+
             EnsureTaskNameIsNotUsed(record, Watcher.Name);
+
             record.ExternalReplications.Add(Watcher);
         }
 
