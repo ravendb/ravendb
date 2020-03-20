@@ -4,7 +4,7 @@ import genUtils = require("common/generalUtils");
 
 class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
-    useCustomS3Host = ko.observable<boolean>(true);
+    useCustomS3Host = ko.observable<boolean>();
     customServerUrl = ko.observable<string>();    
     
     constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>) {
@@ -91,7 +91,7 @@ class s3Settings extends amazonSettings {
                 {
                     validator: (customServerUrl: string) => !this.useCustomS3Host() ||
                                                             (!this.hasConfigurationScript() && customServerUrl && genUtils.urlRegex.test(customServerUrl)),                    
-                    message: "Expected format: 'http(s)://<yourHostAddress>'"
+                    message: genUtils.invalidUrlMessage
                 }
             ]
         });
@@ -106,12 +106,9 @@ class s3Settings extends amazonSettings {
     }
     
     isRegionRequired() {
-        if (!!this.useCustomS3Host) {
-            return this.enabled() && !this.hasConfigurationScript() && !this.useCustomS3Host();     
-        }
-        else {
-            return this.enabled() && !this.hasConfigurationScript();
-        }       
+        const isRegionRequired = this.useCustomS3Host ? !this.hasConfigurationScript() && !this.useCustomS3Host() :
+                                                        !this.hasConfigurationScript();        
+        return super.isRegionRequired() && isRegionRequired;
     }
 
     toDto(): Raven.Client.Documents.Operations.Backups.S3Settings {
