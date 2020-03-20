@@ -87,7 +87,7 @@ abstract class amazonSettings extends backupSettings {
         
         this.awsRegionName.extend({
             required: {
-                onlyIf: () => self.isRegionRequired()
+                onlyIf: () => this.isRegionRequired()
             },
             validation: [
                 {

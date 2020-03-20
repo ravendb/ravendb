@@ -24,7 +24,7 @@ class extensions {
         
         url = _.trim(url);
         if (!genUtils.urlRegex.test(url)) {
-            return "Url format expected: 'http(s)://hostName'";
+            return genUtils.invalidUrlMessage;
         }
 
         try {
