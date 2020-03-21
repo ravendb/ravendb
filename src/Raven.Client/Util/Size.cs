@@ -1,8 +1,9 @@
 ﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Util
 {
-    public class Size
+    public class Size : IDynamicJson
     {
         private static readonly string ZeroHumaneSize = Humane(0);
 
@@ -54,6 +55,15 @@ namespace Raven.Client.Util
             if (absSize > KB)
                 return string.Format("{0:#,#.##} KBytes", size / KB);
             return string.Format("{0:#,#0} Bytes", size);
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(SizeInBytes)] = SizeInBytes, 
+                [nameof(HumaneSize)] = HumaneSize
+            };
         }
     }
 }
