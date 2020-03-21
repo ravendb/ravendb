@@ -9,8 +9,8 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Sparrow.Json;
 using Sparrow.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Commands
         private readonly bool _includeAllCounters;
 
         private readonly IEnumerable<TimeSeriesRange> _timeSeriesIncludes;
-
+        private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
 
         private readonly string _startWith;
@@ -57,18 +57,20 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<TimeSeriesRange> timeSeriesIncludes, bool metadataOnly) 
+        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<TimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
             : this(ids, includes, metadataOnly)
         {
             _counters = counterIncludes;
             _timeSeriesIncludes = timeSeriesIncludes;
+            _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, bool includeAllCounters, IEnumerable<TimeSeriesRange> timeSeriesIncludes, bool metadataOnly)
+        public GetDocumentsCommand(string[] ids, string[] includes, bool includeAllCounters, IEnumerable<TimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
             : this(ids, includes, metadataOnly)
         {
             _includeAllCounters = includeAllCounters;
             _timeSeriesIncludes = timeSeriesIncludes;
+            _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
 
         public GetDocumentsCommand(string startWith, string startAfter, string matches, string exclude, int start, int pageSize, bool metadataOnly)
@@ -103,7 +105,7 @@ namespace Raven.Client.Documents.Commands
                 if (_matches != null)
                     pathBuilder.Append("&matches=").Append(Uri.EscapeDataString(_matches));
                 if (_exclude != null)
-                    pathBuilder.Append("&exclude=").Append(Uri.EscapeDataString(_exclude)); 
+                    pathBuilder.Append("&exclude=").Append(Uri.EscapeDataString(_exclude));
                 if (_startAfter != null)
                     pathBuilder.Append("&startAfter=").Append(Uri.EscapeDataString(_startAfter));
             }
@@ -120,7 +122,6 @@ namespace Raven.Client.Documents.Commands
             {
                 pathBuilder.Append("&counter=").Append(Uri.EscapeDataString(Constants.Counters.All));
             }
-
             else if (_counters != null && _counters.Length > 0)
             {
                 foreach (var counter in _counters)
@@ -137,6 +138,12 @@ namespace Raven.Client.Documents.Commands
                         .Append("&from=").Append(range.From.GetDefaultRavenFormat())
                         .Append("&to=").Append(range.To.GetDefaultRavenFormat());
                 }
+            }
+
+            if (_compareExchangeValueIncludes != null)
+            {
+                foreach (var compareExchangeValue in _compareExchangeValueIncludes)
+                    pathBuilder.Append("&cmpxchg=").Append(Uri.EscapeDataString(compareExchangeValue));
             }
 
             var request = new HttpRequestMessage

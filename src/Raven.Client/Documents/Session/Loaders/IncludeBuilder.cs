@@ -34,7 +34,16 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeTimeSeries(string name, DateTime from, DateTime to);
     }
 
-    public interface IIncludeBuilder<T, out TBuilder> : IDocumentIncludeBuilder<T, TBuilder>, ICounterIncludeBuilder<T, TBuilder>, ITimeSeriesIncludeBuilder<T, TBuilder>
+    public interface ICompareExchangeValueIncludeBuilder<T, out TBuilder>
+    {
+        TBuilder IncludeCompareExchangeValue(string path);
+
+        TBuilder IncludeCompareExchangeValue(Expression<Func<T, string>> path);
+
+        TBuilder IncludeCompareExchangeValue(Expression<Func<T, IEnumerable<string>>> path);
+    }
+
+    public interface IIncludeBuilder<T, out TBuilder> : IDocumentIncludeBuilder<T, TBuilder>, ICounterIncludeBuilder<T, TBuilder>, ITimeSeriesIncludeBuilder<T, TBuilder>, ICompareExchangeValueIncludeBuilder<T, TBuilder>
     {
     }
 
@@ -55,7 +64,6 @@ namespace Raven.Client.Documents.Session.Loaders
         IQueryIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path);
 
         IQueryIncludeBuilder<T> IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime from, DateTime to);
-
     }
 
     public class IncludeBuilder
@@ -104,6 +112,7 @@ namespace Raven.Client.Documents.Session.Loaders
 
         internal Dictionary<string, HashSet<TimeSeriesRange>> TimeSeriesToIncludeBySourceAlias;
 
+        internal HashSet<string> CompareExchangeValuesToInclude;
     }
 
     internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>, ISubscriptionIncludeBuilder<T>
@@ -132,7 +141,6 @@ namespace Raven.Client.Documents.Session.Loaders
             IncludeAllCountersWithAlias(path);
             return this;
         }
-
 
         IQueryIncludeBuilder<T> ICounterIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounter(string name)
         {
@@ -279,12 +287,56 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
+        IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(string path)
+        {
+            IncludeCompareExchangeValue(path);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, string>> path)
+        {
+            IncludeCompareExchangeValue(path.ToPropertyPath());
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            IncludeCompareExchangeValue(path.ToPropertyPath());
+            return this;
+        }
+
+        IIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCompareExchangeValue(string path)
+        {
+            IncludeCompareExchangeValue(path);
+            return this;
+        }
+
+        IIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, string>> path)
+        {
+            IncludeCompareExchangeValue(path.ToPropertyPath());
+            return this;
+        }
+
+        IIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            IncludeCompareExchangeValue(path.ToPropertyPath());
+            return this;
+        }
+
         private void IncludeDocuments(string path)
         {
             if (DocumentsToInclude == null)
                 DocumentsToInclude = new HashSet<string>();
 
             DocumentsToInclude.Add(path);
+        }
+
+        private void IncludeCompareExchangeValue(string path)
+        {
+            if (CompareExchangeValuesToInclude == null)
+                CompareExchangeValuesToInclude = new HashSet<string>();
+
+            CompareExchangeValuesToInclude.Add(path);
         }
 
         private void IncludeCounterWithAlias(Expression<Func<T, string>> path, string name)
@@ -325,7 +377,6 @@ namespace Raven.Client.Documents.Session.Loaders
                 CountersToIncludeBySourcePath[path]
                     .CountersToInclude.Add(name);
             }
-
         }
 
         private void IncludeAllCountersWithAlias(Expression<Func<T, string>> path)
@@ -406,7 +457,6 @@ namespace Raven.Client.Documents.Session.Loaders
 
         private TimeSeriesRangeComparer()
         {
-            
         }
 
         public bool Equals(TimeSeriesRange x, TimeSeriesRange y)
@@ -419,6 +469,4 @@ namespace Raven.Client.Documents.Session.Loaders
             return obj.Name.GetHashCode();
         }
     }
-
-
 }

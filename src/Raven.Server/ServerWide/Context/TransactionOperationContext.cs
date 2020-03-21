@@ -1,8 +1,8 @@
 ﻿using System;
 using Sparrow.Json;
-using Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -62,7 +62,6 @@ namespace Raven.Server.ServerWide.Context
 
             return Transaction;
         }
-
 
         public TTransaction CloneReadTransaction()
         {
@@ -145,9 +144,7 @@ namespace Raven.Server.ServerWide.Context
         {
             CloseTransaction();
 
-
             base.Reset(forceResetLongLivedAllocator);
-
 
             Allocator.Reset();
         }

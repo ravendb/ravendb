@@ -59,8 +59,13 @@ namespace Raven.Client.Documents.Session
         public IClusterTransactionOperations ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperations(this));
         private IClusterTransactionOperations _clusterTransaction;
 
-        protected override ClusterTransactionOperationsBase GetClusterSession()
+        protected override bool HasClusterSession => _clusterTransaction != null;
+
+        protected internal override ClusterTransactionOperationsBase GetClusterSession()
         {
+            if (_clusterTransaction == null)
+                _clusterTransaction = new ClusterTransactionOperations(this);
+
             return (ClusterTransactionOperationsBase)_clusterTransaction;
         }
 

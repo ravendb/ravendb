@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             }
 
             if (response.Result != null)
-                Result = CompareExchangeValueResultParser<T>.GetValue(_context, (BlittableJsonReaderObject)response.Result, _conventions);
+                Result = CompareExchangeValueResultParser<T>.GetValue((BlittableJsonReaderObject)response.Result, _conventions);
         }
     }
 }

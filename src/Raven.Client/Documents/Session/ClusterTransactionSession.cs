@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Util;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -102,9 +104,13 @@ namespace Raven.Client.Documents.Session
 
         protected async Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key, CancellationToken token = default)
         {
+            if (TryGetCompareExchangeValueFromSession(key, out var sessionValue))
+                return sessionValue.GetValue<T>(_session.Conventions);
+
             using (_session.AsyncTaskHolder())
             {
-                return await _session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+                var value = await _session.Operations.SendAsync(new GetCompareExchangeValueOperation<BlittableJsonReaderObject>(key), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+
             }
         }
 
@@ -129,6 +135,68 @@ namespace Raven.Client.Documents.Session
             if (_storeCompareExchange?.ContainsKey(key) == true)
             {
                 throw new ArgumentException($"The key '{key}' already exists in the store requests.");
+            }
+        }
+
+        internal void RegisterCompareExchangeValues(BlittableJsonReaderObject values)
+        {
+            if (_session.NoTracking || values == null)
+                return;
+
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            for (var i = 0; i < values.Count; i++)
+            {
+                values.GetPropertyByIndex(i, ref propertyDetails);
+
+                RegisterCompareExchangeValue(propertyDetails.Value as BlittableJsonReaderObject);
+            }
+        }
+
+        private void RegisterCompareExchangeValue(BlittableJsonReaderObject value)
+        {
+            if (_session.NoTracking || value == null)
+                return;
+
+            var v = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, _session.Conventions);
+            if (v == null)
+                return;
+
+            _values[v.Key] = new CompareExchangeSessionValue
+            {
+                OriginalValue = v
+            };
+        }
+
+        private bool TryGetCompareExchangeValueFromSession(string key, out CompareExchangeSessionValue value)
+        {
+            if (_values.TryGetValue(key, out value) == false)
+                return false;
+
+            if (value == null || value.OriginalValue.Index == -1)
+                return false;
+
+            return true;
+        }
+
+        private readonly Dictionary<string, CompareExchangeSessionValue> _values = new Dictionary<string, CompareExchangeSessionValue>(StringComparer.OrdinalIgnoreCase);
+
+        private class CompareExchangeSessionValue
+        {
+            public CompareExchangeValue<BlittableJsonReaderObject> OriginalValue;
+
+            private object _value;
+
+            public CompareExchangeValue<T> GetValue<T>(DocumentConventions conventions)
+            {
+                if (_value is CompareExchangeValue<T> v)
+                    return v;
+
+                if (_value != null)
+                    throw new InvalidOperationException("TODO ppekrol");
+
+                var entity = (T)EntityToBlittable.ConvertToEntity(typeof(T), OriginalValue.Key, OriginalValue.Value, conventions);
+                _value = new CompareExchangeValue<T>(OriginalValue.Key, OriginalValue.Index, entity);
+                return _value;
             }
         }
     }

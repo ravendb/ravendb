@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
@@ -54,7 +55,7 @@ namespace Raven.Server.Json
             writer.WriteArray(context, "Results", stats, (w, c, taskStats) =>
             {
                 w.WriteStartObject();
-                
+
                 w.WritePropertyName(nameof(taskStats.TaskId));
                 w.WriteInteger(taskStats.TaskId);
                 w.WriteComma();
@@ -62,7 +63,7 @@ namespace Raven.Server.Json
                 w.WritePropertyName(nameof(taskStats.TaskName));
                 w.WriteString(taskStats.TaskName);
                 w.WriteComma();
-                
+
                 w.WritePropertyName(nameof(taskStats.EtlType));
                 w.WriteString(taskStats.EtlType.ToString());
                 w.WriteComma();
@@ -173,7 +174,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.CappedMaxResults != null) {
+            if (result.CappedMaxResults != null)
+            {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
                 writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
@@ -196,7 +198,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.CappedMaxResults != null) {
+            if (result.CappedMaxResults != null)
+            {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
                 writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
@@ -333,7 +336,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.CappedMaxResults != null) {
+            if (result.CappedMaxResults != null)
+            {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
                 writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
@@ -360,7 +364,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.CappedMaxResults != null) {
+            if (result.CappedMaxResults != null)
+            {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
                 writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
@@ -453,7 +458,6 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
             return numberOfResults;
-
         }
 
         private static void WriteIncludedCounterNames(AsyncBlittableJsonTextWriter writer, DocumentQueryResult result)
@@ -686,7 +690,6 @@ namespace Raven.Server.Json
             }
             else
                 writer.WriteNull();
-
 
             writer.WriteEndObject();
         }
@@ -1279,7 +1282,6 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-
                 WriteDocument(writer, context, documents.Current, metadataOnly);
             }
 
@@ -1323,7 +1325,7 @@ namespace Raven.Server.Json
                 return;
             }
 
-            // Explicitly not disposing it, a single document can be 
+            // Explicitly not disposing it, a single document can be
             // used multiple times in a single query, for example, due to projections
             // so we will let the context handle it, rather than handle it directly ourselves
             //using (document.Data)
@@ -1525,6 +1527,41 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
+        public static async Task WriteCompareExchangeValues(this AsyncBlittableJsonTextWriter writer, List<CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in compareExchangeValues)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(kvp.Key));
+                writer.WriteString(kvp.Key);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(kvp.Index));
+                writer.WriteInteger(kvp.Index);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(kvp.Value));
+                writer.WriteObject(kvp.Value);
+
+                writer.WriteEndObject();
+
+                await writer.MaybeOuterFlushAsync();
+            }
+
+            writer.WriteEndObject();
+        }
+
         public static async Task WriteTimeSeriesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, List<TimeSeriesRangeResult>> timeSeries)
         {
             writer.WriteStartObject();
@@ -1659,7 +1696,6 @@ namespace Raven.Server.Json
                 writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Id);
                 writer.WriteString(document.Id);
-
             }
             if (document.IndexScore != null)
             {
@@ -1703,7 +1739,6 @@ namespace Raven.Server.Json
 
         private static void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
-       
             var first = true;
             BlittableJsonReaderObject metadata = null;
             var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
@@ -1918,4 +1953,3 @@ namespace Raven.Server.Json
         }
     }
 }
-
