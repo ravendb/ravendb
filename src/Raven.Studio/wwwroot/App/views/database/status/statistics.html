@@ -1,19 +1,48 @@
-<section data-bind="if: stats" class="stats content-margin">    
-    <h1 class="on-base-background">General Stats
+<section data-bind="if: stats" class="stats content-margin">
+    <h2 class="on-base-background">General Database Stats
         <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
-    </h1>
+    </h2>
+    <hr />
     <div id="storage-report" title="Base path for database data files">
         <div class="base-path">
             <i class="icon-folder"></i>
             <span class="small" data-bind="text: dataLocation"></span>
         </div>
     </div>
-    <div class="stats-list panel">
-        <div class="row flex-row" data-bind="with: stats">
+    <div class="stats-list panel" data-bind="with: stats">
+        <div class="row">
             <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
                     <div class="name"><i class="icon-database"></i> <span>Database ID</span></div>
                     <div class="value long"><span data-bind="text: databaseId"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item js-size-tooltip">
+                    <div class="name"><i class="icon-storage"></i><span>Size On Disk</span></div>
+                    <div class="value"><span data-bind="text: totalSizeOnDisk"></span></div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-etag"></i> <span>Last Document Etag</span></div>
+                    <div class="value"><span data-bind="text: lastDocEtag"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-server"></i><span>Architecture</span></div>
+                    <div class="value"><span data-bind="visible: is64Bit">64 Bit</span><span data-bind="visible : !is64Bit">32 Bit</span></div>
+                </div>
+            </div> 
+        </div>
+        <div class="row">
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-etag"></i> <span>Last Database Etag</span></div>
+                    <div class="value"><span data-bind="text: lastDatabaseEtag"></span></div>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-4 col-xl-3">
@@ -27,6 +56,8 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="row">
             <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
                     <div class="name"><i class="icon-documents"></i> <span>Documents Count</span></div>
@@ -35,8 +66,28 @@
             </div>
             <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
+                    <div class="name"><i class="icon-new-counter"></i><span>Counters Count</span></div>
+                    <div class="value"><span data-bind="text: countOfCounters"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-identities"></i><span>Identities Count</span></div>
+                    <div class="value"><span data-bind="text: countOfIdentities"></span></div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
                     <div class="name"><i class="icon-indexing"></i><span>Indexes Count</span></div>
                     <div class="value"><span data-bind="text: countOfIndexes"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-revisions"></i><span>Revisions Count</span></div>
+                    <div class="value"><span data-bind="text: countOfRevisions"></span></div>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-4 col-xl-3">
@@ -45,12 +96,8 @@
                     <div class="value"><span data-bind="text: countOfDocumentsConflicts"></span></div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-4 col-xl-3">
-                <div class="stats-item">
-                    <div class="name"><i class="icon-zombie"></i><span>Tombstones Count</span></div>
-                    <div class="value"><span data-bind="text: countOfTombstones"></span></div>
-                </div>
-            </div>
+        </div>
+        <div class="row">
             <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
                     <div class="name"><i class="icon-attachment"></i><span>Attachments Count</span></div>
@@ -65,37 +112,20 @@
             </div>
             <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
-                    <div class="name"><i class="icon-etag"></i> <span>Last Document Etag</span></div>
-                    <div class="value"><span data-bind="text: lastDocEtag"></span></div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-4 col-xl-3">
-                <div class="stats-item">
-                    <div class="name"><i class="icon-server"></i><span>Architecture</span></div>
-                    <div class="value"><span data-bind="visible: is64Bit">64 Bit</span><span data-bind="visible : !is64Bit">32 Bit</span></div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-4 col-xl-3">
-                <div class="stats-item js-size-tooltip"> 
-                    <div class="name"><i class="icon-storage"></i><span>Size On Disk</span></div>
-                    <div class="value"><span data-bind="text: totalSizeOnDisk"></span></div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-4 col-xl-3">
-                <div class="stats-item">
-                    <div class="name"><i class="icon-identities"></i><span>Identities Count</span></div>
-                    <div class="value"><span data-bind="text: countOfIdentities"></span></div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-4 col-xl-3">
-                <div class="stats-item">
                     <div class="name"><i class="icon-cmp-xchg"></i><span>Compare Exchange Count</span></div>
                     <div class="value"><span data-bind="text: countOfCompareExchange"></span></div>
                 </div>
             </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-zombie"></i><span>Tombstones Count</span></div>
+                    <div class="value"><span data-bind="text: countOfTombstones"></span></div>
+                </div>
+            </div>
         </div>
     </div>
-    <h1 class="on-base-background">Indexes Stats by Type</h1>
+    <h2 class="on-base-background margin-top margin-top-lg">Indexes Stats</h2>
+    <hr />
     <div class="row" data-bind="visible: stats().indexesByType().length === 0">
         <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
             <i class="icon-xl icon-empty-set text-muted"></i>
@@ -103,10 +133,8 @@
         </div>
     </div>
     <div data-bind="foreach: stats().indexesByType">
-        <hr />
-        <h2 data-bind="text: indexType" class="on-base-background"></h2>
+        <h3 data-bind="text: indexType + ' Indexes'" class="on-base-background"></h3>
         <div class="row row-sm flex-row" data-bind="foreach: indexes">
-
             <div class="col-sm-6 col-lg-4 col-xl-3 flex-vertical">
                 <div class="stats-list panel flex-grow">
                     <div class="flex-horizontal title">
@@ -115,7 +143,7 @@
                                 <span class="text" data-bind="text: indexName"></span>
                             </a>
                         </h3>
-                        <a href="#" title="Show stale reason" class=" pull-right flex-noshrink badge badge-warning" 
+                        <a href="#" title="Show stale reason" class=" pull-right flex-noshrink badge badge-warning"
                            data-bind="visible: isStale, click: _.partial($root.showStaleReasons, indexName)">
                             Stale
                         </a>
@@ -178,14 +206,12 @@
             </div>
         </div>
     </div>
-
     <hr />
-    <div class="identities"> 
+    <div class="identities">
         <div class="flex-horizontal">
-            <h1 class="flex-end on-base-background">Identities</h1>
+            <h2 class="flex-end on-base-background">Identities</h2>
             <small class="js-identities-header identities-header flex-end"><i class="icon-info text-info"></i> </small>
         </div>
-
         <div class="row" data-bind="visible: identities().length === 0">
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                 <i class="icon-xl icon-empty-set text-muted"></i>
@@ -203,5 +229,4 @@
             </div>
         </div>
     </div>
-    
 </section>

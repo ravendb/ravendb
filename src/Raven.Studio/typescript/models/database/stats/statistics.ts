@@ -7,6 +7,7 @@ class statistics {
     databaseId: string;
     databaseChangeVector: changeVectorItem[];
     lastDocEtag: string;
+    lastDatabaseEtag: string;
     countOfIndexes: string;
     countOfDocuments: string;
     countOfAttachments: string;
@@ -15,6 +16,8 @@ class statistics {
     countOfTombstones: string;
     countOfIdentities: string;
     countOfCompareExchange: string;
+    countOfRevisions: string;
+    countOfCounters: string;
     is64Bit: boolean;
     indexPerformanceURL: string;
     dataSizeOnDisk: string;
@@ -28,7 +31,8 @@ class statistics {
         this.databaseId = dbStats.DatabaseId;
 
         this.databaseChangeVector = changeVectorUtils.formatChangeVector(dbStats.DatabaseChangeVector, changeVectorUtils.shouldUseLongFormat([dbStats.DatabaseChangeVector]));
-        this.lastDocEtag = dbStats.LastDocEtag.toLocaleString();;
+        this.lastDocEtag = dbStats.LastDocEtag.toLocaleString();
+        this.lastDatabaseEtag = dbStats.LastDatabaseEtag.toLocaleString();        
         this.countOfDocuments = dbStats.CountOfDocuments.toLocaleString();
         this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
         this.countOfAttachments = dbStats.CountOfAttachments.toLocaleString();
@@ -37,6 +41,8 @@ class statistics {
         this.countOfTombstones = dbStats.CountOfTombstones.toLocaleString();
         this.countOfIdentities = dbStats.CountOfIdentities.toLocaleString();
         this.countOfCompareExchange = dbStats.CountOfCompareExchange.toLocaleString();
+        this.countOfRevisions = dbStats.CountOfRevisionDocuments.toLocaleString();
+        this.countOfCounters = dbStats.CountOfCounterEntries.toLocaleString();
         this.is64Bit = dbStats.Is64Bit;
         this.dataSizeOnDisk = generalUtils.formatBytesToSize(dbStats.SizeOnDisk.SizeInBytes);
         this.tempBuffersSizeOnDisk = generalUtils.formatBytesToSize(dbStats.TempBuffersSizeOnDisk.SizeInBytes);
