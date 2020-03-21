@@ -896,6 +896,9 @@ more responsive application.
 
         private void PrepareCompareExchangeEntities(SaveChangesData result)
         {
+            if (HasClusterSession == false)
+                return;
+
             ClusterTransactionOperationsBase clusterTransactionOperations = GetClusterSession();
 
             if (clusterTransactionOperations == null || clusterTransactionOperations.HasCommands == false)
@@ -928,7 +931,9 @@ more responsive application.
             result.OnSuccess.ClearClusterTransactionOperations(clusterTransactionOperations);
         }
 
-        protected abstract ClusterTransactionOperationsBase GetClusterSession();
+        protected abstract bool HasClusterSession { get; }
+
+        protected internal abstract ClusterTransactionOperationsBase GetClusterSession();
 
         private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
         {
@@ -1281,7 +1286,10 @@ more responsive application.
             _countersByDocId?.Clear();
             DeferredCommands.Clear();
             DeferredCommandsDictionary.Clear();
-            GetClusterSession()?.Clear();
+
+            if (HasClusterSession)
+                GetClusterSession()?.Clear();
+
             PendingLazyOperations.Clear();
             EntityToBlittable.Clear();
         }

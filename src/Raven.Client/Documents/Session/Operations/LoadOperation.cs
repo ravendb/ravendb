@@ -16,6 +16,7 @@ namespace Raven.Client.Documents.Session.Operations
         private string[] _ids;
         private string[] _includes;
         private string[] _countersToInclude;
+        private string[] _compareExchangeValuesToInclude;
         private bool _includeAllCounters;
         private IEnumerable<TimeSeriesRange> _timeSeriesToInclude;
 
@@ -37,9 +38,9 @@ namespace Raven.Client.Documents.Session.Operations
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
 
             if (_includeAllCounters)
-                return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, timeSeriesIncludes : _timeSeriesToInclude, metadataOnly: false);
+                return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude, compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false);
 
-            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _timeSeriesToInclude, metadataOnly: false);
+            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)
@@ -56,6 +57,12 @@ namespace Raven.Client.Documents.Session.Operations
         public LoadOperation WithIncludes(string[] includes)
         {
             _includes = includes;
+            return this;
+        }
+
+        public LoadOperation WithCompareExchange(string[] compareExchangeValues)
+        {
+            _compareExchangeValuesToInclude = compareExchangeValues;
             return this;
         }
 
@@ -186,6 +193,11 @@ namespace Raven.Client.Documents.Session.Operations
             if (_timeSeriesToInclude != null)
             {
                 _session.RegisterTimeSeries(result.TimeSeriesIncludes);
+            }
+
+            if (_compareExchangeValuesToInclude != null)
+            {
+                _session.GetClusterSession().RegisterCompareExchangeValues(result.CompareExchangeValueIncludes);
             }
 
             foreach (var document in GetDocumentsFromResult(result))

@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         private readonly string _startWith;
         private readonly int? _start;
         private readonly int? _pageSize;
-        
+
         public GetCompareExchangeValuesOperation(string[] keys)
         {
             if (keys == null || keys.Length == 0)
@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             _keys = keys;
         }
-        
+
         public GetCompareExchangeValuesOperation(string startWith, int? start = null, int? pageSize = null)
         {
             _startWith = startWith;
@@ -83,8 +83,8 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             }
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {   
-                Result = CompareExchangeValueResultParser<T>.GetValues(context, response, _conventions);
+            {
+                Result = CompareExchangeValueResultParser<T>.GetValues(response, _conventions);
             }
         }
     }

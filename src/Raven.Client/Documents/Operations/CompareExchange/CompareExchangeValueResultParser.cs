@@ -10,12 +10,11 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 {
     internal static class CompareExchangeValueResultParser<T>
     {
-        public static Dictionary<string, CompareExchangeValue<T>> GetValues(JsonOperationContext context, BlittableJsonReaderObject response, DocumentConventions conventions)
+        public static Dictionary<string, CompareExchangeValue<T>> GetValues(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
             if (response.TryGet("Results", out BlittableJsonReaderArray items) == false)
                 throw new InvalidDataException("Response is invalid. Results is missing.");
 
-            LazyStringValue lsv = null;
             var results = new Dictionary<string, CompareExchangeValue<T>>();
 
             foreach (BlittableJsonReaderObject item in items)
@@ -23,47 +22,53 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 if (item == null)
                     throw new InvalidDataException("Response is invalid. Item is null.");
 
-                if (item.TryGet("Key", out string key) == false)
-                    throw new InvalidDataException("Response is invalid. Key is missing.");
-                if (item.TryGet("Index", out long index) == false)
-                    throw new InvalidDataException("Response is invalid. Index is missing.");
-                if (item.TryGet("Value", out BlittableJsonReaderObject raw) == false)
-                    throw new InvalidDataException("Response is invalid. Value is missing.");
-
-                if (typeof(T).GetTypeInfo().IsPrimitive || typeof(T) == typeof(string))
-                {
-                    // simple
-                    T value = default;
-                    raw?.TryGet(Constants.CompareExchange.ObjectFieldName, out value);
-                    results[key] = new CompareExchangeValue<T>(key, index, value);
-                }
-                else
-                {
-                    if (lsv == null)
-                        lsv = context.GetLazyString(Constants.CompareExchange.ObjectFieldName);
-
-                    if (raw == null || raw.Contains(lsv) == false)
-                    {
-                        results[key] = new CompareExchangeValue<T>(key, index, default);
-                    }
-                    else
-                    {
-                        var converted = (ResultHolder)EntityToBlittable.ConvertToEntity(typeof(ResultHolder), null, raw, conventions);
-                        results[key] = new CompareExchangeValue<T>(key, index, converted.Object);
-                    }
-                }
+                var value = GetSingleValue(item, conventions);
+                results[value.Key] = value;
             }
 
             return results;
         }
 
-        public static CompareExchangeValue<T> GetValue(JsonOperationContext context, BlittableJsonReaderObject response, DocumentConventions conventions)
+        public static CompareExchangeValue<T> GetValue(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
             if (response == null)
                 return null;
 
-            var value = GetValues(context, response, conventions).FirstOrDefault();
+            var value = GetValues(response, conventions).FirstOrDefault();
             return value.Value;
+        }
+
+        public static CompareExchangeValue<T> GetSingleValue(BlittableJsonReaderObject item, DocumentConventions conventions)
+        {
+            if (item == null)
+                return null;
+
+            if (item.TryGet(nameof(CompareExchangeValue<T>.Key), out string key) == false)
+                throw new InvalidDataException("Response is invalid. Key is missing.");
+            if (item.TryGet(nameof(CompareExchangeValue<T>.Index), out long index) == false)
+                throw new InvalidDataException("Response is invalid. Index is missing.");
+            if (item.TryGet(nameof(CompareExchangeValue<T>.Value), out BlittableJsonReaderObject raw) == false)
+                throw new InvalidDataException("Response is invalid. Value is missing.");
+
+            if (typeof(T).GetTypeInfo().IsPrimitive || typeof(T) == typeof(string) || typeof(T) == typeof(BlittableJsonReaderObject))
+            {
+                // simple
+                T value = default;
+                raw?.TryGet(Constants.CompareExchange.ObjectFieldName, out value);
+                return new CompareExchangeValue<T>(key, index, value);
+            }
+            else
+            {
+                if (raw == null || raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out _) == false)
+                {
+                    return new CompareExchangeValue<T>(key, index, default);
+                }
+                else
+                {
+                    var converted = (ResultHolder)EntityToBlittable.ConvertToEntity(typeof(ResultHolder), null, raw, conventions);
+                    return new CompareExchangeValue<T>(key, index, converted.Object);
+                }
+            }
         }
 
         private class ResultHolder

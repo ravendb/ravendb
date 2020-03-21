@@ -16,6 +16,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
@@ -32,8 +33,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Utils;
-using Constants = Raven.Client.Constants;
 using Voron;
+using Constants = Raven.Client.Constants;
 using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -217,39 +218,57 @@ namespace Raven.Server.Documents.Handlers
 
             GetTimeSeriesQueryString(Database, context, out var includeTimeSeries);
 
-            foreach (var id in ids)
+            GetCompareExchangeValueQueryString(Database, out var includeCompareExchangeValues);
+
+            using (includeCompareExchangeValues)
             {
-                var document = Database.DocumentsStorage.Get(context, id);
-                if (document == null && ids.Count == 1)
+                foreach (var id in ids)
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    var document = Database.DocumentsStorage.Get(context, id);
+                    if (document == null && ids.Count == 1)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return;
+                    }
+
+                    documents.Add(document);
+                    includeDocs.Gather(document);
+                    includeCounters?.Fill(document);
+                    includeTimeSeries?.Fill(document);
+                    includeCompareExchangeValues?.Gather(document);
+                }
+
+                includeDocs.Fill(includes);
+                includeCompareExchangeValues?.Materialize();
+
+                var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);
+
+                var etag = GetStringFromHeaders("If-None-Match");
+                if (etag == actualEtag)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return;
                 }
 
-                documents.Add(document);
-                includeDocs.Gather(document);
-                includeCounters?.Fill(document);
-                includeTimeSeries?.Fill(document);
+                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
+
+                int numberOfResults = 0;
+
+                numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeTimeSeries?.Results, includeCompareExchangeValues?.Results, numberOfResults);
+
+                AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
             }
+        }
 
-            includeDocs.Fill(includes);
+        private void GetCompareExchangeValueQueryString(DocumentDatabase database, out IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
+        {
+            includeCompareExchangeValues = null;
 
-            var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries);
-
-            var etag = GetStringFromHeaders("If-None-Match");
-            if (etag == actualEtag)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+            var compareExchangeValues = GetStringValuesQueryString("cmpxchg", required: false);
+            if (compareExchangeValues.Count == 0)
                 return;
-            }
 
-            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
-
-            int numberOfResults = 0;
-
-            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeTimeSeries?.Results, numberOfResults);
-
-            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
+            includeCompareExchangeValues = new IncludeCompareExchangeValuesCommand(database, compareExchangeValues);
         }
 
         private void GetCountersQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeCountersCommand includeCounters)
@@ -297,11 +316,11 @@ namespace Raven.Server.Documents.Handlers
             }
 
             includeTimeSeries = new IncludeTimeSeriesCommand(context,
-                new Dictionary<string, HashSet<TimeSeriesRange>> {{string.Empty, hs}});
+                new Dictionary<string, HashSet<TimeSeriesRange>> { { string.Empty, hs } });
         }
 
         private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
-            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, List<TimeSeriesRangeResult>> timeseries, int numberOfResults)
+            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, List<TimeSeriesRangeResult>> timeseries, List<CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues, int numberOfResults)
         {
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
@@ -335,6 +354,13 @@ namespace Raven.Server.Documents.Handlers
                     await writer.WriteTimeSeriesAsync(context, timeseries);
                 }
 
+                if (compareExchangeValues?.Count > 0)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(GetDocumentsResult.CompareExchangeValueIncludes));
+                    await writer.WriteCompareExchangeValues(compareExchangeValues);
+                }
+
                 writer.WriteEndObject();
                 await writer.OuterFlushAsync();
             }
@@ -364,10 +390,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 // We HAVE to read the document in full, trying to parallelize the doc read
-                // and the identity generation needs to take into account that the identity 
+                // and the identity generation needs to take into account that the identity
                 // generation can fail and will leave the reading task hanging if we abort
                 // easier to just do in synchronously
-                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);               
+                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
 
                 if (id[id.Length - 1] == '|')
                 {
@@ -377,7 +403,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                using (var cmd = new MergedPutCommand(doc, id, changeVector, Database, shouldValidateAttachments:true))
+                using (var cmd = new MergedPutCommand(doc, id, changeVector, Database, shouldValidateAttachments: true))
                 {
                     await Database.TxMerger.Enqueue(cmd);
 
@@ -438,7 +464,6 @@ namespace Raven.Server.Documents.Handlers
                     true,
                     returnDocument: false
                 );
-
 
                 if (isTest == false)
                 {
@@ -627,11 +652,11 @@ namespace Raven.Server.Documents.Handlers
             }
             catch (Voron.Exceptions.VoronConcurrencyErrorException)
             {
-                // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                // RavenDB-10581 - If we have a concurrency error on "doc-id/"
                 // this means that we have existing values under the current etag
-                // we'll generate a new (random) id for them. 
+                // we'll generate a new (random) id for them.
 
-                // The TransactionMerger will re-run us when we ask it to as a 
+                // The TransactionMerger will re-run us when we ask it to as a
                 // separate transaction
                 if (_id?.EndsWith(_database.IdentityPartsSeparator) == true)
                 {
@@ -667,7 +692,6 @@ namespace Raven.Server.Documents.Handlers
                         throw new InvalidOperationException($"Can not put document (id={id}) because it contains an attachment with hash={hash} but no such attachment is stored.");
                     }
                 }
-                   
             }
         }
 

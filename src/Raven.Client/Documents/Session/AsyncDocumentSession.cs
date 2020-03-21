@@ -17,7 +17,7 @@ using Raven.Client.Extensions;
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    /// Implementation for async document session 
+    /// Implementation for async document session
     /// </summary>
     public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
@@ -120,8 +120,13 @@ namespace Raven.Client.Documents.Session
         public IClusterTransactionOperationsAsync ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperationsAsync(this));
         private IClusterTransactionOperationsAsync _clusterTransaction;
 
-        protected override ClusterTransactionOperationsBase GetClusterSession()
+        protected override bool HasClusterSession => _clusterTransaction != null;
+
+        protected internal override ClusterTransactionOperationsBase GetClusterSession()
         {
+            if (_clusterTransaction == null)
+                _clusterTransaction = new ClusterTransactionOperationsAsync(this);
+
             return (ClusterTransactionOperationsBase)_clusterTransaction;
         }
 
