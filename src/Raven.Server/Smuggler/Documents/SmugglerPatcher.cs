@@ -24,9 +24,11 @@ namespace Raven.Server.Smuggler.Documents
         public Document Transform(Document document, JsonOperationContext context)
         {
             object translatedResult;
+            var oldMaxStatements = _run.ScriptEngine.MaxStatements;
 
             try
             {
+                _run.ScriptEngine.MaxStatements = _options.MaxStepsForTransformScript;
                 using (document.Data)
                 using (var result = _run.Run(context, null, "execute", new object[] { document }))
                     translatedResult = _run.Translate(result, context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
@@ -37,6 +39,10 @@ namespace Raven.Server.Smuggler.Documents
                     return null;
 
                 throw;
+            }
+            finally
+            {
+                _run.ScriptEngine.MaxStatements = oldMaxStatements;
             }
 
             if (translatedResult is BlittableJsonReaderObject == false)
