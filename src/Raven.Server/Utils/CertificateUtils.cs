@@ -186,21 +186,10 @@ namespace Raven.Server.Utils
                     new X509KeyUsage(X509KeyUsage.KeyCertSign | X509KeyUsage.CrlSign));
             }
 
-            // Serial Number - we must generate a positive number, so retrying if it's not
-            BigInteger serialNumber;
-            var retries = 10;
-
-            while (true)
-            {
-                var serialNumberBytes = new byte[20];
-                random.NextBytes(serialNumberBytes);
-                serialNumber = new BigInteger(serialNumberBytes);
-                if (serialNumber.SignValue > 0)
-                    break;
-                if (retries-- == 0)
-                    throw new ArgumentException("Failed to generate a random positive 20 bytes serial number, please try again.");
-            }
-
+            // Serial Number
+            var serialNumberBytes = new byte[20];
+            random.NextBytes(serialNumberBytes);
+            var serialNumber = new BigInteger(serialNumberBytes).Abs();
             certificateGenerator.SetSerialNumber(serialNumber);
             log?.AppendLine($"serialNumber = {serialNumber}");
 
