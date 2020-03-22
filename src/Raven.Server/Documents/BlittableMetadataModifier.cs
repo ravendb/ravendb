@@ -512,8 +512,8 @@ namespace Raven.Server.Documents
 
                     var longValue = *(long*)(state.StringBuffer + sizeof(int) + sizeof(short));
                     var intValue = *(int*)(state.StringBuffer + sizeof(int) + sizeof(short) + sizeof(long));
-                    if ((longValue != 7237087983830262092 || intValue != 1701406313) &&
-                        (longValue != 5561212665464644932 || intValue != 1701540449))
+                    if ((longValue != 7237087983830262092 || intValue != 1701406313) && // long: Last-Mod, int: ifie
+                        (longValue != 5561212665464644932 || intValue != 1701540449))   // long: Delete-M, int: arke
                     {
                         aboutToReadPropertyName = true;
                         return true;
