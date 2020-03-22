@@ -77,8 +77,9 @@
                     </button>
                 </div>
             </div>
-            <pre class="margin-top export-messages" data-bind="visible: detailsVisible"><code data-bind="foreach: messages"><span data-bind="text: $data"></span>
-</code></pre>
+            <pre class="margin-top compact-messages" data-bind="visible: detailsVisible">
+                <code data-bind="foreach: messages" class="compact-messages-code"><span data-bind="text: $data"></span></code>
+            </pre>
             <div class="toggle" data-bind="visible: detailsVisible() && !operationFailed()">
                 <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
                 <label for="smuggler-monitoring">
