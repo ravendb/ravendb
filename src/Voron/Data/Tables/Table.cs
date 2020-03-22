@@ -264,10 +264,7 @@ namespace Voron.Data.Tables
 
             if (_schema.Compressed)
             {
-                var oldData = DirectRead(id, out var oldSize);
-                var data = new ReadOnlySpan<byte>(oldData, oldSize);
-                var dictionary = GetCompressionDictionaryFor(id, ref data);
-                builder.TryCompression(dictionary);
+                builder.TryCompression(GetAppropriateCompressionDictionaryToCompress(id));
                 _cachedDecompressedBuffersByStorageId?.Remove(id);
             }
 
@@ -275,13 +272,14 @@ namespace Voron.Data.Tables
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
             int size = builder.Size;
 
+            // We must read before we call TryWriteDirect, because it will modify the size
+            var oldData = DirectRead(id, out var oldDataSize);
+
             // first, try to fit in place, either in small or large sections
             var prevIsSmall = id % Constants.Storage.PageSize != 0;
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
-                // We must read before we call TryWriteDirect, because it will modify the size
-                var oldData = DirectRead(id, out var oldDataSize);
-
+             
                 AssertNoReferenceToOldData(builder, oldData, oldDataSize);
 
                 if (prevIsSmall && ActiveDataSmallSection.TryWriteDirect(id, size, builder.Compressed, out byte* pos))
@@ -314,13 +312,11 @@ namespace Voron.Data.Tables
                 {
                     page = _tx.LowLevelTransaction.ModifyPage(pageNumber);
 
-
                     var pos = page.Pointer + PageHeader.SizeOf;
-
-                    var tvr = new TableValueReader(pos, page.OverflowSize);
 
                     AssertNoReferenceToOldData(builder, pos, size);
 
+                    var tvr = new TableValueReader(oldData, oldDataSize);
                     UpdateValuesFromIndex(id, ref tvr, builder, forceUpdate);
 
                     // MemoryCopy into final position.
@@ -336,6 +332,19 @@ namespace Voron.Data.Tables
             Delete(id);
             return Insert(builder);
         }
+
+
+
+        private ZstdLib.CompressionDictionary GetAppropriateCompressionDictionaryToCompress(long id)
+        {
+            using var _ =
+                id % Constants.Storage.PageSize == 0
+                    ? ActiveDataSmallSection.CurrentCompressionDictionaryHash(out var hash)
+                    : ActiveRawDataSmallSection.CompressionDictionaryHashFor(_tx.LowLevelTransaction, id, out hash);
+            return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, hash);
+
+        }
+
 
         private ZstdLib.CompressionDictionary GetCompressionDictionaryFor(long id, ref ReadOnlySpan<byte> data)
         {
@@ -514,13 +523,13 @@ namespace Voron.Data.Tables
 
                 OnDataMoved(idToMove, newId, actualPos, actualSize);
 
-                scope1.Dispose();
-                scope2.Dispose();
-
                 if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, compressed, out byte* writePos) == false)
                     throw new VoronErrorException($"Cannot write to newly allocated size in {Name} during delete");
 
                 Memory.Copy(writePos, pos, itemSize);
+
+                scope1.Dispose();
+                scope2.Dispose();
             }
 
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
@@ -962,12 +971,15 @@ namespace Voron.Data.Tables
 
                 Slice hash = Slices.Empty;
 
+                if (_schema.Compressed)
+                {
+                    ActiveDataSmallSection.CurrentCompressionDictionaryHash(out hash);
+                }
+
                 if (builder != null && builder.Compressed)
                 {
                     // we should only consider this when the current value is compressed, no point if we
                     // couldn't successfully compress the current value
-                    
-                    ActiveDataSmallSection.CurrentCompressionDictionaryHash(out hash);
                     var currentDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
                         .GetCompressionDictionaryFor(_tx, hash);
 
