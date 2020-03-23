@@ -19,8 +19,6 @@ namespace Raven.Server.Documents.TimeSeries
 {
     public class TimeSeriesRollups
     {
-        public static readonly Slice RawPolicySlice;
-
         private static readonly TableSchema RollupSchema;
         public static readonly Slice TimeSeriesRollupTable;
         private static readonly Slice RollupKey;
@@ -55,7 +53,6 @@ namespace Raven.Server.Documents.TimeSeries
                 Slice.From(ctx, nameof(TimeSeriesRollupTable), ByteStringType.Immutable, out TimeSeriesRollupTable);
                 Slice.From(ctx, nameof(RollupKey), ByteStringType.Immutable, out RollupKey);
                 Slice.From(ctx, nameof(NextRollupIndex), ByteStringType.Immutable, out NextRollupIndex);
-                Slice.From(ctx, RawTimeSeriesPolicy.PolicyString, ByteStringType.Immutable, out RawPolicySlice);
             }
 
             RollupSchema = new TableSchema();

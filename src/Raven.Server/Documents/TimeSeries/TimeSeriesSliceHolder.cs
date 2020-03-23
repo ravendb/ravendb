@@ -87,10 +87,10 @@ namespace Raven.Server.Documents.TimeSeries
             CurrentBaseline = time;
         }
 
-        public Slice External(Slice slice, int offset, int length)
+        public Slice PolicyNameWithSeparator(Slice slice, int offset, int length)
         {
-            _externalScopesToDispose.Add(Slice.External(_context.Allocator, slice.Content, offset, length, out var external));
-            return external;
+            _internalScopesToDispose.Add(Slice.From(_context.Allocator, slice.Content.Ptr + offset, length, SpecialChars.RecordSeparator, out var policyName));
+            return policyName;
         }
 
         public Span<byte> TagAsSpan(LazyStringValue tag)

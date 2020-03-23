@@ -1275,6 +1275,25 @@ namespace Sparrow.Server
             return new InternalScope(this, str);
         }
 
+        public InternalScope From(string value, byte endSeparator, ByteStringType type, out ByteString str)
+        {
+            Debug.Assert(value != null, $"{nameof(value)} cant be null.");
+
+            var byteCount = value.GetUtf8MaxSize() + 1;
+            str = AllocateInternal(byteCount, type);
+            fixed (char* ptr = value)
+            {
+                int length = Encodings.Utf8.GetBytes(ptr, value.Length, str.Ptr, byteCount);
+
+                *(str.Ptr + length) = endSeparator;
+                // We can do this because it is internal. See if it makes sense to actually give this ability. 
+                str._pointer->Length = length + 1;
+            }
+
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
+        }
+
         public InternalScope From(string value, Encoding encoding, out ByteString str)
         {
             return From(value, encoding, ByteStringType.Immutable, out str);
@@ -1405,6 +1424,19 @@ namespace Sparrow.Server
 
             str = AllocateInternal(size, type);
             Memory.Copy(str._pointer->Ptr, valuePtr, size);
+
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
+        }
+
+        public InternalScope From(byte* valuePtr, int size, byte endSeparator, ByteStringType type, out ByteString str)
+        {
+            Debug.Assert(valuePtr != null, $"{nameof(valuePtr)} cant be null.");
+            Debug.Assert((type & ByteStringType.External) == 0, $"{nameof(From)} is not expected to be called with the '{nameof(ByteStringType.External)}' requested type, use {nameof(FromPtr)} instead.");
+
+            str = AllocateInternal(size + 1, type);
+            Memory.Copy(str._pointer->Ptr, valuePtr, size);
+            *(str._pointer->Ptr + size) = endSeparator;
 
             RegisterForValidation(str);
             return new InternalScope(this, str);

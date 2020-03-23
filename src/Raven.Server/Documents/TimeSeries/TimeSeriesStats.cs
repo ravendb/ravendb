@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.TimeSeries
 {
     public class TimeSeriesStats
     {
+        private static readonly Slice RawPolicySlice;
         private static readonly Slice TimeSeriesStatsKey;
         private static readonly Slice PolicyIndex;
         private static readonly Slice StartTimeIndex;
@@ -23,10 +24,9 @@ namespace Raven.Server.Documents.TimeSeries
         {
             Key = 0, // documentId, separator, name
             PolicyName = 1,
-            Separator = 2,
-            Start = 3,
-            End = 4,
-            Count = 5,
+            Start = 2,
+            End = 3,
+            Count = 4,
             
         }
 
@@ -34,6 +34,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             using (StorageEnvironment.GetStaticContext(out ByteStringContext ctx))
             {
+                Slice.From(ctx, RawTimeSeriesPolicy.PolicyString, SpecialChars.RecordSeparator, ByteStringType.Immutable, out RawPolicySlice);
                 Slice.From(ctx, nameof(TimeSeriesStatsKey), ByteStringType.Immutable, out TimeSeriesStatsKey);
                 Slice.From(ctx, nameof(PolicyIndex), ByteStringType.Immutable, out PolicyIndex);
                 Slice.From(ctx, nameof(StartTimeIndex), ByteStringType.Immutable, out StartTimeIndex);
@@ -57,7 +58,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 // policy/start
                 StartIndex = (int)StatsColumns.PolicyName,
-                Count = 3, 
+                Count = 2, 
                 Name = StartTimeIndex
             });
         }
@@ -102,7 +103,6 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 tvb.Add(slicer.StatsKey);
                 tvb.Add(GetPolicy(slicer));
-                tvb.Add(SpecialChars.RecordSeparator);
                 tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
                 tvb.Add(previousCount + count);
@@ -122,7 +122,6 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 tvb.Add(slicer.StatsKey);
                 tvb.Add(GetPolicy(slicer));
-                tvb.Add(SpecialChars.RecordSeparator);
                 tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
                 tvb.Add(previousCount);
@@ -169,7 +168,6 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 tvb.Add(slicer.StatsKey);
                 tvb.Add(GetPolicy(slicer));
-                tvb.Add(SpecialChars.RecordSeparator);
                 tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
                 tvb.Add(previousCount + count);
@@ -202,7 +200,7 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<Slice> GetTimeSeriesNameByPolicy(DocumentsOperationContext context, CollectionName collection, string policy, long skip, int take)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
-            using (DocumentIdWorker.GetLower(context.Allocator, policy, out var name))
+            using (Slice.From(context.Allocator, policy.ToLowerInvariant(), SpecialChars.RecordSeparator, ByteStringType.Immutable, out var name))
             {
                 foreach (var result in table.SeekForwardFrom(TimeSeriesStatsSchema.Indexes[PolicyIndex], name, skip, startsWith: true))
                 {
@@ -220,7 +218,7 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<Slice> GetTimeSeriesByPolicyFromStartDate(DocumentsOperationContext context, CollectionName collection, string policy, DateTime start, int take)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
-            using (CombinePolicyNameAndTicks(context, policy, start.Ticks, out var key,out var policySlice))
+            using (CombinePolicyNameAndTicks(context, policy.ToLowerInvariant(), start.Ticks, out var key,out var policySlice))
             {
                 foreach (var result in table.SeekBackwardFrom(TimeSeriesStatsSchema.Indexes[StartTimeIndex], policySlice, key))
                 {
@@ -250,8 +248,6 @@ namespace Raven.Server.Documents.TimeSeries
                 slice = new Slice(str);
                 return scope;
             }
-
-            
         }
 
         public IEnumerable<Slice> GetAllPolicies(DocumentsOperationContext context, CollectionName collection)
@@ -282,9 +278,9 @@ namespace Raven.Server.Documents.TimeSeries
             var name = slicer.LowerTimeSeriesName;
             var index = name.Content.IndexOf((byte)TimeSeriesConfiguration.TimeSeriesRollupSeparator);
             if (index < 0)
-                return TimeSeriesRollups.RawPolicySlice;
+                return RawPolicySlice;
             var offset = index + 1;
-            return slicer.External(name, offset, name.Content.Length - offset);
+            return slicer.PolicyNameWithSeparator(name, offset, name.Content.Length - offset);
         }
     }
 }
