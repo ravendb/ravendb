@@ -157,7 +157,10 @@ namespace Raven.Server.Documents
                 {
                     throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})")
                     {
-                        Caller = caller
+                        Data =
+                        {
+                            {caller, null}
+                        }
                     };
                 }
 
