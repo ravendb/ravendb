@@ -91,9 +91,12 @@ namespace Sparrow.Logging
 
         private (bool Info, bool Operation) CalculateIsLogEnabled(LogMode? logMode = null)
         {
+            if (_listeners.IsEmpty == false || _pipeSink != null) 
+                return (true, true);
+            
             logMode ??= LogMode;
-            var info = (logMode & LogMode.Information) == LogMode.Information || _listeners.IsEmpty == false || _pipeSink != null;
-            var operation = (logMode & LogMode.Operations) == LogMode.Operations || _listeners.IsEmpty == false || _pipeSink != null;
+            var info = (logMode & LogMode.Information) == LogMode.Information;
+            var operation = (logMode & LogMode.Operations) == LogMode.Operations;
             return (info, operation);
         }
         
