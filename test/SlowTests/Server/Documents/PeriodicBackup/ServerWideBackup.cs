@@ -771,7 +771,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var tasks = Server.ServerStore.Cluster.GetServerWideBackupConfigurations(context, serverWideBackupConfiguration.Name).ToList();
+                    var tasks = Server.ServerStore.Cluster.GetServerWideConfigurations(context, OngoingTaskType.Backup, serverWideBackupConfiguration.Name).ToList();
                     Assert.Equal(1, tasks.Count);
 
                     tasks[0].TryGet(nameof(ServerWideBackupConfiguration.ExcludedDatabases), out BlittableJsonReaderArray excludedDatabases);

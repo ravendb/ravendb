@@ -206,6 +206,8 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateUnusedDatabaseIdsCommand)] = GenerateJsonDeserializationRoutine<UpdateUnusedDatabaseIdsCommand>(),
             [nameof(ToggleDatabasesStateCommand)] = GenerateJsonDeserializationRoutine<ToggleDatabasesStateCommand>(),
             [nameof(PutServerWideExternalReplicationCommand)] = GenerateJsonDeserializationRoutine<PutServerWideExternalReplicationCommand>(),
-            [nameof(DeleteServerWideTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideTaskCommand>()        };
+            [nameof(DeleteServerWideTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideTaskCommand>(),
+            [nameof(ToggleServerWideTaskStateCommand)] = GenerateJsonDeserializationRoutine<ToggleServerWideTaskStateCommand>()
+        };
     }
 }
