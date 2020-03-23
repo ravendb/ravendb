@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
@@ -77,6 +78,19 @@ namespace Raven.Server.ServerWide
             public static string Backup = "server-wide/backup/configurations";
 
             public static string ExternalReplication = "server-wide/external-replication/configurations";
+
+            public static string GetKeyByType(OngoingTaskType type)
+            {
+                switch (type)
+                {
+                    case OngoingTaskType.Replication:
+                        return ExternalReplication;
+                    case OngoingTaskType.Backup:
+                        return Backup;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                }
+            }
         }
 
         public enum CompareExchangeTable
@@ -394,8 +408,8 @@ namespace Raven.Server.ServerWide
                         cmd.TryGet(nameof(DeleteServerWideBackupConfigurationCommand.Name), out string name);
                         var deleteServerWideTaskConfiguration = new DeleteServerWideTaskCommand.DeleteConfiguration
                         {
-                            Name = name,
-                            Type = DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.Backup
+                            TaskName = name,
+                            Type = OngoingTaskType.Backup
                         };
                         DeleteServerWideBackupConfigurationFromAllDatabases(deleteServerWideTaskConfiguration, context, type, index);
                         break;
@@ -406,6 +420,10 @@ namespace Raven.Server.ServerWide
                     case nameof(DeleteServerWideTaskCommand):
                         var deleteConfiguration = UpdateValue<DeleteServerWideTaskCommand.DeleteConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         DeleteServerWideBackupConfigurationFromAllDatabases(deleteConfiguration, context, type, index);
+                        break;
+                    case nameof(ToggleServerWideTaskStateCommand):
+                        var parameters = UpdateValue<ToggleServerWideTaskStateCommand.Parameters>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        ToggleServerWideTaskState(cmd, parameters, context, type, index);
                         break;
                     case nameof(PutCertificateWithSamePinningHashCommand):
                         PutCertificate(context, type, cmd, index, serverStore);
@@ -1638,9 +1656,9 @@ namespace Raven.Server.ServerWide
             return null;
         }
 
-        public IEnumerable<BlittableJsonReaderObject> GetServerWideBackupConfigurations(TransactionOperationContext context, string name)
+        public IEnumerable<BlittableJsonReaderObject> GetServerWideConfigurations(TransactionOperationContext context, OngoingTaskType type, string name)
         {
-            var configurationsBlittable = Read(context, ServerWideConfigurationKey.Backup);
+            var configurationsBlittable = Read(context, ServerWideConfigurationKey.GetKeyByType(type));
             if (configurationsBlittable == null)
                 yield break;
 
@@ -3264,7 +3282,7 @@ namespace Raven.Server.ServerWide
 
         private void DeleteServerWideBackupConfigurationFromAllDatabases(DeleteServerWideTaskCommand.DeleteConfiguration deleteConfiguration, ClusterOperationContext context, string type, long index)
         {
-            if (string.IsNullOrWhiteSpace(deleteConfiguration.Name))
+            if (string.IsNullOrWhiteSpace(deleteConfiguration.TaskName))
                 throw new RachisInvalidOperationException($"Task name to delete cannot be null or white space for command type: {type}");
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -3283,7 +3301,7 @@ namespace Raven.Server.ServerWide
 
                     switch (deleteConfiguration.Type)
                     {
-                        case DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.Backup:
+                        case OngoingTaskType.Backup:
                             if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups) == false)
                                 continue;
 
@@ -3293,7 +3311,7 @@ namespace Raven.Server.ServerWide
                                 if (IsServerWideTaskWithName(backup, nameof(PeriodicBackupConfiguration.Name), databaseRecordTaskName))
                                 {
                                     hasChanges = true;
-                                    break;
+                                    continue;
                                 }
 
                                 updatedBackups.Add(backup);
@@ -3305,7 +3323,7 @@ namespace Raven.Server.ServerWide
                             };
 
                             break;
-                        case DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.ExternalReplication:
+                        case OngoingTaskType.Replication:
                             if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.ExternalReplications), out BlittableJsonReaderArray externalReplications) == false)
                                 continue;
 
@@ -3323,7 +3341,7 @@ namespace Raven.Server.ServerWide
 
                             if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings))
                             {
-                                var connectionStringName = PutServerWideExternalReplicationCommand.GetRavenConnectionStringName(deleteConfiguration.Name);
+                                var connectionStringName = PutServerWideExternalReplicationCommand.GetRavenConnectionStringName(deleteConfiguration.TaskName);
                                 var propertyIndex = ravenConnectionStrings.GetPropertyIndex(connectionStringName);
                                 if (propertyIndex != -1)
                                 {
@@ -3365,6 +3383,33 @@ namespace Raven.Server.ServerWide
             }
 
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+        }
+
+        private void ToggleServerWideTaskState(BlittableJsonReaderObject cmd, ToggleServerWideTaskStateCommand.Parameters parameters, ClusterOperationContext context, string type, long index)
+        {
+            if (cmd.TryGet(nameof(ToggleServerWideTaskStateCommand.Name), out string name) == false)
+                throw new RachisApplyException($"Failed to get configuration key name for command type '{type}'");
+
+            var configurationsBlittable = Read(context, name);
+            if (configurationsBlittable == null)
+                throw new RachisApplyException($"Cannot find any server wide tasks of type '{parameters.Type}'");
+
+            if (configurationsBlittable.TryGet(parameters.TaskName, out BlittableJsonReaderObject task) == false)
+                throw new RachisApplyException($"Cannot find server wide task of type '{parameters.Type}' with name '{parameters.TaskName}'");
+
+            switch (parameters.Type)
+            {
+                case OngoingTaskType.Backup:
+                    var serverWideBackupConfiguration = JsonDeserializationCluster.ServerWideBackupConfiguration(task);
+                    UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
+                    break;
+                case OngoingTaskType.Replication:
+                    var serverWideExternalReplication = JsonDeserializationCluster.ServerWideExternalReplication(task);
+                    UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         private static bool IsServerWideTaskWithName(BlittableJsonReaderObject blittable, string namePropertyName, string taskNameToFind)

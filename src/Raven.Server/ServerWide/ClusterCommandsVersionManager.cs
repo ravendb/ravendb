@@ -114,7 +114,8 @@ namespace Raven.Server.ServerWide
             [nameof(ToggleDatabasesStateCommand)] = 42_005,
             [nameof(EditTimeSeriesConfigurationCommand)] = 50_000,
             [nameof(PutServerWideExternalReplicationCommand)] = 50_000,
-            [nameof(DeleteServerWideTaskCommand)] = 50_000
+            [nameof(DeleteServerWideTaskCommand)] = 50_000,
+            [nameof(ToggleServerWideTaskStateCommand)] = 50_000
         };
 
         public static bool CanPutCommand(string command)
