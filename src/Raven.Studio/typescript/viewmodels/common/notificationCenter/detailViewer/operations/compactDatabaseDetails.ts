@@ -104,8 +104,10 @@ class compactDatabaseDetails extends abstractOperationDetails {
     }
     
     private scrollDown() {
-        const messages = $(".export-messages")[0];
-        messages.scrollTop = messages.scrollHeight;
+        const messages = $(".compact-messages")[0];        
+        if (messages) {
+            messages.scrollTop = messages.scrollHeight;
+        }
     }
 
     toggleDetails() {
@@ -152,7 +154,6 @@ class compactDatabaseDetails extends abstractOperationDetails {
             stage: stage
         }
     }
-   
 
     static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean {
         if (!compactDatabaseDetails.supportsDetailsFor(existing)) {
@@ -182,7 +183,6 @@ class compactDatabaseDetails extends abstractOperationDetails {
         
         return true;
     }
-    
 }
 
 export = compactDatabaseDetails;
