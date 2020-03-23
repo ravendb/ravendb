@@ -86,14 +86,10 @@ class s3Settings extends amazonSettings {
         this.customServerUrl.extend({
             required: {
                 onlyIf: () => this.useCustomS3Host()
-            },            
-            validation: [
-                {
-                    validator: (customServerUrl: string) => !this.useCustomS3Host() ||
-                                                            (!this.hasConfigurationScript() && customServerUrl && genUtils.urlRegex.test(customServerUrl)),                    
-                    message: genUtils.invalidUrlMessage
-                }
-            ]
+            },
+            validUrl: {
+                onlyIf: () => this.useCustomS3Host()
+            }
         });
 
         this.localConfigValidationGroup = ko.validatedObservable({
