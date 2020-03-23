@@ -66,6 +66,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         IntegrityErrorOfAlreadySyncedData,
 
-        ConcurrentDatabaseLoadTimeout
+        ConcurrentDatabaseLoadTimeout,
+
+        HighClientCreationRate
     }
 }

@@ -341,10 +341,10 @@ namespace Raven.Client.Http
             UpdateConnectionLimit(initialUrls);
         }
 
-        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, Guid? applicationIdentifier)
         {
             var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls);
+            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, applicationIdentifier);
             return executor;
         }
 
@@ -441,7 +441,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
+        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null, Guid? applicationIdentifier = null)
         {
             if (_disableTopologyUpdates)
                 return false;
@@ -462,7 +462,7 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetDatabaseTopologyCommand(debugTag);
+                    var command = new GetDatabaseTopologyCommand(debugTag, applicationIdentifier);
                     await ExecuteAsync(node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
@@ -604,7 +604,7 @@ namespace Raven.Client.Http
                                 throw new InvalidOperationException("No known topology and no previously known one, cannot proceed, likely a bug");
                             }
 
-                            _firstTopologyUpdate = FirstTopologyUpdate(_lastKnownUrls);
+                            _firstTopologyUpdate = FirstTopologyUpdate(_lastKnownUrls, null);
                         }
 
                         topologyUpdate = _firstTopologyUpdate;
@@ -661,7 +661,7 @@ namespace Raven.Client.Http
             }));
         }
 
-        protected async Task FirstTopologyUpdate(string[] initialUrls)
+        protected async Task FirstTopologyUpdate(string[] initialUrls, Guid? applicationIdentifier)
         {
             initialUrls = ValidateUrls(initialUrls, Certificate);
 
@@ -676,7 +676,7 @@ namespace Raven.Client.Http
                         Database = _databaseName
                     };
 
-                    await UpdateTopologyAsync(serverNode, Timeout.Infinite, debugTag: "first-topology-update").ConfigureAwait(false);
+                    await UpdateTopologyAsync(serverNode, Timeout.Infinite, debugTag: "first-topology-update", applicationIdentifier: applicationIdentifier).ConfigureAwait(false);
 
                     InitializeUpdateTopologyTimer();
                     _topologyTakenFromNode = serverNode;
