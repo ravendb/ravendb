@@ -12,7 +12,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Server.Json;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -22,6 +22,7 @@ using Raven.Server.Rachis;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Config.Settings;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Web.System
@@ -75,7 +76,7 @@ namespace Raven.Server.Web.System
                     if (backupName == null)
                         throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
                     
-                    var putResponse = new PutServerWideBackupConfigurationResponse
+                    var putResponse = new PutServerWideConfigurationResponse
                     {
                         Name = backupName,
                         RaftCommandIndex = newIndex 
@@ -108,7 +109,7 @@ namespace Raven.Server.Web.System
                     if (taskName == null)
                         throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
 
-                    var putResponse = new PutServerWideBackupConfigurationResponse
+                    var putResponse = new PutServerWideConfigurationResponse
                     {
                         Name = taskName,
                         RaftCommandIndex = newIndex
@@ -124,71 +125,110 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
         public async Task DeleteServerWideExternalReplicationConfigurationCommand()
         {
+            // backward compatibility
             await DeleteServerWideTaskCommand(ServerWide.Commands.DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.Backup);
         }
 
-        [RavenAction("/admin/configuration/server-wide/external-replication", "DELETE", AuthorizationStatus.ClusterAdmin)]
-        public async Task DeleteServerWideBackupConfigurationCommand()
+        [RavenAction("/admin/configuration/server-wide/task", "DELETE", AuthorizationStatus.ClusterAdmin)]
+        public async Task DeleteServerWideTaskCommand()
         {
-            await DeleteServerWideTaskCommand(ServerWide.Commands.DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.ExternalReplication);
+            var typeAsString = GetStringQueryString("type", required: true);
+
+            if (Enum.TryParse(typeAsString, out ServerWide.Commands.DeleteServerWideTaskCommand.DeleteConfiguration.TaskType type) == false)
+                throw new ArgumentException($"{typeAsString} is unknown task type.");
+
+            await DeleteServerWideTaskCommand(type);
         }
 
-        // Get all server-wide backups -OR- specific task by the task name... 
-        // todo : consider also returning each db specific details for the studio list view here
         [RavenAction("/admin/configuration/server-wide/backup", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task GetServerWideBackupConfigurationCommand()
+        public Task GetServerWideBackupConfigurations()
+        {
+            // backward compatibility
+            GetTaskConfigurations(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration);
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/configuration/server-wide/tasks", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task GetServerWideTasks()
+        {
+            var typeAsString = GetStringQueryString("type", required: true);
+            if (Enum.TryParse(typeAsString, out OngoingTaskType type) == false)
+                throw new ArgumentException($"{typeAsString} is unknown task type.");
+            
+            Func<BlittableJsonReaderObject, IDynamicJson> converter;
+            switch (type)
+            {
+                case OngoingTaskType.Backup:
+                    converter = JsonDeserializationCluster.ServerWideBackupConfiguration;
+                    break;
+                case OngoingTaskType.Replication:
+                    converter = JsonDeserializationCluster.ServerWideExternalReplication;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException($"Task type '{type} isn't suppported");
+            }
+
+            GetTaskConfigurations(type, converter);
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/configuration/server-wide/tasks-for-studio", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task GetServerWideTasksForStudio()
         {
             var taskName = GetStringQueryString("name", required: false);
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var backups = ServerStore.Cluster.GetServerWideBackupConfigurations(context, taskName);
-                ServerWideBackupConfigurationResults backupsResult = new ServerWideBackupConfigurationResults();
-                
-                foreach (var backupBlittable in backups)
-                {
-                    var backup = JsonDeserializationServer.ServerWideBackupConfiguration(backupBlittable);
-                    backup.BackupDestinations = backup.GetFullBackupDestinations();
-                    backup.IsEncrypted = backup.BackupEncryptionSettings != null &&
-                                         backup.BackupEncryptionSettings.EncryptionMode != EncryptionMode.None;
+                var result = new ServerWideTaskConfigurations();
 
-                    backupsResult.Results.Add(backup);
+                var blittables = ServerStore.Cluster.GetServerWideConfigurations(context, OngoingTaskType.Backup, taskName);
+                foreach (var blittable in blittables)
+                {
+                    var backup = JsonDeserializationServer.ServerWideBackupConfiguration(blittable);
+                    result.Backups.Add(backup);
                 }
-                
-                context.Write(writer, backupsResult.ToJson());
+
+                blittables = ServerStore.Cluster.GetServerWideConfigurations(context, OngoingTaskType.Replication, taskName);
+                foreach (var blittable in blittables)
+                {
+                    var externalReplication = JsonDeserializationCluster.ServerWideExternalReplication(blittable);
+                    result.ExternalReplications.Add(externalReplication);
+                }
+
+                context.Write(writer, result.ToJson());
                 writer.Flush();
 
                 return Task.CompletedTask;
             }
         }
 
-        [RavenAction("/admin/configuration/server-wide/backup/state", "POST", AuthorizationStatus.ClusterAdmin)]
-        public async Task ToggleServerWideBackupTaskState()
+        [RavenAction("/admin/configuration/server-wide/state", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task ToggleServerWideTaskState()
         {
+            var typeAsString = GetStringQueryString("type", required: true);
+            var taskName = GetStringQueryString("name", required: true);
             var disable = GetBoolValueQueryString("disable") ?? true;
-            var taskName = GetStringQueryString("taskName", required: false);
-           
+
+            if (Enum.TryParse(typeAsString, out OngoingTaskType type) == false)
+                throw new ArgumentException($"{typeAsString} is unknown task type.");
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                // Get existing task
-                var serveWideBackupBlittable = ServerStore.Cluster.GetServerWideBackupConfigurations(context, taskName).FirstOrDefault();
-                if (serveWideBackupBlittable == null)
-                    throw new InvalidOperationException($"Server-Wide Backup Task: {taskName} was not found in the server.");
-               
-                // Toggle
-                ServerWideBackupConfiguration serverWideBackup = JsonDeserializationServer.ServerWideBackupConfiguration(serveWideBackupBlittable);
-                serverWideBackup.Disabled = disable; 
-            
-                // Save task
-                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(serverWideBackup, GetRaftRequestIdFromQuery());
+                var configuration = new ToggleServerWideTaskStateCommand.Parameters
+                {
+                    Type = type,
+                    TaskName = taskName,
+                    Disable = disable
+                };
+                var (newIndex, _) = await ServerStore.ToggleServerWideTaskStateAsync(configuration, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var toggleResponse = new PutServerWideBackupConfigurationResponse()
+                    var toggleResponse = new PutServerWideConfigurationResponse
                     {
                         Name = taskName,
                         RaftCommandIndex = newIndex 
@@ -228,7 +268,7 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
-                    var deleteResponse = new PutServerWideBackupConfigurationResponse
+                    var deleteResponse = new PutServerWideConfigurationResponse
                     {
                         Name = name,
                         RaftCommandIndex = newIndex
@@ -240,17 +280,41 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-    }
-    
-    public class ServerWideBackupConfigurationResults : IDynamicJson
-    {
-        public List<ServerWideBackupConfigurationForStudio> Results;
 
-        public ServerWideBackupConfigurationResults()
+        private void GetTaskConfigurations<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter)
+            where T : IDynamicJson
         {
-            Results = new List<ServerWideBackupConfigurationForStudio>();
+            var taskName = GetStringQueryString("name", required: false);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var blittables = ServerStore.Cluster.GetServerWideConfigurations(context, type, taskName);
+                var result = new ServerWideTasksResult<T>();
+
+                foreach (var blittable in blittables)
+                {
+                    var configuration = converter(blittable);
+                    result.Results.Add(configuration);
+                }
+
+                context.Write(writer, result.ToJson());
+                writer.Flush();
+            }
         }
-        
+    }
+
+    public class ServerWideTasksResult<T> : IDynamicJson
+        where T : IDynamicJson
+    {
+        public List<T> Results;
+
+        public ServerWideTasksResult()
+        {
+            Results = new List<T>();
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -259,11 +323,35 @@ namespace Raven.Server.Web.System
             };
         }
     }
+
+    public class ServerWideTaskConfigurations : IDynamicJson
+    {
+        public List<ServerWideBackupConfigurationForStudio> Backups;
+
+        public List<ServerWideExternalReplication> ExternalReplications;
+
+        public ServerWideTaskConfigurations()
+        {
+            Backups = new List<ServerWideBackupConfigurationForStudio>();
+            ExternalReplications = new List<ServerWideExternalReplication>();
+        }
+        
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Backups)] = new DynamicJsonArray(Backups.Select(x => x.ToJson())),
+                [nameof(ExternalReplications)] = new DynamicJsonArray(ExternalReplications.Select(x => x.ToJson()))
+            };
+        }
+    }
     
     public class ServerWideBackupConfigurationForStudio : ServerWideBackupConfiguration
     {
         public OngoingTaskState TaskState { get; set; }
+
         public List<string> BackupDestinations { get; set; }
+
         public bool IsEncrypted { get; set; }
         
         public ServerWideBackupConfigurationForStudio()

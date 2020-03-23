@@ -415,7 +415,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(GetConnectionStringsResult));
 
             // server-wide backup
-            scripter.AddType(typeof(ServerWideBackupConfigurationResults));
+            scripter.AddType(typeof(ServerWideTaskConfigurations));
             scripter.AddType(typeof(PutServerWideBackupConfigurationResponse)); 
             
             // certificates
