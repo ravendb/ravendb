@@ -312,6 +312,17 @@ namespace Raven.Server.Documents
                     // this is already in the process of being deleted, we can just exit and let another thread handle it
                     return;
                 }
+                catch (DatabaseConcurrentLoadTimeoutException e)
+                {
+                    if (e.Caller == nameof(DeleteDatabase))
+                    {
+                        // This case is when a deletion request was issued during the loading of the database.
+                        // The DB will be deleted after actually finishing the loading process
+                        return;
+                    }
+
+                    throw;
+                }
 
                 if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                 {
