@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents.Queries.TimeSeries;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
@@ -22,19 +22,35 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// </summary>
         public RawTimeSeriesPolicy RawPolicy { get; set; } = RawTimeSeriesPolicy.Default;
 
-        public void Validate()
+        internal void Initialize()
         {
             if (Policies.Count == 0)
                 return;
 
             Policies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
+
+            var hashSet = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+            for (var index = 0; index < Policies.Count; index++)
+            {
+                var policy = Policies[index];
+                if (hashSet.Add(policy.Name) == false)
+                    throw new InvalidOperationException($"Policy names must be unique, policy with the name '{policy.Name}' has duplicates.");
+
+                var prev = GetPreviousPolicy(index + 1);
+                if (prev.RetentionTime < policy.AggregationTime)
+                    throw new InvalidOperationException(
+                        $"The policy '{prev.Name}' has a retention time of '{prev.RetentionTime}' " +
+                        $"but should be aggregated by policy '{policy.Name}' with the aggregation time frame of {policy.AggregationTime}");
+
+                _policyIndexCache[policy.Name] = index + 1;
+            }
         }
 
-        private readonly ConcurrentDictionary<string, int> _indexCache = new ConcurrentDictionary<string, int>();
+        private readonly ConcurrentDictionary<string, int> _policyIndexCache = new ConcurrentDictionary<string, int>(StringComparer.InvariantCultureIgnoreCase);
 
         internal TimeSeriesPolicy GetPolicyByName(string policy, out int policyIndex)
         {
-            if (_indexCache.TryGetValue(policy, out policyIndex))
+            if (_policyIndexCache.TryGetValue(policy, out policyIndex))
             {
                 if (policyIndex == 0)
                     return RawPolicy;
@@ -43,7 +59,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             if (policy == RawTimeSeriesPolicy.PolicyString)
             {
-                _indexCache[policy] = 0;
+                _policyIndexCache[policy] = 0;
                 policyIndex = 0;
                 return RawPolicy;
             }
@@ -54,7 +70,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 policyIndex = index + 1;
                 if (policy.IndexOf(p.Name, StringComparison.InvariantCultureIgnoreCase) == 0)
                 {
-                    _indexCache[policy] = policyIndex;
+                    _policyIndexCache[policy] = policyIndex;
                     return p;
                 }
             }
@@ -134,7 +150,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public class TimeSeriesPolicy : IDynamicJson, IComparable<TimeSeriesPolicy>
     {
         /// <summary>
-        /// Name of the time series policy, defined by convention
+        /// Name of the time series policy, must be unique.
         /// </summary>
         public string Name { get; protected set; }
 
@@ -148,10 +164,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// </summary>
         public TimeSpan AggregationTime { get; private set; }
 
-        /// <summary>
-        /// Define the aggregation type
-        /// </summary>
-        public AggregationType Type { get; private set; }
 
         internal static TimeSeriesPolicy AfterAllPolices = new TimeSeriesPolicy();
         internal static TimeSeriesPolicy BeforeAllPolices = new TimeSeriesPolicy();
@@ -165,12 +177,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return $"{rawName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{Name}";
         }
 
-        public TimeSeriesPolicy(TimeSpan aggregationTime, AggregationType type = AggregationType.Average) : this(aggregationTime, TimeSpan.MaxValue, type)
+        public TimeSeriesPolicy(string name, TimeSpan aggregationTime) : this(name, aggregationTime, TimeSpan.MaxValue)
         {
         }
         
-        public TimeSeriesPolicy(TimeSpan aggregationTime, TimeSpan retentionTime, AggregationType type = AggregationType.Average)
+        public TimeSeriesPolicy(string name, TimeSpan aggregationTime, TimeSpan retentionTime)
         {
+            if(string.IsNullOrEmpty(name))
+                throw new ArgumentNullException(name);
+
             if (aggregationTime <= TimeSpan.Zero)
                 throw new ArgumentException("Must be greater than zero", nameof(aggregationTime));
 
@@ -179,10 +194,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             RetentionTime = retentionTime;
             AggregationTime = aggregationTime;
-            Type = type;
 
-            var retentionStr = retentionTime == TimeSpan.MaxValue ? "" : $"KeepFor{retentionTime}";
-            Name = $"Every{AggregationTime}By{Type}{retentionStr}";
+            Name = name;
         }
 
         public DynamicJsonValue ToJson()
@@ -191,16 +204,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 [nameof(Name)] = Name,
                 [nameof(RetentionTime)] = RetentionTime,
-                [nameof(AggregationTime)] = AggregationTime,
-                [nameof(Type)] = Type,
+                [nameof(AggregationTime)] = AggregationTime
             };
         }
 
         protected bool Equals(TimeSeriesPolicy other)
         {
             return RetentionTime == other.RetentionTime &&
-                   AggregationTime == other.AggregationTime && 
-                   Type == other.Type;
+                   AggregationTime == other.AggregationTime;
         }
 
         public int CompareTo(TimeSeriesPolicy other)
@@ -218,7 +229,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public override int GetHashCode()
         {
-            return Name.GetHashCode();
+            var hashCode = Hashing.XXHash64.Calculate(Name.ToLowerInvariant(), Encodings.Utf8);
+            hashCode = (hashCode * 397) ^ (ulong)RetentionTime.GetHashCode();
+            hashCode = (hashCode * 397) ^ (ulong)AggregationTime.GetHashCode();
+            return (int)hashCode;
         }
     }
 

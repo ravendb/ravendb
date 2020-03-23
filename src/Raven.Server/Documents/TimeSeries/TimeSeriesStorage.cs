@@ -515,128 +515,7 @@ namespace Raven.Server.Documents.TimeSeries
                 table.DeleteByPrimaryKeyPrefix(documentKeyPrefix);
             }
         }
-
-        public DateTime GetDateTimeByAggregationType(DateTime start, DateTime end, AggregationType type)
-        {
-            // The timestamp location of the rollup policy is defined by the type
-            // start-point when First
-            // mid-point   when Avg, Mean
-            // end-point   when Sum, Count, Min, Max, Last
-            switch (type)
-            {
-                case AggregationType.First:
-                    return start;
-                case AggregationType.Min:
-                case AggregationType.Max:
-                case AggregationType.Last:
-                case AggregationType.Sum:
-                case AggregationType.Count:
-                    return end;
-                case AggregationType.Mean:
-                case AggregationType.Average:
-                    return new DateTime(checked(start.Ticks + end.Ticks) / 2);
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            }
-        }
-
-        public List<Reader.SingleResult> GetAggregatedValues(Reader reader, DateTime start, TimeSpan rangeGroup, AggregationType type)
-        {
-            var aggStates = new TimeSeriesAggregation[1]; // we always will aggregate here by a single type
-            for (var index = 0; index < aggStates.Length; index++)
-            {
-                aggStates[index] = new TimeSeriesAggregation(type);
-            }
-
-            var results = new List<Reader.SingleResult>();
-            DateTime next = default;
-            var rangeSpec = new TimeSeriesFunction.RangeGroup {Ticks = rangeGroup.Ticks};
-
-            foreach (var it in reader.SegmentsOrValues())
-            {
-                if (it.IndividualValues != null)
-                {
-                    AggregateIndividualItems(it.IndividualValues);
-                }
-                else
-                {
-                    //We might need to close the old aggregation range and start a new one
-                    MaybeMoveToNextRange(it.Segment.Start);
-
-                    // now we need to see if we can consume the whole segment, or 
-                    // if the range it cover needs to be broken up to multiple ranges.
-                    // For example, if the segment covers 3 days, but we have group by 1 hour,
-                    // we still have to deal with the individual values
-                    if (it.Segment.End > next)
-                    {
-                        AggregateIndividualItems(it.Segment.Values);
-                    }
-                    else
-                    {
-                        var span = it.Segment.Summary.Span;
-                        for (int i = 0; i < aggStates.Length; i++)
-                        {
-                            aggStates[i].Segment(span);
-                        }
-                    }
-                }
-            }
-
-            if (aggStates[0].Any)
-            {
-                results.Add(new Reader.SingleResult
-                {
-                    Timestamp = GetDateTimeByAggregationType(start, next, type), 
-                    Values = new Memory<double>(aggStates[0].GetFinalValues().Cast<double>().ToArray()),
-                    Status = TimeSeriesValuesSegment.Live,
-                    // TODO: Tag = ""
-                });
-            }
-
-            return results;
-
-            void MaybeMoveToNextRange(DateTime ts)
-            {
-                if (ts < next)
-                    return;
-
-                if (aggStates[0].Any)
-                {
-                    results.Add(new Reader.SingleResult
-                    {
-                        Timestamp = GetDateTimeByAggregationType(start, next, type), 
-                        Values = new Memory<double>(aggStates[0].GetFinalValues().Cast<double>().ToArray()),
-                        Status = TimeSeriesValuesSegment.Live,
-                        // TODO: Tag = ""
-                    });
-                }
-
-                start = rangeSpec.GetRangeStart(ts);
-                next = rangeSpec.GetNextRangeStart(start);
-
-                for (var index = 0; index < aggStates.Length; index++)
-                {
-                    aggStates[index].Init();
-                }
-            }
-
-            void AggregateIndividualItems(IEnumerable<Reader.SingleResult> items)
-            {
-                foreach (var cur in items)
-                {
-                    if (cur.Status == TimeSeriesValuesSegment.Dead)
-                        continue;
-
-                    MaybeMoveToNextRange(cur.Timestamp);
-
-                    for (int i = 0; i < aggStates.Length; i++)
-                    {
-                        aggStates[i].Step(cur.Values.Span);
-                    }
-                }
-            }
-        }
-
+        
         public Reader GetReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset = null)
         {
             return new Reader(context, documentId, name, from, to, offset);
@@ -1017,7 +896,7 @@ namespace Raven.Server.Documents.TimeSeries
                 using (var slicer = new TimeSeriesSliceHolder(context, docId, name, collectionName.Name))
                 {
                     Stats.UpdateStats(context, slicer, collectionName, segment, baseline);
-                    _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, slicer, newEtag, baseline, changeVector);
+                    _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, slicer, baseline);
 
                     using (Slice.From(context.Allocator, changeVector, out Slice cv))
                     using (table.Allocate(out TableValueBuilder tvb))
@@ -1204,12 +1083,10 @@ namespace Raven.Server.Documents.TimeSeries
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate);
 
                 var keySlice = SliceHolder.TimeSeriesKeySlice;
-                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, _currentEtag, BaselineDate, _currentChangeVector);
 
                 using (Table.Allocate(out var tvb))
                 using (Slice.From(_context.Allocator, _currentChangeVector, out var cv))
                 {
-                    TimeSeriesValuesSegment.ParseTimeSeriesKey(keySlice, _context, out _, out _, out _); // TODO: remove
                     tvb.Add(keySlice);
                     tvb.Add(Bits.SwapBytes(_currentEtag));
                     tvb.Add(cv);
@@ -1244,7 +1121,7 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureSegmentSize(newSegment.NumberOfBytes);
 
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate);
-                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, _currentEtag, BaselineDate, _currentChangeVector);
+                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, BaselineDate);
 
                 using (Slice.From(_context.Allocator, _currentChangeVector, out Slice cv))
                 using (Table.Allocate(out TableValueBuilder tvb))
@@ -1275,6 +1152,8 @@ namespace Raven.Server.Documents.TimeSeries
                     FlushCurrentSegment(ref segment, values, tagSlice, status);
                     UpdateBaseline(timestampDiff);
                 }
+
+                _context.DocumentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, time);
             }
 
             public bool LoadCurrentSegment()
@@ -1392,7 +1271,6 @@ namespace Raven.Server.Documents.TimeSeries
                                 break;
                             }
 
-
                             EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, current);
 
                             if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, out var newValueFetched))
@@ -1493,6 +1371,8 @@ namespace Raven.Server.Documents.TimeSeries
                     // checking if we run out of space here, in which can we'll create new segment
                     if (newSegment.Append(context.Allocator, (int)deltaInMs, current.Values.Span, slicer.TagAsSpan(current.Tag), current.Status))
                     {
+                        _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, segmentHolder.SliceHolder, current.Timestamp);
+
                         newValueFetched = true;
                         current = GetNext(appendEnumerator, segmentHolder.FromReplication);
                         if (current == null)
@@ -1657,7 +1537,7 @@ namespace Raven.Server.Documents.TimeSeries
             return false;
         }
 
-        private static Reader.SingleResult GetNext(IEnumerator<Reader.SingleResult> reader, bool fromReplication)
+        private Reader.SingleResult GetNext(IEnumerator<Reader.SingleResult> reader, bool fromReplication)
         {
             Reader.SingleResult next = null;
             if (reader.MoveNext())

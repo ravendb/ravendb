@@ -19,13 +19,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            if (Configuration?.Collections != null)
-            {
-                foreach (var config in Configuration.Collections.Values)
-                {
-                    config?.Validate();
-                }
-            }
+            Configuration?.Initialize();
 
             record.TimeSeries = Configuration;
             return null;

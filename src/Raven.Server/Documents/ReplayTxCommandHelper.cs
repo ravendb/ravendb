@@ -227,8 +227,6 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<ExecuteCounterBatchCommandDto>(reader);
                 case nameof(TimeSeriesRollups.AddedNewRollupPoliciesCommand):
                     return jsonSerializer.Deserialize<TimeSeriesRollups.AddedNewRollupPoliciesCommand.AddedNewRollupPoliciesCommandDto>(reader);
-                case nameof(TimeSeriesRollups.RemovePoliciesCommand):
-                    return jsonSerializer.Deserialize<TimeSeriesRollups.RemovePoliciesCommand.RemovePoliciesCommandDto>(reader);
                 case nameof(TimeSeriesRollups.RollupTimeSeriesCommand):
                     return jsonSerializer.Deserialize<TimeSeriesRollups.RollupTimeSeriesCommand.RollupTimeSeriesCommandDto>(reader);
                 case nameof(TimeSeriesRollups.TimeSeriesRetentionCommand):
