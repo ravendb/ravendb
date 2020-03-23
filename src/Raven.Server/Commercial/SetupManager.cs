@@ -1485,7 +1485,7 @@ namespace Raven.Server.Commercial
                         {
                             // requires server certificate to be loaded
                             var clientCertificateName = $"{name}.client.certificate";
-                            certBytes = await GenerateCertificateTask(clientCertificateName, serverStore);
+                            certBytes = await GenerateCertificateTask(clientCertificateName, serverStore, setupInfo);
                             clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
                         }
                         catch (Exception e)
@@ -2085,13 +2085,13 @@ namespace Raven.Server.Commercial
         }
 
         // Duplicate of AdminCertificatesHandler.GenerateCertificateInternal stripped from authz checks, used by an unauthenticated client during setup only
-        public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore)
+        public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore, SetupInfo setupInfo)
         {
             if (serverStore.Server.Certificate?.Certificate == null)
                 throw new InvalidOperationException($"Cannot generate the client certificate '{name}' because the server certificate is not loaded.");
 
             // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate, out var certBytes);
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate, out var certBytes, setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
             var newCertDef = new CertificateDefinition
             {

@@ -16,6 +16,7 @@ namespace Raven.Server.Commercial
         public bool EnableExperimentalFeatures { get; set; }
         public StudioConfiguration.StudioEnvironment Environment { get; set; }
         public bool RegisterClientCert { get; set; }
+        public DateTime? ClientCertNotAfter { get; set; }
         public License License { get; set; }
         public string Email { get; set; }
         public string Domain { get; set; }
@@ -39,6 +40,7 @@ namespace Raven.Server.Commercial
                 [nameof(RootDomain)] = RootDomain,
                 [nameof(ModifyLocalServer)] = ModifyLocalServer,
                 [nameof(RegisterClientCert)] = RegisterClientCert,
+                [nameof(ClientCertNotAfter)] = ClientCertNotAfter,
                 [nameof(Certificate)] = Certificate,
                 [nameof(Password)] = Password,
                 [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos)
