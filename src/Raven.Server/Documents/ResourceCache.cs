@@ -152,9 +152,14 @@ namespace Raven.Server.Documents
                         });
                     }
                 }
-                
+
                 if (current.IsCompleted == false)
-                    throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})");
+                {
+                    throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})")
+                    {
+                        Caller = caller
+                    };
+                }
 
                 if (current.IsCompletedSuccessfully)
                 {
