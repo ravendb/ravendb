@@ -95,6 +95,26 @@
                                 <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                             </div>
                         </div>
+                        <div class="flex-horizontal">
+                            <div class="flex-grow">
+                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
+                                    <i class="icon-settings"></i><span>Advanced</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div data-bind="collapse: $root.showAdvancedOptions">
+                            <div class="panel-body">
+                                <div class="form-group" data-bind="validationElement: loadRequestTimeout">
+                                    <label for="loadTimeout" class="control-label">Http Request Timeout</label>
+                                    <div class="flex-grow">
+                                        <div class="input-group">
+                                            <input type="number" min="0" class="form-control" placeholder="Use HttpClient default timeout (100s)" id="LoadTimeout" data-bind="numericInput: loadRequestTimeout" autocomplete="off">
+                                            <div class="input-group-addon">seconds</div>
+                                        </div>
+                                    </div>
+                                </div>                                
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <div data-bind="if: createNewConnectionString">

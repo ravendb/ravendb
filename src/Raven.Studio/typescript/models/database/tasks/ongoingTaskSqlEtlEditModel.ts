@@ -52,7 +52,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         });
 
         this.commandTimeout.extend({
-            number: true
+            digit: true
         });
         
         this.sqlTables.extend({
