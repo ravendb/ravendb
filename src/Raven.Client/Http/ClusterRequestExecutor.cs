@@ -68,7 +68,7 @@ namespace Raven.Client.Http
                 _disableClientConfigurationUpdates = true
             };
 
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls);
+            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, null);
             return executor;
         }
 
@@ -77,7 +77,7 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, new GetTcpInfoCommand("health-check"), shouldRetry: false, sessionInfo: null, token: CancellationToken.None);
         }
 
-        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
+        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null, Guid? applicationIdentifier = null)
         {
             if (Disposed)
                 return false;
