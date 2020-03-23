@@ -23,11 +23,10 @@ namespace Raven.Server.Documents.TimeSeries
         private enum StatsColumns
         {
             Key = 0, // documentId, separator, name
-            PolicyName = 1,
+            PolicyName = 1, // policy, separator
             Start = 2,
             End = 3,
-            Count = 4,
-            
+            Count = 4
         }
 
         static TimeSeriesStats()
@@ -56,7 +55,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             TimeSeriesStatsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                // policy/start
+                // policy, separator, start
                 StartIndex = (int)StatsColumns.PolicyName,
                 Count = 2, 
                 Name = StartTimeIndex

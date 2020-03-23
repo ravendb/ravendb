@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;

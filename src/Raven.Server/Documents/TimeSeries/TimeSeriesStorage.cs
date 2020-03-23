@@ -7,8 +7,6 @@ using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Queries.TimeSeries;
-using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;

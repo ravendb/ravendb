@@ -38,10 +38,10 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 config.Collections["Users"].Policies = new List<TimeSeriesPolicy>
                 {
-                    new TimeSeriesPolicy("ByHourFor12Hours",TimeSpan.FromHours(1), TimeSpan.FromHours(12)),
+                    new TimeSeriesPolicy("ByHourFor12Hours",TimeSpan.FromHours(1), TimeSpan.FromHours(48)),
                     new TimeSeriesPolicy("ByMinuteFor3Hours",TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(180)),
                     new TimeSeriesPolicy("BySecondFor1Minute",TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60)),
-                    new TimeSeriesPolicy("ByDayFor2Days",TimeSpan.FromDays(1), TimeSpan.FromDays(2)),
+                    new TimeSeriesPolicy("ByDayFor2Days",TimeSpan.FromDays(1), TimeSpan.FromDays(5)),
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 
@@ -61,10 +61,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                 Assert.Equal(TimeSpan.FromMinutes(180), policies[1].RetentionTime);
                 Assert.Equal(TimeSpan.FromMinutes(1), policies[1].AggregationTime);
 
-                Assert.Equal(TimeSpan.FromHours(12), policies[2].RetentionTime);
+                Assert.Equal(TimeSpan.FromHours(48), policies[2].RetentionTime);
                 Assert.Equal(TimeSpan.FromHours(1), policies[2].AggregationTime);
 
-                Assert.Equal(TimeSpan.FromDays(2), policies[3].RetentionTime);
+                Assert.Equal(TimeSpan.FromDays(5), policies[3].RetentionTime);
                 Assert.Equal(TimeSpan.FromDays(1), policies[3].AggregationTime);
             }
         }
@@ -127,7 +127,6 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.Store(new User {Name = "Karmel"}, "foo/bar");
                     session.SaveChanges();
                 }
-
 
                 using (var session = store.OpenSession())
                 {
