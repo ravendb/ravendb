@@ -361,7 +361,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     // rollup from the the raw data will generate 6-value roll up of (first, last, min, max, sum, count)
                     // other rollups will aggregate each of those values by the type
-                    var mode = item.Name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) ? AggregationMode.ByType : AggregationMode.Merge;
+                    var mode = item.Name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) ? AggregationMode.FromAggregated : AggregationMode.FromRaw;
                     var values = GetAggregatedValues(reader, policy.AggregationTime, mode);
 
                     if (previouslyAggregated)
@@ -434,8 +434,8 @@ namespace Raven.Server.Documents.TimeSeries
 
          public enum AggregationMode
         {
-            Merge,
-            ByType
+            FromRaw,
+            FromAggregated
         }
 
         private static readonly AggregationType[] Aggregations = {
@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.TimeSeries
                     var val = values[i];
                     switch (_mode)
                     {
-                        case AggregationMode.Merge:
+                        case AggregationMode.FromRaw:
                             for (var index = 0; index < Aggregations.Length; index++)
                             {
                                 var aggregation = Aggregations[index];
@@ -483,11 +483,11 @@ namespace Raven.Server.Documents.TimeSeries
                             }
 
                             break;
-                        case AggregationMode.ByType:
-                            for (var index = 0; index < Values.Count; index++)
+                        case AggregationMode.FromAggregated:
                             {
-                                var aggIndex = index % Aggregations.Length;
-                                AggregateOnceBySegment(Aggregations[aggIndex], index, val);
+                                var aggIndex = i % Aggregations.Length;
+                                var aggType = Aggregations[aggIndex];
+                                AggregateOnceBySegment(aggType, i, val);
                             }
                             break;
                         default:
@@ -585,7 +585,7 @@ namespace Raven.Server.Documents.TimeSeries
                     var val = values[i];
                     switch (_mode)
                     {
-                        case AggregationMode.Merge:
+                        case AggregationMode.FromRaw:
                             for (var index = 0; index < Aggregations.Length; index++)
                             {
                                 var aggregation = Aggregations[index];
@@ -594,11 +594,11 @@ namespace Raven.Server.Documents.TimeSeries
                             }
 
                             break;
-                        case AggregationMode.ByType:
-                            for (var index = 0; index < Values.Count; index++)
+                        case AggregationMode.FromAggregated:
                             {
-                                var aggIndex = index % Aggregations.Length;
-                                AggregateOnceByItem(Aggregations[aggIndex], index, val);
+                                var aggIndex = i % Aggregations.Length;
+                                var type = Aggregations[aggIndex];
+                                AggregateOnceByItem(type, i, val);
                             }
                             break;
                         default:
@@ -611,7 +611,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 switch (_mode)
                 {
-                    case AggregationMode.Merge:
+                    case AggregationMode.FromRaw:
                         var entries = numberOfValues * Aggregations.Length;
                         for (int i = Values.Count; i < entries; i++)
                         {
@@ -619,7 +619,7 @@ namespace Raven.Server.Documents.TimeSeries
                         }
 
                         break;
-                    case AggregationMode.ByType:
+                    case AggregationMode.FromAggregated:
                         for (int i = Values.Count; i < numberOfValues; i++)
                         {
                             Values.Add(double.NaN);
@@ -674,7 +674,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 results.Add(new TimeSeriesStorage.Reader.SingleResult
                 {
-                    Timestamp = next,
+                    Timestamp = next.AddTicks(-1),
                     Values = new Memory<double>(aggStates.Values.ToArray()),
                     Status = TimeSeriesValuesSegment.Live,
                     // TODO: Tag = ""
@@ -692,7 +692,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     results.Add(new TimeSeriesStorage.Reader.SingleResult
                     {
-                        Timestamp = next,
+                        Timestamp = next.AddTicks(-1),
                         Values = new Memory<double>(aggStates.Values.ToArray()),
                         Status = TimeSeriesValuesSegment.Live,
                         // TODO: Tag = ""

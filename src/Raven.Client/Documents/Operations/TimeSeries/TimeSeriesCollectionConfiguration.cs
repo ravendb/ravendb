@@ -37,6 +37,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     throw new InvalidOperationException($"Policy names must be unique, policy with the name '{policy.Name}' has duplicates.");
 
                 var prev = GetPreviousPolicy(index + 1);
+                if (prev.AggregationTime == policy.AggregationTime)
+                    throw new InvalidOperationException(
+                        $"The policy '{prev.Name}' has the same aggregation time as the policy '{policy.Name}'");
+
                 if (prev.RetentionTime < policy.AggregationTime)
                     throw new InvalidOperationException(
                         $"The policy '{prev.Name}' has a retention time of '{prev.RetentionTime}' " +
@@ -111,7 +115,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             if (policyIndex == 1)
                 return RawPolicy;
 
-            return Policies[policyIndex - 1];
+            return Policies[policyIndex - 2];
         }
 
         public DynamicJsonValue ToJson()
@@ -211,7 +215,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         protected bool Equals(TimeSeriesPolicy other)
         {
             return RetentionTime == other.RetentionTime &&
-                   AggregationTime == other.AggregationTime;
+                   AggregationTime == other.AggregationTime &&
+                   string.Equals(Name, other.Name, StringComparison.InvariantCultureIgnoreCase);
         }
 
         public int CompareTo(TimeSeriesPolicy other)
@@ -229,10 +234,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public override int GetHashCode()
         {
-            var hashCode = Hashing.XXHash64.Calculate(Name.ToLowerInvariant(), Encodings.Utf8);
-            hashCode = (hashCode * 397) ^ (ulong)RetentionTime.GetHashCode();
-            hashCode = (hashCode * 397) ^ (ulong)AggregationTime.GetHashCode();
-            return (int)hashCode;
+            var hashCode = StringComparer.OrdinalIgnoreCase.GetHashCode(Name);
+            hashCode = (hashCode * 397) ^ RetentionTime.GetHashCode();
+            hashCode = (hashCode * 397) ^ AggregationTime.GetHashCode();
+            return hashCode;
         }
     }
 
