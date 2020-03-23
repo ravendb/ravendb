@@ -41,7 +41,7 @@ class statistics {
         this.countOfTombstones = dbStats.CountOfTombstones.toLocaleString();
         this.countOfIdentities = dbStats.CountOfIdentities.toLocaleString();
         this.countOfCompareExchange = dbStats.CountOfCompareExchange.toLocaleString();
-        this.countOfRevisions = dbStats.CountOfRevisionDocuments.toLocaleString();
+        this.countOfRevisions =  dbStats.CountOfRevisionDocuments ? dbStats.CountOfRevisionDocuments.toLocaleString() : "0";
         this.countOfCounters = dbStats.CountOfCounterEntries.toLocaleString();
         this.is64Bit = dbStats.Is64Bit;
         this.dataSizeOnDisk = generalUtils.formatBytesToSize(dbStats.SizeOnDisk.SizeInBytes);

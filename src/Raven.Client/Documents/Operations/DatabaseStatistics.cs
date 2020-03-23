@@ -8,11 +8,10 @@ using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class DetailedDatabaseStatistics : DatabaseStatistics, IDynamicJson
+    public class DetailedDatabaseStatistics : DatabaseStatistics
     {
         /// <summary>
         /// Total number of identities in database.
@@ -28,18 +27,9 @@ namespace Raven.Client.Documents.Operations
         /// Total number of compare-exchange tombstones values in database.
         /// </summary>
         public long CountOfCompareExchangeTombstones { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(CountOfIdentities)] = CountOfIdentities;
-            json[nameof(CountOfCompareExchange)] = CountOfCompareExchange;
-            json[nameof(CountOfCompareExchangeTombstones)] = CountOfCompareExchangeTombstones;
-            return json;
-        }
     }
 
-    public class DatabaseStatistics : IDynamicJson
+    public class DatabaseStatistics
     {
         /// <summary>
         /// Last document etag in database.
@@ -130,37 +120,9 @@ namespace Raven.Client.Documents.Operations
         public Size TempBuffersSizeOnDisk { get; set; }
 
         public int NumberOfTransactionMergerQueueOperations { get; set; }
-        
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(LastDocEtag)] = LastDocEtag,
-                [nameof(LastDatabaseEtag)] = LastDatabaseEtag,
-                [nameof(CountOfIndexes)] = CountOfIndexes,
-                [nameof(CountOfDocuments)] = CountOfDocuments,
-                [nameof(CountOfRevisionDocuments)] = CountOfRevisionDocuments,
-                [nameof(CountOfDocumentsConflicts)] = CountOfDocumentsConflicts,
-                [nameof(CountOfTombstones)] = CountOfTombstones,
-                [nameof(CountOfConflicts)] = CountOfConflicts,
-                [nameof(CountOfAttachments)] = CountOfAttachments,
-                [nameof(CountOfUniqueAttachments)] = CountOfUniqueAttachments,
-                [nameof(CountOfCounterEntries)] = CountOfCounterEntries,
-                [nameof(StaleIndexes)] = new DynamicJsonArray(StaleIndexes),
-                [nameof(Indexes)] = Indexes,
-                [nameof(DatabaseChangeVector)] = DatabaseChangeVector,
-                [nameof(DatabaseId)] = DatabaseId,
-                [nameof(Is64Bit)] = Is64Bit,
-                [nameof(Pager)] = Pager,
-                [nameof(LastIndexingTime)] = LastIndexingTime,
-                [nameof(SizeOnDisk)] = SizeOnDisk.ToJson(),
-                [nameof(TempBuffersSizeOnDisk)] = TempBuffersSizeOnDisk.ToJson(),
-                [nameof(NumberOfTransactionMergerQueueOperations)] = NumberOfTransactionMergerQueueOperations,
-            }; 
-        }
     }
 
-    public class IndexInformation : IDynamicJson
+    public class IndexInformation
     {
 
         public string Name { get; set; }
@@ -176,19 +138,5 @@ namespace Raven.Client.Documents.Operations
         public IndexType Type { get; set; }
 
         public DateTime? LastIndexingTime { get; set; }
-        
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Name)] = Name,
-                [nameof(IsStale)] = IsStale,
-                [nameof(State)] = State,
-                [nameof(LockMode)] = LockMode,
-                [nameof(Priority)] = Priority,
-                [nameof(Priority)] = Priority,
-                [nameof(LastIndexingTime)] = LastIndexingTime
-            };
-        }
     }
 }
