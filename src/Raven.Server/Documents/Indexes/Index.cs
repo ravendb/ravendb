@@ -9,6 +9,9 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Index;
+using Lucene.Net.Store;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -59,8 +62,10 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
 using Constants = Raven.Client.Constants;
+using Directory = Lucene.Net.Store.Directory;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 using Size = Sparrow.Size;
+using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -433,6 +438,19 @@ namespace Raven.Server.Documents.Indexes
         internal static void ThrowObjectDisposed()
         {
             throw new ObjectDisposedException("index");
+        }
+
+        public void Export(string path)
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+            {
+                using var indexTx = indexContext.OpenReadTransaction();
+                using var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction);
+
+                Directory directory = reader.GetDirectory();
+                using var fs = FSDirectory.Open(path);
+                Directory.Copy(directory, fs, false, reader._state);
+            }
         }
 
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)

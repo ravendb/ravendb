@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IDisposable _releaseReadTransaction;
         private readonly int _maxNumberOfOutputsPerDocument;
 
-        private readonly IState _state;
+        internal readonly IState _state;
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
@@ -76,6 +76,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
+
+        public Directory GetDirectory() => _searcher.IndexReader.Directory();
 
         public int EntriesCount()
         {

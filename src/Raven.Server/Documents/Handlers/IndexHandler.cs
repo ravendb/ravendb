@@ -186,6 +186,25 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        // Note: This requires cluster admin because it allow external user to write data anywhere
+        [RavenAction("/databases/*/indexes/export", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task Export()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var path = GetQueryStringValueAndAssertIfSingleAndNotEmpty("path");
+            var index = Database.IndexStore.GetIndex(name);
+            if (index == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            index.Export(path);
+            
+            return Task.CompletedTask;
+
+        }
+
         [RavenAction("/databases/*/indexes/debug", "GET", AuthorizationStatus.ValidUser)]
         public Task Debug()
         {
