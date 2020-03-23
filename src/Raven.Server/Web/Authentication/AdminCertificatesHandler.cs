@@ -1153,6 +1153,9 @@ namespace Raven.Server.Web.Authentication
             if (string.IsNullOrWhiteSpace(certificate.Name))
                 throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");
 
+            if (certificate.NotAfter.HasValue && certificate.NotAfter <= DateTime.UtcNow.Date)
+                throw new ArgumentException("The certificate expiration date must be in the future.");
+
             ValidatePermissions(certificate, serverStore);
         }
 

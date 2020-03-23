@@ -1061,6 +1061,8 @@ namespace Raven.Server.Commercial
                     throw new ArgumentException("Invalid email address.");
                 if (IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false)
                     throw new ArgumentException("Invalid domain name.");
+                if (setupInfo.ClientCertNotAfter.HasValue && setupInfo.ClientCertNotAfter <= DateTime.UtcNow.Date)
+                    throw new ArgumentException("The client certificate expiration date must be in the future.");
             }
 
             if (setupMode == SetupMode.Secured && string.IsNullOrWhiteSpace(setupInfo.Certificate))
