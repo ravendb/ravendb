@@ -29,10 +29,10 @@ namespace Raven.Server.Utils
         {
             // Note this is for tests only!
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes, log: log);
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes, log: log);
             var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey.Verify();
-
+            
             // We had a problem where we didn't cleanup the user store in Linux (~/.dotnet/corefx/cryptography/x509stores/ca)
             // and it exploded with thousands of certificates. This caused ssl handshakes to fail on that machine, because it would timeout when
             // trying to match one of these certs to validate the chain
@@ -46,11 +46,11 @@ namespace Raven.Server.Utils
 
             var existingKeyPair = GetRsaKey();
 
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes1, existingKeyPair, log);
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes1, existingKeyPair, log);
             var selfSignedCertificateBasedOnPrivateKey1 = new X509Certificate2(certBytes1, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey1.Verify();
 
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes2, existingKeyPair, log);
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes2, existingKeyPair, log);
             var selfSignedCertificateBasedOnPrivateKey2 = new X509Certificate2(certBytes2, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey2.Verify();
 
@@ -93,7 +93,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder, out byte[] certBytes)
+        public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder, out byte[] certBytes, DateTime notAfter)
         {
             var serverCertBytes = certificateHolder.Certificate.Export(X509ContentType.Cert);
             var readCertificate = new X509CertificateParser().ReadCertificate(serverCertBytes);
@@ -103,7 +103,7 @@ namespace Raven.Server.Utils
                 (certificateHolder.PrivateKey.Key, readCertificate.GetPublicKey()),
                 true,
                 false,
-                5,
+                notAfter,
                 out certBytes);
 
             ValidateNoPrivateKeyInServerCert(serverCertBytes);
@@ -142,7 +142,7 @@ namespace Raven.Server.Utils
                 (certificateHolder.PrivateKey.Key, readCertificate.GetPublicKey()),
                 true,
                 false,
-                -1,
+                DateTime.UtcNow.Date.AddYears(-1),
                 out var certBytes);
 
             return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
@@ -153,7 +153,7 @@ namespace Raven.Server.Utils
             (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) issuerKeyPair,
             bool isClientCertificate,
             bool isCaCertificate,
-            int yearsUntilExpiration,
+            DateTime notAfter,
             out byte[] certBytes,
             AsymmetricCipherKeyPair subjectKeyPair = null,
             StringBuilder log = null)
@@ -202,8 +202,6 @@ namespace Raven.Server.Utils
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
 
-            // For testing purposes, with developer license. Making the default expiration 3 months.
-            DateTime notAfter = yearsUntilExpiration == 0 ? DateTime.UtcNow.Date.AddMonths(3) : notBefore.AddYears(yearsUntilExpiration);
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
             log?.AppendLine($"notBefore = {notBefore}");

@@ -2552,7 +2552,7 @@ namespace Raven.Server.ServerWide
         public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(TransactionOperationContext context, string hash)
         {
             var list = GetCertificatesByPinningHash(context, hash).ToList();
-            list.Sort((x, y) => DateTime.Compare(y.NotAfter, x.NotAfter));
+            list.Sort((x, y) => Nullable.Compare<DateTime>(y.NotAfter, x.NotAfter));
             return list;
         }
 
