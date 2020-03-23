@@ -48,7 +48,9 @@ namespace Raven.Server.Documents.Handlers
                 FillDatabaseStatistics(stats, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    writer.WriteDatabaseStatistics(context, stats);
+                {
+                    context.Write(writer, stats.ToJson());
+                }
             }
 
             return Task.CompletedTask;
