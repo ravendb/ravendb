@@ -9,7 +9,6 @@ using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
-using Voron;
 
 namespace Raven.Server.Documents.TimeSeries
 {
@@ -26,6 +25,8 @@ namespace Raven.Server.Documents.TimeSeries
             if (configuration.Collections != null)
                 Configuration.Collections =
                     new Dictionary<string, TimeSeriesCollectionConfiguration>(Configuration.Collections, StringComparer.InvariantCultureIgnoreCase);
+
+            Configuration.Initialize();
         }
 
         public static TimeSeriesPolicyRunner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, TimeSeriesPolicyRunner policyRunner)
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, long etag, DateTime baseline, string changeVector)
+        public void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, DateTime timestamp)
         {
             if (Configuration.Collections.TryGetValue(slicerHolder.Collection, out var config) == false)
                 return;
@@ -106,11 +107,11 @@ namespace Raven.Server.Documents.TimeSeries
             var nextPolicy = config.GetNextPolicy(current);
             if (nextPolicy == null)
                 return;
-            
-            if (nextPolicy == TimeSeriesPolicy.AfterAllPolices)
+
+            if (ReferenceEquals(nextPolicy, TimeSeriesPolicy.AfterAllPolices))
                 return; // this is the last policy
 
-            _database.DocumentsStorage.TimeSeriesStorage.Rollups.MarkForPolicy(context, slicerHolder, nextPolicy, etag, baseline, changeVector);
+            _database.DocumentsStorage.TimeSeriesStorage.Rollups.MarkForPolicy(context, slicerHolder, nextPolicy, timestamp);
         }
 
         internal async Task HandleChanges()
@@ -133,48 +134,24 @@ namespace Raven.Server.Documents.TimeSeries
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    List<Slice> currentPolicies;
+                    List<string> currentPolicies;
                     using (context.OpenReadTransaction())
                     {
-                        currentPolicies = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetAllPolicies(context, collectionName).ToList();
-                    }
-
-                    foreach (var policySlice in currentPolicies)
-                    {
-                        var policyName = policySlice.ToString();
-                        var policy = config.Value.GetPolicyByName(policyName, out var index);
-                        if (policy == null)
-                        {
-                            await RemoveTimeSeriesByPolicy(collectionName, policyName);
-                            continue;
-                        }
-
-                        policies.Remove((policy, index));
+                        currentPolicies = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetAllPolicies(context, collectionName).Select(p => p.ToString()).ToList();
                     }
 
                     foreach (var policy in policies)
                     {
+                        if (currentPolicies.Contains(policy.Policy.Name))
+                            continue;
+
                         var prev = config.Value.GetPreviousPolicy(policy.Index);
-                        if (prev == null || prev == TimeSeriesPolicy.BeforeAllPolices)
+                        if (prev == null || ReferenceEquals(prev, TimeSeriesPolicy.BeforeAllPolices))
                             continue;
 
                         await AddNewPolicy(collectionName, prev, policy.Policy);
                     }
                 }
-            }
-        }
-
-        private async Task RemoveTimeSeriesByPolicy(CollectionName collectionName, string policyName)
-        {
-            while (true)
-            {
-                Cts.Token.ThrowIfCancellationRequested();
-
-                var cmd = new TimeSeriesRollups.RemovePoliciesCommand(collectionName, policyName);
-                await _database.TxMerger.Enqueue(cmd);
-
-                if (cmd.Deleted < TimeSeriesRollups.RemovePoliciesCommand.BatchSize)
-                    break;
             }
         }
 

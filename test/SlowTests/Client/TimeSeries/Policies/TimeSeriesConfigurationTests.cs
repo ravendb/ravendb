@@ -8,7 +8,6 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
-using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -39,10 +38,10 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 config.Collections["Users"].Policies = new List<TimeSeriesPolicy>
                 {
-                    new TimeSeriesPolicy(TimeSpan.FromHours(1), TimeSpan.FromHours(12)),
-                    new TimeSeriesPolicy(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(180)),
-                    new TimeSeriesPolicy(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60)),
-                    new TimeSeriesPolicy(TimeSpan.FromDays(1), TimeSpan.FromDays(2)),
+                    new TimeSeriesPolicy("ByHourFor12Hours",TimeSpan.FromHours(1), TimeSpan.FromHours(12)),
+                    new TimeSeriesPolicy("ByMinuteFor3Hours",TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(180)),
+                    new TimeSeriesPolicy("BySecondFor1Minute",TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60)),
+                    new TimeSeriesPolicy("ByDayFor2Days",TimeSpan.FromDays(1), TimeSpan.FromDays(2)),
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 
@@ -80,10 +79,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                 ReplicationFactor = 3
             }))
             {
-                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(10));
-                var p3 = new TimeSeriesPolicy(TimeSpan.FromMinutes(1));
-                var p4 = new TimeSeriesPolicy(TimeSpan.FromMinutes(5));
+                var p1 = new TimeSeriesPolicy("BySecond",TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy("By10Seconds",TimeSpan.FromSeconds(10));
+                var p3 = new TimeSeriesPolicy("ByMinute",TimeSpan.FromMinutes(1));
+                var p4 = new TimeSeriesPolicy("By5Minutes",TimeSpan.FromMinutes(5));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -156,9 +155,9 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
+                var p1 = new TimeSeriesPolicy("BySecond",TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy("By2Seconds",TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy("By3Seconds",TimeSpan.FromSeconds(3));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -258,9 +257,9 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
+                var p1 = new TimeSeriesPolicy("BySecond",TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy("By2Seconds",TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy("By3Seconds",TimeSpan.FromSeconds(3));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -324,16 +323,16 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-         [Fact]
-        public async Task CanRemoveConfiguration()
+        [Fact]
+        public async Task RemoveConfigurationWillKeepData()
         {
             using (var store = GetDocumentStore())
             {
                 var baseline = DateTime.Today.AddDays(-1);
 
-                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
+                var p1 = new TimeSeriesPolicy("BySecond",TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy("By2Seconds",TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy("By3Seconds",TimeSpan.FromSeconds(3));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -384,11 +383,39 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(20, ts1.Count);
 
                     var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(0, ts2.Count);
+                    Assert.Equal(10, ts2.Count);
 
                     var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(0, ts3.Count);
+                    Assert.Equal(7, ts3.Count);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 100; i < 200; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel")
+                            .Append("Heartrate", baseline.AddSeconds(0.2 * i), "watches/fitbit", new[] {29d * i});
+                    }
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(200, ts.Count);
+
+                    var ts1 = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(40, ts1.Count);
+
+                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(10, ts2.Count);
+
+                    var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    Assert.Equal(7, ts3.Count);
+                }
+
             }
         }
 
@@ -399,9 +426,9 @@ namespace SlowTests.Client.TimeSeries.Policies
             {
                 var baseline = DateTime.Today.AddDays(-1);
 
-                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
+                var p1 = new TimeSeriesPolicy("BySecond",TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy("By2Seconds",TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy("By3Seconds",TimeSpan.FromSeconds(3));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -477,9 +504,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var p1 = new TimeSeriesPolicy(TimeSpan.FromSeconds(1));
-                var p2 = new TimeSeriesPolicy(TimeSpan.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy(TimeSpan.FromSeconds(3));
+                var p1 = new TimeSeriesPolicy("BySecond",TimeSpan.FromSeconds(1));
+                var p2 = new TimeSeriesPolicy("By2Seconds",TimeSpan.FromSeconds(2));
+                var p3 = new TimeSeriesPolicy("By3Seconds",TimeSpan.FromSeconds(3));
+
                 var config = new TimeSeriesConfiguration
                 {
                     Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
@@ -532,13 +560,13 @@ namespace SlowTests.Client.TimeSeries.Policies
                     for (int i = 0; i <= 120; i++)
                     {
                         session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i});
+                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i, 30 * i});
                     }
                     session.SaveChanges();
                 }
 
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromMinutes(30));
-                var p = new TimeSeriesPolicy(TimeSpan.FromMinutes(10), TimeSpan.FromHours(1));
+                var p = new TimeSeriesPolicy("By10Minutes",TimeSpan.FromMinutes(10), TimeSpan.FromHours(1));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -578,7 +606,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             var recordFilePath = NewDataPath();
 
             var raw = new RawTimeSeriesPolicy(TimeSpan.FromMinutes(30));
-            var p = new TimeSeriesPolicy(TimeSpan.FromMinutes(10), TimeSpan.FromHours(1));
+            var p = new TimeSeriesPolicy("By10Minutes",TimeSpan.FromMinutes(10), TimeSpan.FromHours(1));
             var config = new TimeSeriesConfiguration
             {
                 Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
@@ -653,10 +681,10 @@ namespace SlowTests.Client.TimeSeries.Policies
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
-                var p1 = new TimeSeriesPolicy(TimeSpan.FromHours(6), raw.RetentionTime * 4);
-                var p2 = new TimeSeriesPolicy(TimeSpan.FromDays(1), raw.RetentionTime * 5);
-                var p3 = new TimeSeriesPolicy(TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
-                var p4 = new TimeSeriesPolicy(TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
+                var p1 = new TimeSeriesPolicy("By6Hours",TimeSpan.FromHours(6), raw.RetentionTime * 4);
+                var p2 = new TimeSeriesPolicy("By1Day",TimeSpan.FromDays(1), raw.RetentionTime * 5);
+                var p3 = new TimeSeriesPolicy("By30Minutes",TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
+                var p4 = new TimeSeriesPolicy("By1Hour",TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -684,7 +712,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     for (int i = 0; i <= total; i++)
                     {
                         session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i});
+                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i, i});
                     }
                     session.SaveChanges();
                 }
@@ -693,6 +721,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
                 
+                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
@@ -719,7 +749,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             using (var store = GetDocumentStore())
             {
 
-                var p = new TimeSeriesPolicy(TimeSpan.FromDays(1));
+                var p = new TimeSeriesPolicy("ByDay", TimeSpan.FromDays(1));
 
                 var config = new TimeSeriesConfiguration
                 {

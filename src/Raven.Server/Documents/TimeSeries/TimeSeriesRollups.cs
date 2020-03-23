@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -72,16 +74,15 @@ namespace Raven.Server.Documents.TimeSeries
             });
         }
 
-        public unsafe void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, TimeSeriesPolicy nextPolicy, long etag, DateTime baseline, string changeVector)
+        public unsafe void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, TimeSeriesPolicy nextPolicy, DateTime timestamp)
         {
-            var nextRollup = NextRollup(baseline, nextPolicy);
+            var nextRollup = NextRollup(timestamp, nextPolicy);
 
             // mark for rollup
             RollupSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollupTable, 16);
             var table = context.Transaction.InnerTransaction.OpenTable(RollupSchema, TimeSeriesRollupTable);
             using (table.Allocate(out var tvb))
             using (Slice.From(context.Allocator, nextPolicy.Name, ByteStringType.Immutable, out var policyToApply))
-            using (Slice.From(context.Allocator, changeVector, ByteStringType.Immutable, out var changeVectorSlice))
             {
                 if (table.ReadByKey(slicerHolder.StatsKey, out var tvr))
                 {
@@ -91,12 +92,17 @@ namespace Raven.Server.Documents.TimeSeries
                         return; // we have an earlier date to roll up from
                 }
 
-                tvb.Add(slicerHolder.StatsKey);
-                tvb.Add(slicerHolder.CollectionSlice);
-                tvb.Add(Bits.SwapBytes(nextRollup));
-                tvb.Add(policyToApply);
-                tvb.Add(etag);
-                tvb.Add(changeVectorSlice);
+                var etag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
+                var changeVector = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context, etag);
+                using (Slice.From(context.Allocator, changeVector, ByteStringType.Immutable, out var changeVectorSlice))
+                {
+                    tvb.Add(slicerHolder.StatsKey);
+                    tvb.Add(slicerHolder.CollectionSlice);
+                    tvb.Add(Bits.SwapBytes(nextRollup));
+                    tvb.Add(policyToApply);
+                    tvb.Add(etag);
+                    tvb.Add(changeVectorSlice);
+                }
 
                 table.Set(tvb);
             }
@@ -211,73 +217,6 @@ namespace Raven.Server.Documents.TimeSeries
                     }
 
                     return new TimeSeriesRetentionCommand(keys, request);
-                }
-            }
-        }
-        internal class RemovePoliciesCommand : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            public const int BatchSize = 1024;
-
-            private readonly CollectionName _collection;
-            private readonly string _policy;
-
-            public int Deleted;
-
-            public RemovePoliciesCommand(CollectionName collection, string policy)
-            {
-                _collection = collection;
-                _policy = policy;
-            }
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
-                RollupSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollupTable, 16);
-                var table = context.Transaction.InnerTransaction.OpenTable(RollupSchema, TimeSeriesRollupTable);
-
-                var toDelete = new List<Slice>(tss.Stats.GetTimeSeriesNameByPolicy(context, _collection, _policy, 0, BatchSize));
-
-                var request = new TimeSeriesStorage.DeletionRangeRequest
-                {
-                    Collection = _collection.Name,
-                    From = DateTime.MinValue,
-                    To = DateTime.MaxValue,
-                };
-
-                foreach (var key in toDelete)
-                {
-                    SplitKey(key, out var docId, out var name);
-                    request.DocumentId = docId;
-                    request.Name = name;
-                    
-                    tss.RemoveTimestampRange(context, request);
-
-                    table.DeleteByKey(key);
-
-                    Deleted++;
-                }
-
-                return Deleted;
-            }
-
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
-            {
-                return new RemovePoliciesCommandDto(_collection, _policy);
-            }
-
-            public class RemovePoliciesCommandDto : TransactionOperationsMerger.IReplayableCommandDto<RemovePoliciesCommand>
-            {
-                public CollectionName _collectionName;
-                public string _policy;
-
-                public RemovePoliciesCommandDto(CollectionName collectionName, string policy)
-                {
-                    _collectionName = collectionName;
-                    _policy = policy;
-                }
-
-                public RemovePoliciesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-                {
-                    return new RemovePoliciesCommand(_collectionName, _policy);
                 }
             }
         }
@@ -422,7 +361,11 @@ namespace Raven.Server.Documents.TimeSeries
 
                     var rollupEnd = new DateTime(NextRollup(_now.Add(-policy.AggregationTime), policy));
                     var reader = tss.GetReader(context, item.DocId, item.Name, rollupStart, rollupEnd);
-                    var values = tss.GetAggregatedValues(reader, DateTime.MinValue, policy.AggregationTime, policy.Type);
+
+                    // rollup from the the raw data will generate 6-value roll up of (first, last, min, max, sum, count)
+                    // other rollups will aggregate each of those values by the type
+                    var mode = item.Name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) ? AggregationMode.ByType : AggregationMode.Merge;
+                    var values = GetAggregatedValues(reader, policy.AggregationTime, mode);
 
                     if (previouslyAggregated)
                     {
@@ -457,10 +400,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         using (var slicer = new TimeSeriesSliceHolder(context, item.DocId, item.Name, item.Collection))
                         {
-                            var info = intoReader.GetSegmentInfo();
-                            var nextStart = info.Baseline > rollupStart ? info.Baseline : nextRollup;
-
-                            tss.Rollups.MarkForPolicy(context, slicer, policy, info.Etag, nextStart, info.ChangeVector);
+                            tss.Rollups.MarkForPolicy(context, slicer, policy, nextRollup);
                         }
                     }
                 }
@@ -495,9 +435,295 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static long NextRollup(DateTime baseline, TimeSeriesPolicy nextPolicy)
+         public enum AggregationMode
         {
-            var integerPart = baseline.Ticks / nextPolicy.AggregationTime.Ticks;
+            Merge,
+            ByType
+        }
+
+        private static readonly AggregationType[] Aggregations = {
+            AggregationType.First,
+            AggregationType.Last,
+            AggregationType.Min,
+            AggregationType.Max,
+            AggregationType.Sum,
+            AggregationType.Count
+        };
+
+        public struct TimeSeriesAggregation
+        {
+            private readonly AggregationMode _mode;
+            public bool Any => Values.Count > 0;
+
+            public readonly List<double> Values;
+
+            public TimeSeriesAggregation(AggregationMode mode)
+            {
+                _mode = mode;
+                Values = new List<double>();
+            }
+
+            public void Init()
+            {
+                Values.Clear();
+            }
+
+            public void Segment(Span<StatefulTimestampValue> values)
+            {
+                EnsureNumberOfValues(values.Length);
+
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var val = values[i];
+                    switch (_mode)
+                    {
+                        case AggregationMode.Merge:
+                            for (var index = 0; index < Aggregations.Length; index++)
+                            {
+                                var aggregation = Aggregations[index];
+                                var aggIndex = index + (i * Aggregations.Length);
+                                AggregateOnceBySegment(aggregation, aggIndex, val);
+                            }
+
+                            break;
+                        case AggregationMode.ByType:
+                            for (var index = 0; index < Values.Count; index++)
+                            {
+                                var aggIndex = index % Aggregations.Length;
+                                AggregateOnceBySegment(Aggregations[aggIndex], index, val);
+                            }
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+
+            private void AggregateOnceBySegment(AggregationType aggregation, int i, StatefulTimestampValue val)
+            {
+                switch (aggregation)
+                {
+                    case AggregationType.Min:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = val.Min;
+                        else
+                            Values[i] = Math.Min(Values[i], val.Min);
+                        break;
+                    case AggregationType.Max:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = val.Max;
+                        else
+                            Values[i] = Math.Max(Values[i], val.Max);
+                        break;
+                    case AggregationType.Sum:
+                    case AggregationType.Average:
+                    case AggregationType.Mean:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = 0;
+                        Values[i] = Values[i] + val.Sum;
+                        break;
+                    case AggregationType.First:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = val.First;
+                        break;
+                    case AggregationType.Last:
+                        Values[i] = val.Last;
+                        break;
+                    case AggregationType.Count:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = 0;
+                        Values[i] += val.Count;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + aggregation);
+                }
+            }
+
+            private void AggregateOnceByItem(AggregationType aggregation, int i, double val)
+            {
+                switch (aggregation)
+                {
+                    case AggregationType.Min:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = val;
+                        else
+                            Values[i] = Math.Min(Values[i], val);
+                        break;
+                    case AggregationType.Max:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = val;
+                        else
+                            Values[i] = Math.Max(Values[i], val);
+                        break;
+                    case AggregationType.Sum:
+                    case AggregationType.Average:
+                    case AggregationType.Mean:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = 0;
+                        Values[i] = Values[i] + val;
+                        break;
+                    case AggregationType.First:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = val;
+                        break;
+                    case AggregationType.Last:
+                        Values[i] = val;
+                        break;
+                    case AggregationType.Count:
+                        if (double.IsNaN(Values[i]))
+                            Values[i] = 0;
+                        Values[i]++;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + aggregation);
+                }
+            }
+
+            public void Step(Span<double> values)
+            {
+                EnsureNumberOfValues(values.Length);
+                
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var val = values[i];
+                    switch (_mode)
+                    {
+                        case AggregationMode.Merge:
+                            for (var index = 0; index < Aggregations.Length; index++)
+                            {
+                                var aggregation = Aggregations[index];
+                                var aggIndex = index + (i * Aggregations.Length);
+                                AggregateOnceByItem(aggregation, aggIndex, val);
+                            }
+
+                            break;
+                        case AggregationMode.ByType:
+                            for (var index = 0; index < Values.Count; index++)
+                            {
+                                var aggIndex = index % Aggregations.Length;
+                                AggregateOnceByItem(Aggregations[aggIndex], index, val);
+                            }
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+
+            private void EnsureNumberOfValues(int numberOfValues)
+            {
+                switch (_mode)
+                {
+                    case AggregationMode.Merge:
+                        var entries = numberOfValues * Aggregations.Length;
+                        for (int i = Values.Count; i < entries; i++)
+                        {
+                            Values.Add(double.NaN);
+                        }
+
+                        break;
+                    case AggregationMode.ByType:
+                        for (int i = Values.Count; i < numberOfValues; i++)
+                        {
+                            Values.Add(double.NaN);
+                        }
+
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
+
+        public static List<TimeSeriesStorage.Reader.SingleResult> GetAggregatedValues(TimeSeriesStorage.Reader reader, TimeSpan rangeGroup, AggregationMode mode)
+        {
+            var aggStates = new TimeSeriesAggregation(mode); // we always will aggregate here by Min, Max, First, Last, Sum, Count, Mean
+            var results = new List<TimeSeriesStorage.Reader.SingleResult>();
+
+            var rangeSpec = new TimeSeriesFunction.RangeGroup
+            {
+                Ticks = rangeGroup.Ticks
+            };
+            DateTime next = default;
+
+            foreach (var it in reader.SegmentsOrValues())
+            {
+                if (it.IndividualValues != null)
+                {
+                    AggregateIndividualItems(it.IndividualValues);
+                }
+                else
+                {
+                    //We might need to close the old aggregation range and start a new one
+                    MaybeMoveToNextRange(it.Segment.Start);
+
+                    // now we need to see if we can consume the whole segment, or 
+                    // if the range it cover needs to be broken up to multiple ranges.
+                    // For example, if the segment covers 3 days, but we have group by 1 hour,
+                    // we still have to deal with the individual values
+                    if (it.Segment.End > next)
+                    {
+                        AggregateIndividualItems(it.Segment.Values);
+                    }
+                    else
+                    {
+                        var span = it.Segment.Summary.Span;
+                        aggStates.Segment(span);
+                    }
+                }
+            }
+
+            if (aggStates.Any)
+            {
+                results.Add(new TimeSeriesStorage.Reader.SingleResult
+                {
+                    Timestamp = next,
+                    Values = new Memory<double>(aggStates.Values.ToArray()),
+                    Status = TimeSeriesValuesSegment.Live,
+                    // TODO: Tag = ""
+                });
+            }
+
+            return results;
+
+            void MaybeMoveToNextRange(DateTime ts)
+            {
+                if (ts < next)
+                    return;
+
+                if (aggStates.Any)
+                {
+                    results.Add(new TimeSeriesStorage.Reader.SingleResult
+                    {
+                        Timestamp = next,
+                        Values = new Memory<double>(aggStates.Values.ToArray()),
+                        Status = TimeSeriesValuesSegment.Live,
+                        // TODO: Tag = ""
+                    });
+                }
+
+                var start = rangeSpec.GetRangeStart(ts);
+                next = rangeSpec.GetNextRangeStart(start);
+                aggStates.Init();
+            }
+
+            void AggregateIndividualItems(IEnumerable<TimeSeriesStorage.Reader.SingleResult> items)
+            {
+                foreach (var cur in items)
+                {
+                    if (cur.Status == TimeSeriesValuesSegment.Dead)
+                        continue;
+
+                    MaybeMoveToNextRange(cur.Timestamp);
+                    
+                    aggStates.Step(cur.Values.Span);
+                }
+            }
+        }
+
+        private static long NextRollup(DateTime time, TimeSeriesPolicy nextPolicy)
+        {
+            var integerPart = time.Ticks / nextPolicy.AggregationTime.Ticks;
             var nextRollup = nextPolicy.AggregationTime.Ticks * (integerPart + 1);
             return nextRollup;
         }

@@ -8,6 +8,17 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal const char TimeSeriesRollupSeparator = '@';
         public Dictionary<string, TimeSeriesCollectionConfiguration> Collections { get; set; }
 
+        internal void Initialize()
+        {
+            if (Collections == null) 
+                return;
+
+            foreach (var config in Collections.Values)
+            {
+                config?.Initialize();
+            }
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
