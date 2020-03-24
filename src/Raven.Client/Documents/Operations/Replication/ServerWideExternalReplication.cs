@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class ServerWideExternalReplication : ExternalReplication
+    public class ServerWideExternalReplication : ExternalReplication, IDynamicJson
     {
         internal static string NamePrefix = "Server Wide External Replication";
 

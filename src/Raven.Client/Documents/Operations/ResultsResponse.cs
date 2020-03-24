@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 
@@ -34,6 +35,10 @@ namespace Raven.Client.Documents.Operations
     }
 
     internal class GetServerWideBackupConfigurationsResponse : ResultsResponse<ServerWideBackupConfiguration>
+    {
+    }
+
+    internal class GetServerWideExternalReplicationsResponse : ResultsResponse<ServerWideExternalReplication>
     {
     }
 }
