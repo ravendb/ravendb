@@ -229,43 +229,41 @@ namespace Sparrow.Logging
 
         private void StartNewLoggingThreads(bool compress)
         {
-            if (IsInfoEnabled == false &&
-                IsOperationsEnabled == false)
-                return;
+            lock (this)
+            {
+                if (IsInfoEnabled == false &&
+                    IsOperationsEnabled == false)
+                    return;
 
-            _keepLogging.Raise();
-            _loggingThread = new Thread(BackgroundLogger)
-            {
-                IsBackground = true,
-                Name = _name + " Thread"
-            };
-            _loggingThread.Start();
-            if (compress)
-            {
-                _compressLoggingThread = new Thread(BackgroundLoggerCompress)
+                _keepLogging.Raise();
+                _loggingThread = new Thread(BackgroundLogger) {IsBackground = true, Name = _name + " Thread"};
+                _loggingThread.Start();
+                if (compress)
                 {
-                    IsBackground = true,
-                    Name = _name + "Log Compression Thread"
-                };
-                _compressLoggingThread.Start();
-            }
-            else
-            {
-                _compressLoggingThread = null;
+                    _compressLoggingThread = new Thread(BackgroundLoggerCompress) {IsBackground = true, Name = _name + "Log Compression Thread"};
+                    _compressLoggingThread.Start();
+                }
+                else
+                {
+                    _compressLoggingThread = null;
+                }
             }
         }
 
         public void EndLogging()
         {
-            _keepLogging.Lower();
+            lock (this)
+            {
+                _keepLogging.Lower();
 
-            _hasEntries.Set();
-            _readyToCompress.Set();
+                _hasEntries.Set();
+                _readyToCompress.Set();
 
-            _loggingThread?.Join(TimeToWaitForLoggingToEndInMilliseconds);
-            _compressLoggingThread?.Join(TimeToWaitForLoggingToEndInMilliseconds);
+                _loggingThread?.Join(TimeToWaitForLoggingToEndInMilliseconds);
+                _compressLoggingThread?.Join(TimeToWaitForLoggingToEndInMilliseconds);
 
-            _tokenSource.Cancel();
+                _tokenSource.Cancel();
+            }
         }
 
         private bool TryGetNewStreamAndApplyRetentionPolicies(long maxFileSize, out FileStream fileStream)
@@ -846,19 +844,22 @@ namespace Sparrow.Logging
             {
                 file.Write(bytes.Array, bytes.Offset, bytes.Count);
                 _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
+                if (item.Task != null)
+                {
+                    try
+                    {
+                        file.Flush();
+                        _additionalOutput?.Flush();
+                    }
+                    finally
+                    {
+                        item.Task.TrySetResult(null);
+                    }
+                }
             }
-
-            if (item.Task != null)
+            else
             {
-                try
-                {
-                    file.Flush();
-                    _additionalOutput?.Flush();
-                }
-                finally
-                {
-                    item.Task.TrySetResult(null);
-                }
+                item.Task?.TrySetResult(null);
             }
 
             try

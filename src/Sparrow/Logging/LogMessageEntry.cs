@@ -7,7 +7,7 @@ namespace Sparrow.Logging
 {
     internal class LogMessageEntry
     {
-        public LogMode Type { get; set; }
+        public LogMode Type;
         public MemoryStream Data;
         public TaskCompletionSource<object> Task;
 

@@ -331,8 +331,9 @@ namespace SlowTests.SparrowTests
             var logTasks = Task.WhenAll(logger.OperationsAsync(beforeCloseOperation), logger.InfoAsync(beforeCloseInformation));
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
-            
-            string logsFileContentBefore = await ReadLogsFileContent(path);
+
+            WaitForValue(() => socket.LogsReceived.Contains(beforeCloseInformation) && socket.LogsReceived.Contains(beforeCloseOperation),
+                true, 5000, 100);
             
             //Close socket
             socket.Close();
@@ -348,13 +349,7 @@ namespace SlowTests.SparrowTests
 
             loggingSource.EndLogging();
 
-            Assert.Contains(beforeCloseInformation, socket.LogsReceived);
-            Assert.Contains(beforeCloseInformation, socket.LogsReceived);
-
             string logsFileContentAfter = await ReadLogsFileContent(path);
-            
-            AssertContainsLog(LogMode.Information, logMode)(beforeCloseInformation, logsFileContentBefore);
-            AssertContainsLog(LogMode.Operations, logMode)(beforeCloseOperation, logsFileContentBefore);
             
             AssertContainsLog(LogMode.Information, logMode)(beforeCloseInformation, logsFileContentAfter);
             AssertContainsLog(LogMode.Operations, logMode)(beforeCloseOperation, logsFileContentAfter);
@@ -398,8 +393,6 @@ namespace SlowTests.SparrowTests
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
             
-            string logsFileContentBefore = await ReadLogsFileContent(path);
-            
             //Detach Pipe
             loggingSource.DetachPipeSink();
             await stream.FlushAsync();
@@ -418,15 +411,12 @@ namespace SlowTests.SparrowTests
 
             var logsFromPipe = Encodings.Utf8.GetString(stream.ToArray());
             Assert.Contains(beforeDetachInformation, logsFromPipe);
-            Assert.Contains(beforeDetachInformation, logsFromPipe);
+            Assert.Contains(beforeDetachOperation, logsFromPipe);
             Assert.DoesNotContain(afterDetachInformation, logsFromPipe);
             Assert.DoesNotContain(afterDetachOperation, logsFromPipe);
 
             string logsFileContentAfter = await ReadLogsFileContent(path);
 
-            AssertContainsLog(LogMode.Information, logMode)(beforeDetachInformation, logsFileContentBefore);
-            AssertContainsLog(LogMode.Operations, logMode)(beforeDetachOperation, logsFileContentBefore);
-            
             AssertContainsLog(LogMode.Information, logMode)(beforeDetachInformation, logsFileContentAfter);
             AssertContainsLog(LogMode.Operations, logMode)(beforeDetachOperation, logsFileContentAfter);
 
