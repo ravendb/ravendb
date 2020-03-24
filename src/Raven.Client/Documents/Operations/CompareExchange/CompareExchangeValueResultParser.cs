@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -12,10 +13,13 @@ namespace Raven.Client.Documents.Operations.CompareExchange
     {
         public static Dictionary<string, CompareExchangeValue<T>> GetValues(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
+            var results = new Dictionary<string, CompareExchangeValue<T>>(StringComparer.OrdinalIgnoreCase);
+
+            if (response == null) // 404
+                return results;
+
             if (response.TryGet("Results", out BlittableJsonReaderArray items) == false)
                 throw new InvalidDataException("Response is invalid. Results is missing.");
-
-            var results = new Dictionary<string, CompareExchangeValue<T>>();
 
             foreach (BlittableJsonReaderObject item in items)
             {

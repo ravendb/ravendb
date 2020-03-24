@@ -212,7 +212,7 @@ namespace Raven.Client.Documents.Session
             new Dictionary<(string, CommandType, string), ICommandData>();
 
         public readonly bool NoTracking;
-       
+
         internal Dictionary<string, ForceRevisionStrategy> IdsForCreatingForcedRevisions = new Dictionary<string, ForceRevisionStrategy>(StringComparer.OrdinalIgnoreCase);
 
         public int DeferredCommandsCount => DeferredCommands.Count;
@@ -510,7 +510,7 @@ more responsive application.
 
             if (string.IsNullOrEmpty(id))
             {
-                return DeserializeFromTransformer(entityType, null, document,false);
+                return DeserializeFromTransformer(entityType, null, document, false);
             }
 
             if (DocumentsById.TryGetValue(id, out var docInfo))
@@ -619,7 +619,7 @@ more responsive application.
                 using (var newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo))
                 {
                     if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo, null))
-                    {                        
+                    {
                         throw new InvalidOperationException(
                             "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
                     }
@@ -899,36 +899,11 @@ more responsive application.
             if (HasClusterSession == false)
                 return;
 
-            ClusterTransactionOperationsBase clusterTransactionOperations = GetClusterSession();
-
-            if (clusterTransactionOperations == null || clusterTransactionOperations.HasCommands == false)
-                return;
-
             if (TransactionMode != TransactionMode.ClusterWide)
                 throw new InvalidOperationException($"Performing cluster transaction operations require the '{nameof(TransactionMode)}' to be set to '{nameof(TransactionMode.ClusterWide)}'.");
 
-            if (clusterTransactionOperations.StoreCompareExchange != null)
-            {
-                foreach (var item in clusterTransactionOperations.StoreCompareExchange)
-                {
-                    var djv = new DynamicJsonValue
-                    {
-                        [Constants.CompareExchange.ObjectFieldName] = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(item.Value.Entity, Conventions, Context, JsonSerializer, documentInfo: null, removeIdentityProperty: false)
-                    };
-                    var blittable = Context.ReadObject(djv, item.Key);
-                    result.SessionCommands.Add(new PutCompareExchangeCommandData(item.Key, blittable, item.Value.Index));
-                }
-            }
-
-            if (clusterTransactionOperations.DeleteCompareExchange != null)
-            {
-                foreach (var item in clusterTransactionOperations.DeleteCompareExchange)
-                {
-                    result.SessionCommands.Add(new DeleteCompareExchangeCommandData(item.Key, item.Value));
-                }
-            }
-
-            result.OnSuccess.ClearClusterTransactionOperations(clusterTransactionOperations);
+            var clusterSession = GetClusterSession();
+            clusterSession.PrepareCompareExchangeEntities(result);
         }
 
         protected abstract bool HasClusterSession { get; }
@@ -958,15 +933,15 @@ more responsive application.
 
             return true;
         }
-        
+
         private void PrepareForCreatingRevisionsFromIds(SaveChangesData result)
         {
             // Note: here there is no point checking 'Before' or 'After' because if there were changes then forced revision is done from the PUT command....
             foreach (var idEntry in IdsForCreatingForcedRevisions)
             {
-                result.SessionCommands.Add(new ForceRevisionCommandData(idEntry.Key));   
+                result.SessionCommands.Add(new ForceRevisionCommandData(idEntry.Key));
             }
-            
+
             IdsForCreatingForcedRevisions.Clear();
         }
 
@@ -984,7 +959,9 @@ more responsive application.
                         var docChanges = new List<DocumentsChanges>();
                         var change = new DocumentsChanges
                         {
-                            FieldNewValue = string.Empty, FieldOldValue = string.Empty, Change = DocumentsChanges.ChangeType.DocumentDeleted
+                            FieldNewValue = string.Empty,
+                            FieldOldValue = string.Empty,
+                            Change = DocumentsChanges.ChangeType.DocumentDeleted
                         };
 
                         docChanges.Add(change);
@@ -1345,7 +1322,7 @@ more responsive application.
                     commandType != CommandType.AttachmentDELETE &&
                     commandType != CommandType.AttachmentCOPY &&
                     commandType != CommandType.AttachmentMOVE &&
-                    commandType != CommandType.Counters && 
+                    commandType != CommandType.Counters &&
                     commandType != CommandType.TimeSeries)
                     DeferredCommandsDictionary[(id, CommandType.ClientModifyDocumentCommand, null)] = command;
             }
@@ -1513,7 +1490,7 @@ more responsive application.
                 if (propertyDetails.Value == null)
                     continue;
 
-                string[] counters = {};
+                string[] counters = { };
 
                 if (fromQueryResult)
                 {
@@ -1963,7 +1940,7 @@ more responsive application.
             if (documentInfo.Entity != null && NoTracking == false)
                 EntityToBlittable.RemoveFromMissing(documentInfo.Entity);
 
-            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, ref document,!NoTracking);
+            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, ref document, !NoTracking);
             documentInfo.Document = document;
 
             var type = entity.GetType();
@@ -2031,7 +2008,6 @@ more responsive application.
                 private readonly List<object> _documentsByEntityToRemove = new List<object>();
                 private readonly List<(DocumentInfo Info, BlittableJsonReaderObject Document)> _documentInfosToUpdate = new List<(DocumentInfo Info, BlittableJsonReaderObject Document)>();
 
-                private ClusterTransactionOperationsBase _clusterTransactionOperations;
                 private bool _clearDeletedEntities;
 
                 public ActionsToRunOnSuccess(InMemoryDocumentSessionOperations _session)
@@ -2047,11 +2023,6 @@ more responsive application.
                 public void RemoveDocumentByEntity(object entity)
                 {
                     _documentsByEntityToRemove.Add(entity);
-                }
-
-                public void ClearClusterTransactionOperations(ClusterTransactionOperationsBase clusterTransactionOperations)
-                {
-                    _clusterTransactionOperations = clusterTransactionOperations;
                 }
 
                 public void UpdateEntityDocumentInfo(DocumentInfo documentInfo, BlittableJsonReaderObject document)
@@ -2079,8 +2050,6 @@ more responsive application.
 
                     if (_clearDeletedEntities)
                         _session.DeletedEntities.Clear();
-
-                    _clusterTransactionOperations?.Clear();
 
                     _session.DeferredCommands.Clear();
                     _session.DeferredCommandsDictionary.Clear();
@@ -2298,7 +2267,7 @@ more responsive application.
             public bool ExecuteOnBeforeStore { get; set; }
         }
     }
-    
+
     internal class DeletedEntitiesHolder
     {
         private readonly HashSet<object> _deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);

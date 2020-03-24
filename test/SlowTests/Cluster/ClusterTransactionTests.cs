@@ -398,8 +398,8 @@ namespace SlowTests.Cluster
                 await session.StoreAsync(user1, "users/1");
                 await session.SaveChangesAsync();
 
-                session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(new CompareExchangeValue<User>("usernames/ayende", store.GetLastTransactionIndex(store.Database) ?? 0,
-                    user2));
+                var value = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende");
+                value.Value = user2;
                 await session.StoreAsync(user2, "users/2");
                 user1.Age = 10;
                 await session.StoreAsync(user1, "users/1");
@@ -1199,8 +1199,6 @@ namespace SlowTests.Cluster
                 using (var session = store.OpenAsyncSession())
                 {
                     Assert.Throws<InvalidOperationException>(() => session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1));
-                    Assert.Throws<InvalidOperationException>(() =>
-                        session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(new CompareExchangeValue<string>("test", 0, "test")));
                     Assert.Throws<InvalidOperationException>(() => session.Advanced.ClusterTransaction.DeleteCompareExchangeValue("usernames/ayende", 0));
                     await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende"));
                 }

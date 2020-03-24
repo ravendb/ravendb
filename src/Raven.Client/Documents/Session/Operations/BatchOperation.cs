@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Client.Json;
@@ -100,7 +101,10 @@ namespace Raven.Client.Documents.Session.Operations
                         HandleDelete(batchResult);
                         break;
                     case CommandType.CompareExchangePUT:
+                        HandleCompareExchangePut(batchResult);
+                        break;
                     case CommandType.CompareExchangeDELETE:
+                        HandleCompareExchangeDelete(batchResult);
                         break;
                     default:
                         throw new NotSupportedException($"Command '{type}' is not supported.");
@@ -146,7 +150,7 @@ namespace Raven.Client.Documents.Session.Operations
                         HandleCounters(batchResult);
                         break;
                     case CommandType.TimeSeries:
-                        //TODO: RavenDB-13474 add to time series cache 
+                        //TODO: RavenDB-13474 add to time series cache
                         break;
                     case CommandType.BatchPATCH:
                         break;
@@ -209,6 +213,28 @@ namespace Raven.Client.Documents.Session.Operations
                 _modifications[id] = modifiedDocumentInfo = documentInfo;
 
             return modifiedDocumentInfo;
+        }
+
+        private void HandleCompareExchangePut(BlittableJsonReaderObject batchResult)
+        {
+            HandleCompareExchangeInternal(CommandType.CompareExchangePUT, batchResult);
+        }
+
+        private void HandleCompareExchangeDelete(BlittableJsonReaderObject batchResult)
+        {
+            HandleCompareExchangeInternal(CommandType.CompareExchangeDELETE, batchResult);
+        }
+
+        private void HandleCompareExchangeInternal(CommandType commandType, BlittableJsonReaderObject batchResult)
+        {
+            if (batchResult.TryGet(nameof(ICompareExchangeValue.Key), out string key) == false)
+                ThrowMissingField(commandType, nameof(ICompareExchangeValue.Key));
+
+            if (batchResult.TryGet(nameof(ICompareExchangeValue.Index), out long index) == false)
+                ThrowMissingField(commandType, nameof(ICompareExchangeValue.Index));
+
+            var clusterSession = _session.GetClusterSession();
+            clusterSession.UpdateState(key, index);
         }
 
         private void HandleAttachmentCopy(BlittableJsonReaderObject batchResult)
@@ -382,27 +408,27 @@ namespace Raven.Client.Documents.Session.Operations
         {
             // When forcing a revision for a document that does Not have any revisions yet then the HasRevisions flag is added to the document.
             // In this case we need to update the tracked entities in the session with the document new change-vector.
-            
+
             if (GetBooleanField(batchResult, CommandType.ForceRevisionCreation, "RevisionCreated") == false)
-            { 
+            {
                 // no forced revision was created...nothing to update.
                 return;
             }
-            
+
             var id = GetLazyStringField(batchResult, CommandType.ForceRevisionCreation, Constants.Documents.Metadata.Id);
             var changeVector = GetLazyStringField(batchResult, CommandType.ForceRevisionCreation, Constants.Documents.Metadata.ChangeVector);
 
             if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
                 return;
-            
+
             documentInfo.ChangeVector = changeVector;
-            
+
             HandleMetadataModifications(documentInfo, batchResult, id, changeVector);
-            
+
             var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
             _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
         }
-        
+
         private void HandlePut(int index, BlittableJsonReaderObject batchResult, bool isDeferred)
         {
             object entity = null;
@@ -428,7 +454,7 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             HandleMetadataModifications(documentInfo, batchResult, id, changeVector);
-            
+
             _session.DocumentsById.Add(documentInfo);
 
             if (entity != null)
@@ -454,8 +480,8 @@ namespace Raven.Client.Documents.Session.Operations
             documentInfo.ChangeVector = changeVector;
 
             ApplyMetadataModifications(id, documentInfo);
-        }  
-        
+        }
+
         private void HandleCounters(BlittableJsonReaderObject batchResult)
         {
             var docId = GetLazyStringField(batchResult, CommandType.Counters, nameof(CountersBatchCommandData.Id));
@@ -501,7 +527,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             return longValue;
         }
-        
+
         private static bool GetBooleanField(BlittableJsonReaderObject json, CommandType type, string fieldName)
         {
             if (json.TryGet(fieldName, out bool boolValue) == false)
