@@ -465,24 +465,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/smuggler/migrator-path", "GET", AuthorizationStatus.Operator)]
-        public Task GetConfigurationMigratorPath()
-        {
-            // If the path from the configuration is defined, the Studio will block the option to set the path in the import view
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("PathDefined");
-                    writer.WriteBool(Server.Configuration.Migrator.FullPath != null);
-                    writer.WriteEndObject();
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateFromAnotherDatabase()
         {
@@ -492,7 +474,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
                 var migrationConfiguration = JsonDeserializationServer.MigrationConfiguration(blittable);
                 
-                var migratorFullPath = Server.Configuration.Migrator.FullPath.FullPath ?? migrationConfiguration.MigratorFullPath;
+                var migratorFullPath = Server.Configuration.Migration.MigratorPath.FullPath ?? migrationConfiguration.MigratorFullPath;
 
                 if (string.IsNullOrWhiteSpace(migratorFullPath))
                     throw new ArgumentException("MigratorFullPath cannot be null or empty");
