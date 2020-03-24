@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -216,6 +217,7 @@ namespace Raven.Server.Documents.Handlers
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
             public long TotalSize;
+
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 for (int i = 0; i < NumberOfCommands; i++)
@@ -270,7 +272,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (Logger.IsInfoEnabled)
                 {
-                    Logger.Info($"Merged {NumberOfCommands:#,#;;0} operations ({Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb)");
+                    Logger.Info($"Executed {NumberOfCommands:#,#;;0} bulk insert operations, size: ({new Size(TotalSize, SizeUnit.Bytes)})");
                 }
 
                 return NumberOfCommands;
