@@ -60,14 +60,14 @@ namespace Raven.Server.Documents.Handlers
                 var indexes = Database.IndexStore.GetIndexes().ToList();
                 var size = Database.GetSizeOnDisk();
 
-                stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
-                stats.LastDatabaseEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
-                stats.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-                    
-                stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
-                stats.CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
-                stats.CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context);
-                stats.CountOfTombstones = Database.DocumentsStorage.GetNumberOfTombstones(context);
+                stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Documents.Transaction.InnerTransaction);
+                stats.LastDatabaseEtag = DocumentsStorage.ReadLastEtag(context.Documents.Transaction.InnerTransaction);
+                stats.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context.Documents);
+
+                stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context.Documents);
+                stats.CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context.Documents);
+                stats.CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context.Documents);
+                stats.CountOfTombstones = Database.DocumentsStorage.GetNumberOfTombstones(context.Documents);
                 stats.CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount;
                 stats.SizeOnDisk = size.Data;
                 stats.NumberOfTransactionMergerQueueOperations = Database.TxMerger.NumberOfQueuedOperations;

@@ -1101,7 +1101,7 @@ namespace Raven.Server.ServerWide
                         throw new DatabaseDoesNotExistException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist");
 
                     updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
-            }
+                }
             }
             catch (Exception e)
             {
@@ -2630,10 +2630,10 @@ namespace Raven.Server.ServerWide
             using (var databaseRecord = ReadRawDatabaseRecord(context, name, out etag))
             {
                 if (databaseRecord == null)
-                return null;
+                    return null;
 
                 return databaseRecord.MaterializedRecord;
-        }
+            }
         }
 
         public DatabaseTopology ReadDatabaseTopology(TransactionOperationContext context, string name)
@@ -2965,7 +2965,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ToggleDatabasesState(BlittableJsonReaderObject cmd, TransactionOperationContext context, string type, long index)
+        private void ToggleDatabasesState(BlittableJsonReaderObject cmd, ClusterOperationContext context, string type, long index)
         {
             var command = (ToggleDatabasesStateCommand)JsonDeserializationCluster.Commands[type](cmd);
             if (command.Value == null)
