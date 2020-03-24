@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System.Collections.Generic;
+using FastTests;
 using Orders;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -81,7 +82,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(numberOfRequests + 2, session.Advanced.NumberOfRequests);
 
-                    var values = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(new [] { "companies/cf", "companies/hr" });
+                    var values = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(new[] { "companies/cf", "companies/hr" });
 
                     Assert.Equal(numberOfRequests + 2, session.Advanced.NumberOfRequests);
 
@@ -119,36 +120,68 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void T1()
+        public void CanUseCompareExchangeValueIncludesInLoad()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
+                    var employee = new Employee { Id = "employees/1", Notes = new List<string> { "companies/cf", "companies/hr" } };
+                    session.Store(employee);
+
                     var company = new Company { Id = "companies/1", ExternalId = "companies/cf", Name = "CF" };
                     session.Store(company);
 
-                    var address = new Address { City = "Torun" };
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(company.ExternalId, address);
+                    var address1 = new Address { City = "Torun" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", address1);
+
+                    var address2 = new Address { City = "Hadera" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", address2);
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    var company = session.Load<Company>("companies/1", includes => includes.IncludeCompareExchangeValue(x => x.ExternalId));
+                    var company1 = session.Load<Company>("companies/1", includes => includes.IncludeCompareExchangeValue(x => x.ExternalId));
 
                     var numberOfRequests = session.Advanced.NumberOfRequests;
 
-                    var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(company.ExternalId);
+                    var value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(company1.ExternalId);
 
                     Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
 
-                    Assert.NotNull(value);
-                    Assert.True(value.Index > 0);
-                    Assert.Equal(company.ExternalId, value.Key);
-                    Assert.NotNull(value.Value);
-                    Assert.Equal("Torun", value.Value.City);
+                    Assert.NotNull(value1);
+                    Assert.True(value1.Index > 0);
+                    Assert.Equal(company1.ExternalId, value1.Key);
+                    Assert.NotNull(value1.Value);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    var company2 = session.Load<Company>("companies/1", includes => includes.IncludeCompareExchangeValue(x => x.ExternalId));
+
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(company1, company2);
+
+                    var employee1 = session.Load<Employee>("employees/1", includes => includes.IncludeCompareExchangeValue(x => x.Notes));
+
+                    Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
+
+                    var value2 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(employee1.Notes[0]);
+                    var value3 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(employee1.Notes[1]);
+
+                    Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(value1, value2);
+                    Assert.NotEqual(value2, value3);
+
+                    var values = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(employee1.Notes.ToArray());
+
+                    Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(2, values.Count);
+                    Assert.Equal(value2, values[value2.Key]);
+                    Assert.Equal(value3, values[value3.Key]);
                 }
             }
         }
