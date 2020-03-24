@@ -618,7 +618,6 @@ namespace Raven.Client.Documents.BulkInsert
                     return;
 
                 _operation._currentWriter.Write("]}}");
-                
             }
         }
     }
