@@ -103,7 +103,8 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
 
         return new getServerWideBackupCommand(this.taskName())
             .execute()
-            .done((result: Raven.Server.Web.System.ServerWideBackupConfigurationResults) => this.update(result.Results[0]));
+            .done((result: Raven.Server.Web.System.ServerWideBackupConfigurationForStudio[]) =>
+                this.update(result[0]));
     }
 }
 

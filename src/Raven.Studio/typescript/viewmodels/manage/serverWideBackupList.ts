@@ -1,12 +1,12 @@
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getAllServerWideBackupTasksCommand = require("commands/resources/getAllServerWideBackupTasksCommand");
+import getAllServerWideTasksCommand = require("commands/resources/getAllServerWideTasksCommand");
 import ongoingTaskServerWideBackupListModel = require("models/database/tasks/ongoingTaskServerWideBackupListModel");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
-import deleteServerWideBackupCommand = require("commands/resources/deleteServerWideBackupCommand");
-import toggleServerWideBackupCommand = require("commands/resources/toggleServerWideBackupCommand");
+import deleteServerWideTaskCommand = require("commands/resources/deleteServerWideTaskCommand");
+import toggleServerWideTaskCommand = require("commands/resources/toggleServerWideTaskCommand");
 
 class serverWideBackupList extends viewModelBase {
 
@@ -38,8 +38,8 @@ class serverWideBackupList extends viewModelBase {
         return this.fetchServerWideBackupTasks();
     }
 
-    private fetchServerWideBackupTasks(): JQueryPromise<Raven.Server.Web.System.ServerWideBackupConfigurationResults> { 
-        return new getAllServerWideBackupTasksCommand() 
+    private fetchServerWideBackupTasks(): JQueryPromise<Raven.Server.Web.System.ServerWideTaskConfigurations> { 
+        return new getAllServerWideTasksCommand() 
             .execute()
             .done((info) => {
                 this.processTasksResult(info);
@@ -50,17 +50,17 @@ class serverWideBackupList extends viewModelBase {
         item.toggleDetails();       
     }
     
-    private processTasksResult(result: Raven.Server.Web.System.ServerWideBackupConfigurationResults) {
+    private processTasksResult(result: Raven.Server.Web.System.ServerWideTaskConfigurations) {
         const oldTasks = [            
             ...this.serverWideBackupTasks(),
            ] as Array<{ taskId: number }>;
         
         const oldTaskIds = oldTasks.map(x => x.taskId);
-        const newTaskIds = result.Results.map(x => x.TaskId);
+        const newTaskIds = result.Backups.map(x => x.TaskId);
         const toDeleteIds = _.without(oldTaskIds, ...newTaskIds);
         
         this.mergeTasks(this.serverWideBackupTasks,
-            result.Results, 
+            result.Backups, 
             toDeleteIds,
             (dto: Raven.Server.Web.System.ServerWideBackupConfigurationForStudio) => new ongoingTaskServerWideBackupListModel(dto));
     }
@@ -93,7 +93,7 @@ class serverWideBackupList extends viewModelBase {
         })
             .done(result => {
                 if (result.can) {
-                    new toggleServerWideBackupCommand(model.taskName(), false)
+                    new toggleServerWideTaskCommand("Backup", model.taskName(), false)
                         .execute()
                         .done(() => model.taskState('Enabled'))
                         .always(() => this.fetchServerWideBackupTasks());
@@ -107,7 +107,7 @@ class serverWideBackupList extends viewModelBase {
         })
             .done(result => {
                 if (result.can) {
-                    new toggleServerWideBackupCommand(model.taskName(), true)
+                    new toggleServerWideTaskCommand("Backup", model.taskName(), true)
                         .execute()
                         .done(() => model.taskState('Disabled'))
                         .always(() => this.fetchServerWideBackupTasks()); 
@@ -127,7 +127,7 @@ class serverWideBackupList extends viewModelBase {
     }
 
     private deleteServerWideBackupTask(taskName: string) {
-        new deleteServerWideBackupCommand(taskName)
+        new deleteServerWideTaskCommand("Backup", taskName)
             .execute()
             .done(() => this.fetchServerWideBackupTasks()); 
     }

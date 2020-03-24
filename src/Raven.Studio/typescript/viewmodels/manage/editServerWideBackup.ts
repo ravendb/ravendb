@@ -4,7 +4,7 @@ import router = require("plugins/router");
 import serverWideBackupConfiguration = require("models/database/tasks/periodicBackup/serverWideBackupConfiguration");
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
 import getServerWideBackupConfigCommand = require("commands/resources/getServerWideBackupConfigCommand");
-import getServerWideBackupsCommand = require("commands/resources/getServerWideBackupCommand");
+import getServerWideBackupCommand = require("commands/resources/getServerWideBackupCommand");
 import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
@@ -42,11 +42,11 @@ class editServerWideBackup extends viewModelBase {
                 // 1 Editing an existing task
                 this.isAddingNewBackupTask(false);
                
-                new getServerWideBackupsCommand(args.taskName)
+                new getServerWideBackupCommand(args.taskName)
                     .execute()
-                    .done((backupsList: Raven.Server.Web.System.ServerWideBackupConfigurationResults) => {
-                        if (backupsList.Results.length) {
-                            const backupTask = backupsList.Results[0];
+                    .done((backupsList: Raven.Server.Web.System.ServerWideBackupConfigurationForStudio[]) => {
+                        if (backupsList.length) {
+                            const backupTask = backupsList[0];
                             if (this.serverConfiguration().LocalRootPath && backupTask.LocalSettings.FolderPath && backupTask.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
                                 backupTask.LocalSettings.FolderPath = backupTask.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                             }
