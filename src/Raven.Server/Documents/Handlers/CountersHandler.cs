@@ -174,40 +174,48 @@ namespace Raven.Server.Documents.Handlers
 
                     docId = counterOperation.DocumentId;
 
-                    try
-                    {
-                        doc = _database.DocumentsStorage.Get(context, docId, throwOnConflict: true);
-                        if (doc == null)
-                        {
-                            if (_fromEtl)
-                                return;
-                            ThrowMissingDocument(docId);
-                            return; // never hit
-                        }
-
-                        if (doc.Flags.HasFlag(DocumentFlags.Artificial))
-                            ThrowArtificialDocument(doc);
-
-                        docCollection = CollectionName.GetCollectionName(doc.Data);
-                    }
-                    catch (DocumentConflictException)
-                    {
-                        if (_fromEtl)
-                            return;
-
-                        // this is fine, we explicitly support
-                        // setting the flag if we are in conflicted state is 
-                        // done by the conflict resolver
-
-                        // avoid loading same document again, we validate write using the metadata instance
-                        doc = new Document();
-                        docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, docId);
-                    }
+                    docCollection = GetDocumentCollection(docId, _database, context, _fromEtl, out doc);
                 }
 
                 ApplyChangesForPreviousDocument(context, doc, docId, countersToAdd, countersToRemove);
 
                 return _list.Count;
+            }
+
+            public static string GetDocumentCollection(string docId, DocumentDatabase documentDatabase, DocumentsOperationContext context, bool fromEtl, out Document doc)
+            {
+                try
+                {
+                    doc = documentDatabase.DocumentsStorage.Get(context, docId, throwOnConflict: true);
+                    if (doc == null)
+                    {
+                        if (fromEtl)
+                            return null;
+
+                        ThrowMissingDocument(docId);
+                        return null; // never hit
+                    }
+
+                    if (doc.Flags.HasFlag(DocumentFlags.Artificial))
+                        ThrowArtificialDocument(doc);
+
+                    return CollectionName.GetCollectionName(doc.Data);
+                }
+                catch (DocumentConflictException)
+                {
+                    doc = null;
+
+                    if (fromEtl)
+                        return null;
+
+                    // this is fine, we explicitly support
+                    // setting the flag if we are in conflicted state is 
+                    // done by the conflict resolver
+
+                    // avoid loading same document again, we validate write using the metadata instance
+                    doc = new Document();
+                    return documentDatabase.DocumentsStorage.ConflictsStorage.GetCollection(context, docId);
+                }
             }
 
             private void ApplyChangesForPreviousDocument(DocumentsOperationContext context, Document doc, string docId, SortedSet<string> countersToAdd, HashSet<string> countersToRemove)

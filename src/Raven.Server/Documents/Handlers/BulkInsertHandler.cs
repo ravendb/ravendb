@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
@@ -34,8 +35,10 @@ namespace Raven.Server.Documents.Handlers
             var progress = new BulkInsertProgress();
             try
             {
+
                 var logger = LoggingSource.Instance.GetLogger<MergedInsertBulkCommand>(Database.Name);
                 IDisposable currentCtxReset = null, previousCtxReset = null;
+
                 try
                 {
                     using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -96,7 +99,7 @@ namespace Raven.Server.Documents.Handlers
                                     if (commandData.Type == CommandType.None)
                                         break;
 
-                                    totalSize += commandData.Document.Size;
+                                    totalSize += GetSize(commandData, Database);
                                     if (numberOfCommands >= array.Length)
                                         Array.Resize(ref array, array.Length * 2);
                                     array[numberOfCommands++] = commandData;
@@ -143,6 +146,46 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private int? _changeVectorSize;
+
+        private long GetSize(BatchRequestParser.CommandData commandData, DocumentDatabase documentDatabase)
+        {
+            switch (commandData.Type)
+            {
+                case CommandType.PUT:
+                    return commandData.Document.Size;
+                case CommandType.Counters:
+                    long size = 0;
+                    foreach (var operation in commandData.Counters.Operations)
+                    {
+                        size += operation.CounterName.Length
+                                + sizeof(long) // etag 
+                                + sizeof(long) // counter value
+                                + GetChangeVectorSize() // estimated change vector size
+                                + 10; // estimated collection name size
+                    }
+
+                    return size;
+                default:
+                    throw new ArgumentOutOfRangeException($"'{commandData.Type}' isn't supported");
+            }
+
+
+            int GetChangeVectorSize()
+            {
+                if (_changeVectorSize.HasValue)
+                    return _changeVectorSize.Value;
+
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                    _changeVectorSize = Encoding.UTF8.GetBytes(databaseChangeVector).Length;
+                    return _changeVectorSize.Value;
+                }
+            }
+        }
+
         private IDisposable ReplaceContextIfCurrentlyInUse(Task<BatchRequestParser.CommandData> task, int numberOfCommands, BatchRequestParser.CommandData[] array)
         {
             if (task.IsCompleted)
@@ -178,37 +221,58 @@ namespace Raven.Server.Documents.Handlers
                 for (int i = 0; i < NumberOfCommands; i++)
                 {
                     var cmd = Commands[i];
-                    Debug.Assert(cmd.Type == CommandType.PUT);
-                    try
-                    {
-                        Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
-                    }
-                    catch (Voron.Exceptions.VoronConcurrencyErrorException)
-                    {
-                        // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
-                        // this means that we have existing values under the current etag
-                        // we'll generate a new (random) id for them. 
 
-                        // The TransactionMerger will re-run us when we ask it to as a 
-                        // separate transaction
+                    Debug.Assert(cmd.Type == CommandType.PUT || cmd.Type == CommandType.Counters);
 
-                        for (; i < NumberOfCommands; i++)
+                    if (cmd.Type == CommandType.PUT)
+                    {
+                        try
                         {
-                            cmd = Commands[i];
-                            if (cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
-                            {
-                                cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
-                                RetryOnError = true;
-                            }
+                            Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
                         }
+                        catch (Voron.Exceptions.VoronConcurrencyErrorException)
+                        {
+                            // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                            // this means that we have existing values under the current etag
+                            // we'll generate a new (random) id for them. 
 
-                        throw;
+                            // The TransactionMerger will re-run us when we ask it to as a 
+                            // separate transaction
+
+                            for (; i < NumberOfCommands; i++)
+                            {
+                                cmd = Commands[i];
+                                if (cmd.Type != CommandType.PUT)
+                                    continue;
+
+                                if (cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
+                                {
+                                    cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
+                                    RetryOnError = true;
+                                }
+                            }
+
+                            throw;
+                        }
+                    }
+                    else if (cmd.Type == CommandType.Counters)
+                    {
+                        var collection = CountersHandler.ExecuteCounterBatchCommand.GetDocumentCollection(cmd.Id, Database, context, fromEtl: false, out _);
+
+                        foreach (var counterOperation in cmd.Counters.Operations)
+                        {
+                            counterOperation.DocumentId = cmd.Counters.DocumentId;
+                            Database.DocumentsStorage.CountersStorage.IncrementCounter(
+                                context, cmd.Id, collection, counterOperation.CounterName, counterOperation.Delta, out _);
+                        }
                     }
                 }
+
                 if (Logger.IsInfoEnabled)
                 {
                     Logger.Info($"Merged {NumberOfCommands:#,#;;0} operations ({Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb)");
                 }
+
                 return NumberOfCommands;
             }
 
