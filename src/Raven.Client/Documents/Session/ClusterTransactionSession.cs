@@ -46,8 +46,6 @@ namespace Raven.Client.Documents.Session
         {
             if (key is null)
                 throw new ArgumentNullException(nameof(key));
-            if (item is null)
-                throw new ArgumentNullException(nameof(item));
 
             if (TryGetCompareExchangeValueFromSession(key, out var sessionValue) == false)
                 _state[key] = sessionValue = new CompareExchangeSessionValue(key, 0, CompareExchangeSessionValue.CompareExchangeValueState.None);
@@ -179,7 +177,12 @@ namespace Raven.Client.Documents.Session
         {
             Debug.Assert(value != null, "value != null");
 
-            return _state[value.Key] = new CompareExchangeSessionValue(value);
+            if (_state.TryGetValue(value.Key, out var sessionValue) == false)
+                return _state[value.Key] = new CompareExchangeSessionValue(value);
+
+            sessionValue.UpdateValue(value, _session.JsonSerializer);
+
+            return sessionValue;
         }
 
         private bool TryGetCompareExchangeValueFromSession(string key, out CompareExchangeSessionValue value)
@@ -233,7 +236,7 @@ namespace Raven.Client.Documents.Session
             }
 
             public CompareExchangeSessionValue(CompareExchangeValue<BlittableJsonReaderObject> value)
-                : this(value.Key, value.Index, value.Index > 0 ? CompareExchangeValueState.None : CompareExchangeValueState.Missing)
+                : this(value.Key, value.Index, value.Index >= 0 ? CompareExchangeValueState.None : CompareExchangeValueState.Missing)
             {
                 if (value.Index > 0)
                     _originalValue = value;
@@ -312,7 +315,12 @@ namespace Raven.Client.Documents.Session
                         if (_value == null)
                             return null;
 
-                        var entityJson = (BlittableJsonReaderObject)EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value.Value, conventions, context, jsonSerializer, documentInfo: null, removeIdentityProperty: false);
+                        var entity = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value.Value, conventions, context, jsonSerializer, documentInfo: null, removeIdentityProperty: false);
+                        var entityJson = entity as BlittableJsonReaderObject;
+                        BlittableJsonReaderObject entityToInsert = null;
+                        if (entityJson == null)
+                            entityJson = entityToInsert = ConvertEntity(_key, entity);
+
                         var newValue = new CompareExchangeValue<BlittableJsonReaderObject>(_key, _index, entityJson);
 
                         var hasChanged = _originalValue == null || HasChanged(_originalValue, newValue);
@@ -321,19 +329,25 @@ namespace Raven.Client.Documents.Session
                         if (hasChanged == false)
                             return null;
 
-                        var djv = new DynamicJsonValue
-                        {
-                            [Constants.CompareExchange.ObjectFieldName] = entityJson
-                        };
-                        var blittable = context.ReadObject(djv, newValue.Key);
+                        if (entityToInsert == null)
+                            entityToInsert = ConvertEntity(_key, entity);
 
-                        return new PutCompareExchangeCommandData(newValue.Key, blittable, newValue.Index);
+                        return new PutCompareExchangeCommandData(newValue.Key, entityToInsert, newValue.Index);
                     case CompareExchangeValueState.Deleted:
                         return new DeleteCompareExchangeCommandData(_key, _index);
                     case CompareExchangeValueState.Missing:
                         return null;
                     default:
                         throw new NotSupportedException($"Not supprted state: '{_state}'");
+                }
+
+                BlittableJsonReaderObject ConvertEntity(string key, object entity)
+                {
+                    var djv = new DynamicJsonValue
+                    {
+                        [Constants.CompareExchange.ObjectFieldName] = entity
+                    };
+                    return context.ReadObject(djv, key);
                 }
             }
 
@@ -372,6 +386,22 @@ namespace Raven.Client.Documents.Session
 
                 if (_value != null)
                     _value.Index = index;
+            }
+
+            internal void UpdateValue(CompareExchangeValue<BlittableJsonReaderObject> value, JsonSerializer jsonSerializer)
+            {
+                _index = value.Index;
+                _state = value.Index >= 0 ? CompareExchangeValueState.None : CompareExchangeValueState.Missing;
+
+                _originalValue = value;
+
+                if (_value != null)
+                {
+                    _value.Index = _index;
+
+                    if (_value.Value != null)
+                        EntityToBlittable.PopulateEntity(_value.Value, value.Value, jsonSerializer);
+                }
             }
         }
     }

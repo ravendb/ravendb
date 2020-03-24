@@ -266,10 +266,18 @@ namespace Raven.Client.Documents.Session
 
         internal void PopulateEntity(object entity, LazyStringValue id, BlittableJsonReaderObject document, JsonSerializer serializer)
         {
-            if (entity == null)
-                throw new ArgumentNullException(nameof(entity));
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
+
+            PopulateEntity(entity, document, serializer);
+
+            _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+        }
+
+        internal static void PopulateEntity(object entity, BlittableJsonReaderObject document, JsonSerializer serializer)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
             if (document == null)
                 throw new ArgumentNullException(nameof(document));
             if (serializer == null)
@@ -285,13 +293,11 @@ namespace Raven.Client.Documents.Session
                     reader.Init(document);
 
                     serializer.Populate(reader, entity);
-
-                    _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Could not populate entity {id}", ex);
+                throw new InvalidOperationException($"Could not populate entity.", ex);
             }
             finally
             {
@@ -407,7 +413,7 @@ namespace Raven.Client.Documents.Session
                     return null;
 
                 return enumerableInterface.GenericTypeArguments[0];
-        }
+            }
         }
 
         private static bool ShouldSimplifyJsonBasedOnType(string typeValue)
