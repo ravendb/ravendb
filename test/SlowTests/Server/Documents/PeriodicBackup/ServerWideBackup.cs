@@ -381,7 +381,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(1, record2.PeriodicBackups.Count);
                 Assert.Equal($"{ServerWideBackupConfiguration.NamePrefix}, {putConfiguration.GetDefaultTaskName()} #2", record2.PeriodicBackups.First().Name);
 
-                await store.Maintenance.Server.SendAsync(new DeleteServerWideBackupConfigurationOperation(result2.Name));
+                await store.Maintenance.Server.SendAsync(new DeleteServerWideTaskOperation(result2.Name, OngoingTaskType.Backup));
                 serverWideBackupConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result2.Name));
                 Assert.Null(serverWideBackupConfiguration);
                 serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
