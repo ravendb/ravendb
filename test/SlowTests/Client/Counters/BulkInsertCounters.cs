@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -174,6 +175,17 @@ namespace SlowTests.Client.Counters
                     }
                 });
                 Assert.Equal("An ongoing bulk insert operation of type 'Counters' is already running Did you forget to Dispose() the command?", disposeError.Message);
+                
+                disposeError = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    using (var bulkInsert = store.BulkInsert())
+                    {
+                        var countersBulkInsert = bulkInsert.CountersFor("test");
+                        countersBulkInsert.Dispose();
+                        countersBulkInsert.Increment("votes", 1000);
+                    }
+                });
+                Assert.Equal($"Cannot increment counter 'votes' because {nameof(BulkInsertOperation.CountersBulkInsert)} was already disposed", disposeError.Message);
 
                 var argumentError = Assert.Throws<ArgumentException>(() =>
                 {
