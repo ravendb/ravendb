@@ -1,7 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import endpoints = require("endpoints");
-import configuration = require("configuration");
 
 class toggleDisableIndexingCommand extends commandBase {
 
@@ -9,29 +8,22 @@ class toggleDisableIndexingCommand extends commandBase {
         super();
     }
 
-    private updateDocument(basicUrl: string, databaseConfigDocument: documentDto): JQueryPromise<void> {
-        this.start ? delete databaseConfigDocument["Settings"][configuration.indexing.disabled] :
-            databaseConfigDocument["Settings"][configuration.indexing.disabled] = true;
+    execute(): JQueryPromise<void> {
+        const args = {
+            enable: this.start
+        }
 
-        const jQueryOptions: JQueryAjaxSettings = {
-            headers: { "ETag": databaseConfigDocument["Etag"] }
-        };
+        const url = endpoints.global.adminDatabases.adminDatabasesIndexing + this.urlEncodeArgs(args);
 
-        return this.put<void>(basicUrl, JSON.stringify(databaseConfigDocument), null, jQueryOptions)
+        const payload = {
+            DatabaseNames: [this.db.name]
+        } as Raven.Client.ServerWide.Operations.ToggleDatabasesStateOperation.Parameters;
+
+        return this.post(url, JSON.stringify(payload))
             .done(() => {
                 const state = this.start ? "Enabled" : "Disabled";
                 this.reportSuccess(`Indexing is ${state}`);
             }).fail((response: JQueryXHR) => this.reportError("Failed to toggle indexing status", response.responseText));
-    }
-
-    execute(): JQueryPromise<void> {
-        const args = {
-            "name": this.db.name
-        };
-        const basicUrl = endpoints.global.adminDatabases.adminDatabases + this.urlEncodeArgs(args);
-
-        return this.query(basicUrl, null).then((databaseConfigDocument: documentDto) => 
-            this.updateDocument(basicUrl, databaseConfigDocument));
     }
 }
 

@@ -26,6 +26,10 @@ function BuildServer ( $srcDir, $outDir, $target, $debug) {
         $commandArgs += "/p:Platform=$($target.Arch)"
     }
 
+    if (!$target) {
+        $commandArgs += "/p:UseAppHost=false"
+    }
+
     $commandArgs += '/p:SourceLinkCreate=true'
 
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"

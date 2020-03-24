@@ -279,10 +279,14 @@ namespace Raven.Server.Web.System
                 var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbRecordBlittable);
                 var db = online ? dbTask.Result : null;
 
-                var indexingStatus = db?.IndexStore?.Status ?? IndexRunningStatus.Running;
-                // Looking for disabled indexing flag inside the database settings for offline database status
-                if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
-                    indexingStatus = IndexRunningStatus.Disabled;
+                var indexingStatus = db?.IndexStore?.Status;
+                if (indexingStatus == null)
+                {
+                    // Looking for disabled indexing flag inside the database settings for offline database status
+                    if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && 
+                        bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
+                        indexingStatus = IndexRunningStatus.Disabled;
+                }
 
                 var disabled = dbRecord.Disabled;
                 var topology = dbRecord.Topology;
@@ -391,7 +395,7 @@ namespace Raven.Server.Web.System
                     HasExpirationConfiguration = (db?.ExpiredDocumentsCleaner?.ExpirationConfiguration?.Disabled ?? true) == false, 
                     HasRefreshConfiguration = (db?.ExpiredDocumentsCleaner?.RefreshConfiguration?.Disabled ?? true) == false,
                     IndexesCount = db?.IndexStore?.GetIndexes()?.Count() ?? 0,
-                    IndexingStatus = indexingStatus,
+                    IndexingStatus = indexingStatus ?? IndexRunningStatus.Running,
                     Environment = studioEnvironment,
 
                     NodesTopology = nodesTopology,

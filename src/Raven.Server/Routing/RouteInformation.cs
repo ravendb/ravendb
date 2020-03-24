@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using StringSegment = Sparrow.StringSegment;
 
@@ -122,7 +123,24 @@ namespace Raven.Server.Routing
                 if (context.Database == null)
                     DatabaseDoesNotExistException.Throw(databaseName.Value);
 
-                return context.Database?.DatabaseShutdown.IsCancellationRequested == false
+                // ReSharper disable once PossibleNullReferenceException
+                if (context.Database.DatabaseShutdownCompleted.IsSet)
+                {
+                    using (context.RavenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        if (context.RavenServer.ServerStore.Cluster.DatabaseExists(ctx, databaseName.Value))
+                        {
+                            // db got disabled during loading
+                            throw new DatabaseDisabledException($"Cannot complete the request, because {databaseName.Value} has been disabled.");
+                        }
+                    }
+
+                    // db got deleted during loading
+                    DatabaseDoesNotExistException.ThrowWithMessage(databaseName.Value, "Cannot complete the request.");
+                }
+
+                return context.Database.DatabaseShutdown.IsCancellationRequested == false
                     ? Task.CompletedTask
                     : UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
             }

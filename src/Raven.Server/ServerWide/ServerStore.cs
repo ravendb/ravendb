@@ -1017,6 +1017,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AddDatabaseCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Put));
                     break;
+                case nameof(ToggleDatabasesStateCommand):
                 case nameof(UpdateTopologyCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Update));
                     break;
@@ -1704,6 +1705,18 @@ namespace Raven.Server.ServerWide
             }
             var editExpiration = new EditRefreshCommand(refresh, databaseName, raftRequestId);
             return SendToLeaderAsync(editExpiration);
+        }
+
+        public Task<(long Index, object Result)> ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType toggleType, string[] databaseNames, bool disable, string raftRequestId)
+        {
+            var command = new ToggleDatabasesStateCommand(new ToggleDatabasesStateCommand.Parameters
+            {
+                Type = toggleType,
+                DatabaseNames = databaseNames,
+                Disable = disable
+            }, raftRequestId);
+
+            return SendToLeaderAsync(command);
         }
 
         public Task<(long Index, object Result)> PutServerWideBackupConfigurationAsync(ServerWideBackupConfiguration configuration, string raftRequestId)

@@ -5,11 +5,14 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Dynamic;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 using FastTests;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Raven.Client.Exceptions.Documents.Session;
 using Xunit;
 
@@ -76,6 +79,55 @@ namespace SlowTests.Core.Session
             }
         }
 
+        [Fact]
+        public void StoreDynamic_WhenProvideDelegateForDynamicCollectionAndType_ShouldUseIt()
+        {
+            using (var store = GetDocumentStore(new Options()
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.AddIdFieldToDynamicObjects = false;
+                    s.Conventions.FindCollectionNameForDynamic = (entity) =>
+                    {
+                        var dicEntity = (IDictionary<string, object>)entity;
+                        var dicMetadata = (IDictionary<string, object>)dicEntity["@metadata"];
+                        return (string)dicMetadata["@collection"];
+                    };
+                    s.Conventions.FindClrTypeNameForDynamic = (entity) => 
+                    {
+                        var dicEntity = (IDictionary<string, object>)entity;
+                        var dicMetadata = (IDictionary<string, object>)dicEntity["@metadata"];
+                        return (string)dicMetadata["Raven-Clr-Type"];
+                    };
+                }
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    var str = @"
+{
+    ""heading"": ""Hello, world ⭐️"",
+    ""@metadata"": {
+        ""@collection"": ""homes"",
+        ""Raven-Clr-Type"": ""Brickpile.Web.Models.Home, Brickpile.Web""
+    }
+}";
+                    var expConverter = new ExpandoObjectConverter();
+                    var o = JsonConvert.DeserializeObject<ExpandoObject>(str, expConverter);
+                    session.Store(o, "o/1");
+                    session.SaveChanges();
+
+                    var d = session.Load<ExpandoObject>("o/1");
+                    var dic = (IDictionary<string, object>)d;
+                    var m = (IDictionary<string, object>)dic["@metadata"];
+
+                    IDictionary<string, object> metadata = session.Advanced.GetMetadataFor(d);
+                    Assert.Equal(m["@collection"], metadata["@collection"]);
+                    Assert.Equal(m["Raven-Clr-Type"], metadata["Raven-Clr-Type"]);
+                }
+            }
+        }
+        
         [Fact]
         public async Task CanDelete()
         {

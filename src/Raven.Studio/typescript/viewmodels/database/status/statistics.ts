@@ -57,7 +57,7 @@ class statistics extends viewModelBase {
 
         popoverUtils.longWithHover($(".js-identities-header"),
             {
-                content: "<div>Identities allows you to have consecutive IDs across the cluster.</div>"
+                content: "<div>Identities allow you to have consecutive IDs across the cluster.</div>"
             });
     }
 

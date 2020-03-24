@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, string collectionName, bool isMapReduce)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException("You can't use an async query from a sync session");
         }
 
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()

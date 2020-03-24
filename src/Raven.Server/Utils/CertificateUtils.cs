@@ -187,7 +187,9 @@ namespace Raven.Server.Utils
             }
 
             // Serial Number
-            var serialNumber = new BigInteger(20 * BitsPerByte, random);
+            var serialNumberBytes = new byte[20];
+            random.NextBytes(serialNumberBytes);
+            var serialNumber = new BigInteger(serialNumberBytes).Abs();
             certificateGenerator.SetSerialNumber(serialNumber);
             log?.AppendLine($"serialNumber = {serialNumber}");
 
