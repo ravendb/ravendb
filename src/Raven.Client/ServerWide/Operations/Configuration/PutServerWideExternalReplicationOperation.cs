@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    public class PutServerWideExternalReplicationOperation : IServerOperation<PutServerWideConfigurationResponse>
+    public class PutServerWideExternalReplicationOperation : IServerOperation<ServerWideTaskResponse>
     {
         private readonly ServerWideExternalReplication _configuration;
 
@@ -19,12 +19,12 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
-        public RavenCommand<PutServerWideConfigurationResponse> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ServerWideTaskResponse> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PutServerWideExternalReplicationCommand(context, _configuration);
         }
 
-        private class PutServerWideExternalReplicationCommand : RavenCommand<PutServerWideConfigurationResponse>, IRaftCommand
+        private class PutServerWideExternalReplicationCommand : RavenCommand<ServerWideTaskResponse>, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _configuration;
 

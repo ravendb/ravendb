@@ -63,7 +63,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
         }
     }
 
-    public class PutServerWideConfigurationResponse : IDynamicJson
+    public class ServerWideTaskResponse : IDynamicJson
     {
         public string Name { get; set; }
 
@@ -79,8 +79,8 @@ namespace Raven.Client.ServerWide.Operations.Configuration
         }
     }
 
-    public class PutServerWideBackupConfigurationResponse : PutServerWideConfigurationResponse
+    public class PutServerWideBackupConfigurationResponse : ServerWideTaskResponse
     {
-
+        // for backward compatibility
     }
 }

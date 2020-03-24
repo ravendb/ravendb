@@ -1,26 +1,27 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization;
+using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    public class GetServerWideBackupConfigurationsOperation : IServerOperation<ServerWideBackupConfiguration[]>
+    public class GetServerWideExternalReplicationsOperation : IServerOperation<ServerWideExternalReplication[]>
     {
-        public RavenCommand<ServerWideBackupConfiguration[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ServerWideExternalReplication[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetServerWideBackupConfigurationsCommand();
+            return new GetServerWideExternalReplicationsCommand();
         }
 
-        private class GetServerWideBackupConfigurationsCommand : RavenCommand<ServerWideBackupConfiguration[]>
+        private class GetServerWideExternalReplicationsCommand : RavenCommand<ServerWideExternalReplication[]>
         {
             public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/configuration/server-wide/tasks?type={OngoingTaskType.Backup}";
+                url = $"{node.Url}/admin/configuration/server-wide/tasks?type={OngoingTaskType.Replication}";
 
                 var request = new HttpRequestMessage
                 {
@@ -35,7 +36,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                 if (response == null)
                     return;
 
-                Result = JsonDeserializationClient.GetServerWideBackupConfigurationsResponse(response).Results;
+                Result = JsonDeserializationClient.GetServerWideExternalReplicationResponse(response).Results;
             }
         }
     }
