@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
                                     token.ThrowIfCancellationRequested();
 
                                     // if we are going to wait on the network, flush immediately
-                                    if ((task.IsCompleted == false && numberOfCommands > 0) ||
+                                    if ((task.Wait(5) == false && numberOfCommands > 0) ||
                                         // but don't batch too much anyway
                                         totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
                                     {

@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.Utils.IoMetrics;
 using Sparrow.Server.Meters;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -82,5 +84,65 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
+        public void CanCleanExpiredMetrics()
+        {
+            var files = new List<string>(new[] { "file1.txt", "file2.txt", "file3.txt" });
+
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            {
+                var envWithType = new StorageEnvironmentWithType("test", StorageEnvironmentWithType.StorageEnvironmentType.Documents, env);
+
+                foreach (var fileName in files)
+                {
+                    for (var i = 0; i < 2 * 256; i++)
+                    {
+                        var now = DateTime.UtcNow.AddHours(-7);
+                        var meterIoRate = env.Options.IoMetrics.MeterIoRate(fileName, IoMetrics.MeterType.JournalWrite, i + 1);
+                        var durationMeasurement = new IoMeterBuffer.DurationMeasurement(meterIoRate.Parent, IoMetrics.MeterType.JournalWrite, i + 1, 0, null)
+                        {
+                            Start = now,
+                            End = now.AddMilliseconds(2)
+                        };
+                        meterIoRate.Parent.Mark(ref durationMeasurement);
+                    }
+                }
+
+                CheckMetricFiles(env, files, checkForNull: false);
+
+                IEnumerable<StorageEnvironmentWithType> environments = new[] { envWithType };
+                IoMetricsUtil.CleanIoMetrics(environments, DateTime.UtcNow.Ticks);
+
+                CheckMetricFiles(env, files, checkForNull: true);
+            }
+        }
+
+        private void CheckMetricFiles(StorageEnvironment env, List<string> files, bool checkForNull)
+        {
+            foreach (var fileName in files)
+            {
+                var file = env.Options.IoMetrics.Files.First(x => x.FileName == fileName);
+                var items = file.JournalWrite.GetCurrentItems().ToList();
+                var summarizedItems = file.JournalWrite.GetSummerizedItems().ToList();
+
+                if (checkForNull == false)
+                {
+                    foreach (var item in items)
+                    {
+                        Assert.NotNull(item);
+                    }
+
+                    foreach (var item in summarizedItems)
+                    {
+                        Assert.NotNull(item);
+                    }
+                }
+                else
+                {
+                    Assert.Equal(0, items.Count);
+                    Assert.Equal(0, summarizedItems.Count);
+                }
+            }
+        }
     }
 }

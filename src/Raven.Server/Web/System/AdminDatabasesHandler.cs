@@ -31,7 +31,6 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -51,9 +50,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
 using Voron.Util.Settings;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -840,6 +837,24 @@ namespace Raven.Server.Web.System
             await ToggleDisableDatabases(disable: false);
         }
 
+        [RavenAction("/admin/databases/indexing", "POST", AuthorizationStatus.Operator)]
+        public async Task ToggleIndexing()
+        {
+            var raftRequestId = GetRaftRequestIdFromQuery();
+            var enable = GetBoolValueQueryString("enable") ?? true;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "indexes/toggle");
+                var parameters = JsonDeserializationServer.Parameters.DisableDatabaseToggleParameters(json);
+
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.Indexes, parameters.DatabaseNames, enable == false, $"{raftRequestId}");
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                NoContentStatus();
+            }
+        }
+
         [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.Operator)]
         public async Task ToggleDynamicDatabaseDistribution()
         {
@@ -847,31 +862,16 @@ namespace Raven.Server.Web.System
             var enable = GetBoolValueQueryString("enable") ?? true;
             var raftRequestId = GetRaftRequestIdFromQuery();
 
+            if (enable &&
+                Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)
+            {
+                throw licenseLimit;
+            }
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                DatabaseRecord databaseRecord;
-                long index;
-                using (context.OpenReadTransaction())
-                    databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out index);
-
-                if (databaseRecord.Encrypted)
-                {
-                    throw new InvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: " + name);
-                }
-
-                if (enable == databaseRecord.Topology.DynamicNodesDistribution)
-                    return;
-
-                if (enable &&
-                    Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)
-                {
-                    throw licenseLimit;
-                }
-
-                databaseRecord.Topology.DynamicNodesDistribution = enable;
-
-                var (commandResultIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
-                await ServerStore.Cluster.WaitForIndexNotification(commandResultIndex);
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution, new []{name}, enable == false, $"{raftRequestId}");
+                await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 NoContentStatus();
             }
@@ -886,49 +886,35 @@ namespace Raven.Server.Web.System
 
                 var resultList = new List<DynamicJsonValue>();
                 var raftRequestId = GetRaftRequestIdFromQuery();
+
                 foreach (var name in parameters.DatabaseNames)
                 {
-                    DatabaseRecord databaseRecord;
                     using (context.OpenReadTransaction())
-                        databaseRecord = ServerStore.Cluster.ReadDatabase(context, name);
-
-                    if (databaseRecord == null)
                     {
-                        resultList.Add(new DynamicJsonValue
+                        var databaseExists = ServerStore.Cluster.DatabaseExists(context, name);
+                        if (databaseExists == false)
                         {
-                            ["Name"] = name,
-                            ["Success"] = false,
-                            ["Reason"] = "database not found"
-                        });
-                        continue;
+                            resultList.Add(new DynamicJsonValue
+                            {
+                                ["Name"] = name,
+                                ["Success"] = false,
+                                ["Reason"] = "database not found"
+                            });
+                            continue;
+                        }
                     }
-
-                    if (databaseRecord.Disabled == disable)
-                    {
-                        var state = disable ? "disabled" : "enabled";
-                        resultList.Add(new DynamicJsonValue
-                        {
-                            ["Name"] = name,
-                            ["Success"] = true, //even if we have nothing to do, no reason to return failure status
-                            ["Disabled"] = disable,
-                            ["Reason"] = $"Database already {state}"
-                        });
-                        continue;
-                    }
-
-                    databaseRecord.Disabled = disable;
-
-                    var (index, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null, $"{raftRequestId}/{name}");
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     resultList.Add(new DynamicJsonValue
                     {
                         ["Name"] = name,
                         ["Success"] = true,
                         ["Disabled"] = disable,
-                        ["Reason"] = $"Database state={databaseRecord.Disabled} was propagated on the cluster"
+                        ["Reason"] = $"Database state={disable} was propagated on the cluster"
                     });
                 }
+
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.Databases, parameters.DatabaseNames, disable, $"{raftRequestId}");
+                await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

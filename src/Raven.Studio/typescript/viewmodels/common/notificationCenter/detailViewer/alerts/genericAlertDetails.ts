@@ -3,6 +3,7 @@ import abstractNotification = require("common/notifications/models/abstractNotif
 import notificationCenter = require("common/notifications/notificationCenter");
 import alert = require("common/notifications/models/alert");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
+import generalUtils = require("common/generalUtils");
 
 class genericAlertDetails extends abstractAlertDetails {
 
@@ -13,7 +14,8 @@ class genericAlertDetails extends abstractAlertDetails {
     message = ko.pureComputed(() => {
         const details = this.alert.details() as Raven.Server.NotificationCenter.Notifications.Details.MessageDetails;
         if ("Message" in details) {
-            return details.Message;
+            const escapedMessage = generalUtils.escapeHtml(details.Message);
+            return generalUtils.nl2br(escapedMessage);
         }
         return null;
     });
