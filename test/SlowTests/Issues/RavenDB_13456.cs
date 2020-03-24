@@ -162,8 +162,6 @@ namespace SlowTests.Issues
                     var company = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Company>("company:");
                     company.Value.Name = "HR";
 
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(company);
-
                     session.SaveChanges();
                 }
 

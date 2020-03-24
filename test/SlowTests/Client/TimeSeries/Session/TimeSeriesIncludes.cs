@@ -51,8 +51,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     // should not go to server
                     var values = session.TimeSeriesFor(order, "Heartrate")
                         .Get(DateTime.MinValue, DateTime.MaxValue)
-                        .ToList(); 
-                    
+                        .ToList();
+
                     Assert.Equal(3, values.Count);
 
                     Assert.Equal(1, values[0].Values.Length);
@@ -147,7 +147,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{ Name = "Oren" }, "users/ayende");
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
@@ -551,7 +551,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     Assert.Equal(0, vals.Count);
-                    
+
                     Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out var cache));
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(1, ranges.Count);
@@ -679,7 +679,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Oren", WorksAt = "companies/1"}, "users/ayende");
+                    session.Store(new User { Name = "Oren", WorksAt = "companies/1" }, "users/ayende");
                     session.Store(new Company { Name = "HR" }, "companies/1");
 
                     session.SaveChanges();
@@ -1942,7 +1942,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
                     var company = session.Load<Company>(result[0].WorksAt);
-                    
+
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                     Assert.Equal("HR", company.Name);
 
@@ -1975,12 +1975,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 }))
                 {
                     var cmpxchg = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>("names/ayende");
-
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(
-                        new CompareExchangeValue<string>(
-                            "names/ayende",
-                            cmpxchg.Index,
-                            "Rahien"));
+                    cmpxchg.Value = "Rahien";
 
                     session.SaveChanges();
                 }
@@ -2037,7 +2032,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
             public string WorksAt { get; set; }
 
-            public string Id { get; set;  }
+            public string Id { get; set; }
 
         }
     }

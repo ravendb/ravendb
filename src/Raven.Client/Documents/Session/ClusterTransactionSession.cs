@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Session
 {
@@ -25,25 +30,7 @@ namespace Raven.Client.Documents.Session
     {
         private readonly InMemoryDocumentSessionOperations _session;
 
-        public class StoredCompareExchange
-        {
-            public readonly object Entity;
-            public readonly long Index;
-
-            public StoredCompareExchange(long index, object entity)
-            {
-                Entity = entity;
-                Index = index;
-            }
-        }
-
-        private Dictionary<string, StoredCompareExchange> _storeCompareExchange;
-        public Dictionary<string, StoredCompareExchange> StoreCompareExchange => _storeCompareExchange;
-
-        private Dictionary<string, long> _deleteCompareExchange;
-        public Dictionary<string, long> DeleteCompareExchange => _deleteCompareExchange;
-
-        internal bool HasCommands => _deleteCompareExchange != null || _storeCompareExchange != null;
+        private readonly Dictionary<string, CompareExchangeSessionValue> _state = new Dictionary<string, CompareExchangeSessionValue>(StringComparer.OrdinalIgnoreCase);
 
         protected ClusterTransactionOperationsBase(InMemoryDocumentSessionOperations session)
         {
@@ -57,49 +44,42 @@ namespace Raven.Client.Documents.Session
 
         public void CreateCompareExchangeValue<T>(string key, T item)
         {
-            if (_storeCompareExchange == null)
-                _storeCompareExchange = new Dictionary<string, StoredCompareExchange>();
+            if (key is null)
+                throw new ArgumentNullException(nameof(key));
+            if (item is null)
+                throw new ArgumentNullException(nameof(item));
 
-            EnsureNotDeleted(key);
-            EnsureNotStored(key);
+            if (TryGetCompareExchangeValueFromSession(key, out var sessionValue) == false)
+                _state[key] = sessionValue = new CompareExchangeSessionValue(key, 0, CompareExchangeSessionValue.CompareExchangeValueState.None);
 
-            _storeCompareExchange[key] = new StoredCompareExchange(0, item);
-        }
-
-        public void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item)
-        {
-            EnsureNotDeleted(item.Key);
-
-            if (_storeCompareExchange == null)
-                _storeCompareExchange = new Dictionary<string, StoredCompareExchange>();
-
-            _storeCompareExchange[item.Key] = new StoredCompareExchange(item.Index, item.Value);
+            sessionValue.Create(item);
         }
 
         public void DeleteCompareExchangeValue<T>(CompareExchangeValue<T> item)
         {
-            EnsureNotStored(item.Key);
+            if (item is null)
+                throw new ArgumentNullException(nameof(item));
 
-            if (_deleteCompareExchange == null)
-                _deleteCompareExchange = new Dictionary<string, long>();
+            if (TryGetCompareExchangeValueFromSession(item.Key, out var sessionValue) == false)
+                _state[item.Key] = sessionValue = new CompareExchangeSessionValue(item.Key, 0, CompareExchangeSessionValue.CompareExchangeValueState.None);
 
-            _deleteCompareExchange[item.Key] = item.Index;
+            sessionValue.Delete(item.Index);
         }
 
         public void DeleteCompareExchangeValue(string key, long index)
         {
-            EnsureNotStored(key);
+            if (key is null)
+                throw new ArgumentNullException(nameof(key));
 
-            if (_deleteCompareExchange == null)
-                _deleteCompareExchange = new Dictionary<string, long>();
+            if (TryGetCompareExchangeValueFromSession(key, out var sessionValue) == false)
+                _state[key] = sessionValue = new CompareExchangeSessionValue(key, 0, CompareExchangeSessionValue.CompareExchangeValueState.None);
 
-            _deleteCompareExchange[key] = index;
+            sessionValue.Delete(index);
         }
 
         public void Clear()
         {
-            _deleteCompareExchange = null;
-            _storeCompareExchange = null;
+            _state.Clear();
         }
 
         protected async Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key, CancellationToken token = default)
@@ -109,33 +89,74 @@ namespace Raven.Client.Documents.Session
 
             using (_session.AsyncTaskHolder())
             {
-                var value = await _session.Operations.SendAsync(new GetCompareExchangeValueOperation<BlittableJsonReaderObject>(key), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+                _session.IncrementRequestCount();
 
+                var value = await _session.Operations.SendAsync(new GetCompareExchangeValueOperation<BlittableJsonReaderObject>(key), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+                if (value == null)
+                {
+                    RegisterMissingCompareExchangeValue(key);
+                    return null;
+                }
+
+                sessionValue = RegisterCompareExchangeValue(value);
+                return sessionValue?.GetValue<T>(_session.Conventions);
             }
         }
 
         protected async Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesAsyncInternal<T>(string[] keys, CancellationToken token = default)
         {
+            var results = new Dictionary<string, CompareExchangeValue<T>>(StringComparer.OrdinalIgnoreCase);
+            if (keys == null || keys.Length == 0)
+                return results;
+
+            HashSet<string> missingKeys = null;
+            foreach (var key in keys)
+            {
+                if (TryGetCompareExchangeValueFromSession(key, out var sessionValue))
+                {
+                    results[key] = sessionValue.GetValue<T>(_session.Conventions);
+                    continue;
+                }
+
+                if (missingKeys == null)
+                    missingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                missingKeys.Add(key);
+            }
+
+            if (missingKeys == null || missingKeys.Count == 0)
+                return results;
+
             using (_session.AsyncTaskHolder())
             {
-                return await _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<T>(keys), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+                _session.IncrementRequestCount();
+
+                var keysArray = missingKeys.ToArray();
+                var values = await _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<BlittableJsonReaderObject>(keysArray), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+
+                foreach (var key in keysArray)
+                {
+                    if (values.TryGetValue(key, out var value) == false || value == null)
+                    {
+                        RegisterMissingCompareExchangeValue(key);
+                        results.Add(key, null);
+                        continue;
+                    }
+
+                    var sessionValue = RegisterCompareExchangeValue(value);
+                    results.Add(value.Key, sessionValue.GetValue<T>(_session.Conventions));
+                }
+
+                return results;
             }
         }
 
-        protected void EnsureNotDeleted(string key)
+        private void RegisterMissingCompareExchangeValue(string key)
         {
-            if (_deleteCompareExchange?.ContainsKey(key) == true)
-            {
-                throw new ArgumentException($"The key '{key}' already exists in the deletion requests.");
-            }
-        }
+            if (_session.NoTracking)
+                return;
 
-        protected void EnsureNotStored(string key)
-        {
-            if (_storeCompareExchange?.ContainsKey(key) == true)
-            {
-                throw new ArgumentException($"The key '{key}' already exists in the store requests.");
-            }
+            _state.Add(key, new CompareExchangeSessionValue(key, -1, CompareExchangeSessionValue.CompareExchangeValueState.Missing));
         }
 
         internal void RegisterCompareExchangeValues(BlittableJsonReaderObject values)
@@ -148,55 +169,209 @@ namespace Raven.Client.Documents.Session
             {
                 values.GetPropertyByIndex(i, ref propertyDetails);
 
-                RegisterCompareExchangeValue(propertyDetails.Value as BlittableJsonReaderObject);
+                var value = propertyDetails.Value as BlittableJsonReaderObject;
+
+                RegisterCompareExchangeValue(CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, _session.Conventions));
             }
         }
 
-        private void RegisterCompareExchangeValue(BlittableJsonReaderObject value)
+        private CompareExchangeSessionValue RegisterCompareExchangeValue(CompareExchangeValue<BlittableJsonReaderObject> value)
         {
-            if (_session.NoTracking || value == null)
-                return;
+            Debug.Assert(value != null, "value != null");
 
-            var v = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, _session.Conventions);
-            if (v == null)
-                return;
-
-            _values[v.Key] = new CompareExchangeSessionValue
-            {
-                OriginalValue = v
-            };
+            return _state[value.Key] = new CompareExchangeSessionValue(value);
         }
 
         private bool TryGetCompareExchangeValueFromSession(string key, out CompareExchangeSessionValue value)
         {
-            if (_values.TryGetValue(key, out value) == false)
-                return false;
-
-            if (value == null || value.OriginalValue.Index == -1)
+            if (_state.TryGetValue(key, out value) == false || value == null)
                 return false;
 
             return true;
         }
 
-        private readonly Dictionary<string, CompareExchangeSessionValue> _values = new Dictionary<string, CompareExchangeSessionValue>(StringComparer.OrdinalIgnoreCase);
+        internal void PrepareCompareExchangeEntities(InMemoryDocumentSessionOperations.SaveChangesData result)
+        {
+            if (_state.Count == 0)
+                return;
+
+            foreach (var kvp in _state)
+            {
+                var command = kvp.Value.GetCommand(_session.Conventions, _session.Context, _session.JsonSerializer);
+                if (command == null)
+                    continue;
+
+                result.SessionCommands.Add(command);
+            }
+        }
+
+        internal void UpdateState(string key, long index)
+        {
+            if (TryGetCompareExchangeValueFromSession(key, out var sessionValue) == false)
+                return;
+
+            sessionValue.UpdateState(index);
+        }
 
         private class CompareExchangeSessionValue
         {
-            public CompareExchangeValue<BlittableJsonReaderObject> OriginalValue;
+            private readonly string _key;
 
-            private object _value;
+            private long _index;
 
-            public CompareExchangeValue<T> GetValue<T>(DocumentConventions conventions)
+            private CompareExchangeValue<BlittableJsonReaderObject> _originalValue;
+
+            private ICompareExchangeValue _value;
+
+            public CompareExchangeValueState _state;
+
+            public CompareExchangeSessionValue(string key, long index, CompareExchangeValueState state)
             {
-                if (_value is CompareExchangeValue<T> v)
-                    return v;
+                _key = key ?? throw new ArgumentNullException(nameof(key));
+                _index = index;
+                _state = state;
+            }
+
+            public CompareExchangeSessionValue(CompareExchangeValue<BlittableJsonReaderObject> value)
+                : this(value.Key, value.Index, value.Index > 0 ? CompareExchangeValueState.None : CompareExchangeValueState.Missing)
+            {
+                if (value.Index > 0)
+                    _originalValue = value;
+            }
+
+            internal CompareExchangeValue<T> GetValue<T>(DocumentConventions conventions)
+            {
+                switch (_state)
+                {
+                    case CompareExchangeValueState.None:
+                    case CompareExchangeValueState.Created:
+                        {
+                            if (_value is CompareExchangeValue<T> v)
+                                return v;
+
+                            if (_value != null)
+                                throw new InvalidOperationException("TODO ppekrol");
+
+                            T entity = default;
+                            if (_originalValue != null && _originalValue.Value != null)
+                                entity = (T)EntityToBlittable.ConvertToEntity(typeof(T), _key, _originalValue.Value, conventions);
+
+                            var value = new CompareExchangeValue<T>(_key, _index, entity);
+                            _value = value;
+
+                            return value;
+                        }
+                    case CompareExchangeValueState.Missing:
+                    case CompareExchangeValueState.Deleted:
+                        return null;
+                    default:
+                        throw new NotSupportedException($"Not supported state: '{_state}'");
+                }
+            }
+
+            internal void Create<T>(T item)
+            {
+                AssertState();
 
                 if (_value != null)
+                    throw new InvalidOperationException($"The compare exchange value with key '{_key}' is already tracked.");
+
+                _index = 0;
+                _value = new CompareExchangeValue<T>(_key, _index, item);
+                _state = CompareExchangeValueState.Created;
+            }
+
+            internal void Delete(long index)
+            {
+                AssertState();
+
+                _index = index;
+                _state = CompareExchangeValueState.Deleted;
+            }
+
+            private void AssertState()
+            {
+                switch (_state)
+                {
+                    case CompareExchangeValueState.None:
+                    case CompareExchangeValueState.Missing:
+                        return;
+                    case CompareExchangeValueState.Created:
+                        throw new InvalidOperationException($"The compare exchange value with key '{_key}' was already stored.");
+                    case CompareExchangeValueState.Deleted:
+                        throw new InvalidOperationException($"The compare exchange value with key '{_key}' was already deleted.");
+                }
+            }
+
+            internal ICommandData GetCommand(DocumentConventions conventions, JsonOperationContext context, JsonSerializer jsonSerializer)
+            {
+                switch (_state)
+                {
+                    case CompareExchangeValueState.None:
+                    case CompareExchangeValueState.Created:
+                        if (_value == null)
+                            return null;
+
+                        var entityJson = (BlittableJsonReaderObject)EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value.Value, conventions, context, jsonSerializer, documentInfo: null, removeIdentityProperty: false);
+                        var newValue = new CompareExchangeValue<BlittableJsonReaderObject>(_key, _index, entityJson);
+
+                        var hasChanged = _originalValue == null || HasChanged(_originalValue, newValue);
+                        _originalValue = newValue;
+
+                        if (hasChanged == false)
+                            return null;
+
+                        var djv = new DynamicJsonValue
+                        {
+                            [Constants.CompareExchange.ObjectFieldName] = entityJson
+                        };
+                        var blittable = context.ReadObject(djv, newValue.Key);
+
+                        return new PutCompareExchangeCommandData(newValue.Key, blittable, newValue.Index);
+                    case CompareExchangeValueState.Deleted:
+                        return new DeleteCompareExchangeCommandData(_key, _index);
+                    case CompareExchangeValueState.Missing:
+                        return null;
+                    default:
+                        throw new NotSupportedException($"Not supprted state: '{_state}'");
+                }
+            }
+
+            internal bool HasChanged(CompareExchangeValue<BlittableJsonReaderObject> originalValue, CompareExchangeValue<BlittableJsonReaderObject> newValue)
+            {
+                if (ReferenceEquals(originalValue, newValue))
+                    return false;
+
+                if (string.Equals(originalValue.Key, newValue.Key, StringComparison.OrdinalIgnoreCase) == false)
                     throw new InvalidOperationException("TODO ppekrol");
 
-                var entity = (T)EntityToBlittable.ConvertToEntity(typeof(T), OriginalValue.Key, OriginalValue.Value, conventions);
-                _value = new CompareExchangeValue<T>(OriginalValue.Key, OriginalValue.Index, entity);
-                return _value;
+                if (originalValue.Index != newValue.Index)
+                    return true;
+
+                if (originalValue.Value == null)
+                    return true;
+
+                return originalValue.Value.Equals(newValue.Value) == false;
+            }
+
+            public enum CompareExchangeValueState
+            {
+                None,
+                Created,
+                Deleted,
+                Missing
+            }
+
+            internal void UpdateState(long index)
+            {
+                _index = index;
+                _state = CompareExchangeValueState.None;
+
+                if (_originalValue != null)
+                    _originalValue.Index = index;
+
+                if (_value != null)
+                    _value.Index = index;
             }
         }
     }
@@ -206,8 +381,6 @@ namespace Raven.Client.Documents.Session
         void DeleteCompareExchangeValue(string key, long index);
 
         void DeleteCompareExchangeValue<T>(CompareExchangeValue<T> item);
-
-        void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item);
 
         void CreateCompareExchangeValue<T>(string key, T value);
     }

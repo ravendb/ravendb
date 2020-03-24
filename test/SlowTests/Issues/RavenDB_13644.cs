@@ -146,8 +146,6 @@ namespace SlowTests.Issues
                     var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
                     value.Value.City = "Hadera";
 
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(value);
-
                     session.SaveChanges();
                 }
 
@@ -344,7 +342,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>("companies/hr");
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(new CompareExchangeValue<string>(value.Key, value.Index, "Hadera"));
+                    value.Value = "Hadera";
 
                     session.SaveChanges();
                 }
@@ -605,8 +603,6 @@ namespace SlowTests.Issues
                     var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
                     value.Value.City = "Hadera";
 
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(value);
-
                     session.SaveChanges();
                 }
 
@@ -849,8 +845,6 @@ namespace SlowTests.Issues
                 {
                     var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
                     value.Value.City = "Hadera";
-
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(value);
 
                     session.SaveChanges();
                 }
@@ -1109,8 +1103,6 @@ namespace SlowTests.Issues
                 {
                     var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
                     value.Value.City = "Hadera";
-
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(value);
 
                     session.SaveChanges();
                 }
@@ -1405,8 +1397,6 @@ namespace SlowTests.Issues
                     var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
                     value.Value.City = "Hadera";
 
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(value);
-
                     session.SaveChanges();
                 }
 
@@ -1699,8 +1689,6 @@ namespace SlowTests.Issues
                 {
                     var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
                     value.Value.City = "Hadera";
-
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(value);
 
                     session.SaveChanges();
                 }

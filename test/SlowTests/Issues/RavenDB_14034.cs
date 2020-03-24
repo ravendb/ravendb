@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<User>("from Users Where Name == cmpxchg('names/oren')");
-                        
+
 
                     var result = query.First();
                     Assert.Equal("Ayende", result.Name);
@@ -66,12 +66,7 @@ namespace SlowTests.Issues
                 }))
                 {
                     var cmpxchg = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(key);
-
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(
-                        new CompareExchangeValue<string>(
-                            key,
-                            cmpxchg.Index,
-                            "Rahien"));
+                    cmpxchg.Value = "Rahien";
 
                     session.SaveChanges();
                 }
@@ -155,12 +150,7 @@ namespace SlowTests.Issues
                 }))
                 {
                     var cmpxchg = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(key);
-
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(
-                        new CompareExchangeValue<string>(
-                            key,
-                            cmpxchg.Index,
-                            "Rahien"));
+                    cmpxchg.Value = "Rahien";
 
                     session.SaveChanges();
                 }
@@ -247,12 +237,7 @@ namespace SlowTests.Issues
                 }))
                 {
                     var cmpxchg = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(key);
-
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(
-                        new CompareExchangeValue<string>(
-                            key,
-                            cmpxchg.Index,
-                            "Rahien"));
+                    cmpxchg.Value = "Rahien";
 
                     session.SaveChanges();
                 }
@@ -341,12 +326,7 @@ namespace SlowTests.Issues
                 }))
                 {
                     var cmpxchg = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(key);
-
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(
-                        new CompareExchangeValue<string>(
-                            key,
-                            cmpxchg.Index,
-                            "Rahien"));
+                    cmpxchg.Value = "Rahien";
 
                     session.SaveChanges();
                 }
@@ -436,12 +416,7 @@ namespace SlowTests.Issues
                 }))
                 {
                     var cmpxchg = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(key);
-
-                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(
-                        new CompareExchangeValue<string>(
-                            key,
-                            cmpxchg.Index,
-                            "Rahien"));
+                    cmpxchg.Value = "Rahien";
 
                     session.SaveChanges();
                 }
@@ -510,11 +485,11 @@ namespace SlowTests.Issues
             using (var store2 = GetDocumentStore())
             {
                 var key = "names/ayende/";
-                var keys = new string [10];
+                var keys = new string[10];
 
                 // put compare exchange values on both databases
 
-                foreach (var store in new [] { store1, store2 })
+                foreach (var store in new[] { store1, store2 })
                 {
                     for (int i = 0; i < 10; i++)
                     {
@@ -543,12 +518,7 @@ namespace SlowTests.Issues
                     }))
                     {
                         var cmpxchg = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(keys[5]);
-
-                        session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(
-                            new CompareExchangeValue<string>(
-                                cmpxchg.Key,
-                                cmpxchg.Index,
-                                "Rahien"));
+                        cmpxchg.Value = "Rahien";
 
                         session.SaveChanges();
                     }
@@ -585,11 +555,11 @@ namespace SlowTests.Issues
         {
             public UsersByName()
             {
-                Map = users =>  from user in users
-                                select new
-                                {
-                                    user.Name
-                                };
+                Map = users => from user in users
+                               select new
+                               {
+                                   user.Name
+                               };
             }
         }
 
