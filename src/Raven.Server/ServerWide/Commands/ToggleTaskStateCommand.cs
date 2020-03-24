@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Utils;
@@ -38,6 +39,8 @@ namespace Raven.Server.ServerWide.Commands
                     var watcher = record?.ExternalReplications.Find(x => x.TaskId == TaskId);
                     if (watcher != null)
                     {
+                        ThrowIfServerWideTask(watcher.Name, ServerWideExternalReplication.NamePrefix, "external replication");
+
                         watcher.Disabled = Disable;
                     }
                     break;
@@ -47,11 +50,7 @@ namespace Raven.Server.ServerWide.Commands
                     var backup = record?.PeriodicBackups?.Find(x => x.TaskId == TaskId);
                     if (backup != null)
                     {
-                        if (backup.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
-                        {
-                            var action = Disable ? "disable" : "enable";
-                            throw new InvalidOperationException($"Can't {action} task name '{backup.Name}', because it is a server-wide backup task");
-                        }
+                        ThrowIfServerWideTask(backup.Name, ServerWideBackupConfiguration.NamePrefix, "backup");
 
                         backup.Disabled = Disable;
                     }
@@ -94,6 +93,15 @@ namespace Raven.Server.ServerWide.Commands
                     break;
             }
 
+
+            void ThrowIfServerWideTask(string name, string prefix, string typeName)
+            {
+                if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    var action = Disable ? "disable" : "enable";
+                    throw new InvalidOperationException($"Can't {action} task name '{name}', because it is a server-wide {typeName} task");
+                }
+            }
         }
 
         public override void FillJson(DynamicJsonValue json)
