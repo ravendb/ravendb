@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
@@ -139,6 +140,7 @@ namespace Raven.Client.Documents.BulkInsert
         private Stream _stream;
         private readonly StreamExposerContent _streamExposerContent;
         private bool _first = true;
+        private CommandType _continousCommandType;
         private long _operationId = -1;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
@@ -152,6 +154,9 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 try
                 {
+                    if (_continousCommandType != CommandType.None)
+                        ThrowOnMissingOperationDispose();
+
                     Exception flushEx = null;
 
                     if (_stream != null)
@@ -214,6 +219,12 @@ namespace Raven.Client.Documents.BulkInsert
                 entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
         }
 
+        private void ThrowOnMissingOperationDispose()
+        {
+            throw new InvalidOperationException($"An ongoing bulk insert operation of type '{_continousCommandType}' is already running " +
+                                                $"Did you forget to Dispose() the command?");
+        }
+
         private async Task ThrowBulkInsertAborted(Exception e, Exception flushEx = null)
         {
             var errors = new List<Exception>(3);
@@ -263,30 +274,11 @@ namespace Raven.Client.Documents.BulkInsert
 
         public async Task StoreAsync(object entity, string id, IMetadataDictionary metadata = null)
         {
-            if (Interlocked.CompareExchange(ref _concurrentCheck, 1, 0) == 1)
-                throw new InvalidOperationException("Bulk Insert store methods cannot be executed concurrently.");
-
-            try
+            using (ConcurrencyCheck())
             {
                 VerifyValidId(id);
 
-                if (_stream == null)
-                {
-                    await WaitForId().ConfigureAwait(false);
-                    await EnsureStream().ConfigureAwait(false);
-                }
-
-                if (_bulkInsertExecuteTask.IsFaulted)
-                {
-                    try
-                    {
-                        await _bulkInsertExecuteTask.ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        await ThrowBulkInsertAborted(e).ConfigureAwait(false);
-                    }
-                }
+                await ExecuteBeforeStore().ConfigureAwait(false);
 
                 if (metadata == null)
                     metadata = new MetadataAsDictionary();
@@ -305,26 +297,23 @@ namespace Raven.Client.Documents.BulkInsert
                         metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
                 }
 
-                if (_first == false)
+                await WriteToStream(() =>
                 {
-                    _currentWriter.Write(',');
-                }
+                    if (_first == false)
+                    {
+                        _currentWriter.Write(',');
+                    }
 
-                _first = false;
-                try
-                {
+                    _first = false;
+
                     _currentWriter.Write("{\"Id\":\"");
-                    WriteId(_currentWriter, id);
+                    WriteString(_currentWriter, id);
                     _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
 
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
                         using (var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context,
-                            _defaultSerializer, new DocumentInfo
-                            {
-                                MetadataInstance = metadata
-                            }))
-
+                            _defaultSerializer, new DocumentInfo { MetadataInstance = metadata }))
                         {
                             _currentWriter.Flush();
                             json.WriteJsonTo(_currentWriter.BaseStream);
@@ -332,49 +321,92 @@ namespace Raven.Client.Documents.BulkInsert
                     }
 
                     _currentWriter.Write("}");
-                    _currentWriter.Flush();
+                }, id, CommandType.PUT).ConfigureAwait(false);
+            }
+        }
 
-                    if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
-                        _asyncWrite.IsCompleted)
-                    {
-                        await _asyncWrite.ConfigureAwait(false);
+        private async Task WriteToStream(Action writeOperation, string documentId, CommandType currentCommand)
+        {
+            if (_continousCommandType != CommandType.None && currentCommand != _continousCommandType)
+                ThrowUnfinishedCommand(currentCommand);
 
-                        var tmp = _currentWriter;
-                        _currentWriter = _backgroundWriter;
-                        _backgroundWriter = tmp;
-                        _currentWriter.BaseStream.SetLength(0);
-                        ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                        _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
-                    }
+            try
+            {
+                writeOperation();
+
+                _currentWriter.Flush();
+
+                if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
+                    _asyncWrite.IsCompleted)
+                {
+                    await _asyncWrite.ConfigureAwait(false);
+
+                    var tmp = _currentWriter;
+                    _currentWriter = _backgroundWriter;
+                    _backgroundWriter = tmp;
+                    _currentWriter.BaseStream.SetLength(0);
+                    ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
+                    _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+                }
+            }
+            catch (Exception e)
+            {
+                var error = await GetExceptionFromOperation().ConfigureAwait(false);
+                if (error != null)
+                {
+                    throw error;
+                }
+
+                await ThrowOnUnavailableStream(documentId, e).ConfigureAwait(false);
+            }
+        }
+
+        private void ThrowUnfinishedCommand(CommandType currentCommand)
+        {
+            throw new InvalidOperationException($"An ongoing '{_continousCommandType}' bulk insert operation is already running " +
+                                                $"while the new operation is '{currentCommand}', did you forget to Dispose() the previous operation?");
+        }
+
+        private IDisposable ConcurrencyCheck()
+        {
+            if (Interlocked.CompareExchange(ref _concurrentCheck, 1, 0) == 1)
+                throw new InvalidOperationException("Bulk Insert store methods cannot be executed concurrently.");
+
+            return new DisposableAction(() => Interlocked.CompareExchange(ref _concurrentCheck, 0, 1));
+        }
+
+        private static void WriteString(StreamWriter writer, string input)
+        {
+            for (var i = 0; i < input.Length; i++)
+            {
+                var c = input[i];
+                if (c == '"')
+                {
+                    if (i == 0 || input[i - 1] != '\\')
+                        writer.Write("\\");
+                }
+
+                writer.Write(c);
+            }
+        }
+
+        private async Task ExecuteBeforeStore()
+        {
+            if (_stream == null)
+            {
+                await WaitForId().ConfigureAwait(false);
+                await EnsureStream().ConfigureAwait(false);
+            }
+
+            if (_bulkInsertExecuteTask.IsFaulted)
+            {
+                try
+                {
+                    await _bulkInsertExecuteTask.ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
-                    var error = await GetExceptionFromOperation().ConfigureAwait(false);
-                    if (error != null)
-                    {
-                        throw error;
-                    }
-
-                    await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
-                }
-            }
-            finally
-            {
-                Interlocked.CompareExchange(ref _concurrentCheck, 0, 1);
-            }
-
-            void WriteId(StreamWriter writer, string input)
-            {
-                for (var i = 0; i < input.Length; i++)
-                {
-                    var c = input[i];
-                    if (c == '"')
-                    {
-                        if (i == 0 || input[i - 1] != '\\')
-                            writer.Write("\\");
-                    }
-
-                    writer.Write(c);
+                    await ThrowBulkInsertAborted(e).ConfigureAwait(false);
                 }
             }
         }
@@ -408,7 +440,6 @@ namespace Raven.Client.Documents.BulkInsert
         private StreamWriter _backgroundWriter;
         private Task _asyncWrite = Task.CompletedTask;
         private int _maxSizeInBuffer = 1024 * 1024;
-
 
         private async Task EnsureStream()
         {
@@ -487,6 +518,108 @@ namespace Raven.Client.Documents.BulkInsert
             id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
             _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
             return id;
+        }
+
+        public CountersBulkInsert CountersFor(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException("Document id cannot be null or empty", nameof(id));
+
+            if (_continousCommandType != CommandType.None)
+                ThrowOnMissingOperationDispose();
+
+            _continousCommandType = CommandType.Counters;
+            return new CountersBulkInsert(this, id);
+        }
+
+        public class CountersBulkInsert : IDisposable
+        {
+            private readonly BulkInsertOperation _operation;
+            private readonly string _id;
+            private bool _initialized;
+            private bool _isFirst = true;
+            private bool _disposed;
+            private const int _maxCountersInBatch = 1024;
+            private int _countersInBatch = 0;
+
+            public CountersBulkInsert(BulkInsertOperation bulkInsertOperation, string id)
+            {
+                _operation = bulkInsertOperation;
+                _id = id;
+            }
+
+            public void Increment(string name, long delta = 1L)
+            {
+                AsyncHelpers.RunSync(() => IncrementAsync(name, delta));
+            }
+
+            private async Task IncrementAsync(string name, long delta)
+            {
+                if (_disposed)
+                    ThrowAlreadyDisposed(name);
+
+                using (_operation.ConcurrencyCheck())
+                {
+                    await _operation.ExecuteBeforeStore().ConfigureAwait(false);
+
+                    await _operation.WriteToStream(() =>
+                    {
+                        if (_initialized == false)
+                        {
+                            _initialized = true;
+                            WriteForNewDocument();
+                        }
+
+                        if (++_countersInBatch > _maxCountersInBatch)
+                        {
+                            _operation._currentWriter.Write("]}},");
+                            WriteForNewDocument();
+                            _isFirst = true;
+                            _countersInBatch = 1;
+                        }
+
+                        if (_isFirst == false)
+                            _operation._currentWriter.Write(",");
+
+                        _isFirst = false;
+
+                        _operation._currentWriter.Write("{\"Type\":\"Increment\",\"CounterName\":\"");
+                        WriteString(_operation._currentWriter, name);
+                        _operation._currentWriter.Write("\",\"Delta\":");
+                        _operation._currentWriter.Write(delta);
+                        _operation._currentWriter.Write("}");
+                    }, _id, CommandType.Counters).ConfigureAwait(false);
+                }
+            }
+
+            private void WriteForNewDocument()
+            {
+                _operation._currentWriter.Write("{\"Id\":\"");
+                WriteString(_operation._currentWriter, _id);
+                _operation._currentWriter.Write("\",\"Type\":\"Counters\",\"Counters\":{\"DocumentId\":\"");
+                WriteString(_operation._currentWriter, _id);
+                _operation._currentWriter.Write("\",\"Operations\":[");
+            }
+
+            private void ThrowAlreadyDisposed(string name)
+            {
+                throw new InvalidOperationException($"Cannot increment counter '{name}' because {nameof(CountersBulkInsert)} was already disposed");
+            }
+
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
+                _operation._continousCommandType = CommandType.None;
+
+                if (_initialized == false)
+                    return;
+
+                _operation._currentWriter.Write("]}}");
+                
+            }
         }
     }
 }
