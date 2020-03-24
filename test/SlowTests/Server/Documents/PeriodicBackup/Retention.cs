@@ -270,7 +270,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 lastEtag = status.LastEtag.Value;
                 return true;
             }, true, timeout: timeout);
-            Assert.True(value, $"Got status: {status != null}, exception: {status?.Error?.Exception}");
+            Assert.True(value, $"Got status: {status != null}, exception: {status?.Error?.Exception}, LocalBackup Exception: {status?.LocalBackup?.Exception}, lastEtag: {lastEtag}, status LastEtag: {status?.LastEtag}");
 
             return lastEtag;
         }
