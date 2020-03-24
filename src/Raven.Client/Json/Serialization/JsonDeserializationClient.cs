@@ -205,9 +205,11 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, PutServerWideBackupConfigurationResponse> PutServerWideBackupConfigurationResponse = GenerateJsonDeserializationRoutine<PutServerWideBackupConfigurationResponse>();
         
-        internal static readonly Func<BlittableJsonReaderObject, PutServerWideConfigurationResponse> PutServerWideConfigurationResponse = GenerateJsonDeserializationRoutine<PutServerWideConfigurationResponse>();
+        internal static readonly Func<BlittableJsonReaderObject, ServerWideTaskResponse> PutServerWideConfigurationResponse = GenerateJsonDeserializationRoutine<ServerWideTaskResponse>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetServerWideBackupConfigurationsResponse> GetServerWideBackupConfigurationsResponse = GenerateJsonDeserializationRoutine<GetServerWideBackupConfigurationsResponse>();
+        
+        internal static readonly Func<BlittableJsonReaderObject, GetServerWideExternalReplicationsResponse> GetServerWideExternalReplicationResponse = GenerateJsonDeserializationRoutine<GetServerWideExternalReplicationsResponse>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetClientConfigurationOperation.Result> ClientConfigurationResult = GenerateJsonDeserializationRoutine<GetClientConfigurationOperation.Result>();
 
