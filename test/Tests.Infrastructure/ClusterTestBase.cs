@@ -95,7 +95,7 @@ namespace Tests.Infrastructure
                 return timeoutTask.IsCompleted == false;
             }
         }
-         
+
         protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
         {
             var id = "marker/" + Guid.NewGuid();
@@ -103,7 +103,8 @@ namespace Tests.Infrastructure
             {
                 s.Store(new { }, id);
                 s.SaveChanges();
-            } Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
+            }
+            Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
         }
 
         protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
@@ -124,7 +125,6 @@ namespace Tests.Infrastructure
             return null;
         }
 
-        
         public async Task RemoveDatabaseNode(List<RavenServer> cluster, string database, string toDeleteTag)
         {
             var deleted = cluster.Single(n => n.ServerStore.NodeTag == toDeleteTag);
@@ -153,9 +153,9 @@ namespace Tests.Infrastructure
             var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
 
             var etag1 = storage.DocumentsStorage.GenerateNextEtag();
-            
+
             await Task.Delay(3000);
-            
+
             var etag2 = storage.DocumentsStorage.GenerateNextEtag();
 
             Assert.Equal(etag1 + 1, etag2);
@@ -723,10 +723,14 @@ namespace Tests.Infrastructure
             {
                 try
                 {
-                    await requestExecutor.UpdateTopologyAsync(new ServerNode
+                    await requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
                     {
                         Url = leadersUrl
-                    }, 15000, true);
+                    })
+                    {
+                        TimeoutInMs = 15000,
+                        ForceUpdate = true
+                    });
                 }
                 catch (Exception e)
                 {
