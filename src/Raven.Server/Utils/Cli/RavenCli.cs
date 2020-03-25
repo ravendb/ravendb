@@ -669,7 +669,7 @@ namespace Raven.Server.Utils.Cli
                         using (var certificate = ctx.ReadObject(certDef.ToJson(), "Server/Certificate/Definition"))
                         using (var tx = ctx.OpenWriteTransaction())
                         {
-                            cli._server.ServerStore.Cluster.PutLocalState(ctx, cert.Thumbprint, certificate);
+                            cli._server.ServerStore.Cluster.PutLocalState(ctx, cert.Thumbprint, certificate, certDef);
                             tx.Commit();
                         }
                     }
@@ -767,14 +767,20 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandGenerateClientCert(List<string> args, RavenCli cli)
         {
-            if (args.Count < 2 || args.Count > 3)
+            if (args.Count < 3 || args.Count > 4)
             {
-                WriteError("Usage: generateClientCert <name> <path-to-output-folder> [password]", cli);
+                WriteError("Usage: generateClientCert <name> <path-to-output-folder> <number-of-months-until-expiration> [password]", cli);
                 return false;
             }
 
             var name = args[0];
             var path = args[1];
+
+            if (int.TryParse(args[2], out int months) == false || months <= 0)
+            {
+                WriteError("Error: number of months until expiration must be a positive integer", cli);
+                return false;
+            }
 
             cli._server.ServerStore.EnsureNotPassive();
 
@@ -783,7 +789,8 @@ namespace Raven.Server.Utils.Cli
                 Name = name,
                 Permissions = new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance = SecurityClearance.ClusterAdmin,
-                Password = args.Count == 3 ? args[2] : null
+                Password = args.Count == 4 ? args[3] : null,
+                NotAfter = DateTime.UtcNow.AddMonths(months)
             };
 
             byte[] outputBytes;
@@ -1158,7 +1165,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"restartServer, resetServer", "Restarts the server (shutdown and re-run)"},
                 new[] {"shutdown [no-confirmation]", "Shutdown the server"},
                 new[] {"help", "This help screen"},
-                new[] {"generateClientCert <name> <path-to-output-folder> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
+                new[] {"generateClientCert <name> <path-to-output-folder> <number-of-months-until-expiration> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
                 new[] {"trustServerCert <name> <path-to-pfx> [password]", "Register a server certificate of another node to be trusted on this server."},
                 new[] {"trustClientCert <name> <path-to-pfx> [password]", "Register a client certificate to be trusted on this server with 'ClusterAdmin' security clearance."},
                 new[] {"replaceClusterCert [-replaceImmediately] <path-to-pfx> [password]", "Replace the cluster certificate."},
@@ -1210,7 +1217,7 @@ namespace Raven.Server.Utils.Cli
             [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandClear },
             [Command.TrustServerCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandTrustServerCert },
             [Command.TrustClientCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandTrustClientCert },
-            [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandGenerateClientCert },
+            [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 3, DelegateFunc = CommandGenerateClientCert },
             [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandReplaceClusterCert },
             [Command.TriggerCertificateRefresh] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandTriggerCertificateRefresh },
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandInfo },
