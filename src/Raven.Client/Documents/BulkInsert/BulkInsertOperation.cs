@@ -222,7 +222,7 @@ namespace Raven.Client.Documents.BulkInsert
         private void ThrowOnMissingOperationDispose()
         {
             throw new InvalidOperationException($"An ongoing bulk insert operation of type '{_continousCommandType}' is already running " +
-                                                $"Did you forget to Dispose() the command?");
+                                                $"Did you forget to Dispose() the it?");
         }
 
         private async Task ThrowBulkInsertAborted(Exception e, Exception flushEx = null)
@@ -297,7 +297,10 @@ namespace Raven.Client.Documents.BulkInsert
                         metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
                 }
 
-                await WriteToStream(() =>
+                if (_continousCommandType != CommandType.None)
+                    ThrowUnfinishedCommand(CommandType.PUT);
+
+                try
                 {
                     if (_first == false)
                     {
@@ -321,50 +324,25 @@ namespace Raven.Client.Documents.BulkInsert
                     }
 
                     _currentWriter.Write("}");
-                }, id, CommandType.PUT).ConfigureAwait(false);
+
+                    await FlushIfNeeded().ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    await HandleErrors(id, e).ConfigureAwait(false);
+                }
             }
         }
 
-        private async Task WriteToStream(Action writeOperation, string documentId, CommandType currentCommand)
+        private async Task HandleErrors(string documentId, Exception e)
         {
-            if (_continousCommandType != CommandType.None && currentCommand != _continousCommandType)
-                ThrowUnfinishedCommand(currentCommand);
-
-            try
+            var error = await GetExceptionFromOperation().ConfigureAwait(false);
+            if (error != null)
             {
-                writeOperation();
-
-                _currentWriter.Flush();
-
-                if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
-                    _asyncWrite.IsCompleted)
-                {
-                    await _asyncWrite.ConfigureAwait(false);
-
-                    var tmp = _currentWriter;
-                    _currentWriter = _backgroundWriter;
-                    _backgroundWriter = tmp;
-                    _currentWriter.BaseStream.SetLength(0);
-                    ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                    _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
-                }
+                throw error;
             }
-            catch (Exception e)
-            {
-                var error = await GetExceptionFromOperation().ConfigureAwait(false);
-                if (error != null)
-                {
-                    throw error;
-                }
 
-                await ThrowOnUnavailableStream(documentId, e).ConfigureAwait(false);
-            }
-        }
-
-        private void ThrowUnfinishedCommand(CommandType currentCommand)
-        {
-            throw new InvalidOperationException($"An ongoing '{_continousCommandType}' bulk insert operation is already running " +
-                                                $"while the new operation is '{currentCommand}', did you forget to Dispose() the previous operation?");
+            await ThrowOnUnavailableStream(documentId, e).ConfigureAwait(false);
         }
 
         private IDisposable ConcurrencyCheck()
@@ -373,6 +351,30 @@ namespace Raven.Client.Documents.BulkInsert
                 throw new InvalidOperationException("Bulk Insert store methods cannot be executed concurrently.");
 
             return new DisposableAction(() => Interlocked.CompareExchange(ref _concurrentCheck, 0, 1));
+        }
+
+        private async Task FlushIfNeeded()
+        {
+            _currentWriter.Flush();
+
+            if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
+                _asyncWrite.IsCompleted)
+            {
+                await _asyncWrite.ConfigureAwait(false);
+
+                var tmp = _currentWriter;
+                _currentWriter = _backgroundWriter;
+                _backgroundWriter = tmp;
+                _currentWriter.BaseStream.SetLength(0);
+                ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
+                _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+            }
+        }
+
+        private void ThrowUnfinishedCommand(CommandType currentCommand)
+        {
+            throw new InvalidOperationException($"An ongoing '{_continousCommandType}' bulk insert operation is already running " +
+                                                $"while the new operation is '{currentCommand}', did you forget to Dispose() the previous one?");
         }
 
         private static void WriteString(StreamWriter writer, string input)
@@ -553,7 +555,7 @@ namespace Raven.Client.Documents.BulkInsert
                 AsyncHelpers.RunSync(() => IncrementAsync(name, delta));
             }
 
-            private async Task IncrementAsync(string name, long delta)
+            public async Task IncrementAsync(string name, long delta)
             {
                 if (_disposed)
                     ThrowAlreadyDisposed(name);
@@ -562,7 +564,10 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     await _operation.ExecuteBeforeStore().ConfigureAwait(false);
 
-                    await _operation.WriteToStream(() =>
+                    if (_operation._continousCommandType != CommandType.None && _operation._continousCommandType != CommandType.Counters)
+                        _operation.ThrowUnfinishedCommand(CommandType.Counters);
+
+                    try
                     {
                         if (_initialized == false)
                         {
@@ -588,7 +593,13 @@ namespace Raven.Client.Documents.BulkInsert
                         _operation._currentWriter.Write("\",\"Delta\":");
                         _operation._currentWriter.Write(delta);
                         _operation._currentWriter.Write("}");
-                    }, _id, CommandType.Counters).ConfigureAwait(false);
+
+                        await _operation.FlushIfNeeded().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        await _operation.HandleErrors(_id, e).ConfigureAwait(false);
+                    }
                 }
             }
 
