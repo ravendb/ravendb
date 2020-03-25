@@ -40,7 +40,7 @@ namespace SlowTests.Cluster
         public async Task ProxyServer_should_work()
         {
             int serverPort = 10000;
-            using (var server = GetNewServer(new ServerCreationOptions{CustomSettings = GetServerSettingsForPort(false, out var _), RegisterForDisposal = false}))
+            using (var server = GetNewServer(new ServerCreationOptions { CustomSettings = GetServerSettingsForPort(false, out var _), RegisterForDisposal = false }))
             using (var proxy = new ProxyServer(ref serverPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2])))
             {
                 Servers.Add(server);
@@ -110,12 +110,15 @@ namespace SlowTests.Cluster
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
                 //make sure we have updated topology --> more deterministic test
-                await leaderRequestExecutor.UpdateTopologyAsync(new ServerNode
+                await leaderRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
                 {
                     ClusterTag = leader.ServerStore.NodeTag,
                     Database = databaseName,
                     Url = leader.WebUrl
-                }, 5000);
+                })
+                {
+                    TimeoutInMs = 5000
+                });
 
                 ApplyProxiesOnRequestExecutor(serversToProxies, leaderRequestExecutor);
 
@@ -203,19 +206,19 @@ namespace SlowTests.Cluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = new []{ leader.WebUrl },
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower1 = new DocumentStore
             {
-                Urls = new[]{ followers[0].WebUrl },
+                Urls = new[] { followers[0].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower2 = new DocumentStore
             {
-                Urls = new[]{ followers[1].WebUrl },
+                Urls = new[] { followers[1].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
@@ -230,12 +233,16 @@ namespace SlowTests.Cluster
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
                 //make sure we have updated topology --> more deterministic test
-                await leaderRequestExecutor.UpdateTopologyAsync(new ServerNode
+                await leaderRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
                 {
                     ClusterTag = leader.ServerStore.NodeTag,
                     Database = databaseName,
                     Url = leader.WebUrl
-                },  5000, forceUpdate: true);
+                })
+                {
+                    TimeoutInMs = 5000,
+                    ForceUpdate = true
+                });
 
                 //wait until all nodes in database cluster are members (and not promotables)
                 //GetDatabaseTopologyCommand -> does not retrieve promotables
@@ -294,19 +301,19 @@ namespace SlowTests.Cluster
             };
             using (var leaderStore = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower1 = new DocumentStore
             {
-                Urls = new[] {followers[0].WebUrl},
+                Urls = new[] { followers[0].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower2 = new DocumentStore
             {
-                Urls = new[] {followers[1].WebUrl},
+                Urls = new[] { followers[1].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
@@ -391,7 +398,7 @@ namespace SlowTests.Cluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
@@ -411,7 +418,7 @@ namespace SlowTests.Cluster
                 {
                     session.Query<User>().Where(u => u.Name.StartsWith("Jo"));
                 }
-            }                          
+            }
         }
     }
 }

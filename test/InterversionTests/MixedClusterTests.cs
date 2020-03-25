@@ -969,7 +969,7 @@ namespace InterversionTests
                 var ackSent = new AsyncManualResetEvent();
 
                 var continueMre = new AsyncManualResetEvent();
-                GenerateDistributedRevisionsData(dbName, stores.Stores);
+                await GenerateDistributedRevisionsDataAsync(dbName, stores.Stores);
 
                 var subscriptionId = await storeA.Subscriptions.CreateAsync<Revision<User>>(database: dbName).ConfigureAwait(false);
                 var docsCount = 0;
@@ -1073,7 +1073,7 @@ namespace InterversionTests
             }
         }
 
-        private void GenerateDistributedRevisionsData(string databaseName, List<DocumentStore> stores)
+        private async Task GenerateDistributedRevisionsDataAsync(string databaseName, List<DocumentStore> stores)
         {
             using (var store = new DocumentStore
             {
@@ -1081,12 +1081,14 @@ namespace InterversionTests
                 Database = databaseName
             }.Initialize())
             {
-                AsyncHelpers.RunSync(() => store.GetRequestExecutor()
-                    .UpdateTopologyAsync(new ServerNode
-                    {
-                        Url = store.Urls[0],
-                        Database = databaseName,
-                    }, Timeout.Infinite));
+                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
+                {
+                    Url = store.Urls[0],
+                    Database = databaseName,
+                })
+                {
+                    TimeoutInMs = Timeout.Infinite
+                });
             }
 
             var storesWithoutTopologyUpdates = new List<DocumentStore>();

@@ -486,7 +486,6 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (Exception e)
                 {
-
                     //We don't report this error since we can automatically recover from it and we can't
                     // recover from the OnError accessing the faulty WebSocket.
                     try
@@ -579,7 +578,7 @@ namespace Raven.Client.Documents.Changes
                             if (await UnmanagedJsonParserHelper.ReadAsync(peepingTomStream, parser, state, buffer).ConfigureAwait(false) == false)
                                 continue;
 
-                            if (state.CurrentTokenType == JsonParserToken.EndArray)                             
+                            if (state.CurrentTokenType == JsonParserToken.EndArray)
                                 break;
 
                             await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
@@ -591,7 +590,7 @@ namespace Raven.Client.Documents.Changes
                                     if (json.TryGet(nameof(TopologyChange), out bool supports) && supports)
                                     {
                                         GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
-                                        await _requestExecutor.UpdateTopologyAsync(_serverNode, 0, true, debugTag: "watch-topology-change").ConfigureAwait(false);
+                                        await _requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "watch-topology-change" }).ConfigureAwait(false);
                                         continue;
                                     }
 
@@ -627,7 +626,7 @@ namespace Raven.Client.Documents.Changes
                         }
                     }
                 }
-            }            
+            }
         }
 
         private void NotifySubscribers(string type, BlittableJsonReaderObject value, List<DatabaseConnectionState> states)
@@ -664,11 +663,23 @@ namespace Raven.Client.Documents.Changes
                     break;
                 case nameof(TopologyChange):
                     var topologyChange = TopologyChange.FromJson(value);
-                    _requestExecutor?.UpdateTopologyAsync(new ServerNode
+
+                    var requestExecutor = _requestExecutor;
+                    if (requestExecutor != null)
                     {
-                        Url = topologyChange.Url,
-                        Database = topologyChange.Database
-                    }, 0, true, "topology-change-notification").ConfigureAwait(false);
+                        var node = new ServerNode
+                        {
+                            Url = topologyChange.Url,
+                            Database = topologyChange.Database
+                        };
+
+                        requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(node)
+                        {
+                            TimeoutInMs = 0,
+                            ForceUpdate = true,
+                            DebugTag = "topology-change-notification"
+                        }).ConfigureAwait(false);
+                    }
                     break;
                 default:
                     throw new NotSupportedException(type);
