@@ -1311,7 +1311,7 @@ namespace Raven.Server.Commercial
                     using (var certificate = ctx.ReadObject(certDef.ToJson(), "Client/Certificate/Definition"))
                     using (var tx = ctx.OpenWriteTransaction())
                     {
-                        serverStore.Cluster.PutLocalState(ctx, clientCert.Thumbprint, certificate);
+                        serverStore.Cluster.PutLocalState(ctx, clientCert.Thumbprint, certificate, certDef);
                         tx.Commit();
                     }
                 }

@@ -338,7 +338,7 @@ namespace Raven.Server.Web.Authentication
                     using (var certificate = ctx.ReadObject(currentCertDef.ToJson(), "Client/Certificate/Definition"))
                     using (var tx = ctx.OpenWriteTransaction())
                     {
-                        serverStore.Cluster.PutLocalState(ctx, certKey, certificate);
+                        serverStore.Cluster.PutLocalState(ctx, certKey, certificate, currentCertDef);
                         tx.Commit();
                     }
                 }
