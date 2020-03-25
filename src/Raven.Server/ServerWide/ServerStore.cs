@@ -2002,7 +2002,10 @@ namespace Raven.Server.ServerWide
 
                     _shutdownNotification.Cancel();
 
-                    _server.Statistics.Persist(ContextPool, Logger);
+                    if(ContextPool != null)
+                    {
+                        _server.Statistics.Persist(ContextPool, Logger);
+                    }
 
                     _server.ServerCertificateChanged -= OnServerCertificateChanged;
 
