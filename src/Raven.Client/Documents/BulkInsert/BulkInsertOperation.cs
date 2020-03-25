@@ -140,7 +140,8 @@ namespace Raven.Client.Documents.BulkInsert
         private Stream _stream;
         private readonly StreamExposerContent _streamExposerContent;
         private bool _first = true;
-        private CommandType _continousCommandType;
+        private CommandType _inProgressCommand;
+        private readonly CountersBulkInsertOperation _countersOperation;
         private long _operationId = -1;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
@@ -154,8 +155,7 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 try
                 {
-                    if (_continousCommandType != CommandType.None)
-                        ThrowOnMissingOperationDispose();
+                    EndPreviousCommandIfNeeded();
 
                     Exception flushEx = null;
 
@@ -211,18 +211,13 @@ namespace Raven.Client.Documents.BulkInsert
             _currentWriter = new StreamWriter(new MemoryStream());
             _backgroundWriter = new StreamWriter(new MemoryStream());
             _streamExposerContent = new StreamExposerContent();
+            _countersOperation = new CountersBulkInsertOperation(this);
 
             _defaultSerializer = _requestExecutor.Conventions.CreateSerializer();
             _customEntitySerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeEntityToJsonStream;
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
                 entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
-        }
-
-        private void ThrowOnMissingOperationDispose()
-        {
-            throw new InvalidOperationException($"An ongoing bulk insert operation of type '{_continousCommandType}' is already running " +
-                                                $"Did you forget to Dispose() the it?");
         }
 
         private async Task ThrowBulkInsertAborted(Exception e, Exception flushEx = null)
@@ -297,8 +292,7 @@ namespace Raven.Client.Documents.BulkInsert
                         metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
                 }
 
-                if (_continousCommandType != CommandType.None)
-                    ThrowUnfinishedCommand(CommandType.PUT);
+                EndPreviousCommandIfNeeded();
 
                 try
                 {
@@ -308,6 +302,7 @@ namespace Raven.Client.Documents.BulkInsert
                     }
 
                     _first = false;
+                    _inProgressCommand = CommandType.None;
 
                     _currentWriter.Write("{\"Id\":\"");
                     WriteString(_currentWriter, id);
@@ -371,10 +366,12 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        private void ThrowUnfinishedCommand(CommandType currentCommand)
+        private void EndPreviousCommandIfNeeded()
         {
-            throw new InvalidOperationException($"An ongoing '{_continousCommandType}' bulk insert operation is already running " +
-                                                $"while the new operation is '{currentCommand}', did you forget to Dispose() the previous one?");
+            if (_inProgressCommand == CommandType.Counters)
+            {
+                _countersOperation.EndPreviousCommandIfNeeded();
+            }
         }
 
         private static void WriteString(StreamWriter writer, string input)
@@ -527,66 +524,93 @@ namespace Raven.Client.Documents.BulkInsert
             if (string.IsNullOrEmpty(id))
                 throw new ArgumentException("Document id cannot be null or empty", nameof(id));
 
-            if (_continousCommandType != CommandType.None)
-                ThrowOnMissingOperationDispose();
-
-            _continousCommandType = CommandType.Counters;
             return new CountersBulkInsert(this, id);
         }
 
-        public class CountersBulkInsert : IDisposable
+        public struct CountersBulkInsert
         {
             private readonly BulkInsertOperation _operation;
             private readonly string _id;
-            private bool _initialized;
-            private bool _isFirst = true;
-            private bool _disposed;
-            private const int _maxCountersInBatch = 1024;
-            private int _countersInBatch = 0;
 
-            public CountersBulkInsert(BulkInsertOperation bulkInsertOperation, string id)
+            public CountersBulkInsert(BulkInsertOperation operation, string id)
             {
-                _operation = bulkInsertOperation;
+                _operation = operation;
                 _id = id;
             }
 
             public void Increment(string name, long delta = 1L)
             {
-                AsyncHelpers.RunSync(() => IncrementAsync(name, delta));
+                _operation._countersOperation.Increment(_id, name, delta);
             }
 
-            public async Task IncrementAsync(string name, long delta)
+            public Task IncrementAsync(string name, long delta = 1L)
             {
-                if (_disposed)
-                    ThrowAlreadyDisposed(name);
+                return _operation._countersOperation.IncrementAsync(_id, name, delta);
+            }
+        }
 
+        internal class CountersBulkInsertOperation
+        {
+            private readonly BulkInsertOperation _operation;
+            private string _id;
+            private bool _first = true;
+            private const int _maxCountersInBatch = 1024;
+            private int _countersInBatch = 0;
+
+            public CountersBulkInsertOperation(BulkInsertOperation bulkInsertOperation)
+            {
+                _operation = bulkInsertOperation;
+            }
+
+            public void Increment(string id, string name, long delta = 1L)
+            {
+                AsyncHelpers.RunSync(() => IncrementAsync(id, name, delta));
+            }
+
+            public async Task IncrementAsync(string id, string name, long delta)
+            {
                 using (_operation.ConcurrencyCheck())
                 {
                     await _operation.ExecuteBeforeStore().ConfigureAwait(false);
 
-                    if (_operation._continousCommandType != CommandType.None && _operation._continousCommandType != CommandType.Counters)
-                        _operation.ThrowUnfinishedCommand(CommandType.Counters);
-
                     try
                     {
-                        if (_initialized == false)
+                        var isFirst = _id == null;
+                        if (isFirst || _id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
                         {
-                            _initialized = true;
-                            WriteForNewDocument();
+                            if (isFirst == false)
+                            {
+                                //we need to end the command for the previous document id
+                               _operation._currentWriter.Write("]}},");
+                            }
+                            else if (_operation._first == false)
+                            {
+                                _operation._currentWriter.Write(",");
+                            }
+
+                            _operation._first = false;
+
+                            _id = id;
+                            _operation._inProgressCommand = CommandType.Counters;
+
+                            WritePrefixForNewCommand();
                         }
 
-                        if (++_countersInBatch > _maxCountersInBatch)
+                        if (_countersInBatch >= _maxCountersInBatch)
                         {
                             _operation._currentWriter.Write("]}},");
-                            WriteForNewDocument();
-                            _isFirst = true;
-                            _countersInBatch = 1;
+
+                            WritePrefixForNewCommand();
                         }
 
-                        if (_isFirst == false)
-                            _operation._currentWriter.Write(",");
+                        _countersInBatch++;
 
-                        _isFirst = false;
+                        if (_first == false)
+                        {
+                            _operation._currentWriter.Write(",");
+                        }
+
+                        _first = false;
 
                         _operation._currentWriter.Write("{\"Type\":\"Increment\",\"CounterName\":\"");
                         WriteString(_operation._currentWriter, name);
@@ -603,32 +627,25 @@ namespace Raven.Client.Documents.BulkInsert
                 }
             }
 
-            private void WriteForNewDocument()
+            public void EndPreviousCommandIfNeeded()
             {
+                if (_id == null)
+                    return;
+
+                _operation._currentWriter.Write("]}}");
+                _id = null;
+            }
+
+            private void WritePrefixForNewCommand()
+            {
+                _first = true;
+                _countersInBatch = 0;
+
                 _operation._currentWriter.Write("{\"Id\":\"");
                 WriteString(_operation._currentWriter, _id);
                 _operation._currentWriter.Write("\",\"Type\":\"Counters\",\"Counters\":{\"DocumentId\":\"");
                 WriteString(_operation._currentWriter, _id);
                 _operation._currentWriter.Write("\",\"Operations\":[");
-            }
-
-            private void ThrowAlreadyDisposed(string name)
-            {
-                throw new InvalidOperationException($"Cannot increment counter '{name}' because {nameof(CountersBulkInsert)} was already disposed");
-            }
-
-            public void Dispose()
-            {
-                if (_disposed)
-                    return;
-
-                _disposed = true;
-                _operation._continousCommandType = CommandType.None;
-
-                if (_initialized == false)
-                    return;
-
-                _operation._currentWriter.Write("]}}");
             }
         }
     }
