@@ -137,25 +137,25 @@ namespace SlowTests.Client.TimeSeries.Query
                         Name = "HR"
                     }, "companies/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 59d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 79d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "tags/2");
 
-                    tsf = session.TimeSeriesFor("companies/1");
+                    tsf = session.TimeSeriesFor("companies/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -240,25 +240,25 @@ select {
                         Name = "HR"
                     }, "companies/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 59d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 79d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "tags/2");
 
-                    tsf = session.TimeSeriesFor("companies/1");
+                    tsf = session.TimeSeriesFor("companies/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/3", new[] { 569d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/3");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -345,15 +345,15 @@ select {
                         Name = "HR"
                     }, "companies/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "tags/1", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "tags/2", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "tags/2");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -413,23 +413,25 @@ select {
                         Name = "HR"
                     }, "companies/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "tags/1", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "tags/2", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "tags/2");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+                    tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/2");
+
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -506,23 +508,25 @@ select {
                         Name = "HR"
                     }, "companies/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "tags/1", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "tags/2", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "tags/2");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+                    tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/2");
+
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -606,32 +610,33 @@ select out(p)")
                         Name = "HR"
                     }, "companies/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "tags/1", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "tags/2", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "tags/2");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "tags/2");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "tags/1", new[] { 259d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "tags/1", new[] { 279d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), "tags/2", new[] { 269d });
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 259d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 279d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 269d }, "tags/2");
 
+                    tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(61), "tags/1", new[] { 759d });
-                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(62), "tags/1", new[] { 779d });
-                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(63), "tags/2", new[] { 769d });
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 759d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 779d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 769d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -730,15 +735,15 @@ select out(p)")
                         Age = 60
                     }, "people/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 59d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 79d, 97d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 69d, 96d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d, 97d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d, 96d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d, 251d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d, 271d, 372d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d, 251d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d, 271d, 372d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -794,16 +799,15 @@ select {
                         Age = 30,
                     }, "people/1");
 
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
-
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
                     session.SaveChanges();
                 }
@@ -858,19 +862,19 @@ select foo(heartrate(p))
                     }, "people/1");
 
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(2).AddMinutes(61), "watches/apple", new[] { 259d });
-                    tsf.Append("Heartrate", baseline.AddMonths(2).AddMinutes(62), "watches/fitbit", new[] { 279d });
-                    tsf.Append("Heartrate", baseline.AddMonths(2).AddMinutes(63), "watches/fitbit", new[] { 269d });
+                    tsf.Append(baseline.AddMonths(2).AddMinutes(61), new[] { 259d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(2).AddMinutes(62), new[] { 279d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(2).AddMinutes(63), new[] { 269d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
@@ -943,16 +947,15 @@ select foo(heartrate(p))
                         Age = 30,
                     }, "people/1");
 
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
-
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
                     session.SaveChanges();
                 }
@@ -1018,15 +1021,15 @@ select foo(heartrate(p))
                         Name = "HR",
                     }, companyId);
 
-                    var tsf = session.TimeSeriesFor(companyId);
+                    var tsf = session.TimeSeriesFor(companyId, "Stock");
 
-                    tsf.Append("Stock", baseline.AddMinutes(61), "tags/1", new[] { 12.59d });
-                    tsf.Append("Stock", baseline.AddMinutes(62), "tags/1", new[] { 12.79d });
-                    tsf.Append("Stock", baseline.AddMinutes(63), "tags/2", new[] { 12.69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 12.59d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 12.79d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 12.69d }, "tags/2");
 
-                    tsf.Append("Stock", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 13.59d });
-                    tsf.Append("Stock", baseline.AddMonths(1).AddMinutes(62), "tags/2", new[] { 13.79d });
-                    tsf.Append("Stock", baseline.AddMonths(1).AddMinutes(63), "tags/1", new[] { 13.69d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 13.59d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 13.79d }, "tags/2");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 13.69d }, "tags/1");
 
                     session.SaveChanges();
                 }
@@ -1097,15 +1100,15 @@ select foo(heartrate(p))
                         Accuracy = 1.5
                     }, "watches/apple");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
@@ -1166,23 +1169,25 @@ select foo(heartrate(p))
                     }, "people/1");
 
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+                    tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/2");
+
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/2");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -1241,16 +1246,15 @@ select foo(heartrate(p))
                         Age = 30,
                     }, "people/1");
 
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
-
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
                     session.SaveChanges();
                 }
@@ -1311,16 +1315,15 @@ select foo(heartrate(p))
                         Age = 30,
                     }, "people/1");
 
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
-
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
                     session.SaveChanges();
                 }
@@ -1398,15 +1401,15 @@ select foo(heartrate(p))
                         Accuracy = 1.5
                     }, "watches/sony");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
@@ -1495,15 +1498,15 @@ select foo(heartrate(p))
                         Accuracy = 1.5
                     }, "watches/sony");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
@@ -1582,24 +1585,25 @@ select foo(heartrate(p))
                         Age = 30,
                     }, "people/1");
 
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/2");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -1661,31 +1665,33 @@ select foo(heartrate(p))
                         Age = 30
                     }, "people/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), "watches/apple", new[] { 269d });
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 259d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 279d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 269d }, "watches/apple");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+                    tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(61), "tags/2", new[] { 459d });
-                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(62), "tags/1", new[] { 479d });
-                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(63), "tags/2", new[] { 469d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/2");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
+
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 459d }, "tags/2");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 479d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 469d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -1754,29 +1760,29 @@ select foo(heartrate(p))
 
                     session.Store(new Company(), "companies/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), "watches/apple", new[] { 269d });
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 259d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 279d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 269d }, "watches/apple");
 
-                    tsf = session.TimeSeriesFor("companies/1");
+                    tsf = session.TimeSeriesFor("companies/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/2");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -1838,27 +1844,29 @@ select foo(heartrate(p))
                         Age = 30
                     }, "people/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/1", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/2", new[] { 569d });
+                    tsf = session.TimeSeriesFor("people/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/2", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/2");
 
-                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(61), "tags/2", new[] { 459d });
-                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(62), "tags/1", new[] { 479d });
-                    tsf.Append("Stocks", baseline.AddMonths(3).AddMinutes(63), "tags/2", new[] { 469d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/2");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
+
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 459d }, "tags/2");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 479d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 469d }, "tags/2");
 
                     session.SaveChanges();
                 }
@@ -1927,31 +1935,31 @@ select foo(heartrate(p))
                     session.Store(new Watch(), "watches/fitbit");
                     session.Store(new Watch(), "watches/apple");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), null, new[] { 992d });
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 259d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 279d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 992d });
 
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(61), "watches/apple", new[] { 559d });
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(62), "watches/fitbit", new[] { 579d });
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(63), "watches/apple", new[] { 569d });
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(61), new[] { 559d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(62), new[] { 579d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(63), new[] { 569d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(61), "watches/apple", new[] { 459d });
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(62), "watches/fitbit", new[] { 479d });
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(63), "watches/sony", new[] { 999d });
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(61), new[] { 459d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(62), new[] { 479d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(63), new[] { 999d }, "watches/sony");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(61), "watches/apple", new[] { 359d });
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(62), "watches/fitbit", new[] { 379d });
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(63), "watches/apple", new[] { 369d });
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(61), new[] { 359d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(62), new[] { 379d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(63), new[] { 369d }, "watches/apple");
 
                     session.SaveChanges();
                 }
@@ -2004,31 +2012,31 @@ select foo(heartrate(p))
                     session.Store(new Watch(), "watches/fitbit");
                     session.Store(new Watch(), "watches/apple");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), null, new[] { 992d });
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 259d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 279d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 992d });
 
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(61), "watches/apple", new[] { 559d });
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(62), "watches/fitbit", new[] { 579d });
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(63), "watches/apple", new[] { 569d });
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(61), new[] { 559d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(62), new[] { 579d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(63), new[] { 569d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(61), "watches/apple", new[] { 459d });
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(62), "watches/fitbit", new[] { 479d });
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(63), "watches/sony", new[] { 999d });
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(61), new[] { 459d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(62), new[] { 479d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(63), new[] { 999d }, "watches/sony");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(61), "watches/apple", new[] { 359d });
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(62), "watches/fitbit", new[] { 379d });
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(63), "watches/apple", new[] { 369d });
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(61), new[] { 359d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(62), new[] { 379d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(63), new[] { 369d }, "watches/apple");
 
                     session.SaveChanges();
                 }
@@ -2103,31 +2111,31 @@ select foo(heartrate(p))
                         Accuracy = 2.75
                     }, "watches/apple");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), null, new[] { 992d });
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 259d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 279d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 992d });
 
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(61), "watches/apple", new[] { 559d });
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(62), "watches/fitbit", new[] { 579d });
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(63), "watches/apple", new[] { 569d });
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(61), new[] { 559d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(62), new[] { 579d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(63), new[] { 569d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(61), "watches/apple", new[] { 459d });
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(62), "watches/fitbit", new[] { 479d });
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(63), "watches/sony", new[] { 999d });
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(61), new[] { 459d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(62), new[] { 479d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(63), new[] { 999d }, "watches/sony");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(61), "watches/apple", new[] { 359d });
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(62), "watches/fitbit", new[] { 379d });
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(63), "watches/apple", new[] { 369d });
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(61), new[] { 359d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(62), new[] { 379d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(63), new[] { 369d }, "watches/apple");
 
                     session.SaveChanges();
                 }
@@ -2183,31 +2191,31 @@ select foo(heartrate(p))
                     session.Store(new Watch(), "watches/fitbit");
                     session.Store(new Watch(), "watches/apple");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/apple", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(61), "watches/apple", new[] { 259d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(62), "watches/fitbit", new[] { 279d });
-                    tsf.Append("Heartrate", baseline.AddMonths(3).AddMinutes(63), null, new[] { 992d });
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(61), new[] { 259d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(62), new[] { 279d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(3).AddMinutes(63), new[] { 992d });
 
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(61), "watches/apple", new[] { 559d });
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(62), "watches/fitbit", new[] { 579d });
-                    tsf.Append("Heartrate", baseline.AddMonths(5).AddMinutes(63), "watches/apple", new[] { 569d });
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(61), new[] { 559d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(62), new[] { 579d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(5).AddMinutes(63), new[] { 569d }, "watches/apple");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(61), "watches/apple", new[] { 459d });
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(62), "watches/fitbit", new[] { 479d });
-                    tsf.Append("Heartrate", baseline.AddMonths(6).AddMinutes(63), "watches/sony", new[] { 999d });
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(61), new[] { 459d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(62), new[] { 479d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(63), new[] { 999d }, "watches/sony");
 
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(61), "watches/apple", new[] { 359d });
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(62), "watches/fitbit", new[] { 379d });
-                    tsf.Append("Heartrate", baseline.AddMonths(7).AddMinutes(63), "watches/apple", new[] { 369d });
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(61), new[] { 359d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(62), new[] { 379d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(7).AddMinutes(63), new[] { 369d }, "watches/apple");
 
                     session.SaveChanges();
                 }
@@ -2259,25 +2267,25 @@ select foo(heartrate(p))
                         Name = "HR"
                     }, "companies/1");
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "HeartRate");
 
-                    tsf.Append("HeartRate", baseline.AddMinutes(61), "tags/1", new[] { 59d });
-                    tsf.Append("HeartRate", baseline.AddMinutes(62), "tags/2", new[] { 79d });
-                    tsf.Append("HeartRate", baseline.AddMinutes(63), "tags/2", new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "tags/2");
 
-                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 159d });
-                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 179d });
-                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 169d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "tags/2");
 
-                    tsf = session.TimeSeriesFor("companies/1");
+                    tsf = session.TimeSeriesFor("companies/1", "Stocks");
 
-                    tsf.Append("Stocks", baseline.AddMinutes(61), "tags/1", new[] { 559d });
-                    tsf.Append("Stocks", baseline.AddMinutes(62), "tags/2", new[] { 579d });
-                    tsf.Append("Stocks", baseline.AddMinutes(63), "tags/3", new[] { 569d });
+                    tsf.Append(baseline.AddMinutes(61), new[] { 559d }, "tags/1");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 579d }, "tags/2");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 569d }, "tags/3");
 
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 659d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(62), "tags/1", new[] { 679d });
-                    tsf.Append("Stocks", baseline.AddMonths(1).AddMinutes(63), "tags/2", new[] { 669d });
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 659d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 679d }, "tags/1");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 669d }, "tags/2");
 
                     session.SaveChanges();
                 }

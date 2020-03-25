@@ -110,8 +110,8 @@ namespace SlowTests.Client.TimeSeries.Patch
                 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var val = (await session.TimeSeriesFor(documentId)
-                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                    var val = (await session.TimeSeriesFor(documentId, timeseries)
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .Single();
                     
                     Assert.Equal(tag, val.Tag);
@@ -159,8 +159,8 @@ namespace SlowTests.Client.TimeSeries.Patch
                 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var val = (await session.TimeSeriesFor(documentId)
-                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                    var val = (await session.TimeSeriesFor(documentId, timeseries)
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .Single();
                     Assert.Equal(values, val.Values);
                     Assert.Equal(tag, val.Tag);
@@ -203,8 +203,8 @@ namespace SlowTests.Client.TimeSeries.Patch
                 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var val = (await session.TimeSeriesFor(documentId)
-                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                    var val = (await session.TimeSeriesFor(documentId, timeseries)
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .Single();
                     Assert.Equal(values, val.Values);
                     Assert.Null(val.Tag);
@@ -253,8 +253,8 @@ for(i = 0; i < args.toAppend.length; i++){
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var timeSeriesEntries = (await session.TimeSeriesFor(documentId)
-                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                    var timeSeriesEntries = (await session.TimeSeriesFor(documentId, timeseries)
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .ToArray();
                     
                     Assert.Equal(toAppend.Length, timeSeriesEntries.Length);
@@ -297,7 +297,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     {
                         var time = baseline.AddMinutes(i);
                         expectedValues.Add((time, values[i]));
-                        session.TimeSeriesFor(documentId).Append(timeseries, time, tag, new[] { values[i] });
+                        session.TimeSeriesFor(documentId, timeseries).Append(time, values[i], tag);
                     }
 
                     await session.SaveChangesAsync();
@@ -321,8 +321,8 @@ for(i = 0; i < args.toAppend.length; i++){
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var entries = (await session.TimeSeriesFor(documentId)
-                            .GetAsync(timeseries, DateTime.MinValue, DateTime.MaxValue))
+                    var entries = (await session.TimeSeriesFor(documentId, timeseries)
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .ToList();
 
                     Assert.Equal(values.Length - 1 - (toIndex - fromIndex), entries.Count);
@@ -381,7 +381,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     {
                         var time = baseline.AddMinutes(i);
                         expectedValues.Add((time, values[i]));
-                        session.TimeSeriesFor(documentId).Append(timeseries, time, tag, new[] { values[i] });
+                        session.TimeSeriesFor(documentId, timeseries).Append(time, values[i], tag);
                     }
 
                     await session.SaveChangesAsync();

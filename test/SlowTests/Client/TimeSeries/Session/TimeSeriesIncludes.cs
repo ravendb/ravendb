@@ -30,9 +30,10 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     session.Store(new Company { Name = "HR" }, "companies/1-A");
                     session.Store(new Order { Company = "companies/1-A" }, "orders/1-A");
-                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline, "watches/apple", new []{ 67d });
-                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline.AddMinutes(5), "watches/apple", new[] { 64d });
-                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline.AddMinutes(10), "watches/fitbit", new[] { 65d });
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new []{ 67d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(5), new[] { 64d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(10), new[] { 65d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
@@ -48,8 +49,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal("HR", company.Name);
 
                     // should not go to server
-                    var values = session.TimeSeriesFor(order)
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var values = session.TimeSeriesFor(order, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList(); 
                     
                     Assert.Equal(3, values.Count);
@@ -85,9 +86,10 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
                     await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
-                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline, "watches/apple", new[] { 67d });
-                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline.AddMinutes(5), "watches/apple", new[] { 64d });
-                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline.AddMinutes(10), "watches/fitbit", new[] { 65d });
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 67d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(5), new[] { 64d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(10), new[] { 65d }, "watches/fitbit");
 
                     await session.SaveChangesAsync();
                 }
@@ -110,8 +112,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal("HR", company.Name);
 
                     // should not go to server
-                    var values = (await session.TimeSeriesFor(order)
-                        .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue))
+                    var values = (await session.TimeSeriesFor(order, "Heartrate")
+                        .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -151,10 +153,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -163,8 +165,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(2), baseline.AddMinutes(10))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(2), baseline.AddMinutes(10))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -181,8 +183,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(40), baseline.AddMinutes(50))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(40), baseline.AddMinutes(50))
                         .ToList();
 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
@@ -211,8 +213,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(2))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(2))
                         .ToList();
 
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
@@ -238,8 +240,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(10), baseline.AddMinutes(16))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(10), baseline.AddMinutes(16))
                         .ToList();
 
                     Assert.Equal(4, session.Advanced.NumberOfRequests);
@@ -266,8 +268,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(17), baseline.AddMinutes(19))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(17), baseline.AddMinutes(19))
                         .ToList();
 
                     Assert.Equal(5, session.Advanced.NumberOfRequests);
@@ -297,8 +299,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(18), baseline.AddMinutes(48))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(18), baseline.AddMinutes(48))
                         .ToList();
 
                     Assert.Equal(6, session.Advanced.NumberOfRequests);
@@ -327,8 +329,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(12), baseline.AddMinutes(22))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(12), baseline.AddMinutes(22))
                         .ToList();
 
                     Assert.Equal(7, session.Advanced.NumberOfRequests);
@@ -360,10 +362,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -372,8 +374,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(2), baseline.AddMinutes(10))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(2), baseline.AddMinutes(10))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -382,7 +384,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(2), vals[0].Timestamp);
                     Assert.Equal(baseline.AddMinutes(10), vals[48].Timestamp);
 
-                    session.TimeSeriesFor("users/ayende").Append("Heartrate", baseline.AddMinutes(3).AddSeconds(3), "watches/fitbit", new[] { 6d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(3).AddSeconds(3), new[] { 6d }, "watches/fitbit");
                     session.SaveChanges();
 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
@@ -395,8 +398,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(3), baseline.AddMinutes(5))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(3), baseline.AddMinutes(5))
                         .ToList();
 
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
@@ -425,18 +428,18 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
-
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
-                        tsf.Append("BloodPressure", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 66d });
-                        tsf.Append("Nasdaq", baseline.AddSeconds(i * 10), "nasdaq.com", new[] { 8097.23 });
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
+                        session.TimeSeriesFor("users/ayende", "BloodPressure")
+                            .Append(baseline.AddSeconds(i * 10), new[] { 66d }, "watches/fitbit");
+                        session.TimeSeriesFor("users/ayende", "Nasdaq")
+                            .Append(baseline.AddSeconds(i * 10), new[] { 8097.23 }, "nasdaq.com");
 
                     }
 
                     session.SaveChanges();
-
                 }
 
                 using (var session = store.OpenSession())
@@ -453,8 +456,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(3), baseline.AddMinutes(5))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(3), baseline.AddMinutes(5))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -465,8 +468,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("BloodPressure", baseline.AddMinutes(42), baseline.AddMinutes(43))
+                    vals = session.TimeSeriesFor("users/ayende", "BloodPressure")
+                        .Get(baseline.AddMinutes(42), baseline.AddMinutes(43))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -475,11 +478,10 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(42), vals[0].Timestamp);
                     Assert.Equal(baseline.AddMinutes(43), vals[6].Timestamp);
 
-
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("BloodPressure", baseline.AddMinutes(40), baseline.AddMinutes(45))
+                    vals = session.TimeSeriesFor("users/ayende", "BloodPressure")
+                        .Get(baseline.AddMinutes(40), baseline.AddMinutes(45))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -490,8 +492,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Nasdaq", baseline.AddMinutes(15), baseline.AddMinutes(25))
+                    vals = session.TimeSeriesFor("users/ayende", "Nasdaq")
+                        .Get(baseline.AddMinutes(15), baseline.AddMinutes(25))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -519,11 +521,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -542,8 +544,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(-30), baseline.AddMinutes(-10))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(-30), baseline.AddMinutes(-10))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -559,8 +561,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(-25), baseline.AddMinutes(-15))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(-25), baseline.AddMinutes(-15))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -577,8 +579,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("BloodPressure", baseline.AddMinutes(10), baseline.AddMinutes(30))
+                    vals = session.TimeSeriesFor("users/ayende", "BloodPressure")
+                        .Get(baseline.AddMinutes(10), baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
@@ -590,7 +592,6 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Empty(ranges[0].Entries);
                     Assert.Equal(baseline.AddMinutes(10), ranges[0].From);
                     Assert.Equal(baseline.AddMinutes(30), ranges[0].To);
-
 
                 }
             }
@@ -613,23 +614,21 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf1 = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    var tsf2 = session.TimeSeriesFor("users/ppekrol", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        session.TimeSeriesFor("users/ayende")
-                            .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+                        tsf1.Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
 
                         if (i % 2 == 0)
                         {
-                            session.TimeSeriesFor("users/ppekrol")
-                                .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 7d });
+                            tsf2.Append(baseline.AddSeconds(i * 10), new[] { 7d }, "watches/fitbit");
                         }
 
                     }
 
                     session.SaveChanges();
-
                 }
 
                 using (var session = store.OpenSession())
@@ -643,11 +642,10 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal("Oren", users["users/ayende"].Name);
                     Assert.Equal("Pawel", users["users/ppekrol"].Name);
 
-
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -658,8 +656,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ppekrol")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    vals = session.TimeSeriesFor("users/ppekrol", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -689,18 +687,17 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
                     }
 
                     session.CountersFor("users/ayende").Increment("likes", 100);
                     session.CountersFor("users/ayende").Increment("dislikes", 5);
 
                     session.SaveChanges();
-
                 }
 
                 using (var session = store.OpenSession())
@@ -726,8 +723,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -768,11 +765,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -791,8 +788,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -816,9 +813,10 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
                     await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
-                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline, "watches/apple", new[] { 67d });
-                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline.AddMinutes(5), "watches/apple", new[] { 64d });
-                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline.AddMinutes(10), "watches/fitbit", new[] { 65d });
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 67d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(5), new[] { 64d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(10), new[] { 65d }, "watches/fitbit");
 
                     await session.SaveChangesAsync();
                 }
@@ -842,8 +840,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal("HR", company.Name);
 
                     // should not go to server
-                    var values = (await session.TimeSeriesFor(order)
-                        .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue))
+                    var values = (await session.TimeSeriesFor(order, "Heartrate")
+                        .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -883,11 +881,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -910,8 +908,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -940,11 +938,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -964,8 +962,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -994,10 +992,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -1006,8 +1004,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(2), baseline.AddMinutes(10))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(2), baseline.AddMinutes(10))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1024,8 +1022,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(40), baseline.AddMinutes(50))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(40), baseline.AddMinutes(50))
                         .ToList();
 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
@@ -1054,8 +1052,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(2))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(2))
                         .ToList();
 
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
@@ -1081,8 +1079,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(10), baseline.AddMinutes(16))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(10), baseline.AddMinutes(16))
                         .ToList();
 
                     Assert.Equal(4, session.Advanced.NumberOfRequests);
@@ -1109,8 +1107,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(17), baseline.AddMinutes(19))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(17), baseline.AddMinutes(19))
                         .ToList();
 
                     Assert.Equal(5, session.Advanced.NumberOfRequests);
@@ -1140,8 +1138,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(18), baseline.AddMinutes(48))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(18), baseline.AddMinutes(48))
                         .ToList();
 
                     Assert.Equal(6, session.Advanced.NumberOfRequests);
@@ -1170,8 +1168,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(12), baseline.AddMinutes(22))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(12), baseline.AddMinutes(22))
                         .ToList();
 
                     Assert.Equal(7, session.Advanced.NumberOfRequests);
@@ -1183,7 +1181,6 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(1, ranges.Count);
                     Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
                     Assert.Equal(baseline.AddMinutes(50), ranges[0].To);
-
                 }
             }
         }
@@ -1203,10 +1200,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -1215,8 +1212,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(2), baseline.AddMinutes(10))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(2), baseline.AddMinutes(10))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1225,7 +1222,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(2), vals[0].Timestamp);
                     Assert.Equal(baseline.AddMinutes(10), vals[48].Timestamp);
 
-                    session.TimeSeriesFor("users/ayende").Append("Heartrate", baseline.AddMinutes(3).AddSeconds(3), "watches/fitbit", new[] { 6d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(3).AddSeconds(3), new[] { 6d }, "watches/fitbit");
                     session.SaveChanges();
 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
@@ -1238,8 +1236,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(3), baseline.AddMinutes(5))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(3), baseline.AddMinutes(5))
                         .ToList();
 
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
@@ -1268,13 +1266,14 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
-
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
-                        tsf.Append("BloodPressure", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 66d });
-                        tsf.Append("Nasdaq", baseline.AddSeconds(i * 10), "nasdaq.com", new[] { 8097.23 });
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
+                        session.TimeSeriesFor("users/ayende", "BloodPressure")
+                            .Append(baseline.AddSeconds(i * 10), new[] { 66d }, "watches/fitbit");
+                        session.TimeSeriesFor("users/ayende", "Nasdaq")
+                            .Append(baseline.AddSeconds(i * 10), new[] { 8097.23 }, "nasdaq.com");
                     }
 
                     session.SaveChanges();
@@ -1295,8 +1294,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(3), baseline.AddMinutes(5))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(3), baseline.AddMinutes(5))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1307,8 +1306,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("BloodPressure", baseline.AddMinutes(42), baseline.AddMinutes(43))
+                    vals = session.TimeSeriesFor("users/ayende", "BloodPressure")
+                        .Get(baseline.AddMinutes(42), baseline.AddMinutes(43))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1320,8 +1319,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("BloodPressure", baseline.AddMinutes(40), baseline.AddMinutes(45))
+                    vals = session.TimeSeriesFor("users/ayende", "BloodPressure")
+                        .Get(baseline.AddMinutes(40), baseline.AddMinutes(45))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1332,8 +1331,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Nasdaq", baseline.AddMinutes(15), baseline.AddMinutes(25))
+                    vals = session.TimeSeriesFor("users/ayende", "Nasdaq")
+                        .Get(baseline.AddMinutes(15), baseline.AddMinutes(25))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1361,11 +1360,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -1384,8 +1383,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(-30), baseline.AddMinutes(-10))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(-30), baseline.AddMinutes(-10))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1401,8 +1400,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(-25), baseline.AddMinutes(-15))
+                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddMinutes(-25), baseline.AddMinutes(-15))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1419,8 +1418,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende")
-                        .Get("BloodPressure", baseline.AddMinutes(10), baseline.AddMinutes(30))
+                    vals = session.TimeSeriesFor("users/ayende", "BloodPressure")
+                        .Get(baseline.AddMinutes(10), baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
@@ -1455,11 +1454,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
                     }
 
                     session.CountersFor("users/ayende").Increment("likes", 100);
@@ -1493,8 +1492,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1545,11 +1544,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("employees/ayende");
+                    var tsf = session.TimeSeriesFor("employees/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -1568,8 +1567,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor("employees/ayende")
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor("employees/ayende", "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1608,13 +1607,13 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
-                    var tsf2 = session.TimeSeriesFor("companies/1");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    var tsf2 = session.TimeSeriesFor("companies/1", "Stock");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
-                        tsf2.Append("Stock", baseline.AddSeconds(i * 10), "marketwatch/investing/stock", new[] { 7403.4d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
+                        tsf2.Append(baseline.AddSeconds(i * 10), new[] { 7403.4d }, "marketwatch/investing/stock");
                     }
 
                     session.SaveChanges();
@@ -1643,8 +1642,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor(result[0])
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor(result[0], "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1657,8 +1656,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor(company)
-                        .Get("Stock", baseline, baseline.AddMinutes(30))
+                    vals = session.TimeSeriesFor(company, "Stock")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1691,11 +1690,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -1714,8 +1713,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor(result[0])
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor(result[0], "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1731,8 +1730,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate", baseline.AddMinutes(10), baseline.AddMinutes(40));
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Remove(baseline.AddMinutes(10), baseline.AddMinutes(40));
 
                     session.SaveChanges();
                 }
@@ -1753,8 +1752,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor(result[0])
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor(result[0], "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1785,11 +1784,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -1809,8 +1808,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor(result[0])
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor(result[0], "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1826,8 +1825,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate", baseline.AddMinutes(10), baseline.AddMinutes(40));
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Remove(baseline.AddMinutes(10), baseline.AddMinutes(40));
 
                     session.SaveChanges();
                 }
@@ -1849,8 +1848,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor(result[0])
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor(result[0], "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1897,17 +1896,17 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/1");
-                    var tsf2 = session.TimeSeriesFor("users/2");
+                    var tsf = session.TimeSeriesFor("users/1", "Heartrate");
+                    var tsf2 = session.TimeSeriesFor("users/2", "Heartrate");
 
                     for (int i = 0; i < 360; i++)
                     {
-                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                        tsf.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/fitbit");
 
                         if (i % 2 == 0)
                             continue;
 
-                        tsf2.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/apple", new[] { 67d });
+                        tsf2.Append(baseline.AddSeconds(i * 10), new[] { 67d }, "watches/apple");
                     }
 
                     session.CountersFor("users/1").Increment("likes", 5);
@@ -1955,8 +1954,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor(result[0])
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor(result[0], "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -2016,8 +2015,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
 
-                    var vals = session.TimeSeriesFor(result[0])
-                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                    var vals = session.TimeSeriesFor(result[0], "Heartrate")
+                        .Get(baseline, baseline.AddMinutes(30))
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -2029,7 +2028,6 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(30).AddSeconds(-10), vals[89].Timestamp);
 
                 }
-
             }
         }
 

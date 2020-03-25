@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
@@ -282,12 +281,10 @@ namespace SlowTests.Client.TimeSeries.Operations
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 69d });
-                    session.TimeSeriesFor("users/ayende")
-                     .Append("Heartrate", baseline.AddMinutes(3), "watches/fitbit", new[] { 79d });
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    tsf.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(2), new[] { 69d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(3), new[] { 79d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
@@ -295,16 +292,16 @@ namespace SlowTests.Client.TimeSeries.Operations
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate", baseline.AddMinutes(2));
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Remove(baseline.AddMinutes(2));
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                         .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                         .Get(DateTime.MinValue, DateTime.MaxValue)
                          .ToList();
                     Assert.Equal(2, vals.Count);
                     Assert.Equal(new[] { 59d }, vals[0].Values);
@@ -329,14 +326,14 @@ namespace SlowTests.Client.TimeSeries.Operations
                 {
 
                     session.Store(new User(), "foo/bar");
-                    var tsf = session.TimeSeriesFor("foo/bar");
+                    var tsf = session.TimeSeriesFor("foo/bar", "BloodPressure");
 
                     for (int j = 1; j < 10_000; j++)
                     {
                         var offset = j * 10;
                         var time = baseline.AddSeconds(offset);
 
-                        tsf.Append("BloodPressure", time, "watches/apple", new[] { (double)(j) });
+                        tsf.Append(time, new[] { (double)(j) }, "watches/apple");
                     }
 
                     session.SaveChanges();
@@ -384,8 +381,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("foo/bar");
-                    tsf.Remove("BloodPressure", baseline.AddSeconds(3600), baseline.AddSeconds(3600 * 10)); // remove 9 hours
+                    var tsf = session.TimeSeriesFor("foo/bar", "BloodPressure");
+                    tsf.Remove(baseline.AddSeconds(3600), baseline.AddSeconds(3600 * 10)); // remove 9 hours
                     session.SaveChanges();
                 }
 
@@ -579,12 +576,12 @@ namespace SlowTests.Client.TimeSeries.Operations
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 69d });
-                    session.TimeSeriesFor("users/ayende")
-                     .Append("Heartrate", baseline.AddMinutes(3), "watches/fitbit", new[] { 79d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(2), new[] { 69d }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                     .Append(baseline.AddMinutes(3), new[] { 79d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
@@ -592,16 +589,16 @@ namespace SlowTests.Client.TimeSeries.Operations
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate", baseline.AddMinutes(2));
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Remove(baseline.AddMinutes(2));
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                         .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                         .Get(DateTime.MinValue, DateTime.MaxValue)
                          .ToList();
                     Assert.Equal(2, vals.Count);
                     Assert.Equal(new[] { 59d }, vals[0].Values);

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -26,8 +27,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "fitbit", new[] { 58d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), new[] { 58d }, "fitbit");
                     session.SaveChanges();
                 }
 
@@ -52,8 +53,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "fitbit", new[] { 58d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), new[] { 58d }, "fitbit");
                     session.SaveChanges();
                 }
 
@@ -68,8 +69,8 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Remove(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
                 }
 
@@ -94,10 +95,10 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "fitbit", new[] { 58d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate2", baseline.AddMinutes(1), "apple", new[] { 58d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), new[] { 58d }, "fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate2")
+                        .Append(baseline.AddMinutes(1), new[] { 58d }, "apple");
                     session.SaveChanges();
                 }
 
@@ -118,8 +119,8 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate2", DateTime.MinValue, DateTime.MaxValue);
+                    session.TimeSeriesFor("users/ayende", "Heartrate2")
+                        .Remove(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
                 }
 
@@ -139,8 +140,8 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Remove(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
                 }
 
@@ -169,10 +170,10 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline, "fitbit", new[] { 60d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddSeconds(1), "fitbit", new[] { 62d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline, new[] { 60d }, "fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddSeconds(1), new[] { 62d }, "fitbit");
                     session.SaveChanges();
                 }
 
@@ -182,8 +183,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         for (int j = 0; j < 1000; j++)
                         {
-                            session.TimeSeriesFor("users/ayende")
-                                .Append("Heartrate", baseline.AddYears(i).AddMinutes(j), "fitbit", new[] { 58d + i });
+                            session.TimeSeriesFor("users/ayende", "Heartrate")
+                                .Append(baseline.AddYears(i).AddMinutes(j), new[] { 58d + i }, "fitbit");
                         }
 
                         session.SaveChanges();
@@ -214,10 +215,9 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline, "fitbit", new[] { 60d, 180d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddSeconds(1), "fitbit", new[] { 62d, 178d });
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    tsf.Append(baseline, new[] { 60d, 180d }, "fitbit");
+                    tsf.Append(baseline.AddSeconds(1), new[] { 62d, 178d }, "fitbit");
                     session.SaveChanges();
                 }
 
@@ -227,8 +227,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         for (int j = 0; j < 1000; j++)
                         {
-                            session.TimeSeriesFor("users/ayende")
-                                .Append("Heartrate", baseline.AddYears(i).AddMinutes(j), "fitbit", new[] { 58d + i, 170d - i });
+                            session.TimeSeriesFor("users/ayende", "Heartrate")
+                                .Append(baseline.AddYears(i).AddMinutes(j), new[] { 58d + i, 170d - i }, "fitbit");
                         }
 
                         session.SaveChanges();
@@ -263,10 +263,9 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline, "fitbit", new[] { 60d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddSeconds(1), "fitbit", new[] { 62d, 178d, 278 });
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    tsf.Append(baseline, new[] { 60d }, "fitbit");
+                    tsf.Append(baseline.AddSeconds(1), new[] { 62d, 178d, 278 }, "fitbit");
                     session.SaveChanges();
                 }
 
@@ -276,8 +275,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         for (int j = 0; j < 1000; j++)
                         {
-                            session.TimeSeriesFor("users/ayende")
-                                .Append("Heartrate", baseline.AddYears(i).AddMinutes(j), "fitbit", new[] { 58d + i, 170d - i });
+                            session.TimeSeriesFor("users/ayende", "Heartrate")
+                                .Append(baseline.AddYears(i).AddMinutes(j), new[] { 58d + i, 170d - i }, "fitbit");
                         }
 
                         session.SaveChanges();

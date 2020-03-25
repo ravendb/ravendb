@@ -13,7 +13,7 @@ namespace SlowTests.Issues
             using var store = GetDocumentStore();
             using var session = store.OpenSession();
             session.Store(new {}, "nodes/2-A");
-            var timeSeries = session.TimeSeriesFor("nodes/2-A");
+            var timeSeries = session.TimeSeriesFor("nodes/2-A", "DiskQueue");
 
             var start = DateTime.Today.AddDays(-3);
             var random = new Random(1337);
@@ -32,10 +32,9 @@ namespace SlowTests.Issues
                         n1 = 0;
                         up = true;
                     }
-                    timeSeries.Append("DiskQueue",
-                        start.AddSeconds(n1t).AddMilliseconds(150),
-                        "/dev/nvme1",
-                        new[] { n1 }
+                    timeSeries.Append(start.AddSeconds(n1t).AddMilliseconds(150),
+                        new[] { n1 },
+                        "/dev/nvme1"
                     );
 
                     n1t += random.Next(10);
@@ -49,10 +48,9 @@ namespace SlowTests.Issues
                         n2 = 0;
                         up = true;
                     }
-                    timeSeries.Append("DiskQueue",
-                        start.AddSeconds(n1t).AddMilliseconds(250),
-                        "/dev/nvme2",
-                        new[] { n2 }
+                    timeSeries.Append(start.AddSeconds(n1t).AddMilliseconds(250),
+                        new[] { n2 },
+                        "/dev/nvme2"
                     );
 
                     n2t += random.Next(10);

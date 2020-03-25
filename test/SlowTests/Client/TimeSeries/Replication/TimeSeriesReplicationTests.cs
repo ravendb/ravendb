@@ -7,6 +7,7 @@ using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -31,8 +32,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var session = storeA.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
                     session.SaveChanges();
                 }
 
@@ -44,8 +45,8 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 using (var session = storeB.OpenSession())
                 {
-                    var val = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var val = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .Single();
                     Assert.Equal(new[] { 59d }, val.Values);
                     Assert.Equal("watches/fitbit", val.Tag);
@@ -83,8 +84,8 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                     for (int j = 0; j < retries; j++)
                     {
-                        session.TimeSeriesFor("users/ayende")
-                            .Append("Heartrate", baseline.AddMinutes(offset), "watches/fitbit", new double[] { offset });
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddMinutes(offset), new double[] { offset }, "watches/fitbit");
 
                         offset += 5;
                     }
@@ -99,8 +100,8 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                     for (int j = 0; j < retries; j++)
                     {
-                        session.TimeSeriesFor("users/ayende")
-                            .Append("Heartrate", baseline.AddMinutes(offset), "watches/fitbit", new double[] { offset });
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddMinutes(offset), new double[] { offset }, "watches/fitbit");
                         offset += 5;
                     }
 
@@ -117,8 +118,8 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 using (var session = storeB.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
                     Assert.Equal(2 * retries, vals.Count);
 
@@ -141,8 +142,8 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 using (var session = storeA.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
                     Assert.Equal(2 * retries, vals.Count);
 
@@ -202,8 +203,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                         {
                             for (int j = 0; j < 100; j++)
                             {
-                                session.TimeSeriesFor("users/ayende")
-                                    .Append("Heartrate", baseline.AddMinutes(offset), "watches/fitbit", new double[] { value++ });
+                                session.TimeSeriesFor("users/ayende", "Heartrate")
+                                    .Append(baseline.AddMinutes(offset), new double[] { value++ }, "watches/fitbit");
                                 offset += rand.Next(1, 5);
                             }
 
@@ -217,8 +218,8 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var valsB = sessionB.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var valsB = sessionB.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.Equal(valsB.Select(x => x.Timestamp).Distinct().Count(), valsB.Count);
@@ -235,14 +236,14 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var valsA = sessionA.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var valsA = sessionA.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.True(valsA.SequenceEqual(valsA.OrderBy(x => x.Timestamp)));
 
-                    var valsB = sessionB.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var valsB = sessionB.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.True(valsB.SequenceEqual(valsB.OrderBy(x => x.Timestamp)));
@@ -294,8 +295,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                         {
                             for (int j = 0; j < 100; j++)
                             {
-                                session.TimeSeriesFor("users/ayende")
-                                    .Append("Heartrate", baseline.AddMinutes(offset++), "watches/fitbit", new double[] { value++ });
+                                session.TimeSeriesFor("users/ayende", "Heartrate")
+                                    .Append(baseline.AddMinutes(offset++), new double[] { value++ }, "watches/fitbit");
                             }
 
                             session.SaveChanges();
@@ -312,12 +313,12 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var valsA = sessionA.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var valsA = sessionA.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
-                    var valsB = sessionB.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var valsB = sessionB.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.Equal(valsB.Count, valsA.Count);
@@ -365,17 +366,17 @@ namespace SlowTests.Client.TimeSeries.Replication
                     {
                         using (var session = store.OpenSession())
                         {
+                            var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+
                             for (int j = 0; j < 100; j++)
                             {
                                 var time = baseline.AddMinutes(offset++);
                                 var val = value++;
-                               
-                                session.TimeSeriesFor("users/ayende")
-                                    .Append("Heartrate", time, "watches/fitbit", new double[] { val });
+
+                                tsf.Append(time, new double[] { val }, "watches/fitbit");
                             }
 
-                            session.TimeSeriesFor("users/ayende")
-                                .Remove("Heartrate", baseline.AddMinutes(i + 0.5), baseline.AddMinutes(i + 10.5));
+                            tsf.Remove(baseline.AddMinutes(i + 0.5), baseline.AddMinutes(i + 10.5));
 
                             session.SaveChanges();
                         }
@@ -393,12 +394,12 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var valsA = sessionA.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var valsA = sessionA.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
-                    var valsB = sessionB.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var valsB = sessionB.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.Equal(valsB.Count, valsA.Count);
@@ -429,20 +430,20 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var session = storeA.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(10), "watches/fitbit", new double[] { 1 });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new double[] { 1 });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), new double[] { 1 }, "watches/fitbit");
                     session.SaveChanges();
                 }
 
                 using (var session = storeB.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(2), "watches/fitbit", new double[] { 1 });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(3), "watches/fitbit", new double[] { 1 });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(2), new double[] { 1 }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(3), new double[] { 1 }, "watches/fitbit");
                     session.SaveChanges();
                 }
 
@@ -460,8 +461,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 
                 using (var session = storeA.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate", baseline.AddMinutes(10));
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Remove(baseline.AddMinutes(10));
                     session.SaveChanges();
                 }
 
@@ -472,12 +473,12 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var valsA = sessionA.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var valsA = sessionA.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
-                    var valsB = sessionB.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var valsB = sessionB.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
 
                     Assert.Equal(valsA.Count, valsB.Count);
@@ -508,16 +509,16 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var session = storeA.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
                     session.SaveChanges();
                 }
 
                 using (var session = storeB.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(2), "watches/fitbit2", new[] { 70d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(2), new[] { 70d }, "watches/fitbit2");
                     session.SaveChanges();
                 }
 
@@ -534,8 +535,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 {
                     using (var session = store.OpenSession())
                     {
-                        var values = session.TimeSeriesFor("users/ayende")
-                            .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                        var values = session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Get(DateTime.MinValue, DateTime.MaxValue).ToList();
 
                         var val = values[0];
                         Assert.Equal(new[] { 59d }, val.Values);
@@ -562,16 +563,16 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var session = storeA.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
                     session.SaveChanges();
                 }
 
                 using (var session = storeB.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 70d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), new[] { 70d }, "watches/fitbit");
                     session.SaveChanges();
                 }
 
@@ -588,8 +589,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 {
                     using (var session = store.OpenSession())
                     {
-                        var val = session.TimeSeriesFor("users/ayende")
-                            .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        var val = session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Get(DateTime.MinValue, DateTime.MaxValue)
                             .Single();
 
                         Assert.Equal(new[] { 70d }, val.Values);
@@ -610,13 +611,13 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var session = storeA.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
-                    session.TimeSeriesFor("users/1").Append("heartbeat", DateTime.Now, "herz", new List<double> {1, 2, 3});
+                    session.TimeSeriesFor("users/1", "heartbeat").Append(DateTime.Now, new List<double> {1, 2, 3}, "herz");
                     await session.SaveChangesAsync();
                 }
                 using (var session = storeB.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
-                    session.TimeSeriesFor("users/1").Append("pulse", DateTime.Now, "bps", new List<double> {1, 2, 3});
+                    session.TimeSeriesFor("users/1", "pulse").Append(DateTime.Now, new List<double> {1, 2, 3}, "bps");
                     await session.SaveChangesAsync();
                 }
 
@@ -644,7 +645,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var session = storeA.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
-                    session.TimeSeriesFor("users/1").Append("heartbeat", DateTime.Now, "herz", new List<double> {1, 2, 3});
+                    session.TimeSeriesFor("users/1", "heartbeat").Append(DateTime.Now, new List<double> {1, 2, 3}, "herz");
                     await session.SaveChangesAsync();
                 }
                 using (var session = storeB.OpenAsyncSession())

@@ -685,8 +685,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     for (int i = 0; i < 360; i++)
                     {
-                        session.TimeSeriesFor("users/1")
-                            .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                        session.TimeSeriesFor("users/1", "Heartrate")
+                            .Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
                     }
 
                     await session.SaveChangesAsync();
@@ -730,8 +730,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     for (int i = 0; i < 180; i++)
                     {
-                        session.TimeSeriesFor("users/2")
-                            .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d });
+                        session.TimeSeriesFor("users/2", "Heartrate")
+                            .Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/2");
                     }
 
                     await session.SaveChangesAsync();
@@ -757,7 +757,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.True(users.Any(x => x.Value.Name == "oren"));
                         Assert.True(users.Any(x => x.Value.Name == "ayende"));
 
-                        var values = (await session.TimeSeriesFor("users/1").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        var values = (await session.TimeSeriesFor("users/1", "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToList();
                         Assert.Equal(360, values.Count);
 
                         for (int i = 0; i < values.Count; i++)
@@ -767,7 +767,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             Assert.Equal("watches/1", values[i].Tag);
                         }
 
-                        values = (await session.TimeSeriesFor("users/2").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        values = (await session.TimeSeriesFor("users/2", "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToList();
                         Assert.Equal(180, values.Count);
 
                         for (int i = 0; i < values.Count; i++)
@@ -800,7 +800,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     //create time series segment to backup
                     for (int i = 0; i < 360; i++)
                     {
-                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                        session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
                     } 
 
                     await session.SaveChangesAsync();
@@ -831,7 +831,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
                     for (int i = 0; i < 360; i++)
                     {
-                        session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d });
+                        session.TimeSeriesFor("users/2", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/2");
                     }
 
                     await session.SaveChangesAsync();
@@ -858,7 +858,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.True(users.Any(x => x.Value.Name == "oren"));
                         Assert.True(users.Any(x => x.Value.Name == "ayende"));
 
-                        var values = (await session.TimeSeriesFor("users/1").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        var values = (await session.TimeSeriesFor("users/1", "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToList();
                         Assert.Equal(360, values.Count);
 
                         for (int i = 0; i < values.Count; i++)
@@ -868,7 +868,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             Assert.Equal("watches/1", values[i].Tag);
                         }
 
-                        values = (await session.TimeSeriesFor("users/2").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        values = (await session.TimeSeriesFor("users/2", "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToList();
                         Assert.Equal(360, values.Count);
 
                         for (int i = 0; i < values.Count; i++)
@@ -1095,7 +1095,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     //create time series segment to backup
                     for (int i = 0; i < 360; i++)
                     {
-                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                        session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
                     }
 
                     await session.SaveChangesAsync();
@@ -1136,8 +1136,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         var user1 = await session.LoadAsync<User>("users/1");
                         Assert.Equal("oren", user1.Name);
 
-                        var values = (await session.TimeSeriesFor("users/1")
-                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue))
+                        var values = (await session.TimeSeriesFor("users/1", "Heartrate")
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                             .ToList();
 
                         Assert.Equal(360, values.Count);
@@ -1156,8 +1156,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
                     for (int i = 0; i < 180; i++)
                     {
-                        session.TimeSeriesFor("users/2")
-                            .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                        session.TimeSeriesFor("users/2", "Heartrate")
+                            .Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
                     }
                     await session.SaveChangesAsync();
                 }
@@ -1188,8 +1188,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         Assert.Equal("ayende", user2.Name);
 
-                        var values = (await session.TimeSeriesFor(user2)
-                                .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue))
+                        var values = (await session.TimeSeriesFor(user2, "Heartrate")
+                                .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                             .ToList();
 
                         Assert.Equal(180, values.Count);

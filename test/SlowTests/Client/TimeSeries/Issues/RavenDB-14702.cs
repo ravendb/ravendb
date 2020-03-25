@@ -40,13 +40,13 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                         var r = new Random();
                         var previous = 0.0;
-                        var tsf = session.TimeSeriesFor("zzz/1");
+                        var tsf = session.TimeSeriesFor("zzz/1", "small");
 
                         for (var i = 0; i < 4000; i++)
                         {
                             var nextDouble = previous * 0.9 + 0.1 * r.NextDouble();
 
-                            tsf.Append("small", d, null, new double[] { nextDouble });
+                            tsf.Append(d, nextDouble);
                             d = d.AddMinutes(1);
 
                             previous = nextDouble;
@@ -77,7 +77,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         var doc = session.Load<User>("zzz/1");
                         Assert.NotNull(doc);
 
-                        var ts = session.TimeSeriesFor(doc).Get("small", DateTime.MinValue, DateTime.MaxValue).ToList();
+                        var ts = session.TimeSeriesFor(doc, "small").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                         Assert.Equal(4000, ts.Count);
                     }
                 }

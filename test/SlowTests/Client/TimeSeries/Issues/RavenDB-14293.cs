@@ -22,24 +22,24 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", now1, "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(now1, new[] { 59d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate", now1);
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Remove(now1);
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
                     Assert.Equal(0, vals.Count);
                 }
@@ -56,24 +56,24 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", now1, "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(now1, new[] { 59d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", now1, "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(now1, new[] { 59d }, "watches/fitbit");
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
                     Assert.Equal(1, vals.Count);
                 }
@@ -90,18 +90,18 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", now1, "watches/fitbit", new[] { 59d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", now1.AddMinutes(5), "watches/apple", new[] { 64d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(now1, new[] { 59d }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(now1.AddMinutes(5), new[] { 64d }, "watches/apple");
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", now1, DateTime.MaxValue)
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(now1, DateTime.MaxValue)
                         .ToList();
                     Assert.Equal(2, vals.Count);
                 }

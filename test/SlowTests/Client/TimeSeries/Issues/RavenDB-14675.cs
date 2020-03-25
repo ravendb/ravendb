@@ -24,8 +24,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     await session.StoreAsync(new Company(), "companies/1-A");
 
-                    session.TimeSeriesFor("companies/1-A")
-                        .Append("Temperature", baseline.AddMinutes(10), null, new[] { 17.5d });
+                    session.TimeSeriesFor("companies/1-A", "Temperature")
+                        .Append(baseline.AddMinutes(10), new[] { 17.5d });
 
                     await session.SaveChangesAsync();
                 }
@@ -72,8 +72,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     await session.StoreAsync(new Company(), "companies/1-A");
 
-                    session.TimeSeriesFor("companies/1-A")
-                        .Append("Temperature", baseline.AddMinutes(10), null, new[] { 17.5d });
+                    session.TimeSeriesFor("companies/1-A", "Temperature")
+                        .Append(baseline.AddMinutes(10), 17.5);
 
                     await session.SaveChangesAsync();
                 }
@@ -92,8 +92,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     // modify the document
 
-                    session.TimeSeriesFor("companies/1-A")
-                        .Append("HeartRate", baseline.AddHours(1), null, new[] { 67.2d });
+                    session.TimeSeriesFor("companies/1-A", "HeartRate")
+                        .Append(baseline.AddHours(1), new[] { 67.2d });
 
                     await session.SaveChangesAsync();
                 }

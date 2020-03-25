@@ -30,7 +30,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, "tag", new double[] { 7 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, new double[] { 7 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -67,7 +67,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now2, "tag", new double[] { 3 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now2, new double[] { 3 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -106,7 +106,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Remove("HeartRate", now2);
+                    session.TimeSeriesFor(company, "HeartRate").Remove(now2);
 
                     session.SaveChanges();
                 }
@@ -159,7 +159,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/2");
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, "tag", new double[] { 9 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, new double[] { 9 }, "tag");
 
                     session.SaveChanges();
                 }

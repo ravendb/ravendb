@@ -108,8 +108,8 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                     for (int i = 0; i < 100; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddSeconds(0.5 * i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddSeconds(0.5 * i), new[] {29d * i}, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -130,19 +130,19 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(100, ts.Count);
 
-                    var ts1 = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(50, ts1.Count);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(5, ts2.Count);
 
-                    var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(1, ts3.Count);
 
-                    var ts4 = session.TimeSeriesFor("users/karmel").Get(p4.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts4 = session.TimeSeriesFor("users/karmel", p4.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(1, ts4.Count);
                 }
             }
@@ -181,8 +181,8 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                     for (int i = 0; i < 100; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddSeconds(0.3 * i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddSeconds(0.3 * i), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -192,17 +192,17 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     var tsSeconds = (int)(ts.Last().Timestamp - ts.First().Timestamp).TotalSeconds;
 
-                    var ts1 = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     var ts1Seconds = (int)(ts1.Last().Timestamp - ts1.First().Timestamp).TotalSeconds;
                     Assert.Equal(ts1Seconds, tsSeconds);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(ts1.Count / 2, ts2.Count);
 
-                    var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(ts1.Count / 3, ts3.Count);
                 }
             }
@@ -234,8 +234,8 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                     for (int i = 0; i < 100; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddHours(i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddHours(i), 29 * i, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -245,7 +245,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(3, ts.Count);
                 }
             }
@@ -284,8 +284,8 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                     for (int i = 0; i < 100; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddSeconds(0.2 * i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddSeconds(0.2 * i), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -297,8 +297,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                 {
                     for (int i = 0; i < 100; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddSeconds(0.2 * i + 0.1), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddSeconds(0.2 * i + 0.1), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -307,16 +307,16 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(200, ts.Count);
 
-                    var ts1 = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(20, ts1.Count);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(10, ts2.Count);
 
-                    var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(7, ts3.Count);
                 }
             }
@@ -356,8 +356,8 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                     for (int i = 0; i < 100; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddSeconds(0.2 * i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddSeconds(0.2 * i), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -375,16 +375,16 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(100, ts.Count);
 
-                    var ts1 = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(20, ts1.Count);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(10, ts2.Count);
 
-                    var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(7, ts3.Count);
                 }
 
@@ -392,8 +392,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                 {
                     for (int i = 100; i < 200; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddSeconds(0.2 * i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append( baseline.AddSeconds(0.2 * i), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -402,16 +402,16 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(200, ts.Count);
 
-                    var ts1 = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(40, ts1.Count);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(10, ts2.Count);
 
-                    var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(7, ts3.Count);
                 }
 
@@ -452,8 +452,8 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                     for (int i = 0; i < 100; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddSeconds(0.2 * i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddSeconds(0.2 * i), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -469,16 +469,16 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(100, ts.Count);
 
-                    var ts1 = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(20, ts1.Count);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(10, ts2.Count);
 
-                    var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(7, ts3.Count);
                 }
             }
@@ -497,8 +497,8 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                     for (int i = 0; i < 100; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddSeconds(0.2 * i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddSeconds(0.2 * i), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -530,16 +530,16 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(100, ts.Count);
 
-                    var ts1 = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(20, ts1.Count);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(10, ts2.Count);
 
-                    var ts3 = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(7, ts3.Count);
                 }
             }
@@ -558,8 +558,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.Store(new User {Name = "Karmel"}, "users/karmel");
                     for (int i = 0; i <= 120; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i, 30 * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), new[] {29d * i, 30 * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -590,10 +590,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(30, ts.Count);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel").Get(p.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(p.RetentionTime.TotalMinutes / p.AggregationTime.TotalMinutes, ts2.Count);
                 }
             }
@@ -627,8 +627,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.Store(new User {Name = "Karmel"}, "users/karmel");
                     for (int i = 0; i < 120; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -645,10 +645,10 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     count1 = ts.Count;
 
-                    ts = session.TimeSeriesFor("users/karmel").Get(p.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    ts = session.TimeSeriesFor("users/karmel", p.GetTimeSeriesName("Heartrate")).Get( DateTime.MinValue, DateTime.MaxValue).ToList();
                     count2 = ts.Count;
                 }
             }
@@ -664,9 +664,9 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(count1, ts.Count);
-                    ts = session.TimeSeriesFor("users/karmel").Get(p.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    ts = session.TimeSeriesFor("users/karmel", p.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(count2, ts.Count);
 
                 }
@@ -710,8 +710,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.Store(new User {Name = "Karmel"}, "users/karmel");
                     for (int i = 0; i <= total; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] {29d * i, i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), new[] {29d * i, i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -724,19 +724,19 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(raw.RetentionTime.TotalMinutes, ts.Count);
 
-                    ts = session.TimeSeriesFor("users/karmel").Get(p3.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    ts = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(p3.RetentionTime.TotalMinutes / p3.AggregationTime.TotalMinutes, ts.Count);
 
-                    ts = session.TimeSeriesFor("users/karmel").Get(p4.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    ts = session.TimeSeriesFor("users/karmel", p4.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(p4.RetentionTime.TotalMinutes / p4.AggregationTime.TotalMinutes, ts.Count);
 
-                    ts = session.TimeSeriesFor("users/karmel").Get(p1.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    ts = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(p1.RetentionTime.TotalMinutes / p1.AggregationTime.TotalMinutes, ts.Count);
 
-                    ts = session.TimeSeriesFor("users/karmel").Get(p2.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    ts = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(p2.RetentionTime.TotalMinutes / p2.AggregationTime.TotalMinutes, ts.Count);
                 }
             }
@@ -773,8 +773,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.Store(new User {Name = "Karmel"}, "users/karmel");
                     for (int i = 0; i < total; i++)
                     {
-                        session.TimeSeriesFor("users/karmel")
-                            .Append("Heartrate", baseline.AddHours(i), "watches/fitbit", new[] {29d * i});
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddHours(i), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -785,10 +785,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(288, ts.Count);
 
-                    ts = session.TimeSeriesFor("users/karmel").Get(p.GetTimeSeriesName("Heartrate"), DateTime.MinValue, DateTime.MaxValue).ToList();
+                    ts = session.TimeSeriesFor("users/karmel", p.GetTimeSeriesName("Heartrate")).Get( DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(12, ts.Count);
                 }
             }

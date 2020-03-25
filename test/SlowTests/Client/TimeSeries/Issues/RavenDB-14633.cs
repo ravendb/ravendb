@@ -188,7 +188,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = store.OpenSession())
                     {
                         // add a new entry to the series
-                        session.TimeSeriesFor("users/ayende").Append("Heartrate", baseline.AddSeconds(100).AddMilliseconds(50), "watches/apple", new[] { 1000d });
+                        session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddSeconds(100).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
                         session.SaveChanges();
                     }
 
@@ -280,7 +280,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = store.OpenSession())
                     {
                         // add a new entry to the series
-                        session.TimeSeriesFor("users/ayende").Append("Heartrate", baseline.AddSeconds(2000).AddMilliseconds(50), "watches/apple", new[] { 1000d });
+                        session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddSeconds(2000).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
                         session.SaveChanges();
                     }
 
@@ -585,7 +585,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = store.OpenSession())
                     {
                         // add a new entry to the series
-                        session.TimeSeriesFor("users/ayende").Append("Heartrate", baseline.AddMinutes(5).AddMilliseconds(50), "watches/apple", new[] { 1000d });
+                        session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(5).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
                         session.SaveChanges();
                     }
 
@@ -703,7 +703,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = store.OpenSession())
                     {
                         // add a new entry to the series
-                        session.TimeSeriesFor("users/ayende").Append("Heartrate", baseline.AddMinutes(15).AddMilliseconds(50), "watches/apple", new[] { 1000d });
+                        session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(15).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
                         session.SaveChanges();
                     }
 

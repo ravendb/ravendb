@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Session;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -26,8 +27,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     session.Store(new User(), "users/ayende");
 
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline, "fitbit", new[] { 60d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline, new[] { 60d }, "fitbit");
 
                     session.SaveChanges();
                 }
@@ -35,8 +36,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     // should go to a new segment
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMonths(1), "fitbit", new[] { 60d, 70 });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMonths(1), new[] { 60d, 70 }, "fitbit");
 
                     session.SaveChanges();
                 }
@@ -68,8 +69,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     session.Store(new User(), "users/ayende");
 
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline, "fitbit", new[] { 60d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline, new[] { 60d }, "fitbit");
 
                     session.SaveChanges();
                 }
@@ -77,10 +78,9 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     // should go to a new segment
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMonths(1), "fitbit", new[] { 60d, 70 });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMonths(2), "fitbit", new[] { 60d, 70,80 });
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    tsf.Append(baseline.AddMonths(1), new[] { 60d, 70 }, "fitbit");
+                    tsf.Append(baseline.AddMonths(2), new[] { 60d, 70,80 }, "fitbit");
 
                     session.SaveChanges();
                 }
@@ -112,8 +112,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     session.Store(new User(), "users/ayende");
 
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline, "fitbit", new[] { 60d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline, new[] { 60d }, "fitbit");
 
                     session.SaveChanges();
                 }
@@ -121,10 +121,10 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     // should go to a new segment
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddSeconds(1), "fitbit", new[] { 60d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMonths(1), "fitbit", new[] { 60d, 70 });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddSeconds(1), new[] { 60d }, "fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMonths(1), new[] { 60d, 70 }, "fitbit");
 
                     session.SaveChanges();
                 }
@@ -156,11 +156,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     session.Store(new User(), "users/ayende");
 
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddSeconds(10), "fitbit", new[] { 10d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddSeconds(10), new[] { 10d }, "fitbit");
 
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddSeconds(20), "fitbit", new[] { 10d });
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddSeconds(20), new[] { 10d }, "fitbit");
 
                     session.SaveChanges();
                 }
@@ -169,11 +169,10 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     session.Store(new User(), "users/ayende");
 
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddSeconds(11), "fitbit", new[] { 10d });
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    tsf.Append(baseline.AddSeconds(11), new[] { 10d }, "fitbit");
 
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddSeconds(12), "fitbit", new[] { 60d, 70 });
+                    tsf.Append(baseline.AddSeconds(12), new[] { 60d, 70 }, "fitbit");
 
 
                     session.SaveChanges();
