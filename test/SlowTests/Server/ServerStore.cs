@@ -30,8 +30,9 @@ namespace SlowTests.Server
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    await Server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand("foo/bar", new CertificateDefinition
+                    await Server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, new CertificateDefinition
                     {
+                        Name = "foo/bar",
                         Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                         Permissions = new Dictionary<string, DatabaseAccess>(),
                         SecurityClearance = SecurityClearance.ClusterAdmin,
