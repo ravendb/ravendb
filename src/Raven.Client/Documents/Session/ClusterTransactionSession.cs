@@ -257,7 +257,13 @@ namespace Raven.Client.Documents.Session
 
                             T entity = default;
                             if (_originalValue != null && _originalValue.Value != null)
-                                entity = (T)EntityToBlittable.ConvertToEntity(typeof(T), _key, _originalValue.Value, conventions);
+                            {
+                                var type = typeof(T);
+                                if (type.IsPrimitive || type == typeof(string))
+                                    _originalValue.Value.TryGet(Constants.CompareExchange.ObjectFieldName, out entity);
+                                else
+                                    entity = (T)EntityToBlittable.ConvertToEntity(typeof(T), _key, _originalValue.Value, conventions);
+                            }
 
                             var value = new CompareExchangeValue<T>(_key, _index, entity);
                             _value = value;

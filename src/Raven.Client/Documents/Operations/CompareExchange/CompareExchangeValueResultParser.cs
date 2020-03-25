@@ -54,12 +54,26 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             if (item.TryGet(nameof(CompareExchangeValue<T>.Value), out BlittableJsonReaderObject raw) == false)
                 throw new InvalidDataException("Response is invalid. Value is missing.");
 
-            if (typeof(T).GetTypeInfo().IsPrimitive || typeof(T) == typeof(string) || typeof(T) == typeof(BlittableJsonReaderObject))
+            var type = typeof(T);
+
+            if (type.GetTypeInfo().IsPrimitive || type == typeof(string))
             {
                 // simple
                 T value = default;
                 raw?.TryGet(Constants.CompareExchange.ObjectFieldName, out value);
                 return new CompareExchangeValue<T>(key, index, value);
+            }
+            else if (type == typeof(BlittableJsonReaderObject))
+            {
+                if (raw == null || raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out object rawValue) == false)
+                    return new CompareExchangeValue<T>(key, index, default);
+
+                if (rawValue is null)
+                    return new CompareExchangeValue<T>(key, index, default);
+                else if (rawValue is BlittableJsonReaderObject)
+                    return new CompareExchangeValue<T>(key, index, (T)rawValue);
+                else
+                    return new CompareExchangeValue<T>(key, index, (T)(object)raw);
             }
             else
             {
