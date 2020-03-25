@@ -204,21 +204,25 @@ class documents extends viewModelBase {
             { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true, showFlags: true });
 
         this.columnsSelector.tryInitializeWithSavedDefault(source => documentsProvider.reviver(source));
-        
-        this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols), (w, r) => {
-            if (this.currentCollection().isAllDocuments) {
-                return [
-                    new checkedColumn(true),
-                    new hyperlinkColumn<document>(grid, document.createDocumentIdProvider(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
-                    new textColumn<document>(grid, x => changeVectorUtils.formatChangeVectorAsShortString(x.__metadata.changeVector()), "Change Vector", "200px"),
-                    new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Last Modified", "300px"),
-                    new hyperlinkColumn<document>(grid, x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px"),
-                    new flagsColumn(grid)
-                ];
-            } else {
-                return documentsProvider.findColumns(w, r);
-            }
-        }, (results: pagedResultWithAvailableColumns<document>) => results.availableColumns);
+
+        this.columnsSelector.init(grid, 
+                                  (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols),
+                                  (w, r) => {
+                                      if (this.currentCollection().isAllDocuments) {
+                                          return [
+                                              new checkedColumn(true),
+                                              new hyperlinkColumn<document>(grid, document.createDocumentIdProvider(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
+                                              new textColumn<document>(grid, x => changeVectorUtils.formatChangeVectorAsShortString(x.__metadata.changeVector()), "Change Vector", "200px"),
+                                              new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Last Modified", "300px"),
+                                              new hyperlinkColumn<document>(grid, x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px"),
+                                              new flagsColumn(grid)
+                                          ];
+                                      } else {
+                                          return documentsProvider.findColumns(w, r);
+                                      }
+                                  }, 
+                                  (results: pagedResultWithAvailableColumns<document>) => results.availableColumns
+        );
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
