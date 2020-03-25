@@ -41,16 +41,16 @@ namespace SlowTests.Client.TimeSeries.Issues
                     company.Name = "HR";
                     await session.SaveChangesAsync();
 
-                    var tsf = session.TimeSeriesFor(company);
+                    var tsf = session.TimeSeriesFor(company, "temperature");
 
                     // revision 3
-                    tsf.Append("temperature", baseline.AddMinutes(10), null, new []{ 17.5d });
-                    tsf.Append("temperature", baseline.AddMinutes(20), null, new[] { 17.4d });
+                    tsf.Append(baseline.AddMinutes(10), 17.5);
+                    tsf.Append(baseline.AddMinutes(20), 17.4);
 
                     await session.SaveChangesAsync();
 
                     // no revision for this one
-                    tsf.Append("temperature", baseline.AddMinutes(30), null, new[] { 17.2d });
+                    tsf.Append(baseline.AddMinutes(30), new[] { 17.2d });
 
                     await session.SaveChangesAsync();
                 }
@@ -87,11 +87,12 @@ namespace SlowTests.Client.TimeSeries.Issues
                     await session.SaveChangesAsync();
 
                     // revision 5
-                    var tsf = session.TimeSeriesFor(company);
-                    tsf.Append("temperature", baseline.AddMonths(6), null, new[] { 27.6d }); // will create a new segment
+                    var tsf = session.TimeSeriesFor(company, "temperature");
+                    tsf.Append(baseline.AddMonths(6), new[] { 27.6d }); // will create a new segment
 
-                    tsf.Append("heartrate", baseline.AddHours(1), null, new[] { 92.8d });
-                    tsf.Append("heartrate", baseline.AddHours(2), null, new[] { 89d });
+                    tsf = session.TimeSeriesFor(company, "heartrate");
+                    tsf.Append(baseline.AddHours(1), new[] { 92.8d });
+                    tsf.Append(baseline.AddHours(2), new[] { 89d });
 
                     await session.SaveChangesAsync();
                 }

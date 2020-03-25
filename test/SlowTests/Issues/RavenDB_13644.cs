@@ -751,7 +751,8 @@ namespace SlowTests.Issues
                 {
                     var company = new Company { Name = "CF", ExternalId = "companies/cf" };
                     session.Store(company);
-                    session.TimeSeriesFor(company).Append("HeartRate", DateTime.Now, company.ExternalId, new double[] { 3 });
+                    session.TimeSeriesFor(company, "Heartrate")
+                        .Append(DateTime.Now, new double[] { 3 }, company.ExternalId);
 
                     session.SaveChanges();
                 }
@@ -808,7 +809,8 @@ namespace SlowTests.Issues
                 {
                     var company = new Company { Name = "HR", ExternalId = "companies/hr" };
                     session.Store(company);
-                    session.TimeSeriesFor(company).Append("HeartRate", DateTime.Now, company.ExternalId, new double[] { 5 });
+                    session.TimeSeriesFor(company, "HeartRate")
+                        .Append(DateTime.Now, new double[] { 5 }, company.ExternalId);
 
                     session.SaveChanges();
                 }
@@ -959,7 +961,8 @@ namespace SlowTests.Issues
                 {
                     var company = new Company { Name = "CF", ExternalId = "companies/cf" };
                     session.Store(company);
-                    session.TimeSeriesFor(company).Append("HeartRate", DateTime.Now, company.ExternalId, new double[] { 3 });
+                    session.TimeSeriesFor(company, "HeartRate")
+                        .Append(DateTime.Now, new double[] { 3 }, company.ExternalId);
 
                     session.SaveChanges();
                 }
@@ -1050,7 +1053,7 @@ namespace SlowTests.Issues
                 {
                     var company = new Company { Name = "HR", ExternalId = "companies/hr" };
                     session.Store(company);
-                    session.TimeSeriesFor(company).Append("HeartRate", DateTime.Now, company.ExternalId, new double[] { 5 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(DateTime.Now, 5, company.ExternalId);
 
                     session.SaveChanges();
                 }
@@ -1553,7 +1556,7 @@ namespace SlowTests.Issues
                 {
                     var company = new Company { Name = "CF", ExternalId = "companies/cf" };
                     session.Store(company);
-                    session.TimeSeriesFor(company).Append("HeartRate", DateTime.Now, company.ExternalId, new double[] { 3 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(DateTime.Now, new double[] { 3 }, company.ExternalId);
 
                     session.SaveChanges();
                 }
@@ -1642,7 +1645,7 @@ namespace SlowTests.Issues
                 {
                     var company = new Company { Name = "HR", ExternalId = "companies/hr" };
                     session.Store(company);
-                    session.TimeSeriesFor(company).Append("HeartRate", DateTime.Now, company.ExternalId, new double[] { 5 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(DateTime.Now, new double[] { 5 }, company.ExternalId);
 
                     session.SaveChanges();
                 }

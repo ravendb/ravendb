@@ -26,46 +26,46 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     session.Store(new User(), "users/ayende");
 
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(1), "fitbit", new[] { 58d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(5), "fitbit", new[] { 68d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(10), "fitbit", new[] { 78d });
+                    tsf.Append(baseline.AddMinutes(1), new[] { 58d }, "fitbit");
+                    tsf.Append(baseline.AddMinutes(5), new[] { 68d }, "fitbit");
+                    tsf.Append( baseline.AddMinutes(10), new[] { 78d }, "fitbit");
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var all = session.TimeSeriesFor("users/ayende").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var all = session.TimeSeriesFor("users/ayende", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(3, all.Count);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende")
-                        .Remove("Heartrate", baseline.AddMinutes(2), baseline.AddMinutes(8));
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Remove(baseline.AddMinutes(2), baseline.AddMinutes(8));
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var all = session.TimeSeriesFor("users/ayende").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var all = session.TimeSeriesFor("users/ayende", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(2, all.Count);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(5), "fitbit", new[] { 99d });
+                    tsf.Append(baseline.AddMinutes(5), new[] { 99d }, "fitbit");
                     session.SaveChanges();
                 }
 
 
                 using (var session = store.OpenSession())
                 {
-                    var all = session.TimeSeriesFor("users/ayende").Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var all = session.TimeSeriesFor("users/ayende", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     
                     Assert.Equal(3, all.Count);
                     Assert.Equal(all[1].Values, new []{ 99d });
@@ -85,10 +85,10 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     await session.StoreAsync(new Core.Utils.Entities.User { Name = "Karmel" }, "users/1");
 
-                    var tsf = session.TimeSeriesFor("users/1");
+                    var tsf = session.TimeSeriesFor("users/1", "heartbeat");
 
-                    tsf.Append("heartbeat", baseline, "herz", new List<double> { 10 });
-                    tsf.Append("heartbeat", baseline.AddMinutes(10), "herz", new List<double> { 20 });
+                    tsf.Append(baseline, new List<double> { 10 }, "herz");
+                    tsf.Append(baseline.AddMinutes(10), new List<double> { 20 }, "herz");
 
                     await session.SaveChangesAsync();
                 }
@@ -97,7 +97,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     // remove an entry
 
-                    session.TimeSeriesFor("users/1").Remove("heartbeat", baseline.AddMinutes(5), baseline.AddMinutes(15));
+                    session.TimeSeriesFor("users/1", "heartbeat").Remove(baseline.AddMinutes(5), baseline.AddMinutes(15));
 
                     await session.SaveChangesAsync();
                 }
@@ -111,7 +111,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        var all = (await session.TimeSeriesFor("users/1").GetAsync("heartbeat", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        var all = (await session.TimeSeriesFor("users/1", "heartbeat").GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToList();
 
                         Assert.Equal(1, all.Count);
                     }
@@ -123,11 +123,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                     // create a conflict on Segment's Change Vector,
                     // so that incoming replication (from A to B) won't be able to append entire segment 
 
-                    session.TimeSeriesFor("users/1").Append("heartbeat", baseline.AddMinutes(7.5), "herz", new List<double> { 30 });
+                    session.TimeSeriesFor("users/1", "heartbeat").Append(baseline.AddMinutes(7.5), new List<double> { 30 }, "herz");
 
                     await session.SaveChangesAsync();
 
-                    var all = (await session.TimeSeriesFor("users/1").GetAsync("heartbeat", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                    var all = (await session.TimeSeriesFor("users/1", "heartbeat").GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToList();
 
                     Assert.Equal(2, all.Count);
                 }
@@ -137,13 +137,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     // re insert the deleted entry, with new values 
 
-                    session.TimeSeriesFor("users/1").Append("heartbeat", baseline.AddMinutes(10), "herz2", new List<double> { 5 }); // works fine if new value is greater than old value
+                    session.TimeSeriesFor("users/1", "heartbeat").Append(baseline.AddMinutes(10), new List<double> { 5 }, "herz2"); // works fine if new value is greater than old value
 
                     await session.SaveChangesAsync();
 
                     // verify that the series contains the re-inserted entry
 
-                    var all = await session.TimeSeriesFor("users/1").GetAsync("heartbeat", DateTime.MinValue, DateTime.MaxValue);
+                    var all = await session.TimeSeriesFor("users/1", "heartbeat").GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
                     var values = all.Select(x => x.Value).ToList();
 
@@ -160,8 +160,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var sessionB = storeB.OpenAsyncSession())
                 using (var sessionA = storeA.OpenAsyncSession())
                 {
-                    var allFromA = (await sessionA.TimeSeriesFor("users/1").GetAsync("heartbeat", DateTime.MinValue, DateTime.MaxValue)).ToList();
-                    var allFromB = (await sessionB.TimeSeriesFor("users/1").GetAsync("heartbeat", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                    var allFromA = (await sessionA.TimeSeriesFor("users/1", "heartbeat").GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToList();
+                    var allFromB = (await sessionB.TimeSeriesFor("users/1", "heartbeat").GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToList();
 
                     Assert.Equal(allFromB.Count, allFromA.Count);
 

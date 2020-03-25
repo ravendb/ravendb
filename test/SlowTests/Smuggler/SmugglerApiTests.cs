@@ -844,9 +844,9 @@ namespace SlowTests.Smuggler
                     {
                         for (int i = 0; i < 360; i++)
                         {
-                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
-                            session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d, i % 60d + 5});
-                            session.TimeSeriesFor("users/1").Append("Heartrate2", baseline.AddSeconds(i * 10), "watches/3", new[] { i % 60d, i % 60d + 5, i % 60d + 10});
+                            session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
+                            session.TimeSeriesFor("users/2", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5}, "watches/2");
+                            session.TimeSeriesFor("users/1", "Heartrate2").Append(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5, i % 60d + 10}, "watches/3");
                         }
 
                         await session.SaveChangesAsync();
@@ -870,7 +870,7 @@ namespace SlowTests.Smuggler
                         Assert.Equal("Name1", user1.Name);
                         Assert.Equal("Name2", user2.Name);
 
-                        var values = await session.TimeSeriesFor("users/1").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                        var values = await session.TimeSeriesFor("users/1", "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
                         var count = 0;
                         foreach (var val in values)
@@ -883,7 +883,7 @@ namespace SlowTests.Smuggler
                         Assert.Equal(360, count);
 
 
-                        values = await session.TimeSeriesFor("users/2").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                        values = await session.TimeSeriesFor("users/2", "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
                         count = 0;
                         foreach (var val in values)
@@ -896,7 +896,7 @@ namespace SlowTests.Smuggler
 
                         Assert.Equal(360, count);
 
-                        values = await session.TimeSeriesFor("users/1").GetAsync("Heartrate2", DateTime.MinValue, DateTime.MaxValue);
+                        values = await session.TimeSeriesFor("users/1", "Heartrate2").GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
                         count = 0;
                         foreach (var val in values)
@@ -942,18 +942,18 @@ namespace SlowTests.Smuggler
                     {
                         for (int i = 0; i < 360; i++)
                         {
-                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                            session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
                         }
 
                         for (int i = 0; i < 360; i++)
                         {
-                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddMonths(3).AddSeconds(i * 10), "watches/2", new[] { i % 60d });
+                            session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddMonths(3).AddSeconds(i * 10), new[] { i % 60d }, "watches/2");
                         }
 
 
                         for (int i = 0; i < 360; i++)
                         {
-                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddMonths(6).AddSeconds(i * 10), "watches/3", new[] { i % 60d });
+                            session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddMonths(6).AddSeconds(i * 10), new[] { i % 60d }, "watches/3");
                         }
 
                         await session.SaveChangesAsync();
@@ -977,7 +977,7 @@ namespace SlowTests.Smuggler
                         Assert.Equal("Name1", user1.Name);
                         Assert.Equal("Name2", user2.Name);
 
-                        var values = (await session.TimeSeriesFor("users/1").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        var values = (await session.TimeSeriesFor("users/1", "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToList();
 
                         Assert.Equal(360 * 3, values.Count);
 
@@ -1023,8 +1023,8 @@ namespace SlowTests.Smuggler
                     {
                         for (int i = 0; i < 360; i++)
                         {
-                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
-                            session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d, i % 60d + 5 });
+                            session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
+                            session.TimeSeriesFor("users/2", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5 }, "watches/2");
                         }
 
                         await session.SaveChangesAsync();
@@ -1062,13 +1062,13 @@ namespace SlowTests.Smuggler
                         tsNames = session.Advanced.GetTimeSeriesFor(user2);
                         Assert.Null(tsNames);
 
-                        var values = await session.TimeSeriesFor(user1)
-                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                        var values = await session.TimeSeriesFor(user1, "Heartrate")
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
                         Assert.Empty(values);
 
-                        values = await session.TimeSeriesFor(user2)
-                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                        values = await session.TimeSeriesFor(user2, "Heartrate")
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
                         Assert.Empty(values);
                     }
@@ -1106,8 +1106,8 @@ namespace SlowTests.Smuggler
                     {
                         for (int i = 0; i < 360; i++)
                         {
-                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
-                            session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d, i % 60d + 5 });
+                            session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
+                            session.TimeSeriesFor("users/2", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5 }, "watches/2");
                         }
 
                         await session.SaveChangesAsync();
@@ -1143,13 +1143,13 @@ namespace SlowTests.Smuggler
                         tsNames = session.Advanced.GetTimeSeriesFor(user2);
                         Assert.Null(tsNames);
 
-                        var values = await session.TimeSeriesFor(user1)
-                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                        var values = await session.TimeSeriesFor(user1, "Heartrate")
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
                         Assert.Empty(values);
 
-                        values = await session.TimeSeriesFor(user2)
-                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                        values = await session.TimeSeriesFor(user2, "Heartrate")
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
                         Assert.Empty(values);
                     }
@@ -1187,10 +1187,10 @@ namespace SlowTests.Smuggler
 
                     using (var session = store1.OpenAsyncSession())
                     {
-                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline, "watches/1", new[] { 72d });
-                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddMinutes(1), "watches/1", new[] { 72d });
-                        session.TimeSeriesFor("users/2").Append("Heartrate", baseline, "watches/1", new[] { 70d });
-                        session.TimeSeriesFor("users/3").Append("Heartrate", baseline, "watches/1", new[] { 75d });
+                        session.TimeSeriesFor("users/1", "Heartrate").Append(baseline, new[] { 72d }, "watches/1");
+                        session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddMinutes(1), new[] { 72d }, "watches/1");
+                        session.TimeSeriesFor("users/2", "Heartrate").Append(baseline, new[] { 70d }, "watches/1");
+                        session.TimeSeriesFor("users/3", "Heartrate").Append(baseline, new[] { 75d }, "watches/1");
 
                         await session.SaveChangesAsync();
                     }
@@ -1245,13 +1245,13 @@ namespace SlowTests.Smuggler
 
                     using (var session = store1.OpenAsyncSession())
                     {
-                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline, "watches/1", new[] { 72d });
-                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddMinutes(1), "watches/2", new[] { 72d });
-                        session.TimeSeriesFor("users/2").Append("Heartrate", baseline, "watches/1", new[] { 70d });
-                        session.TimeSeriesFor("users/3").Append("Heartrate", baseline, "watches/1", new[] { 75d });
+                        session.TimeSeriesFor("users/1", "Heartrate").Append(baseline, new[] { 72d }, "watches/1");
+                        session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddMinutes(1), new[] { 72d }, "watches/2");
+                        session.TimeSeriesFor("users/2", "Heartrate").Append(baseline, new[] { 70d }, "watches/1");
+                        session.TimeSeriesFor("users/3", "Heartrate").Append(baseline, new[] { 75d }, "watches/1");
 
-                        session.TimeSeriesFor("orders/1").Append("Heartrate", baseline, "watches/1", new[] { 72d });
-                        session.TimeSeriesFor("orders/2").Append("Heartrate", baseline, "watches/2", new[] { 70d, 67d });
+                        session.TimeSeriesFor("orders/1", "Heartrate").Append(baseline, new[] { 72d }, "watches/1");
+                        session.TimeSeriesFor("orders/2", "Heartrate").Append(baseline, new[] { 70d, 67d }, "watches/2");
 
                         await session.SaveChangesAsync();
                     }
@@ -1282,7 +1282,7 @@ namespace SlowTests.Smuggler
                         Assert.Equal(1, tsNames.Count);
                         Assert.Equal("Heartrate", tsNames[0]);
 
-                        var values = session.TimeSeriesFor(order).Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                        var values = session.TimeSeriesFor(order, "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                         Assert.Equal(1, values.Count);
                         Assert.Equal(1, values[0].Values.Length);
                         Assert.Equal(72d, values[0].Values[0]);
@@ -1294,7 +1294,7 @@ namespace SlowTests.Smuggler
                         Assert.Equal(1, tsNames.Count);
                         Assert.Equal("Heartrate", tsNames[0]);
 
-                        values = session.TimeSeriesFor(order).Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                        values = session.TimeSeriesFor(order, "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                         Assert.Equal(1, values.Count);
                         Assert.Equal(2, values[0].Values.Length);
                         Assert.Equal(70d, values[0].Values[0]);

@@ -36,8 +36,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         var nextDouble = previous * 0.9 + 0.1 * r.NextDouble();
 
-                        session.TimeSeriesFor("zzz/1")
-                            .Append("small", d, null, new double[] { nextDouble });
+                        session.TimeSeriesFor("zzz/1", "small")
+                            .Append(d, nextDouble);
                         d = d.AddMinutes(1);
 
                         previous = nextDouble;

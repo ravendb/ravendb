@@ -862,7 +862,7 @@ namespace SlowTests.Cluster
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Aviv1" }, "users/1-A");
-                    session.TimeSeriesFor("users/1-A").Append("Heartrate", DateTime.Today, "watches/apple", new []{ 55d });
+                    session.TimeSeriesFor("users/1-A", "Heartrate").Append(DateTime.Today, new []{ 55d }, "watches/apple");
                     session.SaveChanges();
                 }
 

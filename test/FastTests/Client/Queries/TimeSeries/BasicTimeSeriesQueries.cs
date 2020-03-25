@@ -40,7 +40,7 @@ namespace FastTests.Client.Queries.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, "tag", new double[] { 7 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, 7, "tag");
 
                     session.SaveChanges();
                 }
@@ -96,7 +96,7 @@ namespace FastTests.Client.Queries.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now2, "tag", new double[] { 3 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now2, new double[] { 3 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -139,7 +139,7 @@ namespace FastTests.Client.Queries.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Remove("HeartRate", now2);
+                    session.TimeSeriesFor(company, "HeartRate").Remove(now2);
 
                     session.SaveChanges();
                 }
@@ -216,7 +216,7 @@ namespace FastTests.Client.Queries.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/2");
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, "tag", new double[] { 9 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, new double[] { 9 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -269,7 +269,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                     for (int i = 0; i < 10; i++)
                     {
-                        session.TimeSeriesFor(user).Append("HeartRate", today.AddHours(i), "abc", new double[] { 180 + i });
+                        session.TimeSeriesFor(user, "HeartRate").Append(today.AddHours(i), new double[] { 180 + i }, "abc");
                     }
 
                     session.SaveChanges();
@@ -344,7 +344,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                     for (int i = 0; i < 20; i++)
                     {
-                        session.TimeSeriesFor(user).Append("HeartRate", tomorrow.AddHours(i), "abc", new double[] { 200 + i });
+                        session.TimeSeriesFor(user, "HeartRate").Append(tomorrow.AddHours(i), new double[] { 200 + i }, "abc");
                     }
 
                     session.SaveChanges();
@@ -395,11 +395,12 @@ namespace FastTests.Client.Queries.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
+                    var tsf = session.TimeSeriesFor(user, "HeartRate");
 
                     for (int i = 0; i < 10; i++)
                     {
-                        session.TimeSeriesFor(user).Remove("HeartRate", today.AddHours(i));
-                        session.TimeSeriesFor(user).Remove("HeartRate", tomorrow.AddHours(i));
+                        tsf.Remove(today.AddHours(i));
+                        tsf.Remove(tomorrow.AddHours(i));
                     }
 
                     session.SaveChanges();

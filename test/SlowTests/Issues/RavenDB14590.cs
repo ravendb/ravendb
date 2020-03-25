@@ -38,8 +38,8 @@ namespace SlowTests.Issues
                 var numOfRequests = s.Advanced.NumberOfRequests;
 
                 // should not go to server
-                var series = (await s.TimeSeriesFor(doc)
-                    .GetAsync("speed", DateTime.MinValue, DateTime.MaxValue))
+                var series = (await s.TimeSeriesFor(doc, "speed")
+                    .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                     .ToList();
                 
                 Assert.Equal(numOfRequests, s.Advanced.NumberOfRequests);
@@ -50,8 +50,8 @@ namespace SlowTests.Issues
                     Assert.Equal(j, series[j].Value);
                 }
 
-                s.TimeSeriesFor(doc)
-                    .Append("speed", baseline.AddMinutes(i), null, new []{ (double)i });
+                s.TimeSeriesFor(doc, "speed")
+                    .Append(baseline.AddMinutes(i), new []{ (double)i });
 
                 await s.SaveChangesAsync();
             }
@@ -87,8 +87,8 @@ namespace SlowTests.Issues
                     var numOfRequests = s.Advanced.NumberOfRequests;
 
                     // should not go to server
-                    var series = (await s.TimeSeriesFor(doc)
-                        .GetAsync("speed", DateTime.MinValue, DateTime.MaxValue))
+                    var series = (await s.TimeSeriesFor(doc, "speed")
+                        .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .ToList();
                     Assert.Equal(numOfRequests, s.Advanced.NumberOfRequests);
                     Assert.Equal(i, series.Count);
@@ -98,8 +98,8 @@ namespace SlowTests.Issues
                         Assert.Equal(j, series[j].Value);
                     }
 
-                    s.TimeSeriesFor(doc)
-                        .Append("speed", baseline.AddMinutes(i), null, new[] { (double)i });
+                    s.TimeSeriesFor(doc, "speed")
+                        .Append(baseline.AddMinutes(i), new[] { (double)i });
 
                     await s.SaveChangesAsync();
                 }
@@ -120,8 +120,8 @@ namespace SlowTests.Issues
                     var numOfRequests = s.Advanced.NumberOfRequests;
 
                     // should not go to server
-                    var series = (await s.TimeSeriesFor(doc)
-                        .GetAsync("speed2", DateTime.MinValue, DateTime.MaxValue))
+                    var series = (await s.TimeSeriesFor(doc, "speed2")
+                        .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .ToList();
                     Assert.Equal(numOfRequests, s.Advanced.NumberOfRequests);
                     Assert.Equal(i, series.Count);
@@ -131,8 +131,8 @@ namespace SlowTests.Issues
                         Assert.Equal(j, series[j].Value);
                     }
 
-                    s.TimeSeriesFor(doc)
-                        .Append("speed2", baseline.AddMinutes(i), null, new[] { (double)i });
+                    s.TimeSeriesFor(doc, "speed2")
+                        .Append(baseline.AddMinutes(i), new[] { (double)i });
 
                     await s.SaveChangesAsync();
                 }

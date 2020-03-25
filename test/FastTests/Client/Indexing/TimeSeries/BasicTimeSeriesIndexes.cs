@@ -33,7 +33,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, "tag", new double[] { 7 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, new double[] { 7 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -71,7 +71,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now2, "tag", new double[] { 3 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now2, new double[] { 3 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -114,7 +114,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Remove("HeartRate", now2);
+                    session.TimeSeriesFor(company, "HeartRate").Remove(now2);
 
                     session.SaveChanges();
                 }
@@ -167,7 +167,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/2");
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, "tag", new double[] { 9 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, new double[] { 9 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -214,12 +214,12 @@ namespace FastTests.Client.Indexing.TimeSeries
                     var company = new Company();
                     session.Store(company, "companies/1");
 
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, employee.Id, new double[] { 7 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, new double[] { 7 }, employee.Id);
 
                     var company2 = new Company();
                     session.Store(company2, "companies/11");
 
-                    session.TimeSeriesFor(company2).Append("HeartRate", now1, employee.Id, new double[] { 11 });
+                    session.TimeSeriesFor(company2, "HeartRate").Append(now1, new double[] { 11 }, employee.Id);
 
                     session.SaveChanges();
                 }
@@ -379,9 +379,11 @@ namespace FastTests.Client.Indexing.TimeSeries
                     var user = new User();
                     session.Store(user, "users/1");
 
+                    var tsf = session.TimeSeriesFor(user, "HeartRate");
+                    
                     for (int i = 0; i < 10; i++)
                     {
-                        session.TimeSeriesFor(user).Append("HeartRate", today.AddHours(i), "abc", new double[] { 180 + i });
+                        tsf.Append(today.AddHours(i), new double[] { 180 + i }, "abc");
                     }
 
                     session.SaveChanges();
@@ -449,10 +451,11 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
+                    var tsf = session.TimeSeriesFor(user, "HeartRate");
 
                     for (int i = 0; i < 20; i++)
                     {
-                        session.TimeSeriesFor(user).Append("HeartRate", tomorrow.AddHours(i), "abc", new double[] { 200 + i });
+                        tsf.Append(tomorrow.AddHours(i), new double[] { 200 + i }, "abc");
                     }
 
                     session.SaveChanges();
@@ -500,11 +503,12 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
+                    var tsf = session.TimeSeriesFor(user, "HeartRate");
 
                     for (int i = 0; i < 10; i++)
                     {
-                        session.TimeSeriesFor(user).Remove("HeartRate", today.AddHours(i));
-                        session.TimeSeriesFor(user).Remove("HeartRate", tomorrow.AddHours(i));
+                        tsf.Remove(today.AddHours(i));
+                        tsf.Remove(tomorrow.AddHours(i));
                     }
 
                     session.SaveChanges();
@@ -587,9 +591,11 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                         session.Store(user, "users/1");
 
+                        var tsf = session.TimeSeriesFor(user, "HeartRate");
+
                         for (int i = 0; i < 10; i++)
                         {
-                            session.TimeSeriesFor(user).Append("HeartRate", today.AddHours(i), address.Id, new double[] { 180 + i });
+                            tsf.Append(today.AddHours(i), 180 + i, tag: address.Id);
                         }
 
                         session.SaveChanges();
@@ -749,7 +755,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     var entity = new User { Name = str };
                     await session.StoreAsync(entity, str);
 
-                    session.TimeSeriesFor(entity).Append("HeartRate", DateTime.Now, "tag", new double[] { 7 });
+                    session.TimeSeriesFor(entity, "HeartRate").Append(DateTime.Now, new double[] { 7 }, "tag");
 
                     await session.SaveChangesAsync();
                 }
@@ -812,7 +818,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/1");
-                    session.TimeSeriesFor(company).Append(heartRateTimeSeriesName, now, "tag", new double[] { 13 });
+                    session.TimeSeriesFor(company, heartRateTimeSeriesName).Append(now, new double[] { 13 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -841,7 +847,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Remove("hearTraTe", now); // <--- note casing hearTraTe
+                    session.TimeSeriesFor(company, "hearTraTe").Remove(now); // <--- note casing hearTraTe
 
                     session.SaveChanges();
                 }
@@ -1079,8 +1085,8 @@ namespace FastTests.Client.Indexing.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, "tag1", new double[] { 7 });
-                    session.TimeSeriesFor(company).Append("Likes", now1, "tag2", new double[] { 3 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, new double[] { 7 }, "tag1");
+                    session.TimeSeriesFor(company, "Likes").Append(now1, new double[] { 3 }, "tag2");
 
                     session.SaveChanges();
                 }
@@ -1123,7 +1129,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now2, "tag", new double[] { 2 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now2, new double[] { 2 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -1156,7 +1162,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Remove("HeartRate", now1);
+                    session.TimeSeriesFor(company, "HeartRate").Remove( now1);
 
                     session.SaveChanges();
                 }
@@ -1188,7 +1194,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Remove("HeartRate", now2);
+                    session.TimeSeriesFor(company, "HeartRate").Remove(now2);
 
                     session.SaveChanges();
                 }
@@ -1254,12 +1260,12 @@ namespace FastTests.Client.Indexing.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, "tag1", new double[] { 7 });
-                    session.TimeSeriesFor(company).Append("Likes", now1, "tag2", new double[] { 3 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, new double[] { 7 }, "tag1");
+                    session.TimeSeriesFor(company, "Likes").Append(now1, new double[] { 3 }, "tag2");
 
                     var employee = new Employee();
                     session.Store(employee, "employees/1");
-                    session.TimeSeriesFor(employee).Append("Dislikes", now1, "tag3", new double[] { 1 });
+                    session.TimeSeriesFor(employee, "Dislikes").Append(now1, new double[] { 1 }, "tag3");
 
                     session.SaveChanges();
                 }
@@ -1309,7 +1315,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Append("HeartRate", now2, "tag", new double[] { 2 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(now2, new double[] { 2 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -1344,7 +1350,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Remove("Likes", now1, now2);
+                    session.TimeSeriesFor(company, "Likes").Remove(now1, now2);
 
                     session.SaveChanges();
                 }
@@ -1406,7 +1412,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("employees/1");
-                    session.TimeSeriesFor(company).Append("Dislikes", now2, "tag", new double[] { 9 });
+                    session.TimeSeriesFor(company, "Dislikes").Append(now2, 9, "tag");
 
                     session.SaveChanges();
                 }
@@ -1548,7 +1554,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 {
                     var company = new Company();
                     session.Store(company, "companies/1");
-                    session.TimeSeriesFor(company).Append(timeSeriesName, now1, "tag", new double[] { 7 });
+                    session.TimeSeriesFor(company, timeSeriesName).Append(now1, new double[] { 7 }, "tag");
 
                     session.SaveChanges();
                 }
@@ -1574,7 +1580,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Append(timeSeriesName, now2, "tag", new double[] { 3 });
+                    session.TimeSeriesFor(company, timeSeriesName).Append(now2, new double[] { 3 }, "tag");
 
                     session.SaveChanges();
                 }
