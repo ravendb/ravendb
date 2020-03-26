@@ -55,7 +55,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                 session.Advanced.Defer(new PatchCommandData(documentId, null,
                     new PatchRequest
                     {
-                        Script = @"appendTimeSeries(this, args.timeseries, args.timestamp, args.tag, args.values);",
+                        Script = @"timeseries(this, args.timeseries).append(args.timestamp, args.values, args.tag);",
                         Values =
                         {
                             { "timeseries", timeseries },
@@ -145,7 +145,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"appendTimeSeries(id(this), args.timeseries, new Date(args.timestamp), args.tag, args.values);",
+                            Script = @"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values, args.tag);",
                             Values =
                             {
                                 { "timeseries", timeseries },
@@ -170,8 +170,8 @@ namespace SlowTests.Client.TimeSeries.Patch
         }
         
         [Theory]
-        [InlineData(@"appendTimeSeries(id(this), args.timeseries, new Date(args.timestamp), null, args.values);")]
-        [InlineData(@"appendTimeSeries(id(this), args.timeseries, new Date(args.timestamp), args.values);")]
+        [InlineData(@"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values, null);")]
+        [InlineData(@"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values);")]
         public async Task CanAppendTimeSeriesByPatch_WithoutTag(string script)
         {
             double[] values = {59d};
@@ -207,8 +207,8 @@ namespace SlowTests.Client.TimeSeries.Patch
                             .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .Single();
                     Assert.Equal(values, val.Values);
-                    Assert.Null(val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                    Assert.Null(val.Tag);
                 }
             }
         }
@@ -223,7 +223,7 @@ namespace SlowTests.Client.TimeSeries.Patch
 
             var baseline = DateTime.Today;
             var toAppend = Enumerable.Range(0, 100)
-                .Select(i => new Tuple<DateTime, string, double[]>(baseline.AddMilliseconds(i), tags[i % tags.Length], values))
+                .Select(i => new Tuple<DateTime, double[], string>(baseline.AddMilliseconds(i), values, tags[i % tags.Length]))
                 .ToArray();
             
             using (var store = GetDocumentStore())
@@ -239,7 +239,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                             Script = @"
 var i = 0;
 for(i = 0; i < args.toAppend.length; i++){
-    appendTimeSeries(id(this), args.timeseries, new Date(args.toAppend[i].Item1), args.toAppend[i].Item2 args.toAppend[i].Item3);
+    timeseries(id(this), args.timeseries).append(new Date(args.toAppend[i].Item1), args.toAppend[i].Item2, args.toAppend[i].Item3);
 }",
                             Values =
                             {
@@ -249,7 +249,6 @@ for(i = 0; i < args.toAppend.length; i++){
                         }, null));
                     await session.SaveChangesAsync();
                 }
-                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -261,8 +260,8 @@ for(i = 0; i < args.toAppend.length; i++){
                     for (int i = 0; i < toAppend.Length; i++)
                     {
                         Assert.Equal(toAppend[i].Item1, timeSeriesEntries[i].Timestamp);
-                        Assert.Equal(toAppend[i].Item2, timeSeriesEntries[i].Tag);
-                        Assert.Equal(toAppend[i].Item3, timeSeriesEntries[i].Values);
+                        Assert.Equal(toAppend[i].Item2, timeSeriesEntries[i].Values);
+                        Assert.Equal(toAppend[i].Item3, timeSeriesEntries[i].Tag);
                     }
                 }
             }
@@ -308,7 +307,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"deleteTimeSeries(this, args.timeseries, args.from, args.to);",
+                            Script = @"timeseries(this, args.timeseries).remove(args.from, args.to);",
                             Values =
                             {
                                 { "timeseries", timeseries },
@@ -392,7 +391,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"this.Result = getRangeTimeSeries(this, args.timeseries, args.from, args.to);",
+                            Script = @"this.Result = timeseries(this, args.timeseries).get(args.from, args.to);",
                             Values =
                             {
                                 { "timeseries", timeseries },
@@ -467,7 +466,7 @@ from TimeSeriesResultHolders as c
 update
 {
     for(var i = 0; i < $toAppend.length; i++){
-        appendTimeSeries(this, $timeseries, $toAppend[i].Timestamp, $toAppend[i].Tag, $toAppend[i].Values);
+        timeseries(this, $timeseries).append($toAppend[i].Timestamp, $toAppend[i].Values, $toAppend[i].Tag);
     }
 }"}));
                 await appendOperation.WaitForCompletionAsync();
@@ -488,7 +487,7 @@ update
 from TimeSeriesResultHolders as c
 update
 {
-  deleteTimeSeries(this, $timeseries, $from, $to);
+  timeseries(this, $timeseries).remove($from, $to);
 }"}));
                 await deleteOperation.WaitForCompletionAsync();
 
@@ -508,7 +507,7 @@ update
 from TimeSeriesResultHolders as c
 update
 {
-  this.Result = getRangeTimeSeries(this, $timeseries, $from, $to);
+  this.Result = timeseries(this, $timeseries).get($from, $to);
 }"}));
                 await getOperation.WaitForCompletionAsync();
                 
@@ -544,7 +543,110 @@ update
                 }
             }
         }
-        
+
+        [Fact]
+        public async Task CanPerformMultipleOperationsOnSingleTimeSeriesInstanceByPatch()
+        {
+            double[] values = { 59d };
+            string[] tags = { "tag/1", "tag/2", "tag/3", "tag/4" };
+            const string timeseries = "Heartrate";
+            const string documentId = "users/ayende";
+
+            var baseline = DateTime.Today;
+            var toAppend = Enumerable.Range(0, 100)
+                .Select(i => new Tuple<DateTime, double[], string>(baseline.AddMilliseconds(i), values, tags[i % tags.Length]))
+                .ToArray();
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new { Name = "Oren" }, documentId);
+                    await session.SaveChangesAsync();
+
+                    session.Advanced.Defer(new PatchCommandData(documentId, null,
+                        new PatchRequest
+                        {
+                            Script = @"
+var ts = timeseries(id(this), args.timeseries);
+for(var i = 0; i < args.toAppend.length; i++){
+    ts.append(new Date(args.toAppend[i].Item1), args.toAppend[i].Item2, args.toAppend[i].Item3);
+}",
+                            Values =
+                            {
+                                { "timeseries", timeseries },
+                                { "toAppend", toAppend },
+                            }
+                        }, null));
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var timeSeriesEntries = (await session.TimeSeriesFor(documentId, timeseries)
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
+                        .ToArray();
+
+                    Assert.Equal(toAppend.Length, timeSeriesEntries.Length);
+                    for (int i = 0; i < toAppend.Length; i++)
+                    {
+                        Assert.Equal(toAppend[i].Item1, timeSeriesEntries[i].Timestamp);
+                        Assert.Equal(toAppend[i].Item2, timeSeriesEntries[i].Values);
+                        Assert.Equal(toAppend[i].Item3, timeSeriesEntries[i].Tag);
+                    }
+                }
+
+                var toRemove = new (DateTime, DateTime)[]
+                {
+                    (baseline.AddMilliseconds(10), baseline.AddMilliseconds(19)),
+                    (baseline.AddMilliseconds(40), baseline.AddMilliseconds(49)),
+                    (baseline.AddMilliseconds(60), baseline.AddMilliseconds(69)),
+                    (baseline.AddMilliseconds(90), baseline.AddMilliseconds(99))
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+
+                    session.Advanced.Defer(new PatchCommandData(documentId, null,
+                        new PatchRequest
+                        {
+                            Script = @"
+var ts = timeseries(id(this), args.timeseries);
+for (var i = 0; i < args.toRemove.length; i++)
+{
+    var from = new Date(args.toRemove[i].Item1);
+    var to = new Date(args.toRemove[i].Item2);
+    ts.remove(from, to);
+}",
+                            Values =
+                            {
+                                { "timeseries", timeseries },
+                                { "toRemove", toRemove },
+                            }
+                        }, null));
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var timeSeriesEntries = (await session.TimeSeriesFor(documentId, timeseries)
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
+                        .ToArray();
+
+                    Assert.Equal(toAppend.Length - 40, timeSeriesEntries.Length);
+
+                    for (int i = 0; i < toRemove.Length; i++)
+                    {
+                        timeSeriesEntries = (await session.TimeSeriesFor(documentId, timeseries)
+                                .GetAsync(toRemove[i].Item1, toRemove[i].Item2))
+                            .ToArray();
+
+                        Assert.Empty(timeSeriesEntries);
+                    }
+                }
+            }
+        }
+
         private class TimeSeriesResultHolder
         {
             public TimeSeriesEntry[] Result { set; get; }
