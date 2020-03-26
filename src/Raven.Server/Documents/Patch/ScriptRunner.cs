@@ -295,6 +295,8 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue TimeSeries(JsValue self, JsValue[] args)
             {
+                AssertValidDatabaseContext("timeseries(doc, name)");
+
                 var originalArgs = new ArrayInstance(ScriptEngine);
                 originalArgs.FastAddProperty("length", 0, true, false, false);
                 ScriptEngine.Array.PrototypeObject.Push(originalArgs, args);
@@ -318,17 +320,18 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue AppendTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
-                AssertValidDatabaseContext("append");
-                const string signature4Args = "appendTimeSeries(doc, timeseries, timestamp, values)";
-                const string signature5Args = "appendTimeSeries(doc, timeseries, timestamp, tag, values)";
+                AssertValidDatabaseContext("timeseries(doc, name).append");
+
+                const string signature2Args = "append(timestamp, values)";
+                const string signature3Args = "append(timestamp, values, tag)";
                 
                 string signature;
                 LazyStringValue lsTag = null;
                 switch (args.Length)
                 {
-                    case 2: signature = signature4Args;
+                    case 2: signature = signature2Args;
                         break;
-                    case 3: signature = signature5Args;
+                    case 3: signature = signature3Args;
                         var tagArgument = args.Last();
                         if (tagArgument != null && tagArgument.IsNull() == false && tagArgument.IsUndefined() == false)
                         {
@@ -336,7 +339,7 @@ namespace Raven.Server.Documents.Patch
                             lsTag = _jsonCtx.GetLazyString(tag);
                         }
                         break;
-                    default: throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature4Args} or {signature5Args}");
+                    default: throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} or {signature3Args}");
                 }
                 
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
@@ -393,7 +396,7 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue DeleteRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
-                AssertValidDatabaseContext("deleteTimeSeries");
+                AssertValidDatabaseContext("timeseries(doc, name).remove");
 
                 const string signature = "remove(from, to)";
                 const int requiredArgs = 2;
@@ -423,8 +426,8 @@ namespace Raven.Server.Documents.Patch
             
             private JsValue GetRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
-                AssertValidDatabaseContext("getRangeTimeSeries");
-                
+                AssertValidDatabaseContext("timeseries(doc, name).get");
+
                 const string signature = "get(from, to)";
                 const int requiredArgs = 2;
                 
@@ -1493,11 +1496,11 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (JavaScriptException e)
                 {
-                    //ScriptRunnerResult is in charge of disposing of the disposible but it is not created (the clones did)
+                    //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
                     JavaScriptUtils.Clear();
                     throw CreateFullError(e);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     JavaScriptUtils.Clear();
                     throw;
