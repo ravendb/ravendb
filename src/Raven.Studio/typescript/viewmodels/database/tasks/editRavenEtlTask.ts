@@ -123,7 +123,6 @@ class ravenTaskTestMode {
             });
     }
     
-    
     runTest() {
         const testValid = viewHelpers.isValid(this.validationGroup, true);
         const parentValid = this.validateParent();
@@ -172,6 +171,7 @@ class editRavenEtlTask extends viewModelBase {
     static isApplyToAll = ongoingTaskRavenEtlTransformationModel.isApplyToAll;
 
     enableTestArea = ko.observable<boolean>(false);
+    showAdvancedOptions = ko.observable<boolean>(false);
 
     test: ravenTaskTestMode;
     
@@ -201,7 +201,7 @@ class editRavenEtlTask extends viewModelBase {
         super();
         
         aceEditorBindingHandler.install();
-        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp", "toggleTestArea");
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp", "toggleTestArea", "toggleAdvancedArea");
     }
 
     activate(args: any) {
@@ -509,6 +509,10 @@ class editRavenEtlTask extends viewModelBase {
             this.enableTestArea(false);
         }
     }
+    
+    toggleAdvancedArea() {
+        this.showAdvancedOptions.toggle();
+    }    
 }
 
 export = editRavenEtlTask;

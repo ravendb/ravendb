@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -262,6 +263,8 @@ namespace Raven.Server
                         // errors here, it all goes to the log anyway
                     }
 
+                    ServerCertificateChanged += OnServerCertificateChanged;
+
                     _externalCertificateValidator.Initialize();
 
                     var port = new Uri(Configuration.Core.ServerUrls[0]).Port;
@@ -339,7 +342,29 @@ namespace Raven.Server
                 throw;
             }
         }
+        private void OnServerCertificateChanged(object sender, EventArgs e)
+        {
+            if (RequestExecutor.HasServerCertificateCustomValidationCallback)
+            {
+                RequestExecutor.RemoteCertificateValidationCallback -= CertificateCallback;
+            }
 
+            try
+            {
+                AssertServerCanContactItselfWhenAuthIsOn(Certificate.Certificate)
+                    .IgnoreUnobservedExceptions()
+                    // here we wait a bit, just enough so for normal servers
+                    // we'll be successful, but not enough to hang the server
+                    // if there is some issue talking to the node because
+                    // of firewall, ssl issues, etc.
+                    .Wait(250);
+            }
+            catch (Exception)
+            {
+                // the .Wait() can throw as well, so we'll ignore any
+                // errors here, it all goes to the log anyway
+            }
+        }
         public void ClearExternalCertificateValidationCache()
         {
             // Can be called from the Admin JS Console
@@ -721,7 +746,7 @@ namespace Raven.Server
                     httpMessageHandler.SslProtocols = TcpUtils.SupportedSslProtocols;
 
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"During server initialization, validating that the server can authenticate with itself using {url}.");
+                        Logger.Operations($"When setting the certificate, validating that the server can authenticate with itself using {url}.");
 
                     // Using the server certificate as a client certificate to test if we can talk to ourselves
                     httpMessageHandler.ClientCertificates.Add(certificateCertificate);
@@ -733,6 +758,8 @@ namespace Raven.Server
                     {
                         await client.GetAsync("/setup/alive");
                     }
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Successful connection to {url}.");
                 }
             }
             catch (Exception e)
@@ -783,12 +810,27 @@ namespace Raven.Server
 
         private bool CertificateCallback(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
         {
-            if (errors == SslPolicyErrors.None || errors == SslPolicyErrors.RemoteCertificateChainErrors) // self-signed is acceptable
+            if (errors == SslPolicyErrors.None)
                 return true;
 
             var cert2 = HttpsConnectionMiddleware.ConvertToX509Certificate2(cert);
+
             // We trust ourselves
-            return cert2?.Thumbprint == Certificate?.Certificate?.Thumbprint;
+            if (cert2?.Thumbprint == Certificate?.Certificate?.Thumbprint)
+                return true;
+
+            // self-signed is acceptable only if we have the same issuer as the remote certificate
+            if (errors == SslPolicyErrors.RemoteCertificateChainErrors)
+            {
+                X509Certificate2 issuer = chain.ChainElements.Count > 1
+                    ? chain.ChainElements[1].Certificate
+                    : chain.ChainElements[0].Certificate;
+
+                if (issuer?.Thumbprint == Certificate?.Certificate?.Thumbprint)
+                    return true;
+            }
+
+            return false;
         }
 
         private Task _currentRefreshTask = Task.CompletedTask;

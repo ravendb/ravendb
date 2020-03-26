@@ -14,11 +14,13 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -79,6 +81,12 @@ namespace Raven.Server.Web.System
         public Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var applicationIdentifier = GetStringQueryString("applicationIdentifier", required: false);
+
+            if (applicationIdentifier != null)
+            {
+                AlertIfDocumentStoreCreationRateIsNotReasonable(applicationIdentifier, name);
+            }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -145,6 +153,31 @@ namespace Raven.Server.Web.System
                 }
             }
             return Task.CompletedTask;
+        }
+
+        private void AlertIfDocumentStoreCreationRateIsNotReasonable(string applicationIdentifier, string name)
+        {
+            var q = ServerStore.ClientCreationRate.GetOrCreate(applicationIdentifier);
+            var now = DateTime.UtcNow;
+            q.Enqueue(now);
+            while (q.Count > 20)
+            {
+                if (q.TryDequeue(out var last) && (now - last).TotalMinutes < 1)
+                {
+                    q.Clear();
+
+                    ServerStore.NotificationCenter.Add(
+                        AlertRaised.Create(
+                            name,
+                            "Too many clients creations",
+                            $"There has been a lot of topology updates (more than 20) for the same client id in less than a minute. " +
+                            "This is usually an indication that you are creating a large number of DocumentStore instance. " +
+                            "Are you creating a Document Store per request, instead of using DocumentStore as a singleton?",
+                            AlertType.HighClientCreationRate,
+                            NotificationSeverity.Warning
+                        ));
+                }
+            }
         }
 
         // we can't use '/database/is-loaded` because that conflict with the `/databases/<db-name>`

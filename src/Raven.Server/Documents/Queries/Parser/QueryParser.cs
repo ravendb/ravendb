@@ -664,12 +664,10 @@ namespace Raven.Server.Documents.Queries.Parser
 
             _state = NextTokenOptions.Parenthesis;
 
-            var parenthesis = Scanner.TryPeek('(');
-
             if (BinaryGraph(gq, out var right) == false)
                 ThrowParseException($"Failed to find second part of {type} expression");
 
-            return TrySimplifyBinaryExpression(right, type, negate, parenthesis, ref op);
+            return TrySimplifyBinaryExpression(right, type, negate, allowSimplification: false, ref op);
         }
 
         private bool GraphOperation(GraphQuery gq, out QueryExpression op)
@@ -1806,22 +1804,20 @@ namespace Raven.Server.Documents.Queries.Parser
 
             _state = NextTokenOptions.Parenthesis;
 
-            var parenthesis = Scanner.TryPeek('(');
-
             if (Binary(out var right) == false)
                 ThrowParseException($"Failed to find second part of {type} expression");
 
-            return TrySimplifyBinaryExpression(right, type, negate, parenthesis, ref op);
+            bool allowSimplificationOfOperation = !(right is BinaryExpression be) || be.Parenthesis == false;
+            return TrySimplifyBinaryExpression(right, type, negate, allowSimplificationOfOperation, ref op);
         }
 
-        private bool TrySimplifyBinaryExpression(
-            QueryExpression right,
+        private bool TrySimplifyBinaryExpression(QueryExpression right,
             OperatorType type,
             bool negate,
-            bool parenthesis,
+            bool allowSimplification,
             ref QueryExpression op)
         {
-            if (parenthesis == false)
+            if (allowSimplification)
             {
                 if (negate)
                 {
@@ -1853,10 +1849,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 right = new NegatedExpression(right);
             }
 
-            op = new BinaryExpression(op, right, type)
-            {
-                Parenthesis = parenthesis
-            };
+            op = new BinaryExpression(op, right, type);
 
             return true;
         }
@@ -1900,6 +1893,12 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScan(')') == false)
                 ThrowParseException("Unmatched parenthesis, expected ')'");
+
+            if (op is BinaryExpression be)
+            {
+                be.Parenthesis = true;
+            }
+
             return true;
         }
 

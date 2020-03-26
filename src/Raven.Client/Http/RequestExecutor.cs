@@ -10,13 +10,11 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
-using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
@@ -343,8 +341,13 @@ namespace Raven.Client.Http
 
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
+            return Create(initialUrls, databaseName, certificate, conventions, applicationIdentifier: null);
+        }
+
+        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, Guid? applicationIdentifier)
+        {
             var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls);
+            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, applicationIdentifier);
             return executor;
         }
 
@@ -441,8 +444,23 @@ namespace Raven.Client.Http
             }
         }
 
-        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
+        public Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
         {
+            return UpdateTopologyAsync(new UpdateTopologyParameters(node)
+            {
+                TimeoutInMs = timeout,
+                ForceUpdate = forceUpdate,
+                DebugTag = debugTag,
+                ApplicationIdentifier = null
+            });
+        }
+
+        public virtual async Task<bool> UpdateTopologyAsync(UpdateTopologyParameters parameters)
+        {
+            if (parameters is null)
+                throw new ArgumentNullException(nameof(parameters));
+
             if (_disableTopologyUpdates)
                 return false;
 
@@ -451,7 +469,7 @@ namespace Raven.Client.Http
 
             //prevent double topology updates if execution takes too much time
             // --> in cases with transient issues
-            var lockTaken = await _updateDatabaseTopologySemaphore.WaitAsync(timeout).ConfigureAwait(false);
+            var lockTaken = await _updateDatabaseTopologySemaphore.WaitAsync(parameters.TimeoutInMs).ConfigureAwait(false);
             if (lockTaken == false)
                 return false;
 
@@ -462,8 +480,8 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetDatabaseTopologyCommand(debugTag);
-                    await ExecuteAsync(node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
+                    var command = new GetDatabaseTopologyCommand(parameters.DebugTag, parameters.ApplicationIdentifier);
+                    await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
                     DatabaseTopologyLocalCache.TrySaving(_databaseName, TopologyHash, topology, Conventions, context);
@@ -477,7 +495,7 @@ namespace Raven.Client.Http
                             _nodeSelector.ScheduleSpeedTest();
                         }
                     }
-                    else if (_nodeSelector.OnUpdateTopology(topology, forceUpdate: forceUpdate))
+                    else if (_nodeSelector.OnUpdateTopology(topology, forceUpdate: parameters.ForceUpdate))
                     {
                         DisposeAllFailedNodesTimers();
                         if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
@@ -604,7 +622,7 @@ namespace Raven.Client.Http
                                 throw new InvalidOperationException("No known topology and no previously known one, cannot proceed, likely a bug");
                             }
 
-                            _firstTopologyUpdate = FirstTopologyUpdate(_lastKnownUrls);
+                            _firstTopologyUpdate = FirstTopologyUpdate(_lastKnownUrls, null);
                         }
 
                         topologyUpdate = _firstTopologyUpdate;
@@ -651,7 +669,7 @@ namespace Raven.Client.Http
             {
                 try
                 {
-                    await UpdateTopologyAsync(serverNode, 0, debugTag: "timer-callback").ConfigureAwait(false);
+                    await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, DebugTag = "timer-callback" }).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -661,7 +679,12 @@ namespace Raven.Client.Http
             }));
         }
 
-        protected async Task FirstTopologyUpdate(string[] initialUrls)
+        protected Task FirstTopologyUpdate(string[] initialUrls)
+        {
+            return FirstTopologyUpdate(initialUrls, applicationIdentifier: null);
+        }
+
+        protected async Task FirstTopologyUpdate(string[] initialUrls, Guid? applicationIdentifier)
         {
             initialUrls = ValidateUrls(initialUrls, Certificate);
 
@@ -676,7 +699,12 @@ namespace Raven.Client.Http
                         Database = _databaseName
                     };
 
-                    await UpdateTopologyAsync(serverNode, Timeout.Infinite, debugTag: "first-topology-update").ConfigureAwait(false);
+                    await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode)
+                    {
+                        TimeoutInMs = Timeout.Infinite,
+                        DebugTag = "first-topology-update",
+                        ApplicationIdentifier = applicationIdentifier
+                    }).ConfigureAwait(false);
 
                     InitializeUpdateTopologyTimer();
                     _topologyTakenFromNode = serverNode;
@@ -897,12 +925,15 @@ namespace Raven.Client.Http
                 var tasks = new Task[2];
 
                 tasks[0] = refreshTopology
-                    ? UpdateTopologyAsync(new ServerNode
+                    ? UpdateTopologyAsync(new UpdateTopologyParameters(new ServerNode
                     {
                         Url = chosenNode.Url,
                         Database = _databaseName
-                    }, 0,
-                        debugTag: refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null)
+                    })
+                    {
+                        TimeoutInMs = 0,
+                        DebugTag = refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null
+                    })
                     : Task.CompletedTask;
 
                 tasks[1] = refreshClientConfiguration
@@ -1053,7 +1084,6 @@ namespace Raven.Client.Http
                             "since this command dependent on a cluster transaction which this node doesn't support");
                     }
                 }
-
             }
 
             return response;
@@ -1361,7 +1391,7 @@ namespace Raven.Client.Http
                     if (command.FailedNodes.ContainsKey(node))
                     {
                         // we tried all the nodes, let's try to update topology and retry one more time
-                        var success = await UpdateTopologyAsync(chosenNode, 60 * 1000, forceUpdate: true, debugTag: "handle-unsuccessful-response").ConfigureAwait(false);
+                        var success = await UpdateTopologyAsync(new UpdateTopologyParameters(chosenNode) { TimeoutInMs = 60 * 1000, ForceUpdate = true, DebugTag = "handle-unsuccessful-response" }).ConfigureAwait(false);
 
                         if (success == false)
                             return false;
@@ -1424,7 +1454,6 @@ namespace Raven.Client.Http
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, RequestContext requestContext = null, CancellationToken token = default)
         {
-
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, Exception>();
 
@@ -1574,7 +1603,7 @@ namespace Raven.Client.Http
             SpawnHealthChecks(chosenNode, nodeIndex);
             _nodeSelector?.OnFailedRequest(nodeIndex);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
-            await UpdateTopologyAsync(serverNode, 0, true, debugTag: "handle-server-not-responsive").ConfigureAwait(false);
+            await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "handle-server-not-responsive" }).ConfigureAwait(false);
             OnFailedRequestInvoke(url, e);
             return serverNode;
         }
@@ -1903,7 +1932,7 @@ namespace Raven.Client.Http
             if (string.IsNullOrEmpty(hostname))
                 throw new CertificateNameMismatchException(
                     $"The hostname of the server URL must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
-                
+
             throw new CertificateNameMismatchException(
                 $"You are trying to contact host {hostname} but the hostname must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
         }
@@ -1929,7 +1958,6 @@ namespace Raven.Client.Http
                 default:
                     hostname = string.Empty;
                     break;
-                    
             }
 
             return hostname;
@@ -2075,6 +2103,20 @@ namespace Raven.Client.Http
                     return;
 
                 _contexts.Value = null;
+            }
+        }
+
+        public class UpdateTopologyParameters
+        {
+            public ServerNode Node { get; }
+            public int TimeoutInMs { get; set; } = 15000;
+            public bool ForceUpdate { get; set; }
+            public string DebugTag { get; set; }
+            public Guid? ApplicationIdentifier { get; set; }
+
+            public UpdateTopologyParameters(ServerNode node)
+            {
+                Node = node ?? throw new ArgumentNullException(nameof(node));
             }
         }
     }

@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Sparrow;
 using Sparrow.Logging;
 using Voron.Global;
 using Xunit;
@@ -296,6 +296,226 @@ namespace SlowTests.SparrowTests
             }
         }
 
+        [Theory]
+        [InlineData(LogMode.None)]
+        [InlineData(LogMode.Operations)]
+        [InlineData(LogMode.Information)]
+        public async Task Register_WhenLogModeIsOperations_ShouldWriteToLogFileJustOperations(LogMode logMode)
+        {
+            var timeout = TimeSpan.FromSeconds(10000);
+            
+            var name = GetTestName();
+            var path = NewDataPath(forceCreateDir: true);
+            path = Path.Combine(path, Guid.NewGuid().ToString());
+            Directory.CreateDirectory(path);
+
+            var loggingSource = new LoggingSource(
+                logMode,
+                path,
+                "LoggingSource" + name,
+                TimeSpan.MaxValue,
+                long.MaxValue,
+                false);
+
+            var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
+            var tcs = new TaskCompletionSource<WebSocketReceiveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var socket = new DummyWebSocket();
+            socket.ReceiveAsyncFunc = () => tcs.Task;
+            var context = new LoggingSource.WebSocketContext();
+
+            //Register
+            var _ = loggingSource.Register(socket, context, CancellationToken.None);
+            var beforeCloseOperation = Guid.NewGuid().ToString();
+            var beforeCloseInformation = Guid.NewGuid().ToString();
+            
+            var logTasks = Task.WhenAll(logger.OperationsAsync(beforeCloseOperation), logger.InfoAsync(beforeCloseInformation));
+            await Task.WhenAny(logTasks, Task.Delay(timeout));
+            Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
+
+            WaitForValue(() => socket.LogsReceived.Contains(beforeCloseInformation) && socket.LogsReceived.Contains(beforeCloseOperation),
+                true, 5000, 100);
+            
+            //Close socket
+            socket.Close();
+            tcs.SetResult(new WebSocketReceiveResult(1, WebSocketMessageType.Text, true, WebSocketCloseStatus.NormalClosure, string.Empty));
+            
+            var afterCloseOperation = Guid.NewGuid().ToString();
+            var afterCloseInformation = Guid.NewGuid().ToString();
+            
+            logTasks = Task.WhenAll(logger.OperationsAsync(afterCloseOperation), logger.InfoAsync(afterCloseInformation));
+            await Task.WhenAny(logTasks, Task.Delay(timeout));
+            Assert.True(logTasks.IsCompleted || logMode == LogMode.None, 
+                $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
+
+            loggingSource.EndLogging();
+
+            string logsFileContentAfter = await ReadLogsFileContent(path);
+            
+            AssertContainsLog(LogMode.Information, logMode)(beforeCloseInformation, logsFileContentAfter);
+            AssertContainsLog(LogMode.Operations, logMode)(beforeCloseOperation, logsFileContentAfter);
+
+            AssertContainsLog(LogMode.Information, logMode)(afterCloseInformation, logsFileContentAfter);
+            AssertContainsLog(LogMode.Operations, logMode)(afterCloseOperation, logsFileContentAfter);
+        }
+        
+        [Theory]
+        [InlineData(LogMode.None)]
+        [InlineData(LogMode.Operations)]
+        [InlineData(LogMode.Information)]
+        public async Task AttachPipeSink_WhenLogModeIsOperations_ShouldWriteToLogFileJustOperations(LogMode logMode)
+        {
+            var timeout = TimeSpan.FromSeconds(10);
+            
+            var name = GetTestName();
+            var path = NewDataPath(forceCreateDir: true);
+            path = Path.Combine(path, Guid.NewGuid().ToString());
+            Directory.CreateDirectory(path);
+
+            var loggingSource = new LoggingSource(
+                logMode,
+                path,
+                "LoggingSource" + name,
+                TimeSpan.MaxValue,
+                long.MaxValue,
+                false);
+
+            var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
+            var tcs = new TaskCompletionSource<WebSocketReceiveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            await using var stream = new MemoryStream();
+            
+            //Attach Pipe
+            loggingSource.AttachPipeSink(stream);
+            var beforeDetachOperation = Guid.NewGuid().ToString();
+            var beforeDetachInformation = Guid.NewGuid().ToString();
+            
+            var logTasks = Task.WhenAll(logger.OperationsAsync(beforeDetachOperation), logger.InfoAsync(beforeDetachInformation));
+            await Task.WhenAny(logTasks, Task.Delay(timeout));
+            Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
+            
+            //Detach Pipe
+            loggingSource.DetachPipeSink();
+            await stream.FlushAsync();
+            
+            
+            var afterDetachOperation = Guid.NewGuid().ToString();
+            var afterDetachInformation = Guid.NewGuid().ToString();
+            
+            logTasks = Task.WhenAll(logger.OperationsAsync(afterDetachOperation), logger.InfoAsync(afterDetachInformation));
+            await Task.WhenAny(logTasks, Task.Delay(timeout));
+            Assert.True(logTasks.IsCompleted || logMode == LogMode.None, 
+                $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
+
+            tcs.SetResult(new WebSocketReceiveResult(1, WebSocketMessageType.Text, true, WebSocketCloseStatus.NormalClosure, ""));
+            loggingSource.EndLogging();
+
+            var logsFromPipe = Encodings.Utf8.GetString(stream.ToArray());
+            Assert.Contains(beforeDetachInformation, logsFromPipe);
+            Assert.Contains(beforeDetachOperation, logsFromPipe);
+            Assert.DoesNotContain(afterDetachInformation, logsFromPipe);
+            Assert.DoesNotContain(afterDetachOperation, logsFromPipe);
+
+            string logsFileContentAfter = await ReadLogsFileContent(path);
+
+            AssertContainsLog(LogMode.Information, logMode)(beforeDetachInformation, logsFileContentAfter);
+            AssertContainsLog(LogMode.Operations, logMode)(beforeDetachOperation, logsFileContentAfter);
+
+            AssertContainsLog(LogMode.Information, logMode)(afterDetachInformation, logsFileContentAfter);
+            AssertContainsLog(LogMode.Operations, logMode)(afterDetachOperation, logsFileContentAfter);
+        }
+
+        private static async Task<string> ReadLogsFileContent(string path)
+        {
+            var logsFileContent = "";
+            var logsFile = Directory.GetFiles(path);
+            foreach (string logFile in logsFile)
+            {
+                logsFileContent += await File.ReadAllTextAsync(logFile);
+            }
+
+            return logsFileContent;
+        }
+
+        private Action<string, string> AssertContainsLog(LogMode logType, LogMode logMode)
+        {
+            if (logMode == LogMode.Information || logMode == logType)
+                return Assert.Contains;
+
+            return Assert.DoesNotContain;
+        }
+        
+        [Fact]
+        public async Task Register_WhenLogModeIsNone_ShouldNotWriteToLogFile()
+        {
+            var name = GetTestName();
+            var path = NewDataPath(forceCreateDir: true);
+            path = Path.Combine(path, Guid.NewGuid().ToString());
+            Directory.CreateDirectory(path);
+
+            var loggingSource = new LoggingSource(
+                LogMode.None,
+                path,
+                "LoggingSource" + name,
+                TimeSpan.MaxValue,
+                long.MaxValue,
+                false);
+
+            var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
+            var tcs = new TaskCompletionSource<WebSocketReceiveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var socket = new DummyWebSocket();
+            socket.ReceiveAsyncFunc = () => tcs.Task;
+            var context = new LoggingSource.WebSocketContext();
+
+            var _ = loggingSource.Register(socket, context, CancellationToken.None);
+
+            var uniqForOperation = Guid.NewGuid().ToString();
+            var uniqForInformation = Guid.NewGuid().ToString();
+
+            var logTasks = Task.WhenAll(logger.OperationsAsync(uniqForOperation), logger.InfoAsync(uniqForInformation));
+            var timeout = TimeSpan.FromSeconds(10);
+            await Task.WhenAny(logTasks, Task.Delay(timeout));
+            Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
+
+            tcs.SetResult(new WebSocketReceiveResult(1, WebSocketMessageType.Text, true, WebSocketCloseStatus.NormalClosure, ""));
+            loggingSource.EndLogging();
+            
+            Assert.Contains(uniqForOperation, socket.LogsReceived);
+            Assert.Contains(uniqForInformation, socket.LogsReceived);
+            
+            var logFile = Directory.GetFiles(path).First();
+            var logContent = await File.ReadAllTextAsync(logFile);
+            Assert.DoesNotContain(uniqForOperation, logContent);
+            Assert.DoesNotContain(uniqForInformation, logContent);
+        }
+        
+        private class DummyWebSocket : WebSocket
+        {
+            private bool _close;
+            public string LogsReceived { get; private set; } = "";
+
+            public void Close() => _close = true;
+
+            public Func<Task<WebSocketReceiveResult>> ReceiveAsyncFunc { get; set; } = () => Task.FromResult(new WebSocketReceiveResult(1, WebSocketMessageType.Text, true));
+            public override void Abort() {}
+            public override Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) 
+                => Task.CompletedTask;
+            public override Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) 
+                => Task.CompletedTask;
+            public override void Dispose() { }
+            public override Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) => ReceiveAsyncFunc();
+
+            public override async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
+            {
+                if(_close)
+                    throw new Exception("Closed");
+                LogsReceived += Encodings.Utf8.GetString(buffer.ToArray()); 
+            }
+            public override WebSocketCloseStatus? CloseStatus { get; }
+            public override string CloseStatusDescription { get; }
+            public override WebSocketState State { get; }
+            public override string SubProtocol { get; }
+        }
+        
         private static string GetTestName([CallerMemberName] string memberName = "") => memberName;
 
         private void AssertNoFileMissing(string[] files)

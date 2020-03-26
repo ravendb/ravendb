@@ -23,10 +23,8 @@ class extensions {
         }
         
         url = _.trim(url);
-
-        const urlRegex = /^(https?:\/\/)([^\s]+)$/; // allow any char, exclude white space
-        if (!urlRegex.test(url)) {
-            return "Url format expected: 'http(s)://hostName'";
+        if (!genUtils.urlRegex.test(url)) {
+            return genUtils.invalidUrlMessage;
         }
 
         try {
