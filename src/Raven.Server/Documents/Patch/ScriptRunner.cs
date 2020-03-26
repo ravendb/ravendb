@@ -13,7 +13,6 @@ using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
-using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -143,6 +142,8 @@ namespace Raven.Server.Documents.Patch
             public HashSet<string> UpdatedDocumentCounterIds;
             public JavaScriptUtils JavaScriptUtils;
 
+            private const string _timeSeriesSignature = "timeseries(doc, name)";
+
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
                 _database = database;
@@ -216,10 +217,6 @@ namespace Raven.Server.Documents.Patch
 
                 //TimeSeries
                 ScriptEngine.SetValue("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", TimeSeries));
-                //ScriptEngine.SetValue("append", new ClrFunctionInstance(ScriptEngine, "append", AppendTimeSeries));
-                //ScriptEngine.SetValue("deleteTimeSeries", new ClrFunctionInstance(ScriptEngine, "deleteTimeSeries", DeleteRangeTimeSeries));
-                //ScriptEngine.SetValue("getRangeTimeSeries", new ClrFunctionInstance(ScriptEngine, "getRangeTimeSeries", GetRangeTimeSeries));
-
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
 
@@ -278,7 +275,7 @@ namespace Raven.Server.Documents.Patch
             private static string GetStringArg(JsValue jsArg, string signature, string argName)
             {
                 if (jsArg.IsString() == false)
-                    throw new ArgumentException($"{signature}: The {argName} argument should be a string, but got {GetTypes(jsArg)}");
+                    throw new ArgumentException($"{signature}: The '{argName}' argument should be a string, but got {GetTypes(jsArg)}");
                 return jsArg.AsString();
             }
             
@@ -298,14 +295,18 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue TimeSeries(JsValue self, JsValue[] args)
             {
+                var originalArgs = new ArrayInstance(ScriptEngine);
+                originalArgs.FastAddProperty("length", 0, true, false, false);
+                ScriptEngine.Array.PrototypeObject.Push(originalArgs, args);
+
                 var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) => 
-                    AppendTimeSeries(args[0], args[1], values));
+                    AppendTimeSeries(originalArgs[0], originalArgs[1], values));
 
                 var remove = new ClrFunctionInstance(ScriptEngine, "remove", (thisObj, values) =>
-                    DeleteRangeTimeSeries(args[0], args[1], values));
+                    DeleteRangeTimeSeries(originalArgs[0], originalArgs[1], values));
 
                 var get = new ClrFunctionInstance(ScriptEngine, "get", (thisObj, values) =>
-                    GetRangeTimeSeries(args[0], args[1], values));
+                    GetRangeTimeSeries(originalArgs[0], originalArgs[1], values));
 
                 var obj = new ObjectInstance(ScriptEngine);
                 obj.Set("append", append);
@@ -338,9 +339,9 @@ namespace Raven.Server.Documents.Patch
                     default: throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature4Args} or {signature5Args}");
                 }
                 
-                var (id, doc) = GetIdAndDocFromArg(document, signature);
+                var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
-                string timeseries = GetStringArg(name, signature, "timeseries");
+                string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
                 var timestamp = GetDateArg(args[0], signature, "timestamp");
 
                 double[] valuesBuffer = null;
@@ -393,19 +394,19 @@ namespace Raven.Server.Documents.Patch
             private JsValue DeleteRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
                 AssertValidDatabaseContext("deleteTimeSeries");
-                
-                const string signature = "deleteTimeSeries(doc, timeseries, from, to)";
-                const int requiredArgs = 4;
+
+                const string signature = "remove(from, to)";
+                const int requiredArgs = 2;
                 
                 if (args.Length != requiredArgs)
                     throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
                 
-                var (id, doc) = GetIdAndDocFromArg(args[0], signature);
+                var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
-                string timeseries = GetStringArg(args[1], signature, "timeseries");
+                string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
 
-                var from = GetDateArg(args[2], signature, "from");
-                var to = GetDateArg(args[3], signature, "to");
+                var from = GetDateArg(args[0], signature, "from");
+                var to = GetDateArg(args[1], signature, "to");
 
                 var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
                 {
@@ -424,18 +425,18 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("getRangeTimeSeries");
                 
-                const string signature = "getRangeTimeSeries(doc, timeseries, from, to)";
-                const int requiredArgs = 4;
+                const string signature = "get(from, to)";
+                const int requiredArgs = 2;
                 
                 if (args.Length != requiredArgs)
                     throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
                 
-                var id = GetIdFromArg(args[0], signature);
+                var id = GetIdFromArg(document, _timeSeriesSignature);
 
-                string timeseries = GetStringArg(args[1], signature, "timeseries");
+                string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
 
-                var from = GetDateArg(args[2], signature, "from");
-                var to = GetDateArg(args[3], signature, "to");
+                var from = GetDateArg(args[0], signature, "from");
+                var to = GetDateArg(args[1], signature, "to");
 
                 var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeseries, from, to);
 
