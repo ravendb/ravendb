@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_13796:ClusterTestBase
+    public class RavenDB_13796 : ClusterTestBase
     {
         public RavenDB_13796(ITestOutputHelper output) : base(output)
         {
@@ -43,9 +43,7 @@ namespace SlowTests.Issues
                     await Task.Delay(100);
                 topology = reqEx.Topology;
                 var serverNode1 = topology.Nodes[0];
-                await reqEx.UpdateTopologyAsync(
-                    node: serverNode1,
-                    timeout: 10_000);
+                await reqEx.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(serverNode1) { TimeoutInMs = 10_000 });
                 var node1 = Servers.First(x => x.WebUrl.Equals(serverNode1.Url, StringComparison.InvariantCultureIgnoreCase));
                 await DisposeServerAndWaitForFinishOfDisposalAsync(node1);
                 var serverNode2 = topology.Nodes[1];
@@ -66,7 +64,7 @@ namespace SlowTests.Issues
 
                     while (command.FailedNodes == null || command.FailedNodes.Count == 0)
                         await Task.Delay(100);
-                    while (await reqEx.UpdateTopologyAsync(topology.Nodes[3], 10_000, forceUpdate: true) == false ||
+                    while (await reqEx.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(topology.Nodes[3]) { TimeoutInMs = 10_000, ForceUpdate = true }) == false ||
                         reqEx.Topology.Etag == topology.Etag)
                     {
                         await Task.Delay(100);

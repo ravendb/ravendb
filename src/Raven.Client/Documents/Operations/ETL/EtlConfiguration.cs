@@ -117,16 +117,6 @@ namespace Raven.Client.Documents.Operations.ETL
             return result;
         }
 
-        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
-        public virtual bool IsEqual(EtlConfiguration<T> config)
-        {
-            if (config == null)
-                return false;
-
-            var result = Compare(config);
-            return result == EtlConfigurationCompareDifferences.None;
-        }
-
         internal EtlConfigurationCompareDifferences Compare(EtlConfiguration<T> config, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
         {
             if (config == null)

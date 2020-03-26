@@ -190,7 +190,7 @@ namespace RachisTests
 
                 for (int i = 0; i < 17; i++)
                 {
-                    GenerateDistributedRevisionsData(defaultDatabase);
+                    await GenerateDistributedRevisionsDataAsync(defaultDatabase);
                 }
             }
         }
@@ -276,7 +276,7 @@ namespace RachisTests
 
                 var continueMre = new AsyncManualResetEvent();
 
-                GenerateDistributedRevisionsData(defaultDatabase);
+                await GenerateDistributedRevisionsDataAsync(defaultDatabase);
 
                 var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>().ConfigureAwait(false);
 
@@ -439,7 +439,7 @@ namespace RachisTests
             }
         }
 
-        private void GenerateDistributedRevisionsData(string defaultDatabase)
+        private async Task GenerateDistributedRevisionsDataAsync(string defaultDatabase)
         {
             IReadOnlyList<ServerNode> nodes;
             using (var store = new DocumentStore
@@ -448,12 +448,15 @@ namespace RachisTests
                 Database = defaultDatabase
             }.Initialize())
             {
-                AsyncHelpers.RunSync(() => store.GetRequestExecutor()
-                    .UpdateTopologyAsync(new ServerNode
-                    {
-                        Url = store.Urls[0],
-                        Database = defaultDatabase,
-                    }, Timeout.Infinite));
+                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
+                {
+                    Url = store.Urls[0],
+                    Database = defaultDatabase,
+                })
+                {
+                    TimeoutInMs = Timeout.Infinite
+                });
+
                 nodes = store.GetRequestExecutor().TopologyNodes;
             }
             var rnd = new Random(1);

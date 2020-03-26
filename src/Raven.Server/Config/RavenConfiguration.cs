@@ -80,6 +80,8 @@ namespace Raven.Server.Config
 
         public UpdatesConfiguration Updates { get; }
 
+        public MigrationConfiguration Migration { get; }
+
         internal IConfigurationRoot ServerWideSettings { get; set; }
 
         protected IConfigurationRoot Settings { get; set; }
@@ -128,6 +130,7 @@ namespace Raven.Server.Config
             TransactionMergerConfiguration = new TransactionMergerConfiguration(Storage.ForceUsing32BitsPager);
             Notifications = new NotificationConfiguration();
             Updates = new UpdatesConfiguration();
+            Migration = new MigrationConfiguration();
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -183,6 +186,7 @@ namespace Raven.Server.Config
             TransactionMergerConfiguration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Notifications.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Updates.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Migration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
 
             PostInit();
 

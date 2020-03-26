@@ -5,6 +5,7 @@ using System.Collections.Generic;
 namespace Raven.Server.Utils
 {
     public class SizeLimitedConcurrentDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
+        where TValue : new()
     {
         private readonly ConcurrentDictionary<TKey, TValue> _dic;
         private readonly ConcurrentQueue<TKey> _queue = new ConcurrentQueue<TKey>();
@@ -30,9 +31,11 @@ namespace Raven.Server.Utils
 
             while (_queue.Count > _size)
             {
-                if (_queue.TryDequeue(out _) == false)
+                if (_queue.TryDequeue(out var keyToRemove) == false)
                     break;
-                _dic.TryRemove(key, out _);
+                if (Equals(keyToRemove, key))
+                    continue;
+                _dic.TryRemove(keyToRemove, out _);
             }
         }
 
@@ -54,6 +57,17 @@ namespace Raven.Server.Utils
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public TValue GetOrCreate(TKey key)
+        {
+            while (true)
+            {
+                if (TryGetValue(key, out var val))
+                    return val;
+
+                Set(key, new TValue());
+            }
         }
     }
 }

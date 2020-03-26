@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.ETL
         internal const string LoadAttachment = "loadAttachment";
 
         internal const string AddAttachment = "addAttachment";
-        
+
         internal const string AttachmentMarker = "$attachment/";
 
         internal const string LoadCounter = "loadCounter";
@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.ETL
         internal const string CounterMarker = "$counter/";
 
         internal const string GenericDeleteDocumentsBehaviorFunctionKey = "$deleteDocumentsBehavior<>";
-        
+
         internal const string GenericDeleteDocumentsBehaviorFunctionName = "deleteDocumentsBehavior";
 
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal static readonly Regex DeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+deleteDocumentsOf(\w+)Behavior" + ParametersAndFunctionBodyRegex, RegexOptions.Singleline);
         internal static readonly Regex DeleteDocumentsBehaviorMethodNameRegex = new Regex(@"deleteDocumentsOf(\w+)Behavior", RegexOptions.Compiled);
-        
+
         internal static readonly Regex GenericDeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+" + GenericDeleteDocumentsBehaviorFunctionName + ParametersAndFunctionBodyRegex, RegexOptions.Singleline);
 
         private static readonly Regex Legacy_ReplicateToMethodRegex = new Regex(@"replicateTo(\w+)", RegexOptions.Compiled);
@@ -278,16 +278,6 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(ApplyToAllDocuments)] = ApplyToAllDocuments,
                 [nameof(Disabled)] = Disabled
             };
-        }
-
-        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
-        public bool IsEqual(Transformation transformation)
-        {
-            if (transformation == null)
-                return false;
-
-            var result = Compare(transformation);
-            return result == EtlConfigurationCompareDifferences.None;
         }
 
         internal EtlConfigurationCompareDifferences Compare(Transformation transformation)

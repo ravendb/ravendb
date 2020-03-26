@@ -222,13 +222,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var prefix = $"{_serverWidePrefix}/{DateTime.UtcNow:yyyy-MM-dd H:mm:ss}.txt";
 
-            var isInfoEnabled = LoggingSource.Instance.IsInfoEnabled;
-            var isOperationsEnabled = LoggingSource.Instance.IsOperationsEnabled;
             try
             {
-                LoggingSource.Instance.IsInfoEnabled = true;
-                LoggingSource.Instance.IsOperationsEnabled = true;
-
                 var entry = archive.CreateEntry(prefix, CompressionLevel.Optimal);
                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
@@ -246,11 +241,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 LoggingSource.Instance.DetachPipeSink();
                 DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, prefix);
-            }
-            finally
-            {
-                LoggingSource.Instance.IsInfoEnabled = isInfoEnabled;
-                LoggingSource.Instance.IsOperationsEnabled = isOperationsEnabled;
             }
         }
 

@@ -61,6 +61,7 @@ using Raven.Server.Storage;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Metrics;
 using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
@@ -97,6 +98,9 @@ namespace Raven.Server.ServerWide
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
 
         internal StorageEnvironment _env;
+
+        internal readonly SizeLimitedConcurrentDictionary<string, ConcurrentQueue<DateTime>> ClientCreationRate = 
+            new SizeLimitedConcurrentDictionary<string, ConcurrentQueue<DateTime>>(50);
 
         private readonly NotificationsStorage _notificationsStorage;
         private readonly OperationsStorage _operationsStorage;

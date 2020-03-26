@@ -82,8 +82,6 @@
                         </div>
                     </div>
                 </div>
-               
-                
             </div>
         </div>
     </div>
@@ -100,7 +98,7 @@
             </div>
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6">
-                    <div class="row margin-bottom">
+                    <div class="row">
                         <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
                             <div class="toggle margin-left">
                                 <input id="s3SettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
@@ -108,10 +106,27 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row margin-bottom" data-bind="visible: !hasConfigurationScript()">
+                        <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
+                            <div class="toggle margin-left">
+                                <input id="s3CustomHost" type="checkbox" data-bind="checked: useCustomS3Host">
+                                <label for="s3CustomHost">Use a custom S3 host</label>
+                            </div>
+                        </div>
+                    </div>
                     <div class="row" data-bind="if: hasConfigurationScript">
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
                     <div data-bind="if: !hasConfigurationScript()">
+                        
+                        <div class="row margin-bottom" data-bind="validationElement: customServerUrl, collapse: useCustomS3Host">
+                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+                                Custom server URL <i class="required"></i>
+                            </label>
+                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: customServerUrl">
+                                <input data-bind="textInput: customServerUrl" type="text" class="form-control" />
+                            </div>
+                        </div>
                         <div class="row margin-bottom" data-bind="validationElement: bucketName">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                                 Bucket name <i class="required"></i> <small><i id="bucket-info" class="icon-info text-info"></i></small>
@@ -126,7 +141,13 @@
                                 <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
                             </div>
                         </div>
-                        <div class="row margin-bottom" data-bind="validationElement: awsRegionName">
+                        <div class="row margin-bottom" data-bind="visible: useCustomS3Host">
+                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
+                            <div class="col-xs-12 col-sm-6 col-lg-8">
+                                <input type="text" class="form-control" data-bind="textInput: selectedAwsRegion">
+                            </div>
+                        </div>
+                        <div class="row margin-bottom" data-bind="visible: !useCustomS3Host(), validationElement: awsRegionName">                            
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region <i class="required"></i></label>
                             <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
                                 <div class="dropdown btn-block">
@@ -479,7 +500,6 @@
                 <input data-bind="textInput: configurationScript.exec" type="text" class="form-control" placeholder="Path to executable" />
             </div>
         </div>
-
         <div class="row margin-bottom" data-bind="validationElement: configurationScript.arguments">
             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                 Arguments
@@ -488,7 +508,6 @@
                 <input data-bind="textInput: configurationScript.arguments" type="text" class="form-control" placeholder="Command line arguments passed to exec" />
             </div>
         </div>
-
         <div class="row margin-bottom" data-bind="validationElement: configurationScript.timeoutInMs">
             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                 Timeout
