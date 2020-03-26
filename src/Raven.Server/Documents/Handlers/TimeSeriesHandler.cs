@@ -607,10 +607,17 @@ namespace Raven.Server.Documents.Handlers
                     {
                         using (var slicer = new TimeSeriesSliceHolder(context, docId, item.Name).WithBaseline(item.Baseline))
                         {
+                            // on import we remove all @time-series from the document, so we need to re-add them
+                            var newSeries = tss.Stats.GetStats(context, slicer) == default;
+
                             if (tss.TryAppendEntireSegment(context, slicer.TimeSeriesKeySlice, collectionName, item))
                             {
                                 var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, item.ChangeVector);
+                                
+                                if (newSeries)
+                                    tss.AddTimeSeriesNameToMetadata(context, item.DocId, item.Name);
+                                
                                 continue;
                             }
                         }
