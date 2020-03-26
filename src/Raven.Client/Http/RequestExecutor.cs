@@ -63,7 +63,7 @@ namespace Raven.Client.Http
         private readonly string _databaseName;
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
-        private DateTime _lastReturnedResponse;                
+        private DateTime _lastReturnedResponse;
 
         public readonly JsonContextPool ContextPool;
 
@@ -322,7 +322,7 @@ namespace Raven.Client.Http
                 // shared instance, cannot dispose!
                 //_httpClient.Dispose();
             });
-            
+
             _databaseName = databaseName;
             Certificate = certificate;
 
@@ -442,18 +442,6 @@ namespace Raven.Client.Http
                 _disableClientConfigurationUpdates = oldDisableClientConfigurationUpdates;
                 _updateClientConfigurationSemaphore.Release();
             }
-        }
-
-        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
-        public Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
-        {
-            return UpdateTopologyAsync(new UpdateTopologyParameters(node)
-            {
-                TimeoutInMs = timeout,
-                ForceUpdate = forceUpdate,
-                DebugTag = debugTag,
-                ApplicationIdentifier = null
-            });
         }
 
         public virtual async Task<bool> UpdateTopologyAsync(UpdateTopologyParameters parameters)
@@ -610,7 +598,7 @@ namespace Raven.Client.Http
                 if (topologyUpdate == null ||
                     // if we previously had a topology error, let's see if we can refresh this
                     // can happen if the user tried a request to a db that didn't exist, created it, then tried immediately
-                    topologyUpdate.IsFaulted) 
+                    topologyUpdate.IsFaulted)
                 {
                     lock (this)
                     {
@@ -1492,7 +1480,7 @@ namespace Raven.Client.Http
             if (command.FailedNodes.ContainsKey(currentNode))
             {
                 if (requestContext == null || requestContext.HttpClientRemoved == false)
-                return false; //we tried all the nodes...nothing left to do
+                    return false; //we tried all the nodes...nothing left to do
             }
 
             OnFailedRequestInvoke(url, e);
@@ -2084,7 +2072,7 @@ namespace Raven.Client.Http
         private class RequestContext
         {
             public bool HttpClientRemoved;
-    }
+        }
 
         private class ReturnContext : IDisposable
         {
@@ -2095,7 +2083,7 @@ namespace Raven.Client.Http
             {
                 _contexts = contexts;
                 _dispose = dispose;
-}
+            }
 
             public void Dispose()
             {
