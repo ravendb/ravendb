@@ -13,6 +13,7 @@ using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
+using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -214,9 +215,10 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
 
                 //TimeSeries
-                ScriptEngine.SetValue("appendTimeSeries", new ClrFunctionInstance(ScriptEngine, "appendTimeSeries", AppendTimeSeries));
-                ScriptEngine.SetValue("deleteTimeSeries", new ClrFunctionInstance(ScriptEngine, "deleteTimeSeries", DeleteRangeTimeSeries));
-                ScriptEngine.SetValue("getRangeTimeSeries", new ClrFunctionInstance(ScriptEngine, "getRangeTimeSeries", GetRangeTimeSeries));
+                ScriptEngine.SetValue("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", TimeSeries));
+                //ScriptEngine.SetValue("append", new ClrFunctionInstance(ScriptEngine, "append", AppendTimeSeries));
+                //ScriptEngine.SetValue("deleteTimeSeries", new ClrFunctionInstance(ScriptEngine, "deleteTimeSeries", DeleteRangeTimeSeries));
+                //ScriptEngine.SetValue("getRangeTimeSeries", new ClrFunctionInstance(ScriptEngine, "getRangeTimeSeries", GetRangeTimeSeries));
 
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
@@ -293,10 +295,29 @@ namespace Raven.Server.Documents.Patch
                     ++i;
                 }
             }
-            
-            private JsValue AppendTimeSeries(JsValue self, JsValue[] args)
+
+            private JsValue TimeSeries(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext("appendTimeSeries");
+                var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) => 
+                    AppendTimeSeries(args[0], args[1], values));
+
+                var remove = new ClrFunctionInstance(ScriptEngine, "remove", (thisObj, values) =>
+                    DeleteRangeTimeSeries(args[0], args[1], values));
+
+                var get = new ClrFunctionInstance(ScriptEngine, "get", (thisObj, values) =>
+                    GetRangeTimeSeries(args[0], args[1], values));
+
+                var obj = new ObjectInstance(ScriptEngine);
+                obj.Set("append", append);
+                obj.Set("remove", remove);
+                obj.Set("get", get);
+
+                return obj;
+            }
+
+            private JsValue AppendTimeSeries(JsValue document, JsValue name, JsValue[] args)
+            {
+                AssertValidDatabaseContext("append");
                 const string signature4Args = "appendTimeSeries(doc, timeseries, timestamp, values)";
                 const string signature5Args = "appendTimeSeries(doc, timeseries, timestamp, tag, values)";
                 
@@ -304,10 +325,10 @@ namespace Raven.Server.Documents.Patch
                 LazyStringValue lsTag = null;
                 switch (args.Length)
                 {
-                    case 4: signature = signature4Args;
+                    case 2: signature = signature4Args;
                         break;
-                    case 5: signature = signature5Args;
-                        var tagArgument = args[3];
+                    case 3: signature = signature5Args;
+                        var tagArgument = args.Last();
                         if (tagArgument != null && tagArgument.IsNull() == false && tagArgument.IsUndefined() == false)
                         {
                             var tag = GetStringArg(tagArgument, signature, "tag");
@@ -317,15 +338,15 @@ namespace Raven.Server.Documents.Patch
                     default: throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature4Args} or {signature5Args}");
                 }
                 
-                var (id, doc) = GetIdAndDocFromArg(args[0], signature);
+                var (id, doc) = GetIdAndDocFromArg(document, signature);
 
-                string timeseries = GetStringArg(args[1], signature, "timeseries");
-                var timestamp = GetDateArg(args[2], signature, "timestamp");
+                string timeseries = GetStringArg(name, signature, "timeseries");
+                var timestamp = GetDateArg(args[0], signature, "timestamp");
 
                 double[] valuesBuffer = null;
                 try
                 {
-                    var valuesArg = args.Last();
+                    var valuesArg = args[1];
                     Memory<double> values;
                     if (valuesArg.IsArray())
                     {
@@ -369,7 +390,7 @@ namespace Raven.Server.Documents.Patch
                 return Undefined.Instance;
             }
 
-            private JsValue DeleteRangeTimeSeries(JsValue self, JsValue[] args)
+            private JsValue DeleteRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
                 AssertValidDatabaseContext("deleteTimeSeries");
                 
@@ -399,7 +420,7 @@ namespace Raven.Server.Documents.Patch
                 return JsValue.Undefined;
             }
             
-            private JsValue GetRangeTimeSeries(JsValue self, JsValue[] args)
+            private JsValue GetRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
                 AssertValidDatabaseContext("getRangeTimeSeries");
                 
@@ -1475,7 +1496,7 @@ namespace Raven.Server.Documents.Patch
                     JavaScriptUtils.Clear();
                     throw CreateFullError(e);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     JavaScriptUtils.Clear();
                     throw;

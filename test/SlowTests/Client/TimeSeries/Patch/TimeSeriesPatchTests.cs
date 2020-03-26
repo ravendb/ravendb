@@ -96,7 +96,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"appendTimeSeries(this, args.timeseries, args.timestamp, args.tag, args.values);",
+                            Script = @"timeseries(this, args.timeseries).append(args.timestamp, args.values, args.tag);", // 'tag' should appear last
                             Values =
                             {
                                 { "timeseries", timeseries },
