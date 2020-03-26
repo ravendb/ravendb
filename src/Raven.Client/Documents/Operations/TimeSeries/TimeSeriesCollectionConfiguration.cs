@@ -96,6 +96,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return index;
         }
 
+        internal TimeSeriesPolicy GetPolicy(int policyIndex)
+        {
+            if (policyIndex == 0)
+                return RawPolicy;
+
+            return Policies[policyIndex - 1];
+        }
+
         internal TimeSeriesPolicy GetNextPolicy(int policyIndex)
         {
             if (Policies.Count == 0)
