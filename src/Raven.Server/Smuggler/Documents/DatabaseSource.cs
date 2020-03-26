@@ -14,6 +14,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -503,63 +504,20 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-
-        private unsafe string GetOriginalName(DocumentsOperationContext context, string docId, string lowerName)
+        public string GetOriginalName(DocumentsOperationContext context, string docId, string name)
         {
             try
             {
-                try
-                {
-                    using (DocumentIdWorker.GetLower(context.Allocator, docId, out var docIdSlice))
-                    {
-                        context.DocumentDatabase.DocumentsStorage.GetTableValueReaderForDocument(context, docIdSlice, throwOnConflict: true, out var tvr);
-                        var doc = new BlittableJsonReaderObject(tvr.Read((int)DocumentsStorage.DocumentsTable.Data, out int size), size, context);
-                        var name = GetOriginalName(lowerName, doc);
-                        if (name != null)
-                            return name;
-                    }
-                }
-                catch (DocumentConflictException)
-                {
-                    // will try to get it from the conflict storage
-                    foreach (var conflict in context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, lowerName))
-                    {
-                        if (conflict.Doc == null)
-                            continue;
-
-                        var name = GetOriginalName(lowerName, conflict.Doc);
-                        if (name != null)
-                            return name;
-                    }
-                }
+                return TimeSeriesStorage.GetOriginalName(context, docId, name);
             }
             catch (Exception e)
             {
-                var error = $"An error occured during exporting time-series '{lowerName}' in document '{docId}'";
+                var error = $"An error occured during finding the original time-series '{name}' in document '{docId}'";
                 if (_logger.IsInfoEnabled)
                     _logger.Info(error, e);
             }
 
-            var msg = $"Can't find time-series '{lowerName}' in document '{docId}', are you exporting an orphaned time-series?";
-            if (_logger.IsInfoEnabled)
-                _logger.Info(msg);
-
-            Debug.Assert(false, msg);
-            return lowerName;
-        }
-
-        private static string GetOriginalName(string lowerName, BlittableJsonReaderObject doc)
-        {
-            doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-            metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray ts);
-
-            foreach (LazyStringValue item in ts)
-            {
-                if (string.Equals(item, lowerName, StringComparison.OrdinalIgnoreCase))
-                    return item;
-            }
-
-            return null;
+            return name;
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)

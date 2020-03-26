@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
@@ -44,6 +45,11 @@ namespace Raven.Server.Documents.TimeSeries
             public DateTime NextRollup;
             public string RollupPolicy;
             public string ChangeVector;
+
+            public override string ToString()
+            {
+                return $"Rollup for time-series '{Name}' in document '{DocId}' of policy {RollupPolicy} at {NextRollup}";
+            }
         }
 
         static TimeSeriesRollups()
@@ -71,6 +77,13 @@ namespace Raven.Server.Documents.TimeSeries
             });
         }
 
+        private readonly Logger _logger;
+
+        public TimeSeriesRollups(string database)
+        {
+            _logger = LoggingSource.Instance.GetLogger<TimeSeriesPolicyRunner>(database);
+        }
+
         public unsafe void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, TimeSeriesPolicy nextPolicy, DateTime timestamp)
         {
             var nextRollup = NextRollup(timestamp, nextPolicy);
@@ -88,6 +101,10 @@ namespace Raven.Server.Documents.TimeSeries
                     if (existingRollup <= nextRollup)
                         return; // we have an earlier date to roll up from
                 }
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(
+                        $"Marking {slicerHolder.Name} in document {slicerHolder.DocId} for policy {nextPolicy.Name} to rollup at {new DateTime(nextRollup)} (ticks:{nextRollup})");
 
                 var etag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
                 var changeVector = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context, etag);
@@ -139,6 +156,9 @@ namespace Raven.Server.Documents.TimeSeries
                     ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollupColumns.ChangeVector, ref item.Result.Reader)
                 };
 
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{state} is prepared.");
+
                 states.Add(state);
                 take--;
             }
@@ -159,61 +179,72 @@ namespace Raven.Server.Documents.TimeSeries
             public const int BatchSize = 1024;
 
             private readonly List<Slice> _keys;
-            private readonly TimeSeriesStorage.DeletionRangeRequest _request;
+            private readonly string _collection;
+            private readonly DateTime _to;
 
-            public TimeSeriesRetentionCommand(List<Slice> keys, TimeSeriesStorage.DeletionRangeRequest request)
+            public TimeSeriesRetentionCommand(List<Slice> keys, string collection, DateTime to)
             {
                 _keys = keys;
-                _request = request;
+                _collection = collection;
+                _to = to;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+                var logger = LoggingSource.Instance.GetLogger<TimeSeriesPolicyRunner>(context.DocumentDatabase.Name);
+                var request = new TimeSeriesStorage.DeletionRangeRequest
+                {
+                    From = DateTime.MinValue,
+                    To = _to,
+                    Collection = _collection
+                };
+
+                var retained = 0;
                 foreach (var key in _keys)
                 {
                     SplitKey(key, out var docId, out var name);
                          
-                    _request.Name = name;
-                    _request.DocumentId = docId;
+                    request.Name = name;
+                    request.DocumentId = docId;
 
-                    context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(context, _request);
+                    if (context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(context, request) != null)
+                    {
+                        if (logger.IsInfoEnabled)
+                            logger.Info($"{request} was executed");
+
+                        retained++;
+                    }
                 }
 
-                return _keys.Count;
+                return retained;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                return new TimeSeriesRetentionCommandDto(_keys, _request);
+                return new TimeSeriesRetentionCommandDto(_keys, _collection, _to);
             }
 
             public class TimeSeriesRetentionCommandDto : TransactionOperationsMerger.IReplayableCommandDto<TimeSeriesRetentionCommand>
             {
                 public List<Slice> _keys;
-                public TimeSeriesStorage.DeletionRangeRequest _request;
+                public string _collection;
+                public DateTime _to;
 
-                public TimeSeriesRetentionCommandDto(List<Slice> keys, TimeSeriesStorage.DeletionRangeRequest request)
+                public TimeSeriesRetentionCommandDto(List<Slice> keys, string collection, DateTime to)
                 {
                     _keys = keys;
-                    _request = request;
+                    _collection = collection;
+                    _to = to;
                 }
                 public TimeSeriesRetentionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
                 {
-                    var request = new TimeSeriesStorage.DeletionRangeRequest
-                    {
-                        Collection = _request.Collection,
-                        DocumentId = _request.DocumentId,
-                        From = _request.From,
-                        To = _request.To,
-                        Name = _request.Name
-                    };
                     var keys = new List<Slice>();
                     foreach (var key in _keys)
                     {
                         keys.Add(key.Clone(context.Allocator));
                     }
 
-                    return new TimeSeriesRetentionCommand(keys, request);
+                    return new TimeSeriesRetentionCommand(keys, _collection, _to);
                 }
             }
         }
@@ -359,6 +390,25 @@ namespace Raven.Server.Documents.TimeSeries
                     var rollupEnd = new DateTime(NextRollup(_now.Add(-policy.AggregationTime), policy));
                     var reader = tss.GetReader(context, item.DocId, item.Name, rollupStart, rollupEnd);
 
+                    if (previouslyAggregated)
+                    {
+                        var hasPriorValues = tss.GetReader(context, item.DocId, item.Name, DateTime.MinValue, rollupStart).AllValues().Any();
+                        if (hasPriorValues == false) 
+                        {
+                            // if the 'from' time-series doesn't have any values it is retained.
+                            // so we need to aggregate only from the next time frame
+                            var first = tss.GetReader(context, item.DocId, item.Name, rollupStart, DateTime.MaxValue).AllValues().FirstOrDefault();
+                            if (first == default)
+                                continue; // nothing we can do here
+
+                            using (var slicer = new TimeSeriesSliceHolder(context, item.DocId, item.Name, item.Collection))
+                            {
+                                tss.Rollups.MarkForPolicy(context, slicer, policy, first.Timestamp);
+                            }
+                            continue;
+                        }
+                    }
+
                     // rollup from the the raw data will generate 6-value roll up of (first, last, min, max, sum, count)
                     // other rollups will aggregate each of those values by the type
                     var mode = item.Name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) ? AggregationMode.FromAggregated : AggregationMode.FromRaw;
@@ -373,7 +423,7 @@ namespace Raven.Server.Documents.TimeSeries
                             DocumentId = item.DocId,
                             Name = intoTimeSeries,
                             From = rollupStart,
-                            To = DateTime.MaxValue
+                            To = DateTime.MaxValue,
                         };
 
                         tss.RemoveTimestampRange(context, removeRequest);
@@ -717,8 +767,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
         }
-
-        private static long NextRollup(DateTime time, TimeSeriesPolicy nextPolicy)
+        public static long NextRollup(DateTime time, TimeSeriesPolicy nextPolicy)
         {
             var integerPart = time.Ticks / nextPolicy.AggregationTime.Ticks;
             var nextRollup = nextPolicy.AggregationTime.Ticks * (integerPart + 1);

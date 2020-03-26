@@ -163,6 +163,39 @@ namespace Raven.Server.Documents.TimeSeries
                     start = first;
             }
 
+            if (count == 0)
+            {
+                if (previousCount == 0)
+                {
+                    // ts completely dead
+                    table.DeleteByKey(slicer.StatsKey);
+                    return;
+                }
+
+                var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
+                var last = segment.YieldAllValues(context, baseline, includeDead: true).Last().Timestamp;
+                if (baseline <= start && last >= start)
+                {
+                    // start was removed, need to find the next start
+                    var first = tss.GetReader(context, slicer.DocId, slicer.Name, last.AddMilliseconds(1), DateTime.MaxValue).AllValues().FirstOrDefault();
+                    if (first == default)
+                    {
+                        // ts completely dead
+                        table.DeleteByKey(slicer.StatsKey);
+                        return;
+                    }
+
+                    start = first.Timestamp;
+                }
+
+                if (baseline <= end && last >= end)
+                {
+                    // end was removed
+                    var lastEntry = tss.GetReader(context, slicer.DocId, slicer.Name, start, baseline.AddMilliseconds(-1)).AllValues().Last(); //TODO: kill this and create a backward reader
+                    end = lastEntry.Timestamp;
+                }
+            }
+
             using (table.Allocate(out var tvb))
             {
                 tvb.Add(slicer.StatsKey);
