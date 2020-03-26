@@ -45,7 +45,7 @@ namespace SlowTests.Server
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 using (context.OpenReadTransaction())
                 {
-                    var fetched = Server.ServerStore.Cluster.GetCertificateByThumbprint(context, "foo/bar");
+                    var fetched = Server.ServerStore.Cluster.GetCertificateByThumbprint(context, certificate.Thumbprint);
                     string val;
                     Assert.True(fetched.TryGet(nameof(CertificateDefinition.Thumbprint), out val));
                     Assert.Equal(certificate.Thumbprint, val);
