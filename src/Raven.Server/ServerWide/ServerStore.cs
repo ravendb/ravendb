@@ -1857,7 +1857,9 @@ namespace Raven.Server.ServerWide
 
         public Task<(long, object)> ModifyTimeSeriesConfiguration(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
-            var editTimeSeries = new EditTimeSeriesConfigurationCommand(JsonDeserializationCluster.TimeSeriesConfiguration(configurationJson), name, raftRequestId);
+            var configuration = JsonDeserializationCluster.TimeSeriesConfiguration(configurationJson);
+            configuration?.Initialize();
+            var editTimeSeries = new EditTimeSeriesConfigurationCommand(configuration, name, raftRequestId);
             return SendToLeaderAsync(editTimeSeries);
         }
 
