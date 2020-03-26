@@ -302,15 +302,14 @@ namespace Raven.Server.Documents.Queries
             {
                 // 'not foo and bar' should be parsed as:
                 // (not foo) and bar, instead of not (foo and bar)
-                if (ne.Expression is BinaryExpression nbe && 
+                if (ne.Expression is BinaryExpression nbe &&
                     nbe.Parenthesis == false &&
                     (nbe.Operator == OperatorType.And || nbe.Operator == OperatorType.Or)
                     )
                 {
                     var newExpr = new BinaryExpression(new NegatedExpression(nbe.Left),
                         nbe.Right, nbe.Operator);
-                    return ToLuceneQuery(serverContext, documentsContext, query, newExpr,
-                        metadata, indexDef, parameters, analyzer, factories, exact);
+                    return ToLuceneQuery(serverContext, documentsContext, query, newExpr, metadata, index, parameters, analyzer, factories, exact);
                 }
 
                 var inner = ToLuceneQuery(serverContext, documentsContext, query, ne.Expression,
