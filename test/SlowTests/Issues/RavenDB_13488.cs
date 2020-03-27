@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
@@ -13,7 +11,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_13488:RavenTestBase
+    public class RavenDB_13488 : RavenTestBase
     {
         public RavenDB_13488(ITestOutputHelper output) : base(output)
         {
@@ -26,7 +24,7 @@ namespace SlowTests.Issues
             {
                 string firstCV = null;
                 using (var session = store.OpenSession())
-                {                    
+                {
                     User firstUser = new User
                     {
                         Name = "UserWithoutAttachment"
@@ -35,7 +33,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                     firstCV = session.Advanced.GetChangeVectorFor(firstUser);
                     firstUser.Age = 55;
-                    session.SaveChanges();                    
+                    session.SaveChanges();
                 }
                 using (var session = store.OpenSession())
                 {
@@ -53,11 +51,9 @@ namespace SlowTests.Issues
                     session.Advanced.Clear();
                     Assert.Equal(0, (session as InMemoryDocumentSessionOperations).DeferredCommandsCount);
 
-                    session.Store(concurrentUser, null, "users/1");                    
-                }                
+                    session.Store(concurrentUser, null, "users/1");
+                }
             }
-
-
         }
 
         [Fact]
@@ -86,8 +82,8 @@ namespace SlowTests.Issues
                     session.Query<User>().ToList();
 
                     session.Advanced.Clear();
-                    
-                    Assert.Equal(sessionRequests + 1, session.Advanced.NumberOfRequests);                   
+
+                    Assert.Equal(sessionRequests + 1, session.Advanced.NumberOfRequests);
                 }
             }
         }
@@ -96,7 +92,7 @@ namespace SlowTests.Issues
         public void ClearShouldClearClusterOperationsAsWell()
         {
             using (var store = GetDocumentStore())
-            {               
+            {
                 using (var session = store.OpenSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
@@ -104,15 +100,13 @@ namespace SlowTests.Issues
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("foo", "bar");
                     session.Advanced.ClusterTransaction.DeleteCompareExchangeValue("foo2", 2);
-                    Assert.Throws<ArgumentException>(() => session.Advanced.ClusterTransaction.CreateCompareExchangeValue("foo", "bar"));
-                    Assert.Throws<ArgumentException>(() => session.Advanced.ClusterTransaction.CreateCompareExchangeValue("foo2", 2));
+                    Assert.Throws<InvalidOperationException>(() => session.Advanced.ClusterTransaction.CreateCompareExchangeValue("foo", "bar"));
+                    Assert.Throws<InvalidOperationException>(() => session.Advanced.ClusterTransaction.CreateCompareExchangeValue("foo2", 2));
                     session.Advanced.Clear();
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("foo", "bar"); // will throw if already stored
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("foo2", 2);// will throw if already deleted
                 }
             }
-
-
         }
     }
 }

@@ -13,12 +13,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CanGetCompareExchangeValuesLazily()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanGetCompareExchangeValuesLazily(bool noTracking)
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = noTracking }))
                 {
                     var lazyValue = session.Advanced.ClusterTransaction.Lazily.GetCompareExchangeValue<Address>("companies/hr");
 
@@ -42,18 +44,18 @@ namespace SlowTests.Issues
                     Assert.Equal(2, addresses.Count);
                     Assert.True(addresses.ContainsKey("companies/hr"));
                     Assert.True(addresses.ContainsKey("companies/cf"));
-                    Assert.Null(addresses["companies/hr"].Value);
-                    Assert.Null(addresses["companies/cf"].Value);
+                    Assert.Null(addresses["companies/hr"]);
+                    Assert.Null(addresses["companies/cf"]);
 
                     var values = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(new[] { "companies/hr", "companies/cf" });
 
                     Assert.True(values.ContainsKey("companies/hr"));
                     Assert.True(values.ContainsKey("companies/cf"));
-                    Assert.Equal(values["companies/hr"].Value, addresses["companies/hr"].Value);
-                    Assert.Equal(values["companies/cf"].Value, addresses["companies/cf"].Value);
+                    Assert.Equal(values["companies/hr"], addresses["companies/hr"]);
+                    Assert.Equal(values["companies/cf"], addresses["companies/cf"]);
                 }
 
-                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = noTracking }))
                 {
                     var lazyValue = session.Advanced.ClusterTransaction.Lazily.GetCompareExchangeValue<Address>("companies/hr");
                     var lazyValues = session.Advanced.ClusterTransaction.Lazily.GetCompareExchangeValues<Address>(new[] { "companies/hr", "companies/cf" });
@@ -79,11 +81,11 @@ namespace SlowTests.Issues
                     Assert.Equal(2, addresses.Count);
                     Assert.True(addresses.ContainsKey("companies/hr"));
                     Assert.True(addresses.ContainsKey("companies/cf"));
-                    Assert.Null(addresses["companies/hr"].Value);
-                    Assert.Null(addresses["companies/cf"].Value);
+                    Assert.Null(addresses["companies/hr"]);
+                    Assert.Null(addresses["companies/cf"]);
                 }
 
-                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = noTracking }))
                 {
                     var lazyValue = session.Advanced.ClusterTransaction.Lazily.GetCompareExchangeValueAsync<Address>("companies/hr");
 
@@ -107,18 +109,18 @@ namespace SlowTests.Issues
                     Assert.Equal(2, addresses.Count);
                     Assert.True(addresses.ContainsKey("companies/hr"));
                     Assert.True(addresses.ContainsKey("companies/cf"));
-                    Assert.Null(addresses["companies/hr"].Value);
-                    Assert.Null(addresses["companies/cf"].Value);
+                    Assert.Null(addresses["companies/hr"]);
+                    Assert.Null(addresses["companies/cf"]);
 
                     var values = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<Address>(new[] { "companies/hr", "companies/cf" });
 
                     Assert.True(values.ContainsKey("companies/hr"));
                     Assert.True(values.ContainsKey("companies/cf"));
-                    Assert.Equal(values["companies/hr"].Value, addresses["companies/hr"].Value);
-                    Assert.Equal(values["companies/cf"].Value, addresses["companies/cf"].Value);
+                    Assert.Equal(values["companies/hr"], addresses["companies/hr"]);
+                    Assert.Equal(values["companies/cf"], addresses["companies/cf"]);
                 }
 
-                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = noTracking }))
                 {
                     var lazyValue = session.Advanced.ClusterTransaction.Lazily.GetCompareExchangeValueAsync<Address>("companies/hr");
                     var lazyValues = session.Advanced.ClusterTransaction.Lazily.GetCompareExchangeValuesAsync<Address>(new[] { "companies/hr", "companies/cf" });
@@ -143,11 +145,11 @@ namespace SlowTests.Issues
                     Assert.Equal(2, addresses.Count);
                     Assert.True(addresses.ContainsKey("companies/hr"));
                     Assert.True(addresses.ContainsKey("companies/cf"));
-                    Assert.Null(addresses["companies/hr"].Value);
-                    Assert.Null(addresses["companies/cf"].Value);
+                    Assert.Null(addresses["companies/hr"]);
+                    Assert.Null(addresses["companies/cf"]);
                 }
 
-                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = noTracking }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", new Address { City = "Hadera" });
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", new Address { City = "Torun" });
@@ -155,7 +157,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = noTracking }))
                 {
                     var lazyValue = session.Advanced.ClusterTransaction.Lazily.GetCompareExchangeValue<Address>("companies/hr");
 
@@ -191,7 +193,7 @@ namespace SlowTests.Issues
                     Assert.Equal(values["companies/cf"].Value.City, addresses["companies/cf"].Value.City);
                 }
 
-                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = noTracking }))
                 {
                     var lazyValue = session.Advanced.ClusterTransaction.Lazily.GetCompareExchangeValueAsync<Address>("companies/hr");
 
