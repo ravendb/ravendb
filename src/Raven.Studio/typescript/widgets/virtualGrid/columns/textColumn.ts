@@ -134,10 +134,11 @@ class textColumn<T> implements virtualColumn {
         }
 
         if (_.isObject(cellValue)) {
-            const innerHtml = Object.keys(cellValue).length ? "&hellip;" : "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+            const propertiesCount = Object.keys(cellValue).length;
+            const innerHtml = propertiesCount ? "&hellip;" : "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 
             return {
-                rawText: `<span class="object-item">{${innerHtml}}</span> <sup>${Object.keys(cellValue).length}</sup>`,
+                rawText: `<span class="object-item">{${innerHtml}}</span> <sup>${propertiesCount}</sup>`,
                 typeCssClass: "token object"
             }
         }

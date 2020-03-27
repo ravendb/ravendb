@@ -128,8 +128,8 @@ namespace Raven.Server.Web.Studio
 
             bool first = true;
 
-            var objectsStubs = new Dictionary<LazyStringValue, int>();
-            var arraysStubs = new Dictionary<LazyStringValue, int>();
+            var arrayStubsJson = new DynamicJsonValue();
+            var objectStubsJson = new DynamicJsonValue();
             var trimmedValue = new HashSet<LazyStringValue>();
 
             var prop = new BlittableJsonReaderObject.PropertyDetails();
@@ -160,10 +160,10 @@ namespace Raven.Server.Web.Studio
                                 writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                                 break;
                             case ValueWriteStrategy.SubstituteWithArrayStub:
-                                arraysStubs.Add(prop.Name, (prop.Value as BlittableJsonReaderArray).Length);
+                                arrayStubsJson[prop.Name] = ((BlittableJsonReaderArray)prop.Value).Length;
                                 break;
                             case ValueWriteStrategy.SubstituteWithObjectStub:
-                                objectsStubs.Add(prop.Name, (prop.Value as BlittableJsonReaderObject).Count);
+                                objectStubsJson[prop.Name] = ((BlittableJsonReaderObject)prop.Value).Count;
                                 break;
                             case ValueWriteStrategy.Trim:
                                 writer.WritePropertyName(prop.Name);
@@ -176,14 +176,6 @@ namespace Raven.Server.Web.Studio
             }
             if (first == false)
                 writer.WriteComma();
-
-            var arrayStubsJson = new DynamicJsonValue();
-            foreach (var p in arraysStubs)
-                arrayStubsJson[p.Key] = p.Value;
-            
-            var objectStubsJson = new DynamicJsonValue();
-            foreach (var p in objectsStubs)
-                objectStubsJson[p.Key] = p.Value;
                     
             var extraMetadataProperties = new DynamicJsonValue
             {
