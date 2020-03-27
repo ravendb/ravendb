@@ -19,7 +19,6 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.TimeSeries;
-using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
@@ -107,18 +106,16 @@ namespace Raven.Client.Documents.Session
         protected int Start;
 
         private readonly DocumentConventions _conventions;
+
         /// <summary>
         /// Timeout for this query
         /// </summary>
         protected TimeSpan? Timeout;
+
         /// <summary>
         /// Should we wait for non stale results
         /// </summary>
         protected bool TheWaitForNonStaleResults;
-        /// <summary>
-        /// The paths to include when loading the query
-        /// </summary>
-        protected HashSet<string> DocumentIncludes = new HashSet<string>();
 
         /// <summary>
         /// Holds the query stats
@@ -146,6 +143,7 @@ namespace Raven.Client.Documents.Session
         ///   Gets the session associated with this document query
         /// </summary>
         public IDocumentSession Session => (IDocumentSession)TheSession;
+
         public IAsyncDocumentSession AsyncSession => (IAsyncDocumentSession)TheSession;
 
         public bool IsDynamicMapReduce => GroupByTokens.Count > 0;
@@ -421,21 +419,12 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        ///   Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <param name = "path">The path.</param>
-        public void Include(string path)
-        {
-            DocumentIncludes.Add(path);
-        }
-
-        /// <summary>
         ///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
         ///   that is nearly always a mistake.
         /// </summary>
         [Obsolete(
             @"
-You cannot issue an in memory filter - such as Where(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
+You cannot issue an in memory filter - such as Where(x=>x.Name == ""Ayende"") - on IDocumentQuery.
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
 Consider using session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
 If you really want to do in memory filtering on the data returned from the query, you can use: session.Advanced.DocumentQuery<T>().ToList().Where(x=>x.Name == ""Ayende"")
@@ -446,14 +435,13 @@ If you really want to do in memory filtering on the data returned from the query
             throw new NotSupportedException();
         }
 
-
         /// <summary>
         ///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
         ///   that is nearly always a mistake.
         /// </summary>
         [Obsolete(
             @"
-You cannot issue an in memory filter - such as Count(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
+You cannot issue an in memory filter - such as Count(x=>x.Name == ""Ayende"") - on IDocumentQuery.
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
 Consider using session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
 If you really want to do in memory filtering on the data returned from the query, you can use: session.Advanced.DocumentQuery<T>().ToList().Count(x=>x.Name == ""Ayende"")
@@ -514,36 +502,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public IEnumerable<IGrouping<TKey, TElement>> GroupBy<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> elementSelector, IEqualityComparer<TKey> comparer)
         {
             throw new NotSupportedException();
-        }
-
-        /// <summary>
-        ///   Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <param name = "path">The path.</param>
-        public void Include(Expression<Func<T, object>> path)
-        {
-            Include(path.ToPropertyPath());
-        }
-
-        public void Include(IncludeBuilder includes)
-        {
-            if (includes == null)
-                return;
-
-            if (includes.DocumentsToInclude != null)
-            {
-                foreach (var doc in includes.DocumentsToInclude)
-                {
-                    DocumentIncludes.Add(doc);
-                }
-            }
-
-            IncludeCounters(includes.Alias, includes.CountersToIncludeBySourcePath);
-
-            if (includes.TimeSeriesToIncludeBySourceAlias != null)
-            {
-                IncludeTimeSeries(includes.Alias, includes.TimeSeriesToIncludeBySourceAlias);
-            }
         }
 
         /// <summary>
@@ -920,7 +878,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(whereToken);
         }
 
-
         /// <summary>
         ///   Matches fields where Regex.IsMatch(filedName, pattern)
         /// </summary>
@@ -1125,7 +1082,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AfterStreamExecutedCallback?.Invoke(result);
         }
 
-        #endregion
+        #endregion TSelf Members
 
         /// <summary>
         ///   Generates the index query.
@@ -1176,7 +1133,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new InvalidOperationException(string.Format("A clause was not closed correctly within this query, current clause depth = {0}", _currentClauseDepth));
 
             var queryText = new StringBuilder();
-
 
             BuildDeclare(queryText);
             if (GraphRawQuery != null)
@@ -1538,7 +1494,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
                 token = token.Next;
             }
-
         }
 
         private void AppendOperatorIfNeeded(LinkedList<QueryToken> tokens)
@@ -1740,7 +1695,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var result = GetImplicitStringConversion(whereParams.Value.GetType());
             if (result != null)
                 return result(whereParams.Value);
-
 
             return whereParams.Value;
         }
