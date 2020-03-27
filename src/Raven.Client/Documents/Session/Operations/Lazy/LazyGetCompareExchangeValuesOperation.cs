@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Conventions;
@@ -11,18 +12,17 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 {
     internal class LazyGetCompareExchangeValuesOperation<T> : ILazyOperation
     {
-        private readonly string[] _keys;
+        private readonly ClusterTransactionOperationsBase _clusterSession;
         private readonly DocumentConventions _conventions;
-        private readonly JsonOperationContext _context;
+        private readonly string[] _keys;
 
-        public LazyGetCompareExchangeValuesOperation(string[] keys, DocumentConventions conventions, JsonOperationContext context)
+        public LazyGetCompareExchangeValuesOperation(ClusterTransactionOperationsBase clusterSession, DocumentConventions conventions, string[] keys)
         {
             if (keys == null || keys.Length == 0)
                 throw new ArgumentNullException(nameof(keys));
-
-            _keys = keys;
+            _clusterSession = clusterSession ?? throw new ArgumentNullException(nameof(clusterSession));
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _keys = keys;
         }
 
         public object Result { get; private set; }
@@ -33,10 +33,24 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public GetRequest CreateRequest(JsonOperationContext ctx)
         {
-            var queryBuilder = new StringBuilder("?");
+            StringBuilder queryBuilder = null;
 
             foreach (var key in _keys)
+            {
+                if (_clusterSession.IsTracked(key))
+                    continue;
+
+                if (queryBuilder == null)
+                    queryBuilder = new StringBuilder("?");
+
                 queryBuilder.Append("&key=").Append(Uri.EscapeDataString(key));
+            }
+
+            if (queryBuilder == null)
+            {
+                Result = _clusterSession.GetCompareExchangeValuesFromSessionInternal<T>(_keys, out _);
+                return null;
+            }
 
             return new GetRequest
             {
@@ -56,7 +70,26 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             }
 
             if (response.Result != null)
-                Result = CompareExchangeValueResultParser<T>.GetValues((BlittableJsonReaderObject)response.Result, _conventions);
+            {
+                foreach (var kvp in CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValues((BlittableJsonReaderObject)response.Result, _conventions))
+                {
+                    if (kvp.Value == null)
+                        continue;
+
+                    _clusterSession.RegisterCompareExchangeValue(kvp.Value);
+                }
+            }
+
+            foreach (var key in _keys)
+            {
+                if (_clusterSession.IsTracked(key))
+                    continue;
+
+                _clusterSession.RegisterMissingCompareExchangeValue(key);
+            }
+
+            Result = _clusterSession.GetCompareExchangeValuesFromSessionInternal<T>(_keys, out var missingKeys);
+            Debug.Assert(missingKeys == null, "missingKeys == null");
         }
     }
 }

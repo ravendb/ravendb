@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Conventions;
@@ -11,15 +12,15 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 {
     internal class LazyGetCompareExchangeValueOperation<T> : ILazyOperation
     {
-        private readonly string _key;
+        private readonly ClusterTransactionOperationsBase _clusterSession;
         private readonly DocumentConventions _conventions;
-        private readonly JsonOperationContext _context;
+        private readonly string _key;
 
-        public LazyGetCompareExchangeValueOperation(string key, DocumentConventions conventions, JsonOperationContext context)
+        public LazyGetCompareExchangeValueOperation(ClusterTransactionOperationsBase clusterSession, DocumentConventions conventions, string key)
         {
-            _key = key ?? throw new ArgumentNullException(nameof(key));
+            _clusterSession = clusterSession ?? throw new ArgumentNullException(nameof(clusterSession));
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _key = key ?? throw new ArgumentNullException(nameof(key));
         }
 
         public object Result { get; private set; }
@@ -30,6 +31,12 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public GetRequest CreateRequest(JsonOperationContext ctx)
         {
+            if (_clusterSession.IsTracked(_key))
+            {
+                Result = _clusterSession.GetCompareExchangeValueFromSessionInternal<T>(_key, out _);
+                return null;
+            }
+
             var queryBuilder = new StringBuilder("?key=")
                 .Append(_key);
 
@@ -51,7 +58,17 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             }
 
             if (response.Result != null)
-                Result = CompareExchangeValueResultParser<T>.GetValue((BlittableJsonReaderObject)response.Result, _conventions);
+            {
+                var value = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValue((BlittableJsonReaderObject)response.Result, _conventions);
+                if (value != null)
+                    _clusterSession.RegisterCompareExchangeValue(value);
+            }
+
+            if (_clusterSession.IsTracked(_key) == false)
+                _clusterSession.RegisterMissingCompareExchangeValue(_key);
+
+            Result = _clusterSession.GetCompareExchangeValueFromSessionInternal<T>(_key, out var notTracked);
+            Debug.Assert(notTracked == false, "notTracked == false");
         }
     }
 }

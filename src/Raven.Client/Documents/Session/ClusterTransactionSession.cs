@@ -42,6 +42,11 @@ namespace Raven.Client.Documents.Session
             _session = session;
         }
 
+        internal bool IsTracked(string key)
+        {
+            return TryGetCompareExchangeValueFromSession(key, out _);
+        }
+
         public void CreateCompareExchangeValue<T>(string key, T item)
         {
             if (key is null)
@@ -82,8 +87,9 @@ namespace Raven.Client.Documents.Session
 
         protected async Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key, CancellationToken token = default)
         {
-            if (TryGetCompareExchangeValueFromSession(key, out var sessionValue))
-                return sessionValue.GetValue<T>(_session.Conventions);
+            var v = GetCompareExchangeValueFromSessionInternal<T>(key, out var notTracked);
+            if (notTracked == false)
+                return v;
 
             using (_session.AsyncTaskHolder())
             {
@@ -96,40 +102,23 @@ namespace Raven.Client.Documents.Session
                     return null;
                 }
 
-                sessionValue = RegisterCompareExchangeValue(value);
+                var sessionValue = RegisterCompareExchangeValue(value);
                 return sessionValue?.GetValue<T>(_session.Conventions);
             }
         }
 
         protected async Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesAsyncInternal<T>(string[] keys, CancellationToken token = default)
         {
-            var results = new Dictionary<string, CompareExchangeValue<T>>(StringComparer.OrdinalIgnoreCase);
-            if (keys == null || keys.Length == 0)
-                return results;
+            var results = GetCompareExchangeValuesFromSessionInternal<T>(keys, out var notTrackedKeys);
 
-            HashSet<string> missingKeys = null;
-            foreach (var key in keys)
-            {
-                if (TryGetCompareExchangeValueFromSession(key, out var sessionValue))
-                {
-                    results[key] = sessionValue.GetValue<T>(_session.Conventions);
-                    continue;
-                }
-
-                if (missingKeys == null)
-                    missingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                missingKeys.Add(key);
-            }
-
-            if (missingKeys == null || missingKeys.Count == 0)
+            if (notTrackedKeys == null || notTrackedKeys.Count == 0)
                 return results;
 
             using (_session.AsyncTaskHolder())
             {
                 _session.IncrementRequestCount();
 
-                var keysArray = missingKeys.ToArray();
+                var keysArray = notTrackedKeys.ToArray();
                 var values = await _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<BlittableJsonReaderObject>(keysArray), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
 
                 foreach (var key in keysArray)
@@ -149,7 +138,43 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private void RegisterMissingCompareExchangeValue(string key)
+        internal CompareExchangeValue<T> GetCompareExchangeValueFromSessionInternal<T>(string key, out bool notTracked)
+        {
+            if (TryGetCompareExchangeValueFromSession(key, out var sessionValue))
+            {
+                notTracked = false;
+                return sessionValue.GetValue<T>(_session.Conventions);
+            }
+
+            notTracked = true;
+            return null;
+        }
+
+        internal Dictionary<string, CompareExchangeValue<T>> GetCompareExchangeValuesFromSessionInternal<T>(string[] keys, out HashSet<string> notTrackedKeys)
+        {
+            notTrackedKeys = null;
+            var results = new Dictionary<string, CompareExchangeValue<T>>(StringComparer.OrdinalIgnoreCase);
+            if (keys == null || keys.Length == 0)
+                return results;
+
+            foreach (var key in keys)
+            {
+                if (TryGetCompareExchangeValueFromSession(key, out var sessionValue))
+                {
+                    results[key] = sessionValue.GetValue<T>(_session.Conventions);
+                    continue;
+                }
+
+                if (notTrackedKeys == null)
+                    notTrackedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                notTrackedKeys.Add(key);
+            }
+
+            return results;
+        }
+
+        internal void RegisterMissingCompareExchangeValue(string key)
         {
             if (_session.NoTracking)
                 return;
@@ -159,21 +184,24 @@ namespace Raven.Client.Documents.Session
 
         internal void RegisterCompareExchangeValues(BlittableJsonReaderObject values)
         {
-            if (_session.NoTracking || values == null)
+            if (_session.NoTracking)
                 return;
 
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            for (var i = 0; i < values.Count; i++)
+            if (values != null)
             {
-                values.GetPropertyByIndex(i, ref propertyDetails);
+                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                for (var i = 0; i < values.Count; i++)
+                {
+                    values.GetPropertyByIndex(i, ref propertyDetails);
 
-                var value = propertyDetails.Value as BlittableJsonReaderObject;
+                    var value = propertyDetails.Value as BlittableJsonReaderObject;
 
-                RegisterCompareExchangeValue(CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, _session.Conventions));
+                    RegisterCompareExchangeValue(CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, _session.Conventions));
+                }
             }
         }
 
-        private CompareExchangeSessionValue RegisterCompareExchangeValue(CompareExchangeValue<BlittableJsonReaderObject> value)
+        internal CompareExchangeSessionValue RegisterCompareExchangeValue(CompareExchangeValue<BlittableJsonReaderObject> value)
         {
             Debug.Assert(value != null, "value != null");
 
@@ -216,7 +244,7 @@ namespace Raven.Client.Documents.Session
             sessionValue.UpdateState(index);
         }
 
-        private class CompareExchangeSessionValue
+        internal class CompareExchangeSessionValue
         {
             private readonly string _key;
 
@@ -471,7 +499,7 @@ namespace Raven.Client.Documents.Session
 
         Lazy<Task<CompareExchangeValue<T>>> ILazyClusterTransactionOperationsAsync.GetCompareExchangeValueAsync<T>(string key, CancellationToken token)
         {
-            return Session.AddLazyOperation<CompareExchangeValue<T>>(new LazyGetCompareExchangeValueOperation<T>(key, Session.Conventions, Session.Context), onEval: null, token);
+            return Session.AddLazyOperation<CompareExchangeValue<T>>(new LazyGetCompareExchangeValueOperation<T>(this, Session.Conventions, key), onEval: null, token);
         }
 
         Task<CompareExchangeValue<T>> IClusterTransactionOperationsAsync.GetCompareExchangeValueAsync<T>(string key, CancellationToken token)
@@ -481,12 +509,12 @@ namespace Raven.Client.Documents.Session
 
         Lazy<Task<CompareExchangeValue<T>>> ILazyClusterTransactionOperationsAsync.GetCompareExchangeValueAsync<T>(string key, Action<CompareExchangeValue<T>> onEval, CancellationToken token)
         {
-            return Session.AddLazyOperation(new LazyGetCompareExchangeValueOperation<T>(key, Session.Conventions, Session.Context), onEval, token);
+            return Session.AddLazyOperation(new LazyGetCompareExchangeValueOperation<T>(this, Session.Conventions, key), onEval, token);
         }
 
         Lazy<Task<Dictionary<string, CompareExchangeValue<T>>>> ILazyClusterTransactionOperationsAsync.GetCompareExchangeValuesAsync<T>(string[] keys, CancellationToken token)
         {
-            return Session.AddLazyOperation<Dictionary<string, CompareExchangeValue<T>>>(new LazyGetCompareExchangeValuesOperation<T>(keys, Session.Conventions, Session.Context), onEval: null, token);
+            return Session.AddLazyOperation<Dictionary<string, CompareExchangeValue<T>>>(new LazyGetCompareExchangeValuesOperation<T>(this, Session.Conventions, keys), onEval: null, token);
         }
 
         Task<Dictionary<string, CompareExchangeValue<T>>> IClusterTransactionOperationsAsync.GetCompareExchangeValuesAsync<T>(string[] keys, CancellationToken token)
@@ -496,7 +524,7 @@ namespace Raven.Client.Documents.Session
 
         Lazy<Task<Dictionary<string, CompareExchangeValue<T>>>> ILazyClusterTransactionOperationsAsync.GetCompareExchangeValuesAsync<T>(string[] keys, Action<Dictionary<string, CompareExchangeValue<T>>> onEval, CancellationToken token)
         {
-            return Session.AddLazyOperation(new LazyGetCompareExchangeValuesOperation<T>(keys, Session.Conventions, Session.Context), onEval, token);
+            return Session.AddLazyOperation(new LazyGetCompareExchangeValuesOperation<T>(this, Session.Conventions, keys), onEval, token);
         }
     }
 
@@ -515,12 +543,12 @@ namespace Raven.Client.Documents.Session
 
         Lazy<CompareExchangeValue<T>> ILazyClusterTransactionOperations.GetCompareExchangeValue<T>(string key)
         {
-            return Session.AddLazyOperation<CompareExchangeValue<T>>(new LazyGetCompareExchangeValueOperation<T>(key, Session.Conventions, Session.Context), onEval: null);
+            return Session.AddLazyOperation<CompareExchangeValue<T>>(new LazyGetCompareExchangeValueOperation<T>(this, Session.Conventions, key), onEval: null);
         }
 
         Lazy<CompareExchangeValue<T>> ILazyClusterTransactionOperations.GetCompareExchangeValue<T>(string key, Action<CompareExchangeValue<T>> onEval)
         {
-            return Session.AddLazyOperation(new LazyGetCompareExchangeValueOperation<T>(key, Session.Conventions, Session.Context), onEval);
+            return Session.AddLazyOperation(new LazyGetCompareExchangeValueOperation<T>(this, Session.Conventions, key), onEval);
         }
 
         Dictionary<string, CompareExchangeValue<T>> IClusterTransactionOperations.GetCompareExchangeValues<T>(string[] keys)
@@ -530,12 +558,12 @@ namespace Raven.Client.Documents.Session
 
         Lazy<Dictionary<string, CompareExchangeValue<T>>> ILazyClusterTransactionOperations.GetCompareExchangeValues<T>(string[] keys)
         {
-            return Session.AddLazyOperation<Dictionary<string, CompareExchangeValue<T>>>(new LazyGetCompareExchangeValuesOperation<T>(keys, Session.Conventions, Session.Context), onEval: null);
+            return Session.AddLazyOperation<Dictionary<string, CompareExchangeValue<T>>>(new LazyGetCompareExchangeValuesOperation<T>(this, Session.Conventions, keys), onEval: null);
         }
 
         Lazy<Dictionary<string, CompareExchangeValue<T>>> ILazyClusterTransactionOperations.GetCompareExchangeValues<T>(string[] keys, Action<Dictionary<string, CompareExchangeValue<T>>> onEval)
         {
-            return Session.AddLazyOperation(new LazyGetCompareExchangeValuesOperation<T>(keys, Session.Conventions, Session.Context), onEval);
+            return Session.AddLazyOperation(new LazyGetCompareExchangeValuesOperation<T>(this, Session.Conventions, keys), onEval);
         }
     }
 }
