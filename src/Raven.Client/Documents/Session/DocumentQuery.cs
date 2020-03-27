@@ -1159,6 +1159,7 @@ namespace Raven.Client.Documents.Session
                 DocumentIncludes = new HashSet<string>(DocumentIncludes),
                 CounterIncludesTokens = CounterIncludesTokens,
                 TimeSeriesIncludesTokens = TimeSeriesIncludesTokens,
+                CompareExchangeValueIncludesTokens = CompareExchangeValueIncludesTokens,
                 RootTypes = { typeof(T) },
                 BeforeQueryExecutedCallback = BeforeQueryExecutedCallback,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,

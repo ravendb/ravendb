@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
@@ -50,6 +51,16 @@ namespace Raven.Server.Documents.Queries
         public override Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesIncludes()
         {
             throw new NotSupportedException();
+        }
+
+        public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
+        {
+            throw new NotImplementedException();
         }
 
         public override bool SupportsExceptionHandling => false;

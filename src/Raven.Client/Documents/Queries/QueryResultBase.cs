@@ -36,9 +36,14 @@ namespace Raven.Client.Documents.Queries
         public BlittableJsonReaderObject TimeSeriesIncludes { get; set; }
 
         /// <summary>
+        /// Gets or sets the Compare Exchange Values included in the result.
+        /// </summary>
+        public BlittableJsonReaderObject CompareExchangeValueIncludes { get; set; }
+
+        /// <summary>
         /// The paths that the server included in the results
         /// </summary>
-        public string [] IncludedPaths { get; set; }
+        public string[] IncludedPaths { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the index is stale.

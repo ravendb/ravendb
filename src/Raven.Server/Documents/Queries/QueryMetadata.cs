@@ -113,6 +113,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasCmpXchg { get; private set; }
 
+        public bool HasCmpXchgIncludes { get; private set; }
+
         public bool HasHighlightings { get; private set; }
 
         public bool HasExplanations { get; private set; }
@@ -162,6 +164,8 @@ namespace Raven.Server.Documents.Queries
         public readonly bool CanCache;
 
         public string[] Includes;
+
+        public string[] CompareExchangeValueIncludes;
 
         public bool HasIncludeOrLoad;
 
@@ -431,9 +435,10 @@ namespace Raven.Server.Documents.Queries
         private void HandleQueryInclude(BlittableJsonReaderObject parameters)
         {
             List<string> includes = null;
+            List<string> compareExchangeValueIncludes = null;
             List<HighlightingField> highlightings = null;
 
-            void AddInclude(QueryExpression include, string path)
+            void AddInclude(QueryExpression include, string path, ref List<string> listToAdd)
             {
                 var expressionPath = ParseExpressionPath(include, path, Query.From.Alias);
 
@@ -441,10 +446,10 @@ namespace Raven.Server.Documents.Queries
                     NotInRootAliasPaths(expressionPath.LoadFromAlias))
                     ThrowUnknownAlias(expressionPath.LoadFromAlias, parameters);
 
-                if (includes == null)
-                    includes = new List<string>();
+                if (listToAdd == null)
+                    listToAdd = new List<string>();
 
-                includes.Add(expressionPath.Path);
+                listToAdd.Add(expressionPath.Path);
             }
 
             foreach (var include in Query.Include)
@@ -454,12 +459,12 @@ namespace Raven.Server.Documents.Queries
                     case FieldExpression fe:
                         HasIncludeOrLoad = true;
 
-                        AddInclude(include, fe.FieldValue);
+                        AddInclude(include, fe.FieldValue, ref includes);
                         break;
                     case ValueExpression ve:
                         HasIncludeOrLoad = true;
 
-                        AddInclude(include, ve.Token.Value);
+                        AddInclude(include, ve.Token.Value, ref includes);
                         break;
                     case MethodExpression me:
                         var methodType = QueryMethod.GetMethodType(me.Name.Value);
@@ -514,6 +519,15 @@ namespace Raven.Server.Documents.Queries
 
                                 AddToTimeSeriesIncludes(TimeSeriesIncludes, me, parameters);
                                 break;
+                            case MethodType.CompareExchange:
+                                QueryValidator.ValidateIncludeCompareExchangeValue(me.Arguments, QueryText, parameters);
+
+                                HasCmpXchgIncludes = true;
+
+                                var fieldName = ExtractFieldNameFromArgument(me.Arguments[0], withoutAlias: true, me.Name.Value, parameters, QueryText);
+
+                                AddInclude(include, fieldName.Value, ref compareExchangeValueIncludes);
+                                break;
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
                         }
@@ -528,6 +542,9 @@ namespace Raven.Server.Documents.Queries
 
             if (HasHighlightings)
                 Highlightings = highlightings?.ToArray();
+
+            if (HasCmpXchgIncludes)
+                CompareExchangeValueIncludes = compareExchangeValueIncludes?.ToArray();
         }
 
         private static ExplanationField CreateExplanationField(MethodExpression expression)

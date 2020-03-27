@@ -412,7 +412,7 @@ namespace Raven.Server.Documents.Handlers
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            using (var context = QueryOperationContext.ForIndex(index))
+            using (var context = QueryOperationContext.Allocate(Database, index))
             using (var writer = new BlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
@@ -756,7 +756,7 @@ namespace Raven.Server.Documents.Handlers
             var field = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
 
             using (var token = CreateTimeLimitedOperationToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var context = QueryOperationContext.Allocate(Database))
             {
                 var name = GetIndexNameFromCollectionAndField(field) ?? GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -773,7 +773,7 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (var writer = new BlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
                 {
                     if (field.EndsWith("__minX") ||
                         field.EndsWith("__minY") ||
@@ -799,7 +799,7 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
 
-                    writer.WriteTermsQueryResult(context, result);
+                    writer.WriteTermsQueryResult(context.Documents, result);
                 }
 
                 return Task.CompletedTask;

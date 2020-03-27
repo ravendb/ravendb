@@ -1197,7 +1197,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 ExplanationToken == null &&
                 QueryTimings == null &&
                 CounterIncludesTokens == null &&
-                TimeSeriesIncludesTokens == null)
+                TimeSeriesIncludesTokens == null &&
+                CompareExchangeValueIncludesTokens == null)
                 return;
 
             queryText.Append(" include ");
@@ -1214,38 +1215,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     queryText.Append(include);
             }
 
-            if (CounterIncludesTokens != null)
-            {
-                foreach (var counterIncludesToken in CounterIncludesTokens)
-                {
-                    if (first == false)
-                        queryText.Append(",");
-                    first = false;
-
-                    counterIncludesToken.WriteTo(queryText);
-                }
-            }
-
-            if (TimeSeriesIncludesTokens != null)
-            {
-                foreach (var token in TimeSeriesIncludesTokens)
-                {
-                    if (first == false)
-                        queryText.Append(",");
-                    first = false;
-
-                    token.WriteTo(queryText);
-                }
-            }
-
-            foreach (var token in HighlightingTokens)
-            {
-                if (first == false)
-                    queryText.Append(",");
-                first = false;
-
-                token.WriteTo(queryText);
-            }
+            WriteIncludeTokens(CounterIncludesTokens);
+            WriteIncludeTokens(TimeSeriesIncludesTokens);
+            WriteIncludeTokens(CompareExchangeValueIncludesTokens);
+            WriteIncludeTokens(HighlightingTokens);
 
             if (ExplanationToken != null)
             {
@@ -1263,6 +1236,21 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 first = false;
 
                 TimingsToken.Instance.WriteTo(queryText);
+            }
+
+            void WriteIncludeTokens<TToken>(IEnumerable<TToken> tokens) where TToken : QueryToken
+            {
+                if (tokens == null)
+                    return;
+
+                foreach (var token in tokens)
+                {
+                    if (first == false)
+                        queryText.Append(",");
+                    first = false;
+
+                    token.WriteTo(queryText);
+                }
             }
         }
 

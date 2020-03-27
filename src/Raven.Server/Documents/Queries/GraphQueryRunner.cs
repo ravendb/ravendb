@@ -101,20 +101,17 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
+        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag,
             OperationCancelToken token)
         {
-            using (var context = QueryOperationContext.ForGraph(documentsContext))
+            var res = new DocumentQueryResult
             {
-                var res = new DocumentQueryResult
-                {
-                    IndexName = "@graph"
-                };
-                return await ExecuteQuery(res, query, context, existingResultEtag, token);
-            }
+                IndexName = "@graph"
+            };
+            return await ExecuteQuery(res, query, queryContext, existingResultEtag, token);
         }
 
-        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
             OperationCancelToken token)
         {
             throw new NotImplementedException();
@@ -321,7 +318,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: false))
             {
@@ -334,22 +331,22 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             throw new NotSupportedException("You cannot delete based on graph query");
         }
 
-        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             throw new NotSupportedException("Graph queries do not expose index queries");
         }
 
-        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, Patch.PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, Patch.PatchRequest patch, BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             throw new NotSupportedException("You cannot patch based on graph query");
         }
 
-        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             throw new NotSupportedException("You cannot suggest based on graph query");
         }

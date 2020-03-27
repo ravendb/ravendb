@@ -8,36 +8,51 @@ namespace Raven.Server.Documents.Indexes
 {
     public class QueryOperationContext : IDisposable
     {
+        private readonly DocumentDatabase _database;
         public readonly DocumentsOperationContext Documents;
 
-        public readonly TransactionOperationContext Server;
+        public TransactionOperationContext Server;
 
         private IDisposable _releaseDocuments;
         private IDisposable _releaseServer;
 
-        private QueryOperationContext(DocumentsOperationContext documentsContext, bool releaseDocumentsContext, bool needsServerContext)
+        private QueryOperationContext(DocumentDatabase database, DocumentsOperationContext documentsContext, bool releaseDocumentsContext, bool needsServerContext)
         {
-            if (documentsContext is null)
-                throw new ArgumentNullException(nameof(documentsContext));
-
-            Documents = documentsContext;
+            _database = database ?? throw new ArgumentNullException(nameof(database));
+            Documents = documentsContext ?? throw new ArgumentNullException(nameof(documentsContext));
 
             if (releaseDocumentsContext)
                 _releaseDocuments = Documents;
 
             if (needsServerContext)
-                _releaseServer = documentsContext.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out Server);
+                _releaseServer = database.ServerStore.ContextPool.AllocateOperationContext(out Server);
         }
 
         private QueryOperationContext(DocumentDatabase database, bool needsServerContext)
         {
-            if (database is null)
-                throw new ArgumentNullException(nameof(database));
-
+            _database = database ?? throw new ArgumentNullException(nameof(database));
             _releaseDocuments = database.DocumentsStorage.ContextPool.AllocateOperationContext(out Documents);
 
             if (needsServerContext)
                 _releaseServer = database.ServerStore.ContextPool.AllocateOperationContext(out Server);
+        }
+
+        internal void WithIndex(Index index)
+        {
+            if (Server != null)
+                return;
+
+            if (index.Definition.HasCompareExchange)
+                _releaseServer = _database.ServerStore.ContextPool.AllocateOperationContext(out Server);
+        }
+
+        internal void WithQuery(QueryMetadata metadata)
+        {
+            if (Server != null)
+                return;
+
+            if (metadata.HasCmpXchg || metadata.HasCmpXchgSelect || metadata.HasCmpXchgIncludes)
+                _releaseServer = _database.ServerStore.ContextPool.AllocateOperationContext(out Server);
         }
 
         public IDisposable OpenReadTransaction()
@@ -77,7 +92,6 @@ namespace Raven.Server.Documents.Indexes
                 Server.PersistentContext.LongLivedTransactions = value;
         }
 
-
         [Conditional("DEBUG")]
         public void AssertOpenedTransactions()
         {
@@ -97,29 +111,17 @@ namespace Raven.Server.Documents.Indexes
             _releaseServer = null;
         }
 
-        public static QueryOperationContext ForQuery(DocumentsOperationContext documentsContext, Index index, QueryMetadata queryMetadata)
-        {
-            return new QueryOperationContext(documentsContext, releaseDocumentsContext: false, needsServerContext: index.Definition.HasCompareExchange || queryMetadata.HasCmpXchg || queryMetadata.HasCmpXchgSelect);
-        }
-
-        public static QueryOperationContext ForQuery(DocumentsOperationContext documentsContext, Index index)
-        {
-            return new QueryOperationContext(documentsContext, releaseDocumentsContext: false, needsServerContext: index.Definition.HasCompareExchange);
-        }
-
-        public static QueryOperationContext ForIndex(Index index)
-        {
-            return new QueryOperationContext(index.DocumentDatabase, index.Definition.HasCompareExchange);
-        }
-
         public static QueryOperationContext Allocate(DocumentDatabase database, bool needsServerContext = false)
         {
             return new QueryOperationContext(database, needsServerContext);
         }
 
-        public static QueryOperationContext ForGraph(DocumentsOperationContext documentsContext)
+        public static QueryOperationContext Allocate(DocumentDatabase database, Index index)
         {
-            return new QueryOperationContext(documentsContext, releaseDocumentsContext: false, needsServerContext: false);
+            var queryContext = Allocate(database);
+            queryContext.WithIndex(index);
+
+            return queryContext;
         }
 
         /// <summary>
@@ -129,7 +131,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var documentsContext = DocumentsOperationContext.ShortTermSingleUse(database);
 
-            return new QueryOperationContext(documentsContext, releaseDocumentsContext: true, needsServerContext: false);
+            return new QueryOperationContext(database, documentsContext, releaseDocumentsContext: true, needsServerContext: false);
         }
 
         private struct DisposeTransactions : IDisposable

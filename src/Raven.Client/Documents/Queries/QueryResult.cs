@@ -77,7 +77,8 @@ namespace Raven.Client.Documents.Queries
                 NodeTag = NodeTag,
                 CounterIncludes = CounterIncludes,
                 IncludedCounterNames = IncludedCounterNames,
-                TimeSeriesIncludes = TimeSeriesIncludes
+                TimeSeriesIncludes = TimeSeriesIncludes,
+                CompareExchangeValueIncludes = CompareExchangeValueIncludes
             };
         }
     }

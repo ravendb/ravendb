@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -23,6 +25,8 @@ namespace Raven.Server.Documents.Queries
 
         private Dictionary<string, List<TimeSeriesRangeResult>> _timeSeriesIncludes;
 
+        private Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> _compareExchangeValueIncludes;
+
         public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
         {
             _counterIncludes = includeCountersCommand.Results;
@@ -36,6 +40,13 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesIncludes() => _timeSeriesIncludes;
+
+        public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
+        {
+            _compareExchangeValueIncludes = command.Results;
+        }
+
+        public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes() => _compareExchangeValueIncludes;
 
         public override void AddResult(Document result)
         {

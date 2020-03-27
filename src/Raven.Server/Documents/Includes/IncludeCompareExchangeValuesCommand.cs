@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -17,13 +18,25 @@ namespace Raven.Server.Documents.Includes
         private HashSet<string> _includedKeys;
 
         private IDisposable _releaseContext;
+        private TransactionOperationContext _serverContext;
 
-        public List<CompareExchangeValue<BlittableJsonReaderObject>> Results;
+        public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> Results;
 
-        public IncludeCompareExchangeValuesCommand(DocumentDatabase database, string[] compareExchangeValues)
+        private IncludeCompareExchangeValuesCommand(DocumentDatabase database, TransactionOperationContext serverContext, string[] compareExchangeValues)
         {
             _database = database ?? throw new ArgumentNullException(nameof(database));
+            _serverContext = serverContext;
             _includes = compareExchangeValues;
+        }
+
+        public static IncludeCompareExchangeValuesCommand ExternalScope(QueryOperationContext context, string[] compareExchangeValues)
+        {
+            return new IncludeCompareExchangeValuesCommand(context.Documents.DocumentDatabase, context.Server, compareExchangeValues);
+        }
+
+        public static IncludeCompareExchangeValuesCommand InternalScope(DocumentDatabase database, string[] compareExchangeValues)
+        {
+            return new IncludeCompareExchangeValuesCommand(database, serverContext: null, compareExchangeValues);
         }
 
         internal void Gather(Document document)
@@ -46,21 +59,23 @@ namespace Raven.Server.Documents.Includes
             if (_includedKeys == null || _includedKeys.Count == 0)
                 return;
 
-            _releaseContext = _database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context);
-
-            context.OpenReadTransaction(); // we will release it on dispose
+            if (_serverContext == null)
+            {
+                _releaseContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
+                _serverContext.OpenReadTransaction();
+            }
 
             foreach (var includedKey in _includedKeys)
             {
                 if (string.IsNullOrEmpty(includedKey))
                     continue;
 
-                var value = _database.ServerStore.Cluster.GetCompareExchangeValue(context, CompareExchangeKey.GetStorageKey(_database.Name, includedKey));
+                var value = _database.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_database.Name, includedKey));
 
                 if (Results == null)
-                    Results = new List<CompareExchangeValue<BlittableJsonReaderObject>>();
+                    Results = new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
 
-                Results.Add(new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, value.Index, value.Value));
+                Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, value.Index, value.Value));
             }
         }
 

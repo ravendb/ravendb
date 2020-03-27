@@ -61,12 +61,12 @@ namespace SlowTests.Server.Documents.Patching
                 }
                 WaitForIndexing(store);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var context = QueryOperationContext.ShortTermSingleUse(database))
                 {
                     var query = new IndexQueryServerSide($"FROM index '{index.Name}'");
                     var patch = new PatchRequest("var u = this; u.is = true;", PatchRequestType.Patch, query.Metadata.DeclaredFunctions);
 
-                    var before = context.AllocatedMemory;
+                    var before = context.Documents.AllocatedMemory;
                     await database.QueryRunner.ExecutePatchQuery(
                         query,
                         new QueryOperationOptions { RetrieveDetails = true },
@@ -75,7 +75,7 @@ namespace SlowTests.Server.Documents.Patching
                         context,
                         p => { },
                         new OperationCancelToken(CancelAfter, CancellationToken.None));
-                    var after = context.AllocatedMemory;
+                    var after = context.Documents.AllocatedMemory;
 
                     //In a case of fragmentation, we don't immediately freeing memory so the memory can be a little bit higher
                     const long threshold = 256;

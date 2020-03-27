@@ -14,7 +14,6 @@ using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -62,7 +61,7 @@ namespace Raven.Server.Documents.Queries
             return _static;
         }
 
-        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
@@ -77,7 +76,7 @@ namespace Raven.Server.Documents.Queries
                         if (scope == null)
                             sw = Stopwatch.StartNew();
 
-                        result = await GetRunner(query).ExecuteQuery(query, documentsContext, existingResultEtag, token);
+                        result = await GetRunner(query).ExecuteQuery(query, queryContext, existingResultEtag, token);
                     }
 
                     result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
@@ -96,14 +95,14 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
                 {
-                    await GetRunner(query).ExecuteStreamQuery(query, documentsContext, response, writer, token);
+                    await GetRunner(query).ExecuteStreamQuery(query, queryContext, response, writer, token);
                     return;
                 }
                 catch (ObjectDisposedException e)
@@ -118,7 +117,7 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+        public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response,
             IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
@@ -126,8 +125,8 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    documentsContext.CloseTransaction();
-                    await GetRunner(query).ExecuteStreamIndexEntriesQuery(query, documentsContext, response, writer, token);
+                    queryContext.CloseTransaction();
+                    await GetRunner(query).ExecuteStreamIndexEntriesQuery(query, queryContext, response, writer, token);
                     return;
                 }
                 catch (ObjectDisposedException e)
@@ -141,7 +140,8 @@ namespace Raven.Server.Documents.Queries
 
             throw CreateRetriesFailedException(lastException);
         }
-        public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+
+        public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, QueryOperationContext queryContext, OperationCancelToken token)
         {
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     var sw = Stopwatch.StartNew();
 
-                    var result = await _static.ExecuteFacetedQuery(query, existingResultEtag, documentsContext, token);
+                    var result = await _static.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token);
 
                     result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
 
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token, out Index index)
+        public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, QueryOperationContext queryContext, OperationCancelToken token, out Index index)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
@@ -180,14 +180,13 @@ namespace Raven.Server.Documents.Queries
                 {
                     index = GetIndex(indexName);
 
-                    using (var context = QueryOperationContext.ForQuery(documentsContext, index))
-                    {
-                        var etag = index.GetIndexEtag(context, null);
-                        if (etag == existingResultEtag)
-                            return TermsQueryResultServerSide.NotModifiedResult;
+                    queryContext.WithIndex(index);
 
-                        return index.GetTerms(field, fromValue, pageSize, context, token);
-                    }
+                    var etag = index.GetIndexEtag(queryContext, null);
+                    if (etag == existingResultEtag)
+                        return TermsQueryResultServerSide.NotModifiedResult;
+
+                    return index.GetTerms(field, fromValue, pageSize, queryContext, token);
                 }
                 catch (ObjectDisposedException e)
                 {
@@ -201,7 +200,7 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
@@ -216,7 +215,7 @@ namespace Raven.Server.Documents.Queries
                         if (scope == null)
                             sw = Stopwatch.StartNew();
 
-                        result = await GetRunner(query).ExecuteSuggestionQuery(query, context, existingResultEtag, token);
+                        result = await GetRunner(query).ExecuteSuggestionQuery(query, queryContext, existingResultEtag, token);
                     }
 
                     result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
@@ -235,14 +234,14 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
                 {
-                    return await GetRunner(query).ExecuteIndexEntriesQuery(query, context, existingResultEtag, token);
+                    return await GetRunner(query).ExecuteIndexEntriesQuery(query, queryContext, existingResultEtag, token);
                 }
                 catch (ObjectDisposedException e)
                 {
@@ -256,14 +255,14 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
                 {
-                    return await GetRunner(query).ExecuteDeleteQuery(query, options, context, onProgress, token);
+                    return await GetRunner(query).ExecuteDeleteQuery(query, options, queryContext, onProgress, token);
                 }
                 catch (ObjectDisposedException e)
                 {
@@ -277,14 +276,14 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
                 {
-                    return await GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, context, onProgress, token);
+                    return await GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, queryContext, onProgress, token);
                 }
                 catch (ObjectDisposedException e)
                 {
