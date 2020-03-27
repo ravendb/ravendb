@@ -2589,6 +2589,7 @@ namespace Raven.Server.Documents.Indexes
                                 var skippedResults = new Reference<int>();
                                 IncludeCountersCommand includeCountersCommand = null;
                                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
+                                IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand = null;
 
                                 var fieldsToFetch = new FieldsToFetch(query, Definition);
 
@@ -2611,6 +2612,9 @@ namespace Raven.Server.Documents.Indexes
                                         queryContext.Documents,
                                         query.Metadata.TimeSeriesIncludes.TimeSeries);
                                 }
+
+                                if (query.Metadata.HasCmpXchgIncludes)
+                                    includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(queryContext, query.Metadata.CompareExchangeValueIncludes);
 
                                 var retriever = GetQueryResultRetriever(query, queryScope, queryContext.Documents, fieldsToFetch, includeDocumentsCommand);
 
@@ -2687,7 +2691,10 @@ namespace Raven.Server.Documents.Indexes
                                                 resultToFill.AddExplanation(document.Explanation);
 
                                             using (gatherScope?.Start())
+                                            {
                                                 includeDocumentsCommand.Gather(document.Result);
+                                                includeCompareExchangeValuesCommand?.Gather(document.Result);
+                                            }
 
                                             includeCountersCommand?.Fill(document.Result);
 
@@ -2704,13 +2711,19 @@ namespace Raven.Server.Documents.Indexes
                                 }
 
                                 using (fillScope?.Start())
+                                {
                                     includeDocumentsCommand.Fill(resultToFill.Includes);
+                                    includeCompareExchangeValuesCommand?.Materialize();
+                                }
 
                                 if (includeCountersCommand != null)
                                     resultToFill.AddCounterIncludes(includeCountersCommand);
 
                                 if (includeTimeSeriesCommand != null)
                                     resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
+
+                                if (includeCompareExchangeValuesCommand != null)
+                                    resultToFill.AddCompareExchangeValueIncludes(includeCompareExchangeValuesCommand);
 
                                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
 

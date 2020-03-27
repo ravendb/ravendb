@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
@@ -189,7 +190,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanUseCompareExchangeValueIncludesInQueries()
+        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic()
         {
             using (var store = GetDocumentStore())
             {
@@ -219,6 +220,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, companies.Count);
                     Assert.True(stats.DurationInMs >= 0);
+                    var resultEtag = stats.ResultEtag;
 
                     var numberOfRequests = session.Advanced.NumberOfRequests;
 
@@ -234,6 +236,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, companies.Count);
                     Assert.Equal(-1, stats.DurationInMs); // from cache
+                    Assert.Equal(resultEtag, stats.ResultEtag);
 
                     using (var innerSession = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
@@ -250,10 +253,101 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, companies.Count);
                     Assert.True(stats.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(resultEtag, stats.ResultEtag);
 
                     value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
                     Assert.Equal("Bydgoszcz", value1.Value.City);
                 }
+            }
+        }
+
+        [Fact]
+        public void CanUseCompareExchangeValueIncludesInQueries_Static()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Companies_ByName().Execute(store);
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var employee = new Employee { Id = "employees/1", Notes = new List<string> { "companies/cf", "companies/hr" } };
+                    session.Store(employee);
+
+                    var company = new Company { Id = "companies/1", ExternalId = "companies/cf", Name = "CF" };
+                    session.Store(company);
+
+                    var address1 = new Address { City = "Torun" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", address1);
+
+                    var address2 = new Address { City = "Hadera" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", address2);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var companies = session.Query<Company, Companies_ByName>()
+                        .Statistics(out var stats)
+                        .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.True(stats.DurationInMs >= 0);
+                    var resultEtag = stats.ResultEtag;
+
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+
+                    var value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+
+                    companies = session.Query<Company, Companies_ByName>()
+                        .Statistics(out stats)
+                        .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.Equal(-1, stats.DurationInMs); // from cache
+                    Assert.Equal(resultEtag, stats.ResultEtag);
+
+                    using (var innerSession = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var value = innerSession.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                        value.Value.City = "Bydgoszcz";
+
+                        innerSession.SaveChanges();
+
+                        WaitForIndexing(store);
+                    }
+
+                    companies = session.Query<Company, Companies_ByName>()
+                        .Statistics(out stats)
+                        .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.True(stats.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(resultEtag, stats.ResultEtag);
+
+                    value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                    Assert.Equal("Bydgoszcz", value1.Value.City);
+                }
+            }
+        }
+
+        private class Companies_ByName : AbstractIndexCreationTask<Company>
+        {
+            public Companies_ByName()
+            {
+                Map = companies => from c in companies
+                                   select new
+                                   {
+                                       c.Name
+                                   };
             }
         }
     }
