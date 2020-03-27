@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.ServerWide;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -39,6 +41,7 @@ namespace Raven.Server.Documents.Queries
         {
             return _anyWrites;
         }
+
         public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
         {
             throw new NotSupportedException();
@@ -53,7 +56,6 @@ namespace Raven.Server.Documents.Queries
         {
             throw new NotSupportedException();
         }
-
 
         public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand includeTimeSeriesCommand)
         {
@@ -70,6 +72,15 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
+        public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
+        {
+            throw new NotImplementedException();
+        }
 
         public override void HandleException(Exception e)
         {
@@ -115,7 +126,6 @@ namespace Raven.Server.Documents.Queries
                 _writer.WriteQueryStatistics(ResultEtag, IsStale, IndexName, TotalResults, IndexTimestamp);
             }
             _writer.StartResults();
-
         }
 
         private void EndResponse()

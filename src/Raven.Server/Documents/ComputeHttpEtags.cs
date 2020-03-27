@@ -86,7 +86,7 @@ namespace Raven.Server.Documents
                     HashNumber(state, includeCompareExchangeValues.Results.Count);
 
                     foreach (var compareExchangeValueInclude in includeCompareExchangeValues.Results)
-                        HashNumber(state, compareExchangeValueInclude.Index);
+                        HashNumber(state, compareExchangeValueInclude.Value.Index);
                 }
             }
 

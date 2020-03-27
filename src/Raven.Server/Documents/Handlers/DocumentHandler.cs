@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.Handlers
             if (compareExchangeValues.Count == 0)
                 return;
 
-            includeCompareExchangeValues = new IncludeCompareExchangeValuesCommand(database, compareExchangeValues);
+            includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(database, compareExchangeValues);
         }
 
         private void GetCountersQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeCountersCommand includeCounters)
@@ -320,7 +320,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
-            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, List<TimeSeriesRangeResult>> timeseries, List<CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues, int numberOfResults)
+            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, List<TimeSeriesRangeResult>> timeseries, Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues, int numberOfResults)
         {
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {

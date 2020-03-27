@@ -146,5 +146,20 @@ namespace Raven.Server.Documents.Queries
                 }
             }
         }
+
+        public static void ValidateIncludeCompareExchangeValue(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
+        {
+            if (arguments.Count != 1)
+                throw new InvalidQueryException("Method 'cmpxchg()' expects one argument to be provided", queryText, parameters);
+
+            switch (arguments[0])
+            {
+                case ValueExpression _:
+                case FieldExpression _:
+                    break;
+                default:
+                    throw new InvalidQueryException($"Method 'cmpxchg()' expects field or value token as an argument at index {0}, got {arguments[0]} type", queryText, parameters);
+            }
+        }
     }
 }

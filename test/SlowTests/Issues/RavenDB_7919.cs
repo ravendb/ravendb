@@ -39,7 +39,7 @@ namespace SlowTests.Issues
 
                 autoIndex.SetState(IndexState.Idle);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var context = QueryOperationContext.ShortTermSingleUse(database))
                 {
                     // it shouldn't throw
                     await database.QueryRunner.ExecuteQuery(new IndexQueryServerSide("from Users where LastName = 'Arek'"), context, null,

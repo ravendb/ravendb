@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
@@ -16,21 +16,20 @@ namespace Raven.Server.Documents.Queries.Graph
         public readonly Query Query;
         private StringSegment _alias;
         private HashSet<string> _aliases;
-        private DocumentsOperationContext _context;
+        private QueryOperationContext _queryContext;
         private long? _resultEtag;
         private OperationCancelToken _token;
         private QueryRunner _queryRunner;
         private QueryMetadata _queryMetadata;
-        private readonly Sparrow.Json.BlittableJsonReaderObject _queryParameters;
+        private readonly BlittableJsonReaderObject _queryParameters;
         private List<Match> _temp = new List<Match>();
-
 
         private int _index = -1;
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
         private GraphQueryPlan _graphQueryPlan;
 
-        public QueryQueryStep(QueryRunner queryRunner, StringSegment alias, Query query, QueryMetadata queryMetadata, Sparrow.Json.BlittableJsonReaderObject queryParameters, DocumentsOperationContext documentsContext, long? existingResultEtag,
+        public QueryQueryStep(QueryRunner queryRunner, StringSegment alias, Query query, QueryMetadata queryMetadata, BlittableJsonReaderObject queryParameters, QueryOperationContext queryContext, long? existingResultEtag,
             GraphQueryPlan gqp, OperationCancelToken token)
         {
             _graphQueryPlan = gqp;
@@ -40,7 +39,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _queryRunner = queryRunner;
             _queryMetadata = queryMetadata;
             _queryParameters = queryParameters;
-            _context = documentsContext;
+            _queryContext = queryContext;
             _resultEtag = existingResultEtag;
             _token = token;
 
@@ -81,7 +80,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public static CollectionDestinationQueryStep ToCollectionDestinationQueryStep(DocumentsStorage documentsStorage, QueryQueryStep qqs, OperationCancelToken token)
         {
-            return new CollectionDestinationQueryStep(qqs._alias, qqs._context, documentsStorage, qqs._queryMetadata.CollectionName, token);
+            return new CollectionDestinationQueryStep(qqs._alias, qqs._queryContext.Documents, documentsStorage, qqs._queryMetadata.CollectionName, token);
         }
 
         public bool IsEmpty()
@@ -95,7 +94,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new QueryQueryStep(_queryRunner, _alias, Query, _queryMetadata, _queryParameters, _context, _resultEtag, _graphQueryPlan, _token)
+            return new QueryQueryStep(_queryRunner, _alias, Query, _queryMetadata, _queryParameters, _queryContext, _resultEtag, _graphQueryPlan, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
@@ -113,21 +112,20 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-
         private string _queryString;
         private bool _shouldCacheResults;
 
-        public string GetQueryString 
+        public string GetQueryString
+        {
+            get
             {
-                get
+                if (_queryString == null)
                 {
-                    if (_queryString == null)
-                    {
-                        _queryString = _queryMetadata.Query.ToString();
-                    }
-                    return _queryString;
+                    _queryString = _queryMetadata.Query.ToString();
                 }
+                return _queryString;
             }
+        }
 
         public ValueTask Initialize()
         {
@@ -136,7 +134,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             var key = GetQueryString;
             if (_graphQueryPlan.IdenticalQueriesCount.ContainsKey(key))
-            {                
+            {
                 if (_graphQueryPlan.QueryCache.TryGetValue(key, out var res))
                 {
                     CompleteInitialization(res);
@@ -160,7 +158,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 QueryParameters = _queryParameters,
                 IsPartOfGraphQuery = true
             },
-                _context, _resultEtag, _token);
+                _queryContext, _resultEtag, _token);
 
             if (results.IsCompleted)
             {
@@ -168,7 +166,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 CompleteInitialization(results.Result);
                 return default;
             }
-            
+
             return new ValueTask(CompleteInitializeAsync(results));
         }
 
@@ -206,12 +204,11 @@ namespace Raven.Server.Documents.Queries.Graph
             _token.ThrowIfCancellationRequested();
             if (_results.Count != 0 && _resultsById.Count == 0)// only reason is that we are projecting non documents here
                 throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
-              
+
             _temp.Clear();
             if (_resultsById.TryGetValue(id, out var match))
                 _temp.Add(match);
             return _temp;
-
         }
 
         public string GetOutputAlias()
@@ -260,8 +257,7 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 _token = token;
                 _parent = queryQueryStep;
-}
-
+            }
 
             public void AddAliases(HashSet<string> aliases)
             {

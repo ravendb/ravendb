@@ -454,6 +454,14 @@ namespace Raven.Server.Json
                 await writer.WriteTimeSeriesAsync(context, timeSeries);
             }
 
+            var compareExchangeValues = result.GetCompareExchangeValueIncludes();
+            if (compareExchangeValues != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.CompareExchangeValueIncludes));
+                await writer.WriteCompareExchangeValues(compareExchangeValues);
+            }
+
             writeAdditionalData?.Invoke(writer);
 
             writer.WriteEndObject();
@@ -787,7 +795,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
         }
-        
+
         public static void WriteDatabaseStatistics(this BlittableJsonTextWriter writer, JsonOperationContext context, DatabaseStatistics statistics)
         {
             writer.WriteStartObject();
@@ -796,7 +804,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
         }
-        
+
         private static void WriteDatabaseStatisticsInternal(BlittableJsonTextWriter writer, DatabaseStatistics statistics)
         {
             writer.WritePropertyName(nameof(statistics.CountOfIndexes));
@@ -868,7 +876,7 @@ namespace Raven.Server.Json
             else
                 writer.WriteNull();
             writer.WriteComma();
-            
+
             writer.WritePropertyName(nameof(statistics.LastDatabaseEtag));
             if (statistics.LastDatabaseEtag.HasValue)
                 writer.WriteInteger(statistics.LastDatabaseEtag.Value);
@@ -960,7 +968,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndArray();
         }
-        
+
         public static void WriteIndexDefinition(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, bool removeAnalyzers = false)
         {
             writer.WriteStartObject();
@@ -1527,7 +1535,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static async Task WriteCompareExchangeValues(this AsyncBlittableJsonTextWriter writer, List<CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
+        public static async Task WriteCompareExchangeValues(this AsyncBlittableJsonTextWriter writer, Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
         {
             writer.WriteStartObject();
 
@@ -1543,16 +1551,16 @@ namespace Raven.Server.Json
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(nameof(kvp.Key));
+                writer.WritePropertyName(nameof(kvp.Value.Key));
                 writer.WriteString(kvp.Key);
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(kvp.Index));
-                writer.WriteInteger(kvp.Index);
+                writer.WritePropertyName(nameof(kvp.Value.Index));
+                writer.WriteInteger(kvp.Value.Index);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(kvp.Value));
-                writer.WriteObject(kvp.Value);
+                writer.WriteObject(kvp.Value.Value);
 
                 writer.WriteEndObject();
 

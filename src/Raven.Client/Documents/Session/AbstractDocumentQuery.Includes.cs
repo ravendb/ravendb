@@ -14,6 +14,8 @@ namespace Raven.Client.Documents.Session
 
         protected List<CounterIncludesToken> CounterIncludesTokens;
 
+        internal List<CompareExchangeValueIncludesToken> CompareExchangeValueIncludesTokens;
+
         /// <summary>
         /// The paths to include when loading the query
         /// </summary>
@@ -56,9 +58,17 @@ namespace Raven.Client.Documents.Session
             {
                 IncludeTimeSeries(includes.Alias, includes.TimeSeriesToIncludeBySourceAlias);
             }
+
+            if (includes.CompareExchangeValuesToInclude != null)
+            {
+                CompareExchangeValueIncludesTokens = new List<CompareExchangeValueIncludesToken>();
+
+                foreach (var compareExchangeValue in includes.CompareExchangeValuesToInclude)
+                    CompareExchangeValueIncludesTokens.Add(CompareExchangeValueIncludesToken.Create(compareExchangeValue));
+            }
         }
 
-        protected void IncludeCounters(string alias, Dictionary<string, (bool All, HashSet<string> Counters)> countersToIncludeByDocId)
+        private void IncludeCounters(string alias, Dictionary<string, (bool All, HashSet<string> Counters)> countersToIncludeByDocId)
         {
             if (countersToIncludeByDocId?.Count > 0 == false)
                 return;
@@ -84,7 +94,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        protected void IncludeTimeSeries(string alias, Dictionary<string, HashSet<TimeSeriesRange>> timeSeriesToInclude)
+        private void IncludeTimeSeries(string alias, Dictionary<string, HashSet<TimeSeriesRange>> timeSeriesToInclude)
         {
             if (timeSeriesToInclude?.Count > 0 == false)
                 return;

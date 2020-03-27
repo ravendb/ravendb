@@ -12,6 +12,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -49,17 +50,17 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     using (var token = CreateTimeLimitedQueryToken())
-                    using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (var queryContext = QueryOperationContext.Allocate(Database))
                     {
                         var debug = GetStringQueryString("debug", required: false);
                         if (string.IsNullOrWhiteSpace(debug) == false)
                         {
-                            await Debug(context, debug, token, tracker, httpMethod);
+                            await Debug(queryContext, debug, token, tracker, httpMethod);
                             return;
                         }
 
                         var diagnostics = GetBoolValueQueryString("diagnostics", required: false) ?? false;
-                        await Query(context, token, tracker, httpMethod, diagnostics);
+                        await Query(queryContext, token, tracker, httpMethod, diagnostics);
                     }
                 }
                 catch (Exception e)
@@ -86,11 +87,11 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task FacetedQuery(IndexQueryServerSide indexQuery, DocumentsOperationContext context, OperationCancelToken token)
+        private async Task FacetedQuery(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, OperationCancelToken token)
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var result = await Database.QueryRunner.ExecuteFacetedQuery(indexQuery, existingResultEtag, context, token);
+            var result = await Database.QueryRunner.ExecuteFacetedQuery(indexQuery, existingResultEtag, queryContext, token);
 
             if (result.NotModified)
             {
@@ -101,19 +102,21 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             long numberOfResults;
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var writer = new BlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
-                writer.WriteFacetedQueryResult(context, result, numberOfResults: out numberOfResults);
+                writer.WriteFacetedQueryResult(queryContext.Documents, result, numberOfResults: out numberOfResults);
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
-        private async Task Query(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool diagnostics)
+        private async Task Query(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool diagnostics)
         {
-            var indexQuery = await GetIndexQuery(context, method, tracker);
+            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
             indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
+
+            queryContext.WithQuery(indexQuery.Metadata);
 
             if (TrafficWatchManager.HasRegisteredClients)
                 TrafficWatchQuery(indexQuery);
@@ -122,13 +125,13 @@ namespace Raven.Server.Documents.Handlers
 
             if (indexQuery.Metadata.HasFacet)
             {
-                await FacetedQuery(indexQuery, context, token);
+                await FacetedQuery(indexQuery, queryContext, token);
                 return;
             }
 
             if (indexQuery.Metadata.HasSuggest)
             {
-                await SuggestQuery(indexQuery, context, token);
+                await SuggestQuery(indexQuery, queryContext, token);
                 return;
             }
 
@@ -138,7 +141,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentQueryResult result;
             try
             {
-                result = await Database.QueryRunner.ExecuteQuery(indexQuery, context, existingResultEtag, token).ConfigureAwait(false);
+                result = await Database.QueryRunner.ExecuteQuery(indexQuery, queryContext, existingResultEtag, token).ConfigureAwait(false);
             }
             catch (IndexDoesNotExistException)
             {
@@ -155,10 +158,10 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             int numberOfResults;
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 result.Timings = indexQuery.Timings?.ToTimings();
-                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery));
+                numberOfResults = await writer.WriteDocumentQueryResultAsync(queryContext.Documents, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery));
                 await writer.OuterFlushAsync();
             }
 
@@ -198,11 +201,11 @@ namespace Raven.Server.Documents.Handlers
             return IndexQueryServerSide.Create(HttpContext, json, Database.QueryMetadataCache, tracker, Database);
         }
 
-        private async Task SuggestQuery(IndexQueryServerSide indexQuery, DocumentsOperationContext context, OperationCancelToken token)
+        private async Task SuggestQuery(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, OperationCancelToken token)
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var result = await Database.QueryRunner.ExecuteSuggestionQuery(indexQuery, context, existingResultEtag, token);
+            var result = await Database.QueryRunner.ExecuteSuggestionQuery(indexQuery, queryContext, existingResultEtag, token);
             if (result.NotModified)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -212,31 +215,31 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             long numberOfResults;
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var writer = new BlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
-                writer.WriteSuggestionQueryResult(context, result, numberOfResults: out numberOfResults);
+                writer.WriteSuggestionQueryResult(queryContext.Documents, result, numberOfResults: out numberOfResults);
             }
 
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
-        private async Task DetailedGraphResult(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        private async Task DetailedGraphResult(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(context, method, tracker);
+            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
             var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
             if (!(queryRunner is GraphQueryRunner gqr))
                 throw new InvalidOperationException("The specified query is not a graph query.");
             using (var token = CreateTimeLimitedQueryToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var writer = new BlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
                 await gqr.WriteDetailedQueryResult(indexQuery, ctx, writer, token);
             }
         }
 
-        private async Task Graph(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        private async Task Graph(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(context, method, tracker);
+            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
             var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
             if (!(queryRunner is GraphQueryRunner gqr))
                 throw new InvalidOperationException("The specified query is not a graph query.");
@@ -294,28 +297,28 @@ namespace Raven.Server.Documents.Handlers
                     edges.Add(djv);
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (var writer = new BlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
                 {
-                    context.Write(writer, output);
+                    queryContext.Documents.Write(writer, output);
                 }
             }
         }
 
-        private async Task Explain(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        private async Task Explain(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(context, method, tracker);
+            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
 
             var explanations = Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery, out string indexName);
 
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("IndexName");
                 writer.WriteString(indexName);
                 writer.WriteComma();
-                writer.WriteArray(context, "Results", explanations, (w, c, explanation) =>
+                writer.WriteArray(queryContext.Documents, "Results", explanations, (w, c, explanation) =>
                 {
-                    w.WriteExplanation(context, explanation);
+                    w.WriteExplanation(queryContext.Documents, explanation);
                 });
 
                 writer.WriteEndObject();
@@ -323,10 +326,10 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task ServerSideQuery(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        private async Task ServerSideQuery(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(context, method, tracker);
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
+            using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(indexQuery.ServerSideQuery));
@@ -340,28 +343,28 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
-            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
+            var queryContext = QueryOperationContext.Allocate(Database); // we don't dispose this as operation is async
 
             try
             {
                 using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "DeleteByQuery"))
                 {
-                    var reader = context.Read(RequestBodyStream(), "queries/delete");
+                    var reader = queryContext.Documents.Read(RequestBodyStream(), "queries/delete");
                     var query = IndexQueryServerSide.Create(HttpContext, reader, Database.QueryMetadataCache, tracker);
 
                     if (TrafficWatchManager.HasRegisteredClients)
                         TrafficWatchQuery(query);
 
                     ExecuteQueryOperation(query,
-                        (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
-                        context, returnContextToPool, Operations.Operations.OperationType.DeleteByQuery);
+                        (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, queryContext, onProgress, token),
+                        queryContext, queryContext, Operations.Operations.OperationType.DeleteByQuery);
 
                     return Task.CompletedTask;
                 }
             }
             catch
             {
-                returnContextToPool.Dispose();
+                queryContext.Dispose();
                 throw;
             }
         }
@@ -461,11 +464,11 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public Task Patch()
         {
-            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
+            var queryContext = QueryOperationContext.Allocate(Database); // we don't dispose this as operation is async
 
             try
             {
-                var reader = context.Read(RequestBodyStream(), "queries/patch");
+                var reader = queryContext.Documents.Read(RequestBodyStream(), "queries/patch");
                 if (reader == null)
                     throw new BadRequestException("Missing JSON content.");
                 if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
@@ -480,17 +483,18 @@ namespace Raven.Server.Documents.Handlers
 
                 ExecuteQueryOperation(query,
                     (runner, options, onProgress, token) => runner.ExecutePatchQuery(
-                        query, options, patch, query.QueryParameters, context, onProgress, token),
-                    context, returnContextToPool, Operations.Operations.OperationType.UpdateByQuery);
+                        query, options, patch, query.QueryParameters, queryContext, onProgress, token),
+                    queryContext, queryContext, Operations.Operations.OperationType.UpdateByQuery);
 
                 return Task.CompletedTask;
             }
             catch
             {
-                returnContextToPool.Dispose();
+                queryContext.Dispose();
                 throw;
             }
         }
+
         /// <summary>
         /// TrafficWatchQuery writes query data to httpContext
         /// </summary>
@@ -511,7 +515,7 @@ namespace Raven.Server.Documents.Handlers
                 QueryOperationOptions,
                 Action<IOperationProgress>, OperationCancelToken,
                 Task<IOperationResult>> operation,
-                DocumentsOperationContext context,
+                QueryOperationContext queryContext,
                 IDisposable returnContextToPool,
                 Operations.Operations.OperationType operationType)
         {
@@ -535,9 +539,9 @@ namespace Raven.Server.Documents.Handlers
                 operationType,
                 onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);
 
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var writer = new BlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
-                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+                writer.WriteOperationIdAndNodeTag(queryContext.Documents, operationId, ServerStore.NodeTag);
             }
 
             task.ContinueWith(_ =>
@@ -547,46 +551,46 @@ namespace Raven.Server.Documents.Handlers
             });
         }
 
-        private async Task Debug(DocumentsOperationContext context, string debug, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
+        private async Task Debug(QueryOperationContext queryContext, string debug, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
         {
             if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
             {
-                await IndexEntries(context, token, tracker, method);
+                await IndexEntries(queryContext, token, tracker, method);
                 return;
             }
 
             if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
             {
-                await Explain(context, tracker, method);
+                await Explain(queryContext, tracker, method);
                 return;
             }
 
             if (string.Equals(debug, "serverSideQuery", StringComparison.OrdinalIgnoreCase))
             {
-                await ServerSideQuery(context, tracker, method);
+                await ServerSideQuery(queryContext, tracker, method);
                 return;
             }
 
             if (string.Equals(debug, "graph", StringComparison.OrdinalIgnoreCase))
             {
-                await Graph(context, tracker, method);
+                await Graph(queryContext, tracker, method);
                 return;
             }
 
             if (string.Equals(debug, "detailedGraphResult", StringComparison.OrdinalIgnoreCase))
             {
-                await DetailedGraphResult(context, tracker, method);
+                await DetailedGraphResult(queryContext, tracker, method);
                 return;
             }
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }
 
-        private async Task IndexEntries(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
+        private async Task IndexEntries(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(context, method, tracker);
+            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var result = await Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, context, existingResultEtag, token);
+            var result = await Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, queryContext, existingResultEtag, token);
 
             if (result.NotModified)
             {
@@ -596,9 +600,9 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var writer = new BlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
-                writer.WriteIndexEntriesQueryResult(context, result);
+                writer.WriteIndexEntriesQueryResult(queryContext.Documents, result);
             }
         }
 

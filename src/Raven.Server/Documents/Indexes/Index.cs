@@ -640,7 +640,7 @@ namespace Raven.Server.Documents.Indexes
                     if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
                         return true;
 
-                    using (var context = QueryOperationContext.ForIndex(this))
+                    using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
                     using (context.OpenReadTransaction())
                     {
                         return IsStale(context);
@@ -1764,7 +1764,7 @@ namespace Raven.Server.Documents.Indexes
 
             using (DocumentDatabase.PreventFromUnloading())
             using (CultureHelper.EnsureInvariantCulture())
-            using (var context = QueryOperationContext.ForIndex(this))
+            using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {
                 indexContext.PersistentContext.LongLivedTransactions = true;
@@ -3299,7 +3299,7 @@ namespace Raven.Server.Documents.Indexes
 
             var hasCounters = q.CounterIncludes != null || q.HasCounterSelect;
             var hasTimeSeries = q.TimeSeriesIncludes != null || q.HasTimeSeriesSelect;
-            var hasCmpXchg = q.HasCmpXchg || q.HasCmpXchgSelect;
+            var hasCmpXchg = q.HasCmpXchg || q.HasCmpXchgSelect || q.HasCmpXchgIncludes;
 
             if (hasCounters)
             {
@@ -3347,7 +3347,7 @@ namespace Raven.Server.Documents.Indexes
             if (q.TimeSeriesIncludes != null || q.HasTimeSeriesSelect)
                 length += sizeof(long); // last time series etag
 
-            if (q.HasCmpXchg || q.HasCmpXchgSelect)
+            if (q.HasCmpXchg || q.HasCmpXchgSelect || q.HasCmpXchgIncludes)
                 length += sizeof(long); //last cmpxchg etag
 
             return length;

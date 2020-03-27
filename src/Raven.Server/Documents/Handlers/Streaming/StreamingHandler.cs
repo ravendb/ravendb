@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
@@ -89,16 +90,16 @@ namespace Raven.Server.Documents.Handlers.Streaming
             // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateTimeLimitedQueryToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var queryContext = QueryOperationContext.Allocate(Database))
             {
                 var documentId = GetStringQueryString("fromDocument", false);
                 string overrideQuery = null;
                 if (string.IsNullOrEmpty(documentId) == false)
                 {
                     Document document;
-                    using (context.OpenReadTransaction())
+                    using (queryContext.OpenReadTransaction())
                     {
-                        document = Database.DocumentsStorage.Get(context, documentId);                    
+                        document = Database.DocumentsStorage.Get(queryContext.Documents, documentId);
                         if (document == null)
                         {
                             throw new DocumentDoesNotExistException($"Was request to stream a query taken from {documentId} document, but it does not exist.");
@@ -109,7 +110,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         }
                     }
                 }
-                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context, tracker, overrideQuery);
+                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), queryContext.Documents, tracker, overrideQuery);
                 var format = GetStringQueryString("format", false);
                 var debug = GetStringQueryString("debug", false);
                 var properties = GetStringValuesQueryString("field", false);
@@ -121,11 +122,11 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 {
                     if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                         {
                             try
                             {
-                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, queryContext, HttpContext.Response, writer, token).ConfigureAwait(false);
                             }
                             catch (IndexDoesNotExistException)
                             {
@@ -141,11 +142,11 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 }
                 else
                 {
-                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                     {
                         try
                         {
-                            await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                            await Database.QueryRunner.ExecuteStreamQuery(query, queryContext, HttpContext.Response, writer, token).ConfigureAwait(false);
                         }
                         catch (IndexDoesNotExistException)
                         {
@@ -179,10 +180,10 @@ namespace Raven.Server.Documents.Handlers.Streaming
             // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateTimeLimitedQueryToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var queryContext = QueryOperationContext.Allocate(Database))
             {
                 var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream();
-                var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
+                var queryJson = await queryContext.Documents.ReadForMemoryAsync(stream, "index/query");
                 var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, tracker);
 
                 if (TrafficWatchManager.HasRegisteredClients)
@@ -200,7 +201,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 var debug = GetStringQueryString("debug", false);
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
-                
+
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
                 fileNamePrefix = $"{Database.Name}_{fileNamePrefix}";
@@ -208,11 +209,11 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 {
                     if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                         {
                             try
                             {
-                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, queryContext, HttpContext.Response, writer, token).ConfigureAwait(false);
                             }
                             catch (IndexDoesNotExistException)
                             {
@@ -228,11 +229,11 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 }
                 else
                 {
-                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                     {
                         try
                         {
-                            await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                            await Database.QueryRunner.ExecuteStreamQuery(query, queryContext, HttpContext.Response, writer, token).ConfigureAwait(false);
                         }
                         catch (IndexDoesNotExistException)
                         {
@@ -244,7 +245,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
             }
         }
 
-        private StreamCsvBlittableQueryResultWriter GetIndexEntriesQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
+        private StreamCsvBlittableQueryResultWriter GetIndexEntriesQueryResultWriter(string format, HttpResponse response, Stream responseBodyStream,
             string[] propertiesArray, string fileNamePrefix = null)
         {
             if (string.IsNullOrEmpty(format) || string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase) == false)

@@ -21,123 +21,125 @@ namespace Raven.Server.Documents.Queries
         {
         }
 
-        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
-            {
-                if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
-                {
-                    var etag = index.GetIndexEtag(context, query.Metadata);
-                    if (etag == existingResultEtag)
-                        return DocumentQueryResult.NotModifiedResult;
-                }
+            queryContext.WithIndex(index);
 
-                using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-                {
-                    return await index.Query(query, context, token);
-                }
+            if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
+            {
+                var etag = index.GetIndexEtag(queryContext, query.Metadata);
+                if (etag == existingResultEtag)
+                    return DocumentQueryResult.NotModifiedResult;
+            }
+
+            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await index.Query(query, queryContext, token);
             }
         }
 
-        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
+
+            queryContext.WithIndex(index);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token, true))
-            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                await index.StreamQuery(response, writer, query, context, token);
+                await index.StreamQuery(response, writer, query, queryContext, token);
             }
         }
 
-        public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+        public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
+
+            queryContext.WithIndex(index);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token, true))
-            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                await index.StreamIndexEntriesQuery(response, writer, query, context, token);
+                await index.StreamIndexEntriesQuery(response, writer, query, queryContext, token);
             }
         }
 
-        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
-            {
-                if (existingResultEtag.HasValue)
-                {
-                    var etag = index.GetIndexEtag(context, query.Metadata);
-                    if (etag == existingResultEtag)
-                        return IndexEntriesQueryResult.NotModifiedResult;
-                }
+            queryContext.WithIndex(index);
 
-                using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-                {
-                    return await index.IndexEntries(query, context, token);
-                }
+            if (existingResultEtag.HasValue)
+            {
+                var etag = index.GetIndexEtag(queryContext, query.Metadata);
+                if (etag == existingResultEtag)
+                    return IndexEntriesQueryResult.NotModifiedResult;
+            }
+
+            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await index.IndexEntries(query, queryContext, token);
             }
         }
 
-        public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, QueryOperationContext queryContext, OperationCancelToken token)
         {
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
-            var fq = FacetQuery.Create(documentsContext, query);
+            var fq = FacetQuery.Create(queryContext.Documents, query);
 
             var index = GetIndex(query.Metadata.IndexName);
 
-            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
-            {
-                if (existingResultEtag.HasValue)
-                {
-                    var etag = index.GetIndexEtag(context, query.Metadata) ^ fq.FacetsEtag;
-                    if (etag == existingResultEtag)
-                        return FacetedQueryResult.NotModifiedResult;
-                }
+            queryContext.WithIndex(index);
 
-                using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-                {
-                    return await index.FacetedQuery(fq, context, token);
-                }
+            if (existingResultEtag.HasValue)
+            {
+                var etag = index.GetIndexEtag(queryContext, query.Metadata) ^ fq.FacetsEtag;
+                if (etag == existingResultEtag)
+                    return FacetedQueryResult.NotModifiedResult;
+            }
+
+            using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await index.FacetedQuery(fq, queryContext, token);
             }
         }
 
-        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext documentsContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
+            queryContext.WithIndex(index);
+
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                return await ExecuteDelete(query, index, options, context, onProgress, token);
+                return await ExecuteDelete(query, index, options, queryContext, onProgress, token);
             }
         }
 
-        public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext documentsContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
+            queryContext.WithIndex(index);
+
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                return await ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
+                return await ExecutePatch(query, index, options, patch, patchArgs, queryContext, onProgress, token);
             }
         }
 
-        public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
+            queryContext.WithIndex(index);
+
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
-            using (var context = QueryOperationContext.ForQuery(documentsContext, index, query.Metadata))
             {
-                return await ExecuteSuggestion(query, index, context, existingResultEtag, token);
+                return await ExecuteSuggestion(query, index, queryContext, existingResultEtag, token);
             }
         }
     }

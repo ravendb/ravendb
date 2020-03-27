@@ -7,10 +7,10 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Enumerators;
 using Sparrow;
@@ -27,14 +27,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
         }
 
-        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             var result = new DocumentQueryResult();
 
-            if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
-                documentsContext.OpenReadTransaction();
+            if (queryContext.AreTransactionsOpened() == false)
+                queryContext.OpenReadTransaction();
 
-            FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
+            FillCountOfResultsAndIndexEtag(result, query.Metadata, queryContext);
 
             if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
             {
@@ -48,48 +48,50 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 result.IndexName = indexName;
 
-                ExecuteCollectionQuery(result, query, collection, documentsContext, pulseReadingTransaction: false, token.Token);
+                ExecuteCollectionQuery(result, query, collection, queryContext, pulseReadingTransaction: false, token.Token);
 
                 return Task.FromResult(result);
             }
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
-            documentsContext.OpenReadTransaction();
 
-            FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
-
-            var collection = GetCollectionName(query.Metadata.CollectionName, out var indexName);
-
-            using (QueryRunner.MarkQueryAsRunning(indexName, query, token, true))
+            using (queryContext.OpenReadTransaction())
             {
-                result.IndexName = indexName;
+                FillCountOfResultsAndIndexEtag(result, query.Metadata, queryContext);
 
-                ExecuteCollectionQuery(result, query, collection, documentsContext, pulseReadingTransaction: true, token.Token);
+                var collection = GetCollectionName(query.Metadata.CollectionName, out var indexName);
 
-                result.Flush();
+                using (QueryRunner.MarkQueryAsRunning(indexName, query, token, true))
+                {
+                    result.IndexName = indexName;
 
-                return Task.CompletedTask;
+                    ExecuteCollectionQuery(result, query, collection, queryContext, pulseReadingTransaction: true, token.Token);
+
+                    result.Flush();
+
+                    return Task.CompletedTask;
+                }
             }
         }
 
-        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }
 
-        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response,
             IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }
 
-        public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var runner = new CollectionRunner(Database, context, query);
+            var runner = new CollectionRunner(Database, queryContext.Documents, query);
 
             return runner.ExecuteDelete(query.Metadata.CollectionName, query.Start, query.PageSize, new CollectionOperationOptions
             {
@@ -97,9 +99,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }, onProgress, token);
         }
 
-        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var runner = new CollectionRunner(Database, context, query);
+            var runner = new CollectionRunner(Database, queryContext.Documents, query);
 
             return runner.ExecutePatch(query.Metadata.CollectionName, query.Start, query.PageSize, new CollectionOperationOptions
             {
@@ -107,12 +109,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }, patch, patchArgs, onProgress, token);
         }
 
-        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             throw new NotSupportedException("Collection query is handled directly by documents storage so suggestions aren't supported");
         }
 
-        private void ExecuteCollectionQuery(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, bool pulseReadingTransaction, CancellationToken cancellationToken)
+        private void ExecuteCollectionQuery(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, QueryOperationContext context, bool pulseReadingTransaction, CancellationToken cancellationToken)
         {
             using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
             {
@@ -133,31 +135,31 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 resultToFill.IncludedPaths = query.Metadata.Includes;
 
                 var fieldsToFetch = new FieldsToFetch(query, null);
-                var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context, query.Metadata.Includes, fieldsToFetch.IsProjection);
+                var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
+
                 var totalResults = new Reference<int>();
 
                 IEnumerator<Document> enumerator;
 
                 if (pulseReadingTransaction == false)
                 {
-                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context, includeDocumentsCommand, totalResults);
+                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, totalResults);
 
                     enumerator = documents.GetEnumerator();
                 }
                 else
                 {
-                    enumerator = new PulsedTransactionEnumerator<Document, CollectionQueryResultsIterationState>(context,
+                    enumerator = new PulsedTransactionEnumerator<Document, CollectionQueryResultsIterationState>(context.Documents,
                         state =>
                         {
                             query.Start = state.Start;
                             query.PageSize = state.Take;
 
-                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context,
-                                includeDocumentsCommand, totalResults);
+                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, totalResults);
 
                             return documents;
                         },
-                        new CollectionQueryResultsIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
+                        new CollectionQueryResultsIterationState(context.Documents, Database.Configuration.Databases.PulseReadTransactionLimit)
                         {
                             Start = query.Start,
                             Take = query.PageSize
@@ -166,91 +168,109 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 IncludeCountersCommand includeCountersCommand = null;
                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
+                IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand = null;
                 if (query.Metadata.CounterIncludes != null)
                 {
                     includeCountersCommand = new IncludeCountersCommand(
                         Database,
-                        context,
+                        context.Documents,
                         query.Metadata.CounterIncludes.Counters);
                 }
 
                 if (query.Metadata.TimeSeriesIncludes != null)
                 {
                     includeTimeSeriesCommand = new IncludeTimeSeriesCommand(
-                        context,
+                        context.Documents,
                         query.Metadata.TimeSeriesIncludes.TimeSeries);
                 }
 
-                try
+                if (query.Metadata.HasCmpXchgIncludes)
+                    includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
+
+                using (includeCompareExchangeValuesCommand)
                 {
-                    using (enumerator)
+                    try
                     {
-                        while (enumerator.MoveNext())
+                        using (enumerator)
                         {
-                            var document = enumerator.Current;
+                            while (enumerator.MoveNext())
+                            {
+                                var document = enumerator.Current;
 
-                            cancellationToken.ThrowIfCancellationRequested();
+                                cancellationToken.ThrowIfCancellationRequested();
 
-                            resultToFill.AddResult(document);
+                                resultToFill.AddResult(document);
 
-                            using (gatherScope?.Start())
-                                includeDocumentsCommand.Gather(document);
+                                using (gatherScope?.Start())
+                                {
+                                    includeDocumentsCommand.Gather(document);
+                                    includeCompareExchangeValuesCommand?.Gather(document);
+                                }
 
-                            includeCountersCommand?.Fill(document);
+                                includeCountersCommand?.Fill(document);
 
-                            includeTimeSeriesCommand?.Fill(document);
+                                includeTimeSeriesCommand?.Fill(document);
+                            }
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    if (resultToFill.SupportsExceptionHandling == false)
-                        throw;
-
-                    resultToFill.HandleException(e);
-                }
-
-                using (fillScope?.Start())
-                    includeDocumentsCommand.Fill(resultToFill.Includes);
-
-                if (includeCountersCommand != null)
-                    resultToFill.AddCounterIncludes(includeCountersCommand);
-
-                if (includeTimeSeriesCommand != null)
-                    resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
-
-                resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
-
-                resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
-
-                if (query.Offset != null || query.Limit != null)
-                {
-                    if (resultToFill.TotalResults == -1)
+                    catch (Exception e)
                     {
-                        resultToFill.CappedMaxResults = query.Limit ?? -1;
+                        if (resultToFill.SupportsExceptionHandling == false)
+                            throw;
+
+                        resultToFill.HandleException(e);
                     }
-                    else
+
+                    using (fillScope?.Start())
                     {
-                        resultToFill.CappedMaxResults = Math.Min(
-                            query.Limit ?? int.MaxValue,
-                            resultToFill.TotalResults - (query.Offset ?? 0)
-                        );
+                        includeDocumentsCommand.Fill(resultToFill.Includes);
+
+                        includeCompareExchangeValuesCommand?.Materialize();
+                    }
+
+                    if (includeCompareExchangeValuesCommand != null)
+                        resultToFill.AddCompareExchangeValueIncludes(includeCompareExchangeValuesCommand);
+
+                    if (includeCountersCommand != null)
+                        resultToFill.AddCounterIncludes(includeCountersCommand);
+
+                    if (includeTimeSeriesCommand != null)
+                        resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
+
+                    resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
+
+                    resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
+
+                    if (query.Offset != null || query.Limit != null)
+                    {
+                        if (resultToFill.TotalResults == -1)
+                        {
+                            resultToFill.CappedMaxResults = query.Limit ?? -1;
+                        }
+                        else
+                        {
+                            resultToFill.CappedMaxResults = Math.Min(
+                                query.Limit ?? int.MaxValue,
+                                resultToFill.TotalResults - (query.Offset ?? 0)
+                            );
+                        }
                     }
                 }
             }
         }
 
-        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide<Document> resultToFill, QueryMetadata query, DocumentsOperationContext context)
+        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide<Document> resultToFill, QueryMetadata query, QueryOperationContext context)
         {
             var bufferSize = 3;
             var hasCounters = query.HasCounterSelect || query.CounterIncludes != null;
             var hasTimeSeries = query.HasTimeSeriesSelect || query.TimeSeriesIncludes != null;
+            var hasCmpXchg = query.HasCmpXchg || query.HasCmpXchgSelect || query.HasCmpXchgIncludes;
 
             if (hasCounters)
                 bufferSize++;
             if (hasTimeSeries)
                 bufferSize++;
-            if (query.HasCmpXchgSelect)
+            if (hasCmpXchg)
                 bufferSize++;
 
             var collection = query.CollectionName;
@@ -261,43 +281,37 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (collection == Constants.Documents.Collections.AllDocumentsCollection ||
                 query.HasIncludeOrLoad)
             {
-                var numberOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
-                buffer[0] = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
-                buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(context.Transaction.InnerTransaction);
+                var numberOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context.Documents);
+                buffer[0] = DocumentsStorage.ReadLastDocumentEtag(context.Documents.Transaction.InnerTransaction);
+                buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(context.Documents.Transaction.InnerTransaction);
                 buffer[2] = numberOfDocuments;
 
                 if (hasCounters)
-                    buffer[3] = DocumentsStorage.ReadLastCountersEtag(context.Transaction.InnerTransaction);
+                    buffer[3] = DocumentsStorage.ReadLastCountersEtag(context.Documents.Transaction.InnerTransaction);
 
                 if (hasTimeSeries)
-                    buffer[hasCounters ? 4 : 3] = DocumentsStorage.ReadLastTimeSeriesEtag(context.Transaction.InnerTransaction);
+                    buffer[hasCounters ? 4 : 3] = DocumentsStorage.ReadLastTimeSeriesEtag(context.Documents.Transaction.InnerTransaction);
 
                 resultToFill.TotalResults = (int)numberOfDocuments;
             }
             else
             {
-                var collectionStats = Database.DocumentsStorage.GetCollection(collection, context);
-                buffer[0] = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
-                buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context, collection);
+                var collectionStats = Database.DocumentsStorage.GetCollection(collection, context.Documents);
+                buffer[0] = Database.DocumentsStorage.GetLastDocumentEtag(context.Documents, collection);
+                buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context.Documents, collection);
                 buffer[2] = collectionStats.Count;
 
                 if (hasCounters)
-                    buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context, collection);
+                    buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context.Documents, collection);
 
                 if (hasTimeSeries)
-                    buffer[hasCounters ? 4 : 3] = Database.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(context, collection);
+                    buffer[hasCounters ? 4 : 3] = Database.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(context.Documents, collection);
 
                 resultToFill.TotalResults = (int)collectionStats.Count;
             }
 
-            if (query.HasCmpXchgSelect)
-            {
-                using (context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
-                using (transactionContext.OpenReadTransaction())
-                {
-                    buffer[bufferSize - 1] = Database.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(transactionContext, Database.Name);
-                }
-            }
+            if (hasCmpXchg)
+                buffer[bufferSize - 1] = Database.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(context.Server, Database.Name);
 
             resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * (uint)bufferSize);
             resultToFill.NodeTag = Database.ServerStore.NodeTag;
