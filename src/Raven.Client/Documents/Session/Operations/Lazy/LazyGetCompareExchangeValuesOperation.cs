@@ -88,8 +88,8 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 _clusterSession.RegisterMissingCompareExchangeValue(key);
             }
 
-            Result = _clusterSession.GetCompareExchangeValuesFromSessionInternal<T>(_keys, out var missingKeys);
-            Debug.Assert(missingKeys == null, "missingKeys == null");
+            Result = _clusterSession.GetCompareExchangeValuesFromSessionInternal<T>(_keys, out var notTrackedKeys);
+            Debug.Assert(_clusterSession._session.NoTracking || notTrackedKeys == null, "missingKeys == null");
         }
     }
 }

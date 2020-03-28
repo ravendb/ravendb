@@ -28,9 +28,11 @@ namespace Raven.Client.Documents.Session
 
     public abstract class ClusterTransactionOperationsBase
     {
-        private readonly InMemoryDocumentSessionOperations _session;
+        internal readonly InMemoryDocumentSessionOperations _session;
 
         private readonly Dictionary<string, CompareExchangeSessionValue> _state = new Dictionary<string, CompareExchangeSessionValue>(StringComparer.OrdinalIgnoreCase);
+
+        internal int NumberOfTrackedCompareExchangeValues => _state.Count;
 
         protected ClusterTransactionOperationsBase(InMemoryDocumentSessionOperations session)
         {

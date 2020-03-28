@@ -122,6 +122,14 @@ namespace Raven.Client.Documents.Session
 
         protected override bool HasClusterSession => _clusterTransaction != null;
 
+        protected override void ClearClusterSession()
+        {
+            if (HasClusterSession == false)
+                return;
+
+            GetClusterSession().Clear();
+        }
+
         protected internal override ClusterTransactionOperationsBase GetClusterSession()
         {
             if (_clusterTransaction == null)
