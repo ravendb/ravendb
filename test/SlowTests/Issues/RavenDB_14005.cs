@@ -149,7 +149,7 @@ namespace SlowTests.Issues
                     Assert.Null(addresses["companies/cf"]);
                 }
 
-                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = noTracking }))
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", new Address { City = "Hadera" });
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", new Address { City = "Torun" });

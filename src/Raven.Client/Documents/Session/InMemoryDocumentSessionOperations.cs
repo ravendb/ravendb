@@ -898,15 +898,20 @@ more responsive application.
         {
             if (HasClusterSession == false)
                 return;
+            
+            var clusterSession = GetClusterSession();
+            if (clusterSession.NumberOfTrackedCompareExchangeValues == 0)
+                return;
 
             if (TransactionMode != TransactionMode.ClusterWide)
                 throw new InvalidOperationException($"Performing cluster transaction operations require the '{nameof(TransactionMode)}' to be set to '{nameof(TransactionMode.ClusterWide)}'.");
 
-            var clusterSession = GetClusterSession();
             clusterSession.PrepareCompareExchangeEntities(result);
         }
 
         protected abstract bool HasClusterSession { get; }
+
+        protected abstract void ClearClusterSession();
 
         protected internal abstract ClusterTransactionOperationsBase GetClusterSession();
 
@@ -1263,10 +1268,7 @@ more responsive application.
             _countersByDocId?.Clear();
             DeferredCommands.Clear();
             DeferredCommandsDictionary.Clear();
-
-            if (HasClusterSession)
-                GetClusterSession()?.Clear();
-
+            ClearClusterSession();
             PendingLazyOperations.Clear();
             EntityToBlittable.Clear();
         }

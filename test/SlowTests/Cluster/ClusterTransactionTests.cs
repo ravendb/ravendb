@@ -329,19 +329,20 @@ namespace SlowTests.Cluster
                     await session.StoreAsync(user1, "foo/bar");
                     await session.StoreAsync(new User(), "foo/bar2");
                     await session.SaveChangesAsync();
-                    session.Advanced.Evict(user1);
+                    session.Advanced.Clear();
 
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user2);
                     await session.StoreAsync(user2, "foo/bar");
                     await session.StoreAsync(new User(), "foo/bar3");
                     await session.SaveChangesAsync();
-                    session.Advanced.Evict(user2);
+                    session.Advanced.Clear();
 
                     session.Advanced.SetTransactionMode(TransactionMode.SingleNode);
                     await session.StoreAsync(user3, "foo/bar");
                     await session.SaveChangesAsync();
-                    session.Advanced.Evict(user3);
+                    session.Advanced.Clear();
 
+                    session.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
                     var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
                     Assert.Equal(user2.Name, user.Name);
                     user = await session.LoadAsync<User>("foo/bar");
@@ -862,7 +863,7 @@ namespace SlowTests.Cluster
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Aviv1" }, "users/1-A");
-                    session.TimeSeriesFor("users/1-A", "Heartrate").Append(DateTime.Today, new []{ 55d }, "watches/apple");
+                    session.TimeSeriesFor("users/1-A", "Heartrate").Append(DateTime.Today, new[] { 55d }, "watches/apple");
                     session.SaveChanges();
                 }
 

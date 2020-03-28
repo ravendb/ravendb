@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 _clusterSession.RegisterMissingCompareExchangeValue(_key);
 
             Result = _clusterSession.GetCompareExchangeValueFromSessionInternal<T>(_key, out var notTracked);
-            Debug.Assert(notTracked == false, "notTracked == false");
+            Debug.Assert(_clusterSession._session.NoTracking || notTracked == false, "notTracked == false");
         }
     }
 }
