@@ -1257,7 +1257,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     var result = query.First();
 
-                    Assert.Equal(3, result.Count);
+                    Assert.Equal(4, result.Count);
 
                     var agg = result.Results;
 
@@ -1268,8 +1268,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(59, agg[0].Min[0]);
 
                     Assert.Equal(169, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Average[0]);
-                    Assert.Equal(169, agg[1].Min[0]);
+                    Assert.Equal(164, agg[1].Average[0]);
+                    Assert.Equal(159, agg[1].Min[0]);
 
                 }
             }
