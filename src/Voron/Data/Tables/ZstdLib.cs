@@ -80,12 +80,17 @@ namespace Voron.Data.Tables
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr  ZDICT_trainFromBuffer(byte* dictBuffer, UIntPtr dictBufferCapacity, byte* samplesBuffer, UIntPtr* samplesSizes, uint nbSamples);
         
-        private static void AssertSuccess(UIntPtr v)
+        private static void AssertSuccess(UIntPtr v, CompressionDictionary dictionary)
         {
             if (ZSTD_isError(v) == 0) 
                 return;
 
             string ptrToStringAnsi = Marshal.PtrToStringAnsi(ZSTD_getErrorName(v));
+            if (dictionary != null)
+            {
+                string hash = Convert.ToBase64String(dictionary.Hash.AsSpan());
+                throw new InvalidOperationException(ptrToStringAnsi + " on dictionary " + hash);
+            }
             throw new InvalidOperationException(ptrToStringAnsi);
         }
 
@@ -141,7 +146,7 @@ namespace Voron.Data.Tables
             fixed (byte* dstPtr = dst)
             {
                 var result = ZSTD_compress_usingCDict(_threadCompressContext.Compression, dstPtr, (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length, dictionary.Compression);
-                AssertSuccess(result);
+                AssertSuccess(result, dictionary);
                 return (int)result;
             }
         }
@@ -155,7 +160,7 @@ namespace Voron.Data.Tables
             fixed (byte* dstPtr = dst)
             {
                 var result = ZSTD_decompress_usingDDict(_threadCompressContext.Decompression, dstPtr, (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length, dictionary.Decompression);
-                AssertSuccess(result);
+                AssertSuccess(result, dictionary);
                 return (int)result;
             }
         }
@@ -211,7 +216,7 @@ namespace Voron.Data.Tables
             fixed(UIntPtr* sizesPtr = sizes )
             {
                 var len = ZDICT_trainFromBuffer(outputPtr, (UIntPtr)output.Length, textPtr, sizesPtr, (uint)sizes.Length);
-                AssertSuccess(len);
+                AssertSuccess(len, null);
                 output = output.Slice(0, (int)len);
             }
         }
