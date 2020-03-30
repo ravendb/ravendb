@@ -69,12 +69,15 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
             const model = new timeSeriesQueryResult(cellValue); 
             const [startDate, endDate] = model.getDateRange();
             
+            const resultType = model.detectResultType();
+            
             const dateRange = startDate && endDate 
                 ? generalUtils.formatUtcDateAsLocal(startDate, timeSeriesColumn.dateFormat) + " - " + generalUtils.formatUtcDateAsLocal(endDate, timeSeriesColumn.dateFormat)
                 : "N/A";
                 
             const tsInfo = `<i title="Time Series" class="icon-timeseries margin-right"></i>` 
-                + `<div class="ts-group-property" data-label="Count">${model.getCount().toLocaleString()}</div>`
+                + `<div class="ts-group-property" data-label="Points">${model.getCount().toLocaleString()}</div>`
+                + (resultType === "grouped" ? `<div class="ts-group-property" data-label="Buckets">${model.getBucketCount().toLocaleString()}</div>` : "")
                 + `<div class="ts-group-property" data-label="Date Range">${dateRange}</div>`
             ;
             
