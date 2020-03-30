@@ -295,7 +295,10 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue TimeSeries(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext("timeseries(doc, name)");
+                AssertValidDatabaseContext(_timeSeriesSignature);
+
+                if (args.Length != 2)
+                    throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
                 var originalArgs = new ArrayInstance(ScriptEngine);
                 originalArgs.FastAddProperty("length", 0, true, false, false);
@@ -322,8 +325,8 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("timeseries(doc, name).append");
 
-                const string signature2Args = "append(timestamp, values)";
-                const string signature3Args = "append(timestamp, values, tag)";
+                const string signature2Args = "timeseries(doc, name).append(timestamp, values)";
+                const string signature3Args = "timeseries(doc, name).append(timestamp, values, tag)";
                 
                 string signature;
                 LazyStringValue lsTag = null;
@@ -398,7 +401,7 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("timeseries(doc, name).remove");
 
-                const string signature = "remove(from, to)";
+                const string signature = "timeseries(doc, name).remove(from, to)";
                 const int requiredArgs = 2;
                 
                 if (args.Length != requiredArgs)
@@ -428,7 +431,7 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("timeseries(doc, name).get");
 
-                const string signature = "get(from, to)";
+                const string signature = "timeseries(doc, name).get(from, to)";
                 const int requiredArgs = 2;
                 
                 if (args.Length != requiredArgs)
