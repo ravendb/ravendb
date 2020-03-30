@@ -12,8 +12,8 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +24,6 @@ namespace SlowTests.Client.TimeSeries.Policies
         public TimeSeriesConfigurationTests(ITestOutputHelper output) : base(output)
         {
         }
-
 
         [Fact]
         public async Task CanConfigureTimeSeries()
@@ -723,14 +722,12 @@ namespace SlowTests.Client.TimeSeries.Policies
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
-                
-
 
                 await VerifyFullPolicyExecution(store, config.Collections["Users"]);
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task RapidRetentionAndRollupInACluster()
         {
             var cluster = await CreateRaftCluster(3);
@@ -875,7 +872,7 @@ namespace SlowTests.Client.TimeSeries.Policies
         [Fact]
         public async Task FullRetentionAndRollupInACluster()
         {
-            var cluster = await CreateRaftCluster(3);
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
@@ -903,7 +900,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                             }
                         },
                     },
-                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(5)
                 };
 
                 var now = DateTime.UtcNow;

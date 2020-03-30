@@ -9,6 +9,7 @@ using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Documents.TimeSeries
 {
@@ -135,6 +136,8 @@ namespace Raven.Server.Documents.TimeSeries
                     continue;
 
                 policies.Clear();
+
+                policies.Add((config.Value.RawPolicy, 0));
                 for (int i = 0; i < config.Value.Policies.Count; i++)
                 {
                     var p = config.Value.Policies[i];
@@ -146,7 +149,14 @@ namespace Raven.Server.Documents.TimeSeries
                     List<string> currentPolicies;
                     using (context.OpenReadTransaction())
                     {
-                        currentPolicies = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetAllPolicies(context, collectionName).Select(p => p.ToString()).ToList();
+                        currentPolicies = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetAllPolicies(context, collectionName)
+                            .Select(p =>
+                            {
+                                using (Slice.External(context.Allocator, p, p.Content.Length - 1, out var ex))
+                                {
+                                    return ex.ToString();
+                                }
+                            }).ToList();
                     }
 
                     if (Logger.IsInfoEnabled)
@@ -154,7 +164,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     foreach (var policy in policies)
                     {
-                        if (currentPolicies.Contains(policy.Policy.Name))
+                        if (currentPolicies.Contains(policy.Policy.Name, StringComparer.InvariantCultureIgnoreCase))
                             continue;
 
                         var prev = config.Value.GetPreviousPolicy(policy.Index);
@@ -310,10 +320,13 @@ namespace Raven.Server.Documents.TimeSeries
 
                     if (Logger.IsInfoEnabled)
                     {
-                        Logger.Info($"Found {list.Count} time-series for retention in policy {policy.Name} with collection '{collectionName.Name}' up-to {now}");
+                        Logger.Info($"Found {list.Count} time-series for retention in policy {policy.Name} with collection '{collectionName.Name}' up-to {to}"
 #if DEBUG
-                        Logger.Info($"{string.Join(',', list)}");
+
+                                    + $"{Environment.NewLine}{string.Join(Environment.NewLine, list)}"
 #endif
+
+                                    );
                     }
 
                     var cmd = new TimeSeriesRollups.TimeSeriesRetentionCommand(list, collectionName.Name, to);

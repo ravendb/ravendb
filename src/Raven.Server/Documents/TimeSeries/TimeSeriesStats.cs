@@ -70,7 +70,10 @@ namespace Raven.Server.Documents.TimeSeries
         private Table GetOrCreateTable(Transaction tx, CollectionName collection)
         {
             var tableName = collection.GetTableName(CollectionTableType.TimeSeriesStats); // TODO: cache the collection and pass Slice
-            TimeSeriesStatsSchema.Create(tx, tableName, 16);
+            
+            if (tx.IsWriteTransaction)
+                TimeSeriesStatsSchema.Create(tx, tableName, 16);
+
             return tx.OpenTable(TimeSeriesStatsSchema, tableName);
         }
 
@@ -129,19 +132,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public void UpdateStats(DocumentsOperationContext context, string docId, string name, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline)
-        {
-            using (var slicer = new TimeSeriesSliceHolder(context, docId, name))
-            {
-                UpdateStats(context, slicer, collection, segment, baseline);
-            }
-        }
-
         public void UpdateStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline)
         {
             long previousCount = 0;
             var start = DateTime.MaxValue;
             var end = DateTime.MinValue;
+            
+            var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
 
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
             if (table.ReadByKey(slicer.StatsKey, out var tvr))
@@ -151,48 +148,18 @@ namespace Raven.Server.Documents.TimeSeries
                 end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
             }
 
-            var count = segment.NumberOfLiveEntries;
-            if (count > 0)
+            var liveEntries = segment.NumberOfLiveEntries;
+            if (liveEntries > 0)
             {
-                var last = segment.GetLastTimestamp(baseline);
-                if (last > end)
-                    end = last;
-                
-                var first = segment.YieldAllValues(context, baseline, includeDead: false).First().Timestamp;
-                if (first < start)
-                    start = first;
+                HandleLiveSegment();
             }
 
-            if (count == 0)
+            if (liveEntries == 0) 
             {
-                if (previousCount == 0)
+                if (TryHandleDeadSegment() == false)
                 {
-                    // ts completely dead
                     table.DeleteByKey(slicer.StatsKey);
-                    return;
-                }
-
-                var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
-                var last = segment.YieldAllValues(context, baseline, includeDead: true).Last().Timestamp;
-                if (baseline <= start && last >= start)
-                {
-                    // start was removed, need to find the next start
-                    var first = tss.GetReader(context, slicer.DocId, slicer.Name, last.AddMilliseconds(1), DateTime.MaxValue).AllValues().FirstOrDefault();
-                    if (first == default)
-                    {
-                        // ts completely dead
-                        table.DeleteByKey(slicer.StatsKey);
-                        return;
-                    }
-
-                    start = first.Timestamp;
-                }
-
-                if (baseline <= end && last >= end)
-                {
-                    // end was removed
-                    var lastEntry = tss.GetReader(context, slicer.DocId, slicer.Name, start, baseline.AddMilliseconds(-1)).AllValues().Last(); //TODO: kill this and create a backward reader
-                    end = lastEntry.Timestamp;
+                    return; // this ts was completely deleted
                 }
             }
 
@@ -202,10 +169,70 @@ namespace Raven.Server.Documents.TimeSeries
                 tvb.Add(GetPolicy(slicer));
                 tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
-                tvb.Add(previousCount + count);
+                tvb.Add(previousCount + liveEntries);
 
                 table.Set(tvb);
             }
+
+            void HandleLiveSegment()
+            {
+                var lastTimestamp = GetLastLiveTimestamp(context, segment, baseline);
+
+                if (lastTimestamp > end)
+                {
+                    end = lastTimestamp; // found later end
+                }
+                else
+                {
+                    var reader = tss.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue);
+                    var last = reader.Last();
+                    
+                    var lastValueInCurrentSegment = reader.ReadBaselineAsDateTime() == baseline;
+                    end = lastValueInCurrentSegment ? lastTimestamp : last.Timestamp;
+                }
+
+                var first = segment.YieldAllValues(context, baseline, includeDead: false).First().Timestamp;
+                if (first < start)
+                    start = first; // found earlier start
+
+                if (baseline <= start && first >= start)
+                {
+                    // start was removed
+                    start = first;
+                }
+            }
+
+            bool TryHandleDeadSegment()
+            {
+                if (previousCount == 0)
+                    return false; // if current and previous are zero it means that this time-series was completely deleted
+
+                var last = segment.GetLastTimestamp(baseline);
+                if (baseline <= start && last >= start)
+                {
+                    // start was removed, need to find the next start
+
+                    // this segment isn't relevant, so let's get the next one
+                    var next = tss.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue).NextSegmentBaseline();
+                    var reader = tss.GetReader(context, slicer.DocId, slicer.Name, next, DateTime.MaxValue);
+
+                    var first = reader.First();
+                    if (first == default)
+                        return false;
+
+                    start = first.Timestamp;
+                }
+
+                end = tss.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue).Last().Timestamp;
+                return true;
+            }
+        }
+
+        private static DateTime GetLastLiveTimestamp(DocumentsOperationContext context, TimeSeriesValuesSegment segment, DateTime baseline)
+        {
+            return segment.NumberOfEntries == segment.NumberOfLiveEntries
+                ? segment.GetLastTimestamp(baseline) // all values are alive, so we can get the last value fast
+                : segment.YieldAllValues(context, baseline, includeDead: false).Last().Timestamp;
         }
 
         public (long Count, DateTime Start, DateTime End) GetStats(DocumentsOperationContext context, string docId, string name)
@@ -250,6 +277,9 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<Slice> GetTimeSeriesByPolicyFromStartDate(DocumentsOperationContext context, CollectionName collection, string policy, DateTime start, int take)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
+            if (table == null)
+                yield break;
+
             using (CombinePolicyNameAndTicks(context, policy.ToLowerInvariant(), start.Ticks, out var key,out var policySlice))
             {
                 foreach (var result in table.SeekBackwardFrom(TimeSeriesStatsSchema.Indexes[StartTimeIndex], policySlice, key))
@@ -285,6 +315,8 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<Slice> GetAllPolicies(DocumentsOperationContext context, CollectionName collection)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
+            if (table == null)
+                yield break;
 
             var policies = table.GetTree(TimeSeriesStatsSchema.Indexes[PolicyIndex]);
             using (var it = policies.Iterate(true))
@@ -303,6 +335,12 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
             table.DeleteByKey(key);
+        }
+
+        public void DeleteByPrimaryKeyPrefix(DocumentsOperationContext context, CollectionName collection, Slice key)
+        {
+            var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
+            table.DeleteByPrimaryKeyPrefix(key);
         }
 
         private Slice GetPolicy(TimeSeriesSliceHolder slicer)

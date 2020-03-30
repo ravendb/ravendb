@@ -228,7 +228,6 @@ namespace Raven.Server.Documents.Handlers
                 Entries = values.ToArray(),
                 Hash = ComputeHttpEtags.FinalizeHash(size, state)
             };
-
         }
 
         public static unsafe DateTime ParseDate(string dateStr, string name)
