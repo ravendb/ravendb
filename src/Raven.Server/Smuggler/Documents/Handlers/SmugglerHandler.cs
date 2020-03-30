@@ -474,7 +474,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
                 var migrationConfiguration = JsonDeserializationServer.MigrationConfiguration(blittable);
                 
-                var migratorFullPath = Server.Configuration.Migration.MigratorPath.FullPath ?? migrationConfiguration.MigratorFullPath;
+                var migratorFullPath = Server.Configuration.Migration.MigratorPath?.FullPath ?? migrationConfiguration.MigratorFullPath;
 
                 if (string.IsNullOrWhiteSpace(migratorFullPath))
                     throw new ArgumentException("MigratorFullPath cannot be null or empty");

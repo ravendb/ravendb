@@ -122,7 +122,10 @@ class cosmosDbMigrationModel extends noSqlMigrationModel {
 
 class migrateDatabaseModel {
     selectMigrationOption = ko.observable<migrationOptions>();
+    
     migratorFullPath = ko.observable<string>();
+    migratorPathInConfiguration = ko.observable<boolean>();
+    
     showTransformScript = ko.observable<boolean>(false);
     transformScript = ko.observable<string>();
 
@@ -169,10 +172,6 @@ class migrateDatabaseModel {
     }
     
     private initValidation() {
-        this.migratorFullPath.extend({
-            required: true
-        });
-
         this.selectMigrationOption.extend({
             validation: [
                 {
@@ -256,7 +255,7 @@ class migrateDatabaseModel {
         const type = this.selectMigrationOption().toLowerCase();
         return {
             DatabaseTypeName: type,
-            MigratorFullPath: this.migratorFullPath(),
+            MigratorFullPath: this.migratorPathInConfiguration() ? null : this.migratorFullPath(),
             InputConfiguration: inputConfiguration,
             TransformScript: this.transformScript()
         };
