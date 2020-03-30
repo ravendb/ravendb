@@ -354,7 +354,7 @@ namespace SlowTests.Cluster
                         leader.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
                 }
 
-                using (var requestExecutor = RequestExecutor.Create(follower1.Urls, databaseName, null, follower1.Conventions, null))
+                using (var requestExecutor = RequestExecutor.Create(follower1.Urls, databaseName, null, follower1.Conventions))
                 {
                     do //make sure there are three nodes in the topology
                     {
