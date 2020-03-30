@@ -39,6 +39,15 @@ namespace Raven.Client.Documents.Conventions
                         if (_generateEntityIdOnTheClient.TryGetIdFromInstance(o, out var existing) &&
                             existing != null)
                             return;
+
+                        if (json.TryGetValue(Constants.Documents.Metadata.Projection, out var projection)
+                            && projection.Type == JTokenType.Boolean
+                            && projection.Value<bool>())
+                        {
+                            // we don't need to set the Id field when it's a projection
+                            return;
+                        }
+
                         _generateEntityIdOnTheClient.TrySetIdentity(o, id.Value<string>());
                     }
                 }
