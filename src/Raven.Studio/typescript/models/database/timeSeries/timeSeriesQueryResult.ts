@@ -6,13 +6,17 @@ class timeSeriesQueryResult {
     getCount() {
         return this.dto.Count;
     }
+
+    getBucketCount() {
+        return this.dto.Results.length;
+    }
     
     getDateRange(): [string, string] {
         if (this.dto.Results.length === 0) {
             return [null, null];
         }
         
-        switch (timeSeriesQueryResult.detectResultType(this.dto)) {
+        switch (this.detectResultType()) {
             case "grouped":
                 const groupedResults = this.dto.Results as Array<timeSeriesQueryGroupedItemResultDto>;
                 return [groupedResults[0].From, groupedResults[groupedResults.length - 1].To];
@@ -20,6 +24,10 @@ class timeSeriesQueryResult {
                 const rawResults = this.dto.Results as Array<timeSeriesRawItemResultDto>;
                 return [rawResults[0].Timestamp, rawResults[rawResults.length - 1].Timestamp];
         }
+    }
+    
+    detectResultType(): timeSeriesResultType {
+        return timeSeriesQueryResult.detectResultType(this.dto);
     }
     
     static detectResultType(dto: timeSeriesQueryResultDto): timeSeriesResultType {
