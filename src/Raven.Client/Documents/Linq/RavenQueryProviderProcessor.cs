@@ -3056,6 +3056,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 alias = null;
             }
 
+            if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+            {
+                field =  $"id({_fromAlias})";
+                return;
+            }
+
             field = quote
                 ? $"{_fromAlias}.'{field}'"
                 : $"{_fromAlias}.{field}";
@@ -3067,7 +3073,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
             AddFromAlias(fromAlias);
             foreach (var fieldToFetch in FieldsToFetch)
             {
-                fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
+                if (fieldToFetch.Name == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                {
+                    fieldToFetch.Name = $"id({_fromAlias})";
+                }
+                else
+                {
+                    fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
+                }
             }
 
             _addedDefaultAlias = true;
