@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Esprima;
 using Jint;
 using Jint.Native;
@@ -213,11 +214,15 @@ namespace Raven.Server.Documents.Indexes.Static
             _engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
             _engine.ExecuteWithReset(Code);
 
+            var additionalSourcesString = new StringBuilder();
             if (definition.AdditionalSources != null)
             {
                 foreach (var script in definition.AdditionalSources.Values)
                 {
                     _engine.ExecuteWithReset(script);
+
+                    additionalSourcesString.Append(Environment.NewLine);
+                    additionalSourcesString.AppendLine(script);
                 }
             }
 
@@ -226,7 +231,15 @@ namespace Raven.Server.Documents.Indexes.Static
 
             foreach (var t in maps)
             {
-                mapReferencedCollections.Add(ExecuteCodeAndCollectReferencedCollections(t));
+                var map = t;
+
+                if (additionalSourcesString.Length > 0)
+                {
+                    // each map sent to the ReferencedCollectionVisitor as separate program, so it have to include the additional sources
+                    map += additionalSourcesString;
+                }
+
+                mapReferencedCollections.Add(ExecuteCodeAndCollectReferencedCollections(map));
             }
 
             if (definition.Reduce != null)
