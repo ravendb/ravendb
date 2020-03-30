@@ -105,20 +105,36 @@ namespace Raven.Client.Documents.Identity
         /// <param name="id">The id.</param>
         protected internal void TrySetIdentity(object entity, string id)
         {
+            TrySetIdentityInternal(entity, id, isProjection: false);
+        }
+
+        internal void TrySetIdentity(object entity, string id, bool isProjection)
+        {
+            TrySetIdentityInternal(entity, id, isProjection);
+        }
+
+        private void TrySetIdentityInternal(object entity, string id, bool isProjection)
+        {
             var entityType = entity.GetType();
             var identityProperty = _conventions.GetIdentityProperty(entityType);
             if (identityProperty == null)
             {
                 if (_conventions.AddIdFieldToDynamicObjects && entity is IDynamicMetaObjectProvider)
                 {
-
                     TrySetIdOnDynamic(entity, id);
                 }
+
                 return;
             }
 
             if (identityProperty.CanWrite())
             {
+                if (isProjection && identityProperty.GetValue(entity) != null)
+                {
+                    // identity property was already set
+                    return;
+                }
+
                 SetPropertyOrField(identityProperty, entity, val => identityProperty.SetValue(entity, val), id);
             }
             else
@@ -129,6 +145,12 @@ namespace Raven.Client.Documents.Identity
 
                 if (fieldInfo == null)
                     return;
+
+                if (isProjection && fieldInfo.GetValue(entity) != null)
+                {
+                    // identity property was already set
+                    return;
+                }
 
                 SetPropertyOrField(identityProperty, entity, val => fieldInfo.SetValue(entity, val), id);
             }
