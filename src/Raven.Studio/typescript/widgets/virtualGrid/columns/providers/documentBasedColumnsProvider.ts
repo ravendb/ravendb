@@ -219,7 +219,7 @@ class documentBasedColumnsProvider {
             return [];
         }
         
-        const timeSeriesFields = results.additionalResultInfo.TimeSeriesFields;
+        const timeSeriesFields = results.additionalResultInfo ? results.additionalResultInfo.TimeSeriesFields : undefined;
         if (timeSeriesFields != null) {
             if (timeSeriesFields.length === 0) {
                 // special case timeSeriesFields is empty array, it means result contains time series data at root level (w/o alias)
