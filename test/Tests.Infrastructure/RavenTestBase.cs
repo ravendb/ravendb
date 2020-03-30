@@ -311,7 +311,7 @@ namespace FastTests
 
                             if (Servers.Contains(serverToUse) && result != null)
                             {
-                                var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 5 : 1);
+                                var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 150 : 15);
                                 AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
                             }
                         }

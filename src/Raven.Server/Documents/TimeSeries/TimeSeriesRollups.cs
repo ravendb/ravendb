@@ -207,13 +207,12 @@ namespace Raven.Server.Documents.TimeSeries
                     request.Name = name;
                     request.DocumentId = docId;
 
-                    if (context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(context, request) != null)
-                    {
-                        if (logger.IsInfoEnabled)
-                            logger.Info($"{request} was executed");
-
+                    var done = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(context, request) != null;
+                    if (done)
                         retained++;
-                    }
+
+                    if (logger.IsInfoEnabled)
+                        logger.Info($"{request} was executed (successfully: {done})");
                 }
 
                 return retained;

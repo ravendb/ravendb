@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.TimeSeries
         public readonly string Name;
         public readonly string Collection;
 
-        private readonly Dictionary<LazyStringValue, Slice> CachedTags = new Dictionary<LazyStringValue, Slice>();
+        private Dictionary<LazyStringValue, Slice> _cachedTags;
         private readonly List<ByteStringContext.InternalScope> _internalScopesToDispose = new List<ByteStringContext.InternalScope>();
         private readonly List<ByteStringContext.ExternalScope> _externalScopesToDispose = new List<ByteStringContext.ExternalScope>();
 
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (TimeSeriesKeySlice.Content.HasValue == false)
                 _externalScopesToDispose.Add(Slice.External(_context.Allocator, TimeSeriesKeyBuffer.Ptr, TimeSeriesKeyBuffer.Length, out TimeSeriesKeySlice));
 
-            *(long*)(TimeSeriesKeyBuffer.Ptr + TimeSeriesKeySlice.Size) = Bits.SwapBytes(etag);
+            *(long*)(TimeSeriesKeyBuffer.Ptr + TimeSeriesKeyBuffer.Length - sizeof(long)) = Bits.SwapBytes(etag);
             return this;
         }
 
@@ -99,13 +99,16 @@ namespace Raven.Server.Documents.TimeSeries
                 return Slices.Empty.AsSpan();
             }
 
-            if (CachedTags.TryGetValue(tag, out var tagSlice))
+            if (_cachedTags == null)
+                _cachedTags = new Dictionary<LazyStringValue, Slice>();
+
+            if (_cachedTags.TryGetValue(tag, out var tagSlice))
             {
                 return tagSlice.AsSpan();
             }
 
             _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(_context, tag, out tagSlice));
-            CachedTags[tag] = tagSlice;
+            _cachedTags[tag] = tagSlice;
 
             if (tagSlice.Size > byte.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(tag),
@@ -116,7 +119,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public void Dispose()
         {
-            CachedTags.Clear();
+            _cachedTags?.Clear();
 
             foreach (var internalScope in _internalScopesToDispose)
             {

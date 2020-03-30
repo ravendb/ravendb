@@ -423,7 +423,6 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(JsonOperationContext context, ByteStringContext allocator, DateTime baseline, bool includeDead = true)
         {
-            var result = new TimeSeriesStorage.Reader.SingleResult();
             var values = new double[NumberOfValues];
             var states = new TimestampState[NumberOfValues];
 
@@ -443,12 +442,14 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         end--;
                     }
-                    result.Timestamp = cur;
-                    result.Tag = tag;
-                    result.Values = new Memory<double>(values, 0, end);
-                    result.Status = status;
 
-                    yield return result;
+                    yield return new TimeSeriesStorage.Reader.SingleResult
+                    {
+                        Timestamp = cur, 
+                        Tag = tag, 
+                        Values = new Memory<double>(values, 0, end), 
+                        Status = status
+                    };
                 }
             }
         }
