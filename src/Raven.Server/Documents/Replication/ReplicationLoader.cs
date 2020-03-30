@@ -1131,7 +1131,7 @@ namespace Raven.Server.Documents.Replication
         private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplication exNode, X509Certificate2 certificate, string database)
         {
             using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate,
-                DocumentConventions.Default, null))
+                DocumentConventions.Default))
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var cmd = new GetTcpInfoCommand(ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());

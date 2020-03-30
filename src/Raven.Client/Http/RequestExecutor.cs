@@ -38,6 +38,9 @@ namespace Raven.Client.Http
 {
     public class RequestExecutor : IDisposable
     {
+        private static Guid GlobalApplicationIdentifier = Guid.NewGuid();
+
+
         private const int InitialTopologyEtag = -2;
 
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
@@ -341,13 +344,8 @@ namespace Raven.Client.Http
 
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            return Create(initialUrls, databaseName, certificate, conventions, applicationIdentifier: null);
-        }
-
-        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, Guid? applicationIdentifier)
-        {
             var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, applicationIdentifier);
+            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, GlobalApplicationIdentifier);
             return executor;
         }
 
@@ -677,11 +675,6 @@ namespace Raven.Client.Http
                         Logger.Info("Couldn't Update Topology from _updateTopologyTimer task", e);
                 }
             }));
-        }
-
-        protected Task FirstTopologyUpdate(string[] initialUrls)
-        {
-            return FirstTopologyUpdate(initialUrls, applicationIdentifier: null);
         }
 
         protected async Task FirstTopologyUpdate(string[] initialUrls, Guid? applicationIdentifier)
