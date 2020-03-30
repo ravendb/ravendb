@@ -210,8 +210,8 @@ namespace Raven.Server.Web.Studio
                     break;
                 case BlittableJsonToken.CompressedString:
                     var lazyCompressedString = (LazyCompressedStringValue)val;
-                    writer.WriteString(lazyCompressedString?.Substring(0,
-                        Math.Min(lazyCompressedString.UncompressedSize, StringLengthLimit)));
+                    string actualString = lazyCompressedString.ToString();
+                    writer.WriteString(actualString.Substring(0, Math.Min(actualString.Length, StringLengthLimit)));
                     break;
 
                 default:
