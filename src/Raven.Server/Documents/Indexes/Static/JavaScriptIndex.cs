@@ -197,12 +197,15 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static readonly ParserOptions DefaultParserOptions = new ParserOptions();
 
-        private HashSet<CollectionName> ExecuteCodeAndCollectReferencedCollections(string code)
+        private HashSet<CollectionName> ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
             var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
             var program = javascriptParser.ParseProgram();
             _engine.ExecuteWithReset(program);
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
+            if (string.IsNullOrEmpty(additionalSources) == false)
+                loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseProgram());
+
             loadVisitor.Visit(program);
             return loadVisitor.ReferencedCollection;
         }
@@ -214,32 +217,24 @@ namespace Raven.Server.Documents.Indexes.Static
             _engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
             _engine.ExecuteWithReset(Code);
 
-            var additionalSourcesString = new StringBuilder();
+            var sb = new StringBuilder();
             if (definition.AdditionalSources != null)
             {
                 foreach (var script in definition.AdditionalSources.Values)
                 {
                     _engine.ExecuteWithReset(script);
 
-                    additionalSourcesString.Append(Environment.NewLine);
-                    additionalSourcesString.AppendLine(script);
+                    sb.Append(Environment.NewLine);
+                    sb.AppendLine(script);
                 }
             }
 
             var maps = definition.Maps.ToList();
             var mapReferencedCollections = new List<HashSet<CollectionName>>();
-
+            var additionalSources = sb.ToString();
             foreach (var t in maps)
             {
-                var map = t;
-
-                if (additionalSourcesString.Length > 0)
-                {
-                    // each map sent to the ReferencedCollectionVisitor as separate program, so it have to include the additional sources
-                    map += additionalSourcesString;
-                }
-
-                mapReferencedCollections.Add(ExecuteCodeAndCollectReferencedCollections(map));
+                mapReferencedCollections.Add(ExecuteCodeAndCollectReferencedCollections(t, additionalSources));
             }
 
             if (definition.Reduce != null)
