@@ -83,7 +83,8 @@ class queryUtil {
     }
     
     static getCollectionOrIndexName(query: string): [string, "index" | "collection" | "unknown"] {
-        const words = queryUtil.tokenizeQuery(query);
+        const queryWoDeclare = queryUtil.trimDeclareSections(query);
+        const words = queryUtil.tokenizeQuery(queryWoDeclare);
 
         for (let i = 0; i < words.length; i++) {
             if (words[i] === "from") {
@@ -96,6 +97,53 @@ class queryUtil {
         }
         
         return [undefined, "unknown"];
+    }
+    
+    private static trimDeclareSections(query: string): string {
+        if (!query.toLocaleLowerCase().includes("declare")) {
+            return query;
+        }
+        
+        const rangesToDelete: Array<[number, number]> = [];
+        
+        const queryLowered = query.toLocaleLowerCase();
+        
+        let index = 0;
+        
+        do {
+            const declareIndex = queryLowered.indexOf("declare ", index);
+            if (declareIndex === -1) {
+                break;
+            }
+            
+            const openBracketPosition = queryLowered.indexOf("{", declareIndex + 1);
+            if (openBracketPosition === -1) {
+                break;
+            }
+            
+            let openBracketsCounter = 1;
+            
+            for (index = openBracketPosition + 1; index < query.length; index++) {
+                const char = query.charAt(index);
+                if (char === '{') {
+                    openBracketsCounter++;
+                } else if (char === "}") {
+                    openBracketsCounter--;
+                    if (openBracketsCounter === 0) {
+                        rangesToDelete.push([declareIndex, index]);
+                        break;
+                    }
+                }
+            }
+        } while (true);
+
+        const rangesReversed = rangesToDelete.reverse();
+        for (let i = 0; i < rangesReversed.length; i++) {
+            const range = rangesReversed[i];
+            query = query.substring(0, range[0]) + query.substring(range[1] + 1);
+        }
+        
+        return query;
     }
 
     static isDynamicQuery(query: string): boolean {
