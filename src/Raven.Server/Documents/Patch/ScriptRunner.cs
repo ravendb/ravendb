@@ -300,23 +300,23 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2)
                     throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
-                var originalArgs = new ArrayInstance(ScriptEngine);
-                originalArgs.FastAddProperty("length", 0, true, false, false);
-                ScriptEngine.Array.PrototypeObject.Push(originalArgs, args);
+           
 
                 var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) => 
-                    AppendTimeSeries(originalArgs[0], originalArgs[1], values));
+                    AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
                 var remove = new ClrFunctionInstance(ScriptEngine, "remove", (thisObj, values) =>
-                    DeleteRangeTimeSeries(originalArgs[0], originalArgs[1], values));
+                    DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
                 var get = new ClrFunctionInstance(ScriptEngine, "get", (thisObj, values) =>
-                    GetRangeTimeSeries(originalArgs[0], originalArgs[1], values));
+                    GetRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
                 var obj = new ObjectInstance(ScriptEngine);
                 obj.Set("append", append);
                 obj.Set("remove", remove);
                 obj.Set("get", get);
+                obj.Set("doc", args[0]);
+                obj.Set("name", args[1]);
 
                 return obj;
             }
