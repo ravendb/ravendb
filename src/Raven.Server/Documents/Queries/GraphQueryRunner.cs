@@ -137,6 +137,7 @@ namespace Raven.Server.Documents.Queries
 
                     //TODO: handle order by, load,  clauses
                     IncludeDocumentsCommand idc = null;
+                    IncludeCompareExchangeValuesCommand icevc = null;
                     if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                     {
                         HandleResultsWithoutSelect(queryContext.Documents, qr.Matches, final);
@@ -146,6 +147,7 @@ namespace Raven.Server.Documents.Queries
                         //TODO : investigate fields to fetch
                         var fieldsToFetch = new FieldsToFetch(query, null);
                         idc = new IncludeDocumentsCommand(Database.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
+                        icevc = IncludeCompareExchangeValuesCommand.ExternalScope(queryContext, query.Metadata.CompareExchangeValueIncludes);
 
                         var resultRetriever = new GraphQueryResultRetriever(
                             q.GraphQuery,
@@ -155,7 +157,8 @@ namespace Raven.Server.Documents.Queries
                             Database.DocumentsStorage,
                             queryContext.Documents,
                             fieldsToFetch,
-                            idc);
+                            idc,
+                            icevc);
 
                         HashSet<ulong> alreadySeenProjections = null;
                         if (q.IsDistinct)

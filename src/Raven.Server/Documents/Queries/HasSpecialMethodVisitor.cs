@@ -14,8 +14,11 @@ namespace Raven.Server.Documents.Queries
 
         public override void VisitCallExpression(CallExpression callExpression)
         {
-            if (_queryMetadata.HasIncludeOrLoad && _queryMetadata.HasCounterSelect && 
-                _queryMetadata.HasCmpXchgSelect && _queryMetadata.HasTimeSeriesSelect)
+            if (_queryMetadata.HasIncludeOrLoad &&
+                _queryMetadata.HasCounterSelect &&
+                _queryMetadata.HasCmpXchgSelect &&
+                _queryMetadata.HasTimeSeriesSelect &&
+                _queryMetadata.HasCmpXchgIncludes)
                 return;
 
             if (callExpression.Callee is Identifier id)
@@ -37,6 +40,26 @@ namespace Raven.Server.Documents.Queries
                     case "timeseries":
                         _queryMetadata.HasTimeSeriesSelect = true;
                         break;
+                }
+            }
+
+            if (callExpression.Callee is StaticMemberExpression @static)
+            {
+                var staticId = @static.Object as Identifier;
+                var staticCallId = @static.Property as Identifier;
+                if (staticId != null && staticCallId != null)
+                {
+                    switch (staticId.Name)
+                    {
+                        case "includes":
+                            switch (staticCallId.Name)
+                            {
+                                case "cmpxchg":
+                                    _queryMetadata.HasCmpXchgIncludes = true;
+                                    break;
+                            }
+                            break;
+                    }
                 }
             }
 

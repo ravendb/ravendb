@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Patch
         internal readonly Dictionary<string, DeclaredFunction> TimeSeriesDeclaration = new Dictionary<string, DeclaredFunction>();
 
         public long Runs;
-        DateTime _lastRun;
+        private DateTime _lastRun;
 
         public string ScriptType { get; internal set; }
 
@@ -128,6 +128,7 @@ namespace Raven.Server.Documents.Patch
             public List<string> DebugOutput;
             public bool PutOrDeleteCalled;
             public HashSet<string> Includes;
+            public HashSet<string> CompareExchangeValueIncludes;
             private HashSet<string> _documentIds;
 
             public bool ReadOnly
@@ -161,7 +162,6 @@ namespace Raven.Server.Documents.Patch
                         .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter())
                         .LocalTimeZone(TimeZoneInfo.Utc);
-
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
@@ -175,7 +175,6 @@ namespace Raven.Server.Documents.Patch
                 consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, "log", OutputDebug), false, false, false);
                 ScriptEngine.SetValue("console", consoleObject);
 
-
                 //spatial.distance
                 ObjectInstance spatialObject = new ObjectInstance(ScriptEngine);
                 var spatialFunc = new ClrFunctionInstance(ScriptEngine, "distance", Spatial_Distance);
@@ -183,7 +182,16 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("spatial", spatialObject);
                 ScriptEngine.SetValue("spatial.distance", spatialFunc);
 
-                ScriptEngine.SetValue("include", new ClrFunctionInstance(ScriptEngine, "include", IncludeDoc));
+                // includes
+                var includeDocumentFunc = new ClrFunctionInstance(ScriptEngine, "include", IncludeDoc);
+                ObjectInstance includesObject = new ObjectInstance(ScriptEngine);
+                includesObject.FastAddProperty("document", includeDocumentFunc, false, false, false);
+                includesObject.FastAddProperty("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false);
+                ScriptEngine.SetValue("includes", includesObject);
+
+                // includes - backward compatibility
+                ScriptEngine.SetValue("include", includeDocumentFunc);
+
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
                 ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
                 ScriptEngine.SetValue("loadPath", new ClrFunctionInstance(ScriptEngine, "loadPath", LoadDocumentByPath));
@@ -218,7 +226,6 @@ namespace Raven.Server.Documents.Patch
                 //TimeSeries
                 ScriptEngine.SetValue("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", TimeSeries));
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
-
 
                 foreach (var script in scriptsSource)
                 {
@@ -257,7 +264,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
-            
+
             private string GetIdFromArg(JsValue docArg, string signature)
             {
                 if (docArg.IsObject() && docArg.AsObject() is BlittableObjectInstance doc)
@@ -271,14 +278,14 @@ namespace Raven.Server.Documents.Patch
 
                 throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(docArg)}");
             }
-            
+
             private static string GetStringArg(JsValue jsArg, string signature, string argName)
             {
                 if (jsArg.IsString() == false)
                     throw new ArgumentException($"{signature}: The '{argName}' argument should be a string, but got {GetTypes(jsArg)}");
                 return jsArg.AsString();
             }
-            
+
             private void FillDoubleArrayFromJsArray(double[] array, ArrayInstance jsArray, string signature)
             {
                 var i = 0;
@@ -300,9 +307,7 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2)
                     throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
-           
-
-                var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) => 
+                var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) =>
                     AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
                 var remove = new ClrFunctionInstance(ScriptEngine, "remove", (thisObj, values) =>
@@ -327,14 +332,16 @@ namespace Raven.Server.Documents.Patch
 
                 const string signature2Args = "timeseries(doc, name).append(timestamp, values)";
                 const string signature3Args = "timeseries(doc, name).append(timestamp, values, tag)";
-                
+
                 string signature;
                 LazyStringValue lsTag = null;
                 switch (args.Length)
                 {
-                    case 2: signature = signature2Args;
+                    case 2:
+                        signature = signature2Args;
                         break;
-                    case 3: signature = signature3Args;
+                    case 3:
+                        signature = signature3Args;
                         var tagArgument = args.Last();
                         if (tagArgument != null && tagArgument.IsNull() == false && tagArgument.IsUndefined() == false)
                         {
@@ -342,9 +349,10 @@ namespace Raven.Server.Documents.Patch
                             lsTag = _jsonCtx.GetLazyString(tag);
                         }
                         break;
-                    default: throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} or {signature3Args}");
+                    default:
+                        throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} or {signature3Args}");
                 }
-                
+
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
                 string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
@@ -386,14 +394,14 @@ namespace Raven.Server.Documents.Patch
                         id,
                         CollectionName.GetCollectionName(doc),
                         timeseries,
-                        new[] { toAppend});
+                        new[] { toAppend });
                 }
-                finally                
+                finally
                 {
-                    if(valuesBuffer != null)
+                    if (valuesBuffer != null)
                         ArrayPool<double>.Shared.Return(valuesBuffer);
                 }
-                
+
                 return Undefined.Instance;
             }
 
@@ -403,10 +411,10 @@ namespace Raven.Server.Documents.Patch
 
                 const string signature = "timeseries(doc, name).remove(from, to)";
                 const int requiredArgs = 2;
-                
+
                 if (args.Length != requiredArgs)
                     throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
-                
+
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
                 string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
@@ -423,20 +431,20 @@ namespace Raven.Server.Documents.Patch
                     To = to,
                 };
                 _database.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(_docsCtx, deletionRangeRequest);
-                
+
                 return JsValue.Undefined;
             }
-            
+
             private JsValue GetRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
                 AssertValidDatabaseContext("timeseries(doc, name).get");
 
                 const string signature = "timeseries(doc, name).get(from, to)";
                 const int requiredArgs = 2;
-                
+
                 if (args.Length != requiredArgs)
                     throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
-                
+
                 var id = GetIdFromArg(document, _timeSeriesSignature);
 
                 string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
@@ -458,17 +466,18 @@ namespace Raven.Server.Documents.Patch
                     var jsValues = new ArrayInstance(ScriptEngine);
                     jsValues.FastAddProperty("length", 0, true, false, false);
                     ScriptEngine.Array.PrototypeObject.Push(jsValues, v);
-                    
+
                     var entry = new ObjectInstance(ScriptEngine);
                     entry.Set(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat());
                     entry.Set(nameof(TimeSeriesEntry.Tag), singleResult.Tag?.ToString());
                     entry.Set(nameof(TimeSeriesEntry.Values), jsValues);
-                    
+
                     entries.Add(entry);
                 }
-                return ScriptEngine.Array.Construct(entries.ToArray());;
+                return ScriptEngine.Array.Construct(entries.ToArray());
+                ;
             }
-            
+
             private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName]string caller = null)
             {
                 void Swap()
@@ -478,7 +487,7 @@ namespace Raven.Server.Documents.Patch
                     args[0] = tmp;
                 }
 
-                // this is basically the same as Math.min / Math.max, but 
+                // this is basically the same as Math.min / Math.max, but
                 // can also be applied to strings, numbers and nulls
 
                 if (args.Length != 2)
@@ -509,7 +518,7 @@ namespace Raven.Server.Documents.Patch
                                 break;
                             case Jint.Runtime.Types.Boolean:
                             case Jint.Runtime.Types.Number:
-                                // if the string value is a number that is smaller than 
+                                // if the string value is a number that is smaller than
                                 // the numeric value, because Math.min(true, "-2") works :-(
                                 if (double.TryParse(args[0].AsString(), out double d) == false ||
                                     d > Jint.Runtime.TypeConverter.ToNumber(args[1]))
@@ -568,6 +577,39 @@ namespace Raven.Server.Documents.Patch
                 if (Includes == null)
                     Includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 Includes.Add(id);
+
+                return self;
+            }
+
+            private JsValue IncludeCompareExchangeValue(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 1)
+                    throw new InvalidOperationException("includes.cmpxchg(key) must be called with a single argument");
+
+                if (args[0].IsNull() || args[0].IsUndefined())
+                    return self;
+
+                if (args[0].IsArray())// recursive call ourselves
+                {
+                    var array = args[0].AsArray();
+                    foreach (var pair in array.GetOwnProperties())
+                    {
+                        args[0] = pair.Value.Value;
+                        if (args[0].IsString())
+                            IncludeCompareExchangeValue(self, args);
+                    }
+                    return self;
+                }
+
+                if (args[0].IsString() == false)
+                    throw new InvalidOperationException("includes.cmpxchg(key) must be called with an string or string array argument");
+
+                var key = args[0].AsString();
+
+                if (CompareExchangeValueIncludes == null)
+                    CompareExchangeValueIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                CompareExchangeValueIncludes.Add(key);
 
                 return self;
             }
@@ -831,7 +873,6 @@ namespace Raven.Server.Documents.Patch
                         return JsValue.Null;
 
                     return LoadDocumentInternal(_documentIds.First());
-
                 }
 
                 throw new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead");
@@ -1029,7 +1070,6 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, result);
-
             }
 
             private object[] GetTimeSeriesFunctionArgs(string name, JsValue[] args, out string docId, out List<IDisposable> lazyIds)
@@ -1257,7 +1297,6 @@ namespace Raven.Server.Documents.Patch
                         return date1 != date2;
                     default:
                         throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
-
                 }
             }
 
@@ -1273,12 +1312,12 @@ namespace Raven.Server.Documents.Patch
                 fixed (char* pValue = s)
                 {
                     var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
-                    if(result != LazyStringParser.Result.DateTime)
+                    if (result != LazyStringParser.Result.DateTime)
                         ThrowInvalidDateArgument();
-    
+
                     return dt;
                 }
-                
+
                 void ThrowInvalidDateArgument() =>
                     throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
             }
@@ -1317,7 +1356,6 @@ namespace Raven.Server.Documents.Patch
                     return format != null ?
                         date.ToString(format, cultureInfo) :
                         date.ToString(cultureInfo);
-
                 }
 
                 if (args[0].IsNumber())
@@ -1386,14 +1424,12 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2)
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
-
                 JsValue firstParam = args[0];
                 if (firstParam.IsObject() && args[0].AsObject() is BlittableObjectInstance selfInstance)
                 {
                     JsValue secondParam = args[1];
                     if (secondParam.IsObject() && secondParam.AsObject() is ArrowFunctionInstance lambda)
                     {
-
                         var functionAst = lambda.FunctionDeclaration;
                         var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
 
@@ -1563,6 +1599,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 Includes?.Clear();
+                CompareExchangeValueIncludes?.Clear();
                 UpdatedDocumentCounterIds?.Clear();
                 PutOrDeleteCalled = false;
                 OriginalDocumentId = null;
@@ -1632,6 +1669,7 @@ namespace Raven.Server.Documents.Patch
                 _run.DebugActions?.Clear();
 
                 _run.Includes?.Clear();
+                _run.CompareExchangeValueIncludes?.Clear();
 
                 _run.OriginalDocumentId = null;
                 _run.RefreshOriginalDocument = false;

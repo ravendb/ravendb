@@ -19,24 +19,40 @@ namespace Raven.Server.Documents.Includes
 
         private IDisposable _releaseContext;
         private TransactionOperationContext _serverContext;
-
+        private readonly bool _throwWhenServerContextIsAllocated;
         public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> Results;
 
-        private IncludeCompareExchangeValuesCommand(DocumentDatabase database, TransactionOperationContext serverContext, string[] compareExchangeValues)
+        private IncludeCompareExchangeValuesCommand(DocumentDatabase database, TransactionOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
         {
             _database = database ?? throw new ArgumentNullException(nameof(database));
             _serverContext = serverContext;
+            _throwWhenServerContextIsAllocated = throwWhenServerContextIsAllocated;
             _includes = compareExchangeValues;
         }
 
         public static IncludeCompareExchangeValuesCommand ExternalScope(QueryOperationContext context, string[] compareExchangeValues)
         {
-            return new IncludeCompareExchangeValuesCommand(context.Documents.DocumentDatabase, context.Server, compareExchangeValues);
+            return new IncludeCompareExchangeValuesCommand(context.Documents.DocumentDatabase, context.Server, throwWhenServerContextIsAllocated: true, compareExchangeValues);
         }
 
         public static IncludeCompareExchangeValuesCommand InternalScope(DocumentDatabase database, string[] compareExchangeValues)
         {
-            return new IncludeCompareExchangeValuesCommand(database, serverContext: null, compareExchangeValues);
+            return new IncludeCompareExchangeValuesCommand(database, serverContext: null, throwWhenServerContextIsAllocated: false, compareExchangeValues);
+        }
+
+        internal void AddRange(HashSet<string> keys)
+        {
+            if (keys == null)
+                return;
+
+            if (_includedKeys == null)
+            {
+                _includedKeys = new HashSet<string>(keys, StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var key in keys)
+                _includedKeys.Add(key);
         }
 
         internal void Gather(Document document)
@@ -61,6 +77,9 @@ namespace Raven.Server.Documents.Includes
 
             if (_serverContext == null)
             {
+                if (_throwWhenServerContextIsAllocated)
+                    throw new InvalidOperationException("Cannot allocate new server context during materialization of compare exchange includes.");
+
                 _releaseContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
                 _serverContext.OpenReadTransaction();
             }
