@@ -74,12 +74,15 @@ namespace Raven.Server.Documents.Queries
 
         public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
         {
-            throw new NotImplementedException();
+            if (command.Results == null)
+                return;
+
+            throw new NotSupportedException();
         }
 
         public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public override void HandleException(Exception e)
