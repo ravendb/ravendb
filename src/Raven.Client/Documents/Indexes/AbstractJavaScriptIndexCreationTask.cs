@@ -36,10 +36,31 @@ namespace Raven.Client.Documents.Indexes
         /// <inheritdoc />
         public override bool IsMapReduce => Reduce != null;
 
+        /// <summary>
+        /// If not null than each reduce result will be created as a document in the specified collection name.
+        /// </summary>
         protected string OutputReduceToCollection
         {
             get => _definition.OutputReduceToCollection;
             set => _definition.OutputReduceToCollection = value;
+        }
+
+        /// <summary>
+        /// Defines a collection name for reference documents created based on provided pattern
+        /// </summary>
+        protected string PatternReferencesCollectionName
+        {
+            get => _definition.PatternReferencesCollectionName;
+            set => _definition.PatternReferencesCollectionName = value;
+        }
+
+        /// <summary>
+        /// Defines a collection name for reference documents created based on provided pattern
+        /// </summary>
+        protected string PatternForOutputReduceToCollectionReferences
+        {
+            get => _definition.PatternForOutputReduceToCollectionReferences;
+            set => _definition.PatternForOutputReduceToCollectionReferences = value;
         }
 
         /// <inheritdoc />

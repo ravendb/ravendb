@@ -3,6 +3,25 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 import document = require("models/database/documents/document");
 
+class stubsObjectsContainer {
+    private static stubsObjects = {} as dictionary<{}>;
+  
+    static getStubObject(propertiesCount: number) {
+        if (propertiesCount in stubsObjectsContainer.stubsObjects) {
+            return stubsObjectsContainer.stubsObjects[propertiesCount];
+        } else {
+            const stubObject: Record<string, number> = {};
+
+            for (let i = 0; i < propertiesCount; i++) {
+                stubObject["$$fake$$" + i] = null;
+            }
+
+            stubsObjectsContainer.stubsObjects[propertiesCount] = stubObject;
+            return stubObject;
+        } 
+    }
+}
+
 class getDocumentsPreviewCommand extends commandBase {
 
     static readonly ObjectStubsKey = "$o";
@@ -23,9 +42,7 @@ class getDocumentsPreviewCommand extends commandBase {
         };
 
         const resultsSelector = (dto: resultsWithCountAndAvailableColumns<documentDto>, xhr: JQueryXHR) => {
-
             dto.AvailableColumns.push("__metadata");
-
             return {
                 items: dto.Results.map(x => this.mapToDocument(x)),
                 totalResultCount: dto.TotalResults,
@@ -33,6 +50,7 @@ class getDocumentsPreviewCommand extends commandBase {
                 availableColumns: dto.AvailableColumns
             } as pagedResultWithAvailableColumns<document>;
         };
+        
         const url = endpoints.databases.studioCollections.studioCollectionsPreview + this.urlEncodeArgs(args);
         return this.query(url, null, this.database, resultsSelector);
     }
@@ -42,14 +60,16 @@ class getDocumentsPreviewCommand extends commandBase {
 
         const metadata = doc.__metadata as any;
 
-        const objectStubs = metadata[getDocumentsPreviewCommand.ObjectStubsKey] as string[];
+        const objectStubs = metadata[getDocumentsPreviewCommand.ObjectStubsKey] as System.Collections.Generic.Dictionary<string, number>;
         if (objectStubs) {
-            objectStubs.forEach(stub => (doc as any)[stub] = {});
+            Object.keys(objectStubs).forEach(stubKey => (doc as any)[stubKey] =
+                stubsObjectsContainer.getStubObject(objectStubs[stubKey]));
         }
 
-        const arrayStubs = metadata[getDocumentsPreviewCommand.ArrayStubsKey] as string[];
+        const arrayStubs = metadata[getDocumentsPreviewCommand.ArrayStubsKey] as System.Collections.Generic.Dictionary<string, number>;
         if (arrayStubs) {
-            arrayStubs.forEach(stub => (doc as any)[stub] = []);
+            Object.keys(arrayStubs).forEach(stubKey => (doc as any)[stubKey] =
+                new Array(arrayStubs[stubKey])); 
         }
 
         const trimmedValues = metadata[getDocumentsPreviewCommand.TrimmedValueKey] as string[];
@@ -63,7 +83,6 @@ class getDocumentsPreviewCommand extends commandBase {
 
         return doc;
     }
-
 }
 
 export = getDocumentsPreviewCommand;

@@ -108,7 +108,14 @@ namespace Sparrow.Logging
             {
                 if (_listeners.TryAdd(source, context) == false)
                     throw new InvalidOperationException("Socket was already added?");
-                SetupLogMode(LogMode, _path, RetentionTime, RetentionSize, Compressing);
+                if (LogMode == LogMode.None)
+                {
+                    SetupLogMode(LogMode, _path, RetentionTime, RetentionSize, Compressing);
+                }
+                else
+                {
+                    (_isInfoEnabled, _isOperationsEnabled) = (true, true);
+                }
             }
 
             AssertLogging();
@@ -188,6 +195,12 @@ namespace Sparrow.Logging
         {
             lock (this)
             {
+                var copyLoggingThread = _loggingThread;
+                if (copyLoggingThread?.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
+                {
+                    Task.Run(() => SetupLogMode(logMode, path, retentionTime, retentionSize, compress));
+                    return;
+                }
                 (bool info, bool operation) old = (_isInfoEnabled, _isOperationsEnabled);
                 (_isInfoEnabled, _isOperationsEnabled) = CalculateIsLogEnabled(logMode);
                 if (_isInfoEnabled == old.info && _isOperationsEnabled == old.operation && LogMode == logMode && path == _path && retentionTime == RetentionTime && compress == Compressing)
@@ -198,29 +211,18 @@ namespace Sparrow.Logging
                 RetentionSize = retentionSize;
 
                 Directory.CreateDirectory(_path);
-                var copyLoggingThread = _loggingThread;
-                var copyCompressLoggingThread = _compressLoggingThread;
                 if (copyLoggingThread == null)
                 {
                     StartNewLoggingThreads(compress);
                 }
-                else if (copyLoggingThread.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
-                {
-                    // have to do this on a separate thread
-                    Task.Run((Action)Restart);
-                }
                 else
-                {
-                    Restart();
-                }
-                void Restart()
                 {
                     _keepLogging.Lower();
                     _hasEntries.Set();
                     _readyToCompress.Set();
 
                     copyLoggingThread.Join();
-                    copyCompressLoggingThread?.Join();
+                    _compressLoggingThread?.Join();
 
                     StartNewLoggingThreads(compress);
                 }
@@ -229,24 +231,21 @@ namespace Sparrow.Logging
 
         private void StartNewLoggingThreads(bool compress)
         {
-            lock (this)
-            {
-                if (IsInfoEnabled == false &&
-                    IsOperationsEnabled == false)
-                    return;
+            if (IsInfoEnabled == false &&
+                IsOperationsEnabled == false)
+                return;
 
-                _keepLogging.Raise();
-                _loggingThread = new Thread(BackgroundLogger) {IsBackground = true, Name = _name + " Thread"};
-                _loggingThread.Start();
-                if (compress)
-                {
-                    _compressLoggingThread = new Thread(BackgroundLoggerCompress) {IsBackground = true, Name = _name + "Log Compression Thread"};
-                    _compressLoggingThread.Start();
-                }
-                else
-                {
-                    _compressLoggingThread = null;
-                }
+            _keepLogging.Raise();
+            _loggingThread = new Thread(BackgroundLogger) {IsBackground = true, Name = _name + " Thread"};
+            _loggingThread.Start();
+            if (compress)
+            {
+                _compressLoggingThread = new Thread(BackgroundLoggerCompress) {IsBackground = true, Name = _name + "Log Compression Thread"};
+                _compressLoggingThread.Start();
+            }
+            else
+            {
+                _compressLoggingThread = null;
             }
         }
 
@@ -832,7 +831,7 @@ namespace Sparrow.Logging
             else
             {
                 (_isInfoEnabled, _isOperationsEnabled) = CalculateIsLogEnabled();
-            }    
+            }
         }
 
         private int ActualWriteToLogTargets(LogMessageEntry item, Stream file)
@@ -929,10 +928,14 @@ namespace Sparrow.Logging
 
         private void RemoveWebSocket(WebSocket socket)
         {
-            lock (this)
+            _listeners.TryRemove(socket, out WebSocketContext _);
+            if (LogMode == LogMode.None)
             {
-                _listeners.TryRemove(socket, out WebSocketContext _);
                 SetupLogMode(LogMode, _path, RetentionTime, RetentionSize, Compressing);
+            }
+            else
+            {
+                (_isInfoEnabled, _isOperationsEnabled) = CalculateIsLogEnabled();
             }
         }
 

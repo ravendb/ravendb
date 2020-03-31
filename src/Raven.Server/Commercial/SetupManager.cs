@@ -1061,6 +1061,8 @@ namespace Raven.Server.Commercial
                     throw new ArgumentException("Invalid email address.");
                 if (IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false)
                     throw new ArgumentException("Invalid domain name.");
+                if (setupInfo.ClientCertNotAfter.HasValue && setupInfo.ClientCertNotAfter <= DateTime.UtcNow.Date)
+                    throw new ArgumentException("The client certificate expiration date must be in the future.");
             }
 
             if (setupMode == SetupMode.Secured && string.IsNullOrWhiteSpace(setupInfo.Certificate))
@@ -1309,7 +1311,7 @@ namespace Raven.Server.Commercial
                     using (var certificate = ctx.ReadObject(certDef.ToJson(), "Client/Certificate/Definition"))
                     using (var tx = ctx.OpenWriteTransaction())
                     {
-                        serverStore.Cluster.PutLocalState(ctx, clientCert.Thumbprint, certificate);
+                        serverStore.Cluster.PutLocalState(ctx, clientCert.Thumbprint, certificate, certDef);
                         tx.Commit();
                     }
                 }
@@ -1485,7 +1487,7 @@ namespace Raven.Server.Commercial
                         {
                             // requires server certificate to be loaded
                             var clientCertificateName = $"{name}.client.certificate";
-                            certBytes = await GenerateCertificateTask(clientCertificateName, serverStore);
+                            certBytes = await GenerateCertificateTask(clientCertificateName, serverStore, setupInfo);
                             clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
                         }
                         catch (Exception e)
@@ -2085,13 +2087,13 @@ namespace Raven.Server.Commercial
         }
 
         // Duplicate of AdminCertificatesHandler.GenerateCertificateInternal stripped from authz checks, used by an unauthenticated client during setup only
-        public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore)
+        public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore, SetupInfo setupInfo)
         {
             if (serverStore.Server.Certificate?.Certificate == null)
                 throw new InvalidOperationException($"Cannot generate the client certificate '{name}' because the server certificate is not loaded.");
 
             // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate, out var certBytes);
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate, out var certBytes, setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
             var newCertDef = new CertificateDefinition
             {

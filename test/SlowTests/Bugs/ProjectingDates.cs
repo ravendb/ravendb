@@ -50,6 +50,19 @@ namespace SlowTests.Bugs
                         .SelectFields<Registration>("RegisteredAt")
                         .WaitForNonStaleResults()
                         .First();
+
+                    Assert.Equal(new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local), registration.RegisteredAt);
+                    Assert.NotNull(registration.Id);
+                    Assert.Null(registration.Name);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var registration = session.Advanced.DocumentQuery<Registration>("Regs")
+                        .SelectFields<Registration>("RegisteredAt", "Id")
+                        .WaitForNonStaleResults()
+                        .First();
+
                     Assert.Equal(new DateTime(2010, 1, 1,0,0,0,DateTimeKind.Local), registration.RegisteredAt);
                     Assert.NotNull(registration.Id);
                     Assert.Null(registration.Name);
@@ -60,6 +73,7 @@ namespace SlowTests.Bugs
         public class Registration
         {
             public string Id { get; set; }
+
             public DateTime RegisteredAt { get; set; }
 
             public string Name { get; set; }

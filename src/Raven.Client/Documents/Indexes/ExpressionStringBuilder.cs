@@ -1773,7 +1773,11 @@ namespace Raven.Client.Documents.Indexes
                 }
                 else if (parameters.Length == 2)
                 {
-                    // nothing do to - collection name was provided - LoadDocument<T>("id", "CollectionName")
+                    // collection name was provided - validate it - LoadDocument<T>("id", "CollectionName")
+
+                    var argument = node.Arguments[1];
+                    if (argument.NodeType != ExpressionType.Constant)
+                        throw new InvalidOperationException($"Invalid argument in {nameof(AbstractIndexCreationTask.LoadDocument)}. String constant was expected but was '{argument.NodeType}' with value '{argument}'.");
                 }
                 else
                 {

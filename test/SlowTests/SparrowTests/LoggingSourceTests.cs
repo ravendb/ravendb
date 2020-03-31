@@ -299,9 +299,9 @@ namespace SlowTests.SparrowTests
         [InlineData(LogMode.None)]
         [InlineData(LogMode.Operations)]
         [InlineData(LogMode.Information)]
-        public async Task Register_WhenLogModeIsOperations_ShouldWriteToLogFileJustOperations(LogMode logMode)
+        public async Task Register_WhenLogModeIsOperations_ShouldWriteToLogFileJustAsLogMode(LogMode logMode)
         {
-            var timeout = TimeSpan.FromSeconds(10000);
+            var timeout = TimeSpan.FromSeconds(10);
 
             var name = GetTestName();
             var path = NewDataPath(forceCreateDir: true);
@@ -331,8 +331,10 @@ namespace SlowTests.SparrowTests
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
 
-            WaitForValue(() => socket.LogsReceived.Contains(beforeCloseInformation) && socket.LogsReceived.Contains(beforeCloseOperation),
-                true, 5000, 100);
+            const int socketTimeout = 5000;
+            var socketContainsLogs = WaitForValue(() => socket.LogsReceived.Contains(beforeCloseInformation) && socket.LogsReceived.Contains(beforeCloseOperation),
+                true, socketTimeout, 100);
+            Assert.True(socketContainsLogs, $"Waited over {socketTimeout} seconds for log to be written to socket");
 
             //Close socket
             socket.Close();

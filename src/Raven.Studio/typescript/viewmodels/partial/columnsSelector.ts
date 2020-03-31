@@ -184,9 +184,11 @@ class columnsSelector<T> {
         });
     }
 
-    init(grid: virtualGridController<T>, fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>,
-        defaultColumnsProvider: (containerWidth: number, results: pagedResult<T>) => virtualColumn[],
-        availableColumnsProvider: (results: pagedResult<T>) => string[]) {
+    init(grid: virtualGridController<T>, 
+         fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>,
+         defaultColumnsProvider: (containerWidth: number, results: pagedResult<T>) => virtualColumn[],
+         availableColumnsProvider: (results: pagedResult<T>) => string[]) 
+    {
         this.grid = grid;
         this.fetcher = fetcher;
         this.defaultColumnsProvider = defaultColumnsProvider;

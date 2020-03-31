@@ -66,6 +66,7 @@ namespace Raven.Server.Web.Studio
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
+                
                 HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
                 if (string.IsNullOrEmpty(collection))
@@ -85,26 +86,24 @@ namespace Raven.Server.Web.Studio
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
+                    
+                    writer.WriteStartArray();
 
+                    var first = true;
+                    foreach (var document in documents)
                     {
-                        writer.WriteStartArray();
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
 
-                        var first = true;
-                        foreach (var document in documents)
+                        using (document.Data)
                         {
-                            if (first == false)
-                                writer.WriteComma();
-                            first = false;
-
-                            using (document.Data)
-                            {
-                                WriteDocument(writer, context, document, propertiesPreviewToSend, fullPropertiesToSend);
-                            }
+                            WriteDocument(writer, context, document, propertiesPreviewToSend, fullPropertiesToSend);
                         }
-
-                        writer.WriteEndArray();
                     }
 
+                    writer.WriteEndArray();
+                   
                     writer.WriteComma();
 
                     writer.WritePropertyName("TotalResults");
@@ -129,8 +128,8 @@ namespace Raven.Server.Web.Studio
 
             bool first = true;
 
-            var objectsStubs = new HashSet<LazyStringValue>();
-            var arraysStubs = new HashSet<LazyStringValue>();
+            var arrayStubsJson = new DynamicJsonValue();
+            var objectStubsJson = new DynamicJsonValue();
             var trimmedValue = new HashSet<LazyStringValue>();
 
             var prop = new BlittableJsonReaderObject.PropertyDetails();
@@ -161,10 +160,10 @@ namespace Raven.Server.Web.Studio
                                 writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                                 break;
                             case ValueWriteStrategy.SubstituteWithArrayStub:
-                                arraysStubs.Add(prop.Name);
+                                arrayStubsJson[prop.Name] = ((BlittableJsonReaderArray)prop.Value).Length;
                                 break;
                             case ValueWriteStrategy.SubstituteWithObjectStub:
-                                objectsStubs.Add(prop.Name);
+                                objectStubsJson[prop.Name] = ((BlittableJsonReaderObject)prop.Value).Count;
                                 break;
                             case ValueWriteStrategy.Trim:
                                 writer.WritePropertyName(prop.Name);
@@ -177,11 +176,11 @@ namespace Raven.Server.Web.Studio
             }
             if (first == false)
                 writer.WriteComma();
-
+                    
             var extraMetadataProperties = new DynamicJsonValue
             {
-                [ObjectStubsKey] = new DynamicJsonArray(objectsStubs),
-                [ArrayStubsKey] = new DynamicJsonArray(arraysStubs),
+                [ObjectStubsKey] = objectStubsJson,
+                [ArrayStubsKey] = arrayStubsJson,
                 [TrimmedValueKey] = new DynamicJsonArray(trimmedValue)
             };
 
@@ -211,8 +210,8 @@ namespace Raven.Server.Web.Studio
                     break;
                 case BlittableJsonToken.CompressedString:
                     var lazyCompressedString = (LazyCompressedStringValue)val;
-                    writer.WriteString(lazyCompressedString?.Substring(0,
-                        Math.Min(lazyCompressedString.UncompressedSize, StringLengthLimit)));
+                    string actualString = lazyCompressedString.ToString();
+                    writer.WriteString(actualString.Substring(0, Math.Min(actualString.Length, StringLengthLimit)));
                     break;
 
                 default:
@@ -305,7 +304,6 @@ namespace Raven.Server.Web.Studio
                 context, returnContextToPool, Documents.Operations.Operations.OperationType.DeleteByCollection, excludeIds);
             return Task.CompletedTask;
         }
-
 
         private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Documents.Operations.Operations.OperationType operationType, HashSet<string> excludeIds)
         {
