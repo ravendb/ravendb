@@ -414,9 +414,6 @@ namespace Raven.Server.Documents.Handlers
             private readonly List<TimeSeriesOperation> _operations;
             private readonly bool _fromEtl;
 
-            private Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>> _appendDictionary;
-            private TimeSeriesOperation.AppendOperation _singleValue;
-
             public string LastChangeVector;
 
             public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, List<TimeSeriesOperation> operations, bool fromEtl)
@@ -437,11 +434,9 @@ namespace Raven.Server.Documents.Handlers
                     if (docCollection == null)
                         continue;
 
-                    ConvertBatch(operation);
-
                     var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
-                    if (operation?.Removals != null)
+                    if (operation.Removals != null)
                     {
                         foreach (var removal in operation.Removals)
                         {
@@ -460,69 +455,36 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
 
-                    if (_appendDictionary != null)
-                    {
-                        foreach (var kvp in _appendDictionary)
-                        {
-                            LastChangeVector = tss.AppendTimestamp(context,
-                                operation.DocumentId,
-                                docCollection,
-                                kvp.Key,
-                                kvp.Value.Values
-                            );
+                    if (operation.Appends?.Count > 0 == false)
+                        continue;
 
-                            changes += kvp.Value.Values.Count;
-                        }
-
-                        _appendDictionary.Clear();
-                    }
-                    else if (_singleValue != null)
+                    if (operation.Appends.Count == 1)
                     {
                         LastChangeVector = tss.AppendTimestamp(context,
                             operation.DocumentId,
                             docCollection,
-                            _singleValue.Name,
+                            operation.Name,
                             new[]
                             {
-                            _singleValue
+                                operation.Appends[0]
                             });
 
                         changes++;
                     }
+                    else
+                    {
+                        LastChangeVector = tss.AppendTimestamp(context,
+                            operation.DocumentId,
+                            docCollection,
+                            operation.Name,
+                            operation.Appends
+                        );
 
+                        changes += operation.Appends.Count;
+                    }
                 }
 
                 return changes;
-            }
-
-            private void ConvertBatch(TimeSeriesOperation operation)
-            {
-                _appendDictionary?.Clear();
-                _singleValue = null;
-
-                if (operation.Appends == null || operation.Appends.Count == 0)
-                {
-                    return;
-                }
-
-                if (operation.Appends.Count == 1)
-                {
-                    _singleValue = operation.Appends[0];
-                    return;
-                }
-
-                _appendDictionary = new Dictionary<string, SortedList<long, TimeSeriesOperation.AppendOperation>>();
-
-                foreach (var item in operation.Appends)
-                {
-                    if (_appendDictionary.TryGetValue(item.Name, out var sorted) == false)
-                    {
-                        sorted = new SortedList<long, TimeSeriesOperation.AppendOperation>();
-                        _appendDictionary[item.Name] = sorted;
-                    }
-
-                    sorted[item.Timestamp.Ticks] = item;
-                }
             }
 
             private string GetDocumentCollection(DocumentsOperationContext context, TimeSeriesOperation operation)

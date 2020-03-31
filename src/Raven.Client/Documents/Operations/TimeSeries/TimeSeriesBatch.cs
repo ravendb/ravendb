@@ -20,14 +20,20 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public string DocumentId;
 
+        public string Name;
+
         internal static TimeSeriesOperation Parse(BlittableJsonReaderObject input)
         {
             if (input.TryGet(nameof(DocumentId), out string docId) == false || docId == null)
                 ThrowMissingDocumentId();
 
+            if (input.TryGet(nameof(Name), out string name) == false || name == null)
+                ThrowMissingName(); 
+
             var result = new TimeSeriesOperation
             {
-                DocumentId = docId
+                DocumentId = docId,
+                Name = name
             };
 
             if (input.TryGet(nameof(Appends), out BlittableJsonReaderArray operations) && operations != null)
@@ -72,7 +78,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         private static void ThrowMissingDocumentId()
         {
-            throw new InvalidDataException($"Missing '{nameof(DocumentId)}' property on 'TimeSeries'");
+            throw new InvalidDataException($"Missing '{nameof(DocumentId)}' property on 'TimeSeriesOperation'");
+        }
+        private static void ThrowMissingName()
+        {
+            throw new InvalidDataException($"Missing '{nameof(Name)}' property on 'TimeSeriesOperation'");
         }
 
         public DynamicJsonValue ToJson()
@@ -80,6 +90,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return new DynamicJsonValue
             {
                 [nameof(DocumentId)] = DocumentId,
+                [nameof(Name)] = Name,
                 [nameof(Appends)] = Appends?.Select(x => x.ToJson()),
                 [nameof(Removals)] = Removals?.Select(x => x.ToJson())
             };
@@ -87,24 +98,22 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public class AppendOperation
         {
-            public string Name;
             public DateTime Timestamp;
             public double[] Values;
             public string Tag;
 
             internal static AppendOperation Parse(BlittableJsonReaderObject input)
             {
-                if (input.TryGet(nameof(Name), out string name) == false || name == null)
-                    throw new InvalidDataException($"Missing '{nameof(Name)}' property");
-
-                if (input.TryGet(nameof(Tag), out string tag) == false)
-                    throw new InvalidDataException($"Missing '{nameof(Tag)}' property");
+                /*if (input.TryGet(nameof(Name), out string name) == false || name == null)
+                    throw new InvalidDataException($"Missing '{nameof(Name)}' property");*/
 
                 if (input.TryGet(nameof(Timestamp), out DateTime ts) == false)
                     throw new InvalidDataException($"Missing '{nameof(Timestamp)}' property");
 
                 if (input.TryGet(nameof(Values), out BlittableJsonReaderArray values) == false || values == null)
                     throw new InvalidDataException($"Missing '{nameof(Values)}' property");
+
+                input.TryGet(nameof(Tag), out string tag);
 
                 var doubleValues = new double[values.Length];
                 for (int i = 0; i < doubleValues.Length; i++)
@@ -114,7 +123,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 var op = new AppendOperation
                 {
-                    Name = name,
                     Timestamp = ts,
                     Values = doubleValues,
                     Tag = tag
@@ -125,13 +133,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             public DynamicJsonValue ToJson()
             {
-                return new DynamicJsonValue
+                var djv = new DynamicJsonValue
                 {
-                    [nameof(Name)] = Name,
                     [nameof(Timestamp)] = Timestamp,
-                    [nameof(Tag)] = Tag,
                     [nameof(Values)] = new DynamicJsonArray(Values.Select(x => (object)x)),
                 };
+
+                if (Tag != null)
+                    djv[nameof(Tag)] = Tag;
+
+                return djv;
             }
         }
 

@@ -10,16 +10,21 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class TimeSeriesBatchCommandData : ICommandData
     {
-        public TimeSeriesBatchCommandData(string documentId, List<TimeSeriesOperation.AppendOperation> appends, List<TimeSeriesOperation.RemoveOperation> removals)
+        public TimeSeriesBatchCommandData(string documentId, string name, List<TimeSeriesOperation.AppendOperation> appends, List<TimeSeriesOperation.RemoveOperation> removals)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
+            
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
 
             Id = documentId;
+            Name = name;
 
             TimeSeries = new TimeSeriesOperation
             {
                 DocumentId = documentId,
+                Name = name,
                 Appends = appends,
                 Removals = removals
             };
@@ -27,7 +32,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public string Id { get; set; }
 
-        public string Name => null;
+        public string Name { get; set; }
 
         public string ChangeVector => null;
 
