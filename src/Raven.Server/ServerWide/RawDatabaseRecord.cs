@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -142,6 +143,22 @@ namespace Raven.Server.ServerWide
                     _databaseState = DatabaseStateStatus.Normal;
 
                 return _databaseState.Value;
+            }
+        }
+
+        private TimeSeriesConfiguration _timeSeriesConfiguration;
+
+        public TimeSeriesConfiguration TimeSeriesConfiguration
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.TimeSeries;
+                
+                if (_timeSeriesConfiguration == null && _record.TryGet(nameof(DatabaseRecord.TimeSeries), out BlittableJsonReaderObject config) && config != null)
+                    _timeSeriesConfiguration = JsonDeserializationCluster.TimeSeriesConfiguration(config);
+
+                return _timeSeriesConfiguration;
             }
         }
 

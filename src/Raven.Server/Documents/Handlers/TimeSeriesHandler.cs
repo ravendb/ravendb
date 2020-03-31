@@ -17,6 +17,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Handlers
@@ -443,6 +444,42 @@ namespace Raven.Server.Documents.Handlers
                     throw;
                 }
             }
+        }
+
+        [RavenAction("/databases/*/timeseries/config", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetTimeSeriesConfig()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                TimeSeriesConfiguration timeSeriesConfig;
+                using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
+                {
+                    timeSeriesConfig = rawRecord?.TimeSeriesConfiguration;
+                }
+
+                if (timeSeriesConfig != null)
+                {
+                    var timeSeriesCollection = new DynamicJsonValue();
+                    foreach (var collection in timeSeriesConfig.Collections)
+                    {
+                        timeSeriesCollection[collection.Key] = collection.Value.ToJson();
+                    }
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(timeSeriesConfig.Collections)] = timeSeriesCollection
+                        });
+                    }
+                }
+                else
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                }
+            }
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/admin/timeseries/config", "POST", AuthorizationStatus.DatabaseAdmin)]
