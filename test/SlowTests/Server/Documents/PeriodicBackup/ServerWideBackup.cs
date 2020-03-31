@@ -666,6 +666,106 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public async Task CanExcludeDatabase()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                var serverWideBackupConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = false,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1",
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                };
+
+                var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+                serverWideBackupConfiguration.Name = result.Name;
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record.PeriodicBackups.Count);
+
+                var backupConfiguration = new PeriodicBackupConfiguration
+                {
+                    Disabled = true,
+                    Name = "Regular Task",
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration));
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(2, record.PeriodicBackups.Count);
+
+                serverWideBackupConfiguration.DatabasesToExclude = new[] {store.Database};
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record.PeriodicBackups.Count);
+                Assert.Equal(backupConfiguration.Name, record.PeriodicBackups.First().Name);
+            }
+        }
+
+        [Fact]
+        public async Task CanExcludeForNewDatabase()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                var newDbName = store.Database + "-testDatabase";
+                var serverWideBackupConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = false,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1",
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    DatabasesToExclude = new []
+                    {
+                        newDbName
+                    }
+                };
+
+                var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+                serverWideBackupConfiguration.Name = result.Name;
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(0, record.PeriodicBackups.Count);
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(0, record.PeriodicBackups.Count);
+
+                var backupConfiguration = new PeriodicBackupConfiguration
+                {
+                    Disabled = true,
+                    Name = "Regular Task",
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                await store.Maintenance.ForDatabase(newDbName).SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration));
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(1, record.PeriodicBackups.Count);
+
+                serverWideBackupConfiguration.DatabasesToExclude = new[] {store.Database};
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(2, record.PeriodicBackups.Count);
+                Assert.Equal(backupConfiguration.Name, record.PeriodicBackups[0].Name);
+                Assert.Equal(PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(serverWideBackupConfiguration.Name), record.PeriodicBackups[1].Name);
+            }
+        }
+
+        [Fact]
         public async Task CanCreateSnapshotBackupForNonEncryptedDatabase()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

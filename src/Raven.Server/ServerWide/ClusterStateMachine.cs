@@ -1432,6 +1432,9 @@ namespace Raven.Server.ServerWide
                             if (serverWideBackups.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
                                 continue;
 
+                            if (IsExcluded(configurationBlittable, addDatabaseCommand.Name))
+                                continue;
+
                             var backupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configurationBlittable);
                             PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name, addDatabaseCommand.Encrypted);
                             addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
@@ -1454,6 +1457,20 @@ namespace Raven.Server.ServerWide
                         ? DatabasesLandlord.ClusterDatabaseChangeType.RecordRestored
                         : DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
             }
+        }
+
+        private static bool IsExcluded(BlittableJsonReaderObject configurationBlittable, string databaseName)
+        {
+            if (configurationBlittable.TryGet(nameof(ServerWideBackupConfiguration.DatabasesToExclude), out BlittableJsonReaderArray databasesToExclude) == false)
+                return false;
+
+            foreach (object databaseToExclude in databasesToExclude)
+            {
+                if (databaseName.Equals(databaseToExclude.ToString(), StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 
         private static void SetDatabaseValues(
@@ -3277,19 +3294,18 @@ namespace Raven.Server.ServerWide
 
             const string dbKey = "db/";
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
-            long? oldTaskId = null;
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
-
-                    oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted);
-
-                    var newBackups = new DynamicJsonArray();
-                    var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(serverWideBlittable);
                     var databaseName = key.Substring(dbKey.Length);
+                    var newBackups = new DynamicJsonArray();
+
+                    var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(serverWideBlittable);
+                    long? oldTaskId = null;
+                    oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted);
                     PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(periodicBackupConfiguration, databaseName, encrypted);
 
                     if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups))
@@ -3308,11 +3324,15 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    using (oldDatabaseRecord)
+                    if (serverWideBackupConfiguration.DatabasesToExclude == null ||
+                        serverWideBackupConfiguration.DatabasesToExclude.Contains(databaseName, StringComparer.OrdinalIgnoreCase) == false)
                     {
                         periodicBackupConfiguration.TaskId = oldTaskId ?? index;
                         newBackups.Add(periodicBackupConfiguration.ToJson());
+                    }
 
+                    using (oldDatabaseRecord)
+                    {
                         oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
                         {
                             [nameof(DatabaseRecord.PeriodicBackups)] = newBackups
