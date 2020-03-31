@@ -834,7 +834,7 @@ namespace Raven.Server.Documents.TimeSeries
         private bool TryAppendEntireSegment(
             DocumentsOperationContext context, 
             Slice key, 
-            string docId,
+            string documentId,
             string name,
             CollectionName collectionName, 
             string changeVector, 
@@ -862,7 +862,7 @@ namespace Raven.Server.Documents.TimeSeries
                         {
                             var segmentReadOnlyBuffer = tvr.Read((int)TimeSeriesTable.Segment, out int size);
                             var readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
-                            Stats.UpdateCount(context, docId, name, collectionName, -readOnlySegment.NumberOfLiveEntries);
+                            Stats.UpdateCount(context, documentId, name, collectionName, -readOnlySegment.NumberOfLiveEntries);
 
                             AppendEntireSegment();
                             return true;
@@ -889,9 +889,9 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureSegmentSize(segment.NumberOfBytes);
 
                 var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
-                var newTimeSeries = tss.Stats.GetStats(context, docId, name).Count == 0;
+                var newTimeSeries = tss.Stats.GetStats(context, documentId, name).Count == 0;
                 
-                using (var slicer = new TimeSeriesSliceHolder(context, docId, name, collectionName.Name))
+                using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
                 {
                     Stats.UpdateStats(context, slicer, collectionName, segment, baseline);
                     _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, slicer, baseline);
@@ -911,7 +911,18 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 if (newTimeSeries)
-                    tss.AddTimeSeriesNameToMetadata(context, docId, name);
+                    tss.AddTimeSeriesNameToMetadata(context, documentId, name);
+
+                context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
+                {
+                    CollectionName = collectionName.Name,
+                    ChangeVector = changeVector,
+                    DocumentId = documentId,
+                    Name = name,
+                    Type = TimeSeriesChangeTypes.Put,
+                    From = DateTime.MinValue,
+                    To = DateTime.MaxValue
+                });
             }
 
             bool IsOverlapWithHigherSegment(Slice prefix)
