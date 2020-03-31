@@ -12,7 +12,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         public SecurityClearance SecurityClearance;
         public string Thumbprint;
         public string PublicKeyPinningHash;
-        public DateTime NotAfter;
+        public DateTime? NotAfter;
         public Dictionary<string, DatabaseAccess> Permissions = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
         public string CollectionPrimaryKey = string.Empty;
         public List<string> CollectionSecondaryKeys = new List<string>();

@@ -68,8 +68,8 @@ select {
 
                     var first = rep.FirstOrDefault();
                     WaitForUserToContinueTheTest(documentStore);
-                    Assert.Equal(first.Name, "product 1");
-                    Assert.Equal(first.Id, "products/1-A");
+                    Assert.Equal("product 1", first.Name);
+                    Assert.Equal("products/1-A", first.Id);
                     Assert.Equal(first.Variants[0].Name, "VARIANT 1");
                 }
             }

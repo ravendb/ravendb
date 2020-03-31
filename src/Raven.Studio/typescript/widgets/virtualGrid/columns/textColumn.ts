@@ -129,15 +129,20 @@ class textColumn<T> implements virtualColumn {
         }
 
         if (_.isArray(cellValue)) {
+            const innerHtml = cellValue.length ? "&hellip;" : "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+
             return {
-                rawText: "[ ... ]",
+                rawText: `<span class="array-item">[${innerHtml}]</span> <sup>${cellValue.length}</sup>`,
                 typeCssClass: "token array"
             }
         }
 
         if (_.isObject(cellValue)) {
+            const propertiesCount = Object.keys(cellValue).length;
+            const innerHtml = propertiesCount ? "&hellip;" : "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+
             return {
-                rawText: "{ ... }",
+                rawText: `<span class="object-item">{${innerHtml}}</span> <sup>${propertiesCount}</sup>`,
                 typeCssClass: "token object"
             }
         }

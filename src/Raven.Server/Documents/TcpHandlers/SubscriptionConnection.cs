@@ -875,7 +875,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public void Dispose()
         {
-            this.AddToStatusDescription($"Disposed at {Environment.StackTrace}"); //todo: remove that
             if (_isDisposed)
                 return;
             _isDisposed = true;

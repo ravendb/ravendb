@@ -233,7 +233,7 @@ namespace FastTests
                         Certificate = serverCertificate,
                         PrivateKey = pk
                     },
-                    out var certBytes);
+                    out var certBytes, DateTime.UtcNow.Date.AddYears(5));
 
                 string clientCertificatePath = null;
                 try

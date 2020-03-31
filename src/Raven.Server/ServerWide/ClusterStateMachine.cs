@@ -2097,8 +2097,10 @@ namespace Raven.Server.ServerWide
             ExecuteManyOnDispose(context, index, type, tasks);
         }
 
-        public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value)
+        public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value, CertificateDefinition certificateDefinition)
         {
+            PutCertificateCommand.ValidateCertificateDefinition(certificateDefinition);
+
             var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             using (localState.DirectAdd(thumbprint, value.Size, out var ptr))
             {
@@ -2571,7 +2573,7 @@ namespace Raven.Server.ServerWide
         public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(ClusterOperationContext context, string hash)
         {
             var list = GetCertificatesByPinningHash(context, hash).ToList();
-            list.Sort((x, y) => DateTime.Compare(y.NotAfter, x.NotAfter));
+            list.Sort((x, y) => Nullable.Compare<DateTime>(y.NotAfter, x.NotAfter));
             return list;
         }
 

@@ -75,12 +75,12 @@ class documentPropertyProvider {
     private hasEntireValue(doc: document, property: string) {
         const meta = doc.__metadata as any;
         const arrays = meta[getDocumentsPreviewCommand.ArrayStubsKey];
-        if (arrays && _.includes(arrays, property)) {
+        if (arrays && property in arrays) {
             return false;
         }
 
         const objects = meta[getDocumentsPreviewCommand.ObjectStubsKey];
-        if (objects && _.includes(objects, property)) {
+        if (objects && property in objects) {
             return false;
         }
 

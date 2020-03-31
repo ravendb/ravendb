@@ -643,11 +643,11 @@ namespace Raven.Client.Documents.Linq
             Expression constant;
             if (IsMemberAccessForQuerySource(firstArg))
             {
-                if(IsMemberAccessForQuerySource(secondArg))
+                if (IsMemberAccessForQuerySource(secondArg))
                     throw new NotSupportedException("Where clauses containing an Equals Expression between two fields are not supported. " +
                                                     "The equalization should be between a field and a constant value. " +
                                                     $"`{firstArg}` and `{secondArg}` are both fields, so cannot convert {expression} to a proper query.");
-                        
+
                 fieldInfo = GetMember(firstArg);
                 constant = secondArg;
             }
@@ -664,7 +664,7 @@ namespace Raven.Client.Documents.Linq
             }
 
             if (comparisonArg != null
-                && comparisonArg.NodeType == ExpressionType.Constant 
+                && comparisonArg.NodeType == ExpressionType.Constant
                 && comparisonArg.Type == typeof(StringComparison))
             {
                 var comparisonType = ((ConstantExpression)comparisonArg).Value;
@@ -3133,6 +3133,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 alias = null;
             }
 
+            if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+            {
+                field = $"id({FromAlias})";
+                return;
+            }
+
             field = quote
                 ? $"{FromAlias}.'{field}'"
                 : $"{FromAlias}.{field}";
@@ -3144,7 +3150,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
             AddFromAlias(fromAlias);
             foreach (var fieldToFetch in FieldsToFetch)
             {
-                fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
+                if (fieldToFetch.Name == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                {
+                    fieldToFetch.Name = $"id({fromAlias})";
+                }
+                else
+                {
+                    fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
+                }
             }
 
             _addedDefaultAlias = true;
