@@ -21,7 +21,7 @@ namespace Sparrow.Server.Platform
             try
             {
                 var mutator = PlatformDetails.IsWindows8OrNewer == false ? (Func<string,string>)ToWin7DllName : default;
-                DynamicNativeLibraryResolver.Register(LIBRVNPAL, mutator);
+                DynamicNativeLibraryResolver.Register(typeof(Pal).Assembly, LIBRVNPAL, mutator);
 
                 var palVer = rvn_get_pal_ver();
                 if (palVer != 0 && palVer != PAL_VER)
