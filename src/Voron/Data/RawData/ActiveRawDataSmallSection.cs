@@ -30,6 +30,15 @@ namespace Voron.Data.RawData
             _transaction = tx;
         }
 
+        public string CurrentCompressionDictionaryHashBase64
+        {
+            get
+            {
+                using var _ = CurrentCompressionDictionaryHash(out var hash);
+                return Convert.ToBase64String(hash.AsSpan());
+            }
+        }
+
 
         public ByteStringContext.ExternalScope CurrentCompressionDictionaryHash(out Slice hash) => 
             Slice.External(_llt.Allocator, (byte*)_sectionHeader + PageHeader.SizeOf, 32, out hash);

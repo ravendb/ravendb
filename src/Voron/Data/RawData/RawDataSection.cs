@@ -58,7 +58,7 @@ namespace Voron.Data.RawData
                     Debug.Assert(IsFreed == false, "Should not try to get size of freed instance");
                     return (short)(UsedSize_Buffer & ValueOnlyMask);
                 }
-                set => UsedSize_Buffer = (short)(UsedSize_Buffer & ValueOnlyMask);
+                set => UsedSize_Buffer = (short)(value & ValueOnlyMask);
             }
         }
 
