@@ -19,6 +19,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Exceptions;
+using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -344,11 +345,8 @@ namespace Raven.Server.Utils
 
         private static IEnumerable<object> EnumerateArray(object root, ArrayInstance arr, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
-            foreach (var (key, val) in arr.GetOwnProperties())
+            foreach (var (key, val) in arr.GetOwnPropertiesWithoutLength())
             {
-                if (key == "length")
-                    continue;
-
                 yield return ToBlittableSupportedType(root, val.Value, flattenArrays, forIndexing, recursiveLevel, engine, context);
             }
         }

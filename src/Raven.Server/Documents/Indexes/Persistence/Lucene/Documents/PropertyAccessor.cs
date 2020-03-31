@@ -8,6 +8,7 @@ using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Microsoft.CSharp.RuntimeBinder;
+using Raven.Server.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -225,11 +226,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var arr = jsValue.AsArray();
                 var array = new object[arr.Length];
                 var i = 0;
-                foreach ((var key, var val) in arr.GetOwnProperties())
+                foreach ((var key, var val) in arr.GetOwnPropertiesWithoutLength())
                 {
-                    if (key == "length")
-                        continue;
-
                     array[i++] = GetValue(val.Value);
                 }
 

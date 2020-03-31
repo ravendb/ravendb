@@ -70,10 +70,8 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (jsItem.IsArray())
                         {
                             var array = jsItem.AsArray();
-                            foreach (var (prop, val) in array.GetOwnProperties())
+                            foreach (var (prop, val) in array.GetOwnPropertiesWithoutLength())
                             {
-                                if (prop == "length")
-                                    continue;
                                 yield return val.Value;
                             }
                         }

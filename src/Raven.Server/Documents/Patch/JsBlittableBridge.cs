@@ -15,6 +15,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Descriptors.Specialized;
 using Jint.Runtime.Interop;
 using Raven.Client;
+using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -119,11 +120,8 @@ namespace Raven.Server.Documents.Patch
         private void WriteArray(ArrayInstance arrayInstance)
         {
             _writer.StartWriteArray();
-            foreach (var property in arrayInstance.GetOwnProperties())
+            foreach (var property in arrayInstance.GetOwnPropertiesWithoutLength())
             {
-                if (property.Key == "length")
-                    continue;
-
                 JsValue propertyValue = SafelyGetJsValue(property.Value);
 
                 WriteJsonValue(arrayInstance, false, property.Key.AsString(), propertyValue);
@@ -154,7 +152,7 @@ namespace Raven.Server.Documents.Patch
             else if (value is ArrayInstance jsArray)
             {
                 _writer.StartWriteArray();
-                foreach (var property in jsArray.GetOwnProperties())
+                foreach (var property in jsArray.GetOwnPropertiesWithoutLength())
                 {
                     WriteValue(jsArray, false, property.Key.AsString(), property.Value);
                 }
