@@ -1545,12 +1545,12 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     var company = new Company();
                     session.Store(company, "companies/1");
 
-                    session.TimeSeriesFor(company).Append("HeartRate", DateTime.UtcNow, null, new double[] { 1 });
-                    session.TimeSeriesFor(company).Append("HeartRate2", DateTime.UtcNow, null, new double[] { 11 });
+                    session.TimeSeriesFor(company, "HeartRate").Append(DateTime.UtcNow, new double[] { 1 });
+                    session.TimeSeriesFor(company, "HeartRate2").Append(DateTime.UtcNow, new double[] { 11 });
 
                     var user = new User();
                     session.Store(user, "companies/11");
-                    session.TimeSeriesFor(user).Append("HeartRate", DateTime.UtcNow, null, new double[] { 1 });
+                    session.TimeSeriesFor(user, "HeartRate").Append(DateTime.UtcNow, new double[] { 1 });
 
                     session.SaveChanges();
                 }
