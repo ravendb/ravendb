@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var returnedResults = 0;
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query,_index, getSpatialField, documentsContext);
+            var sort = GetSort(query, _index, getSpatialField, documentsContext);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -399,7 +399,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                     }
 
-                    var result = retriever.Get(document, new ScoreDoc(indexResult.LuceneId,indexResult.Score), _state);
+                    var result = retriever.Get(document, new ScoreDoc(indexResult.LuceneId, indexResult.Score), _state);
                     if (scope.TryIncludeInResults(result) == false)
                     {
                         skippedResults.Value++;
@@ -554,8 +554,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             throw new ArgumentOutOfRangeException();
                     }
 
-                    var roundTo = field.Arguments.Length > lastArgument ? 
-                        field.Arguments[lastArgument].GetDouble(query.QueryParameters) 
+                    var roundTo = field.Arguments.Length > lastArgument ?
+                        field.Arguments[lastArgument].GetDouble(query.QueryParameters)
                         : 0;
 
                     var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point, query, roundTo);
@@ -708,7 +708,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 fieldNames = options.Fields;
             else
                 fieldNames = ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
-                    .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
+                    .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
                     .ToArray();
 
             mlt.SetFieldNames(fieldNames);
@@ -802,12 +802,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (fieldName == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
                     || fieldName == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
                     || fieldName == Constants.Documents.Indexing.Fields.ValueFieldName
-                    || fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                    || fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName
+                    || fieldName == Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName)
                     continue;
 
                 if (fieldName.EndsWith(LuceneDocumentConverterBase.ConvertToJsonSuffix) ||
                     fieldName.EndsWith(LuceneDocumentConverterBase.IsArrayFieldSuffix) ||
-                    fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
+                    fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) ||
+                    fieldName.EndsWith(Constants.Documents.Indexing.Fields.TimeFieldSuffix))
                     continue;
 
                 yield return fieldName;

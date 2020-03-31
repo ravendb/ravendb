@@ -116,6 +116,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     fields = input.GetFields()
                         .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
+                                    && x.Name != Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
                                     && x.Name != Constants.Documents.Indexing.Fields.ValueFieldName
