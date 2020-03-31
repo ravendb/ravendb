@@ -540,6 +540,7 @@ more responsive application.
 
         /// <summary>
         /// Marks the specified entity for deletion. The entity will be deleted when SaveChanges is called.
+        /// <para>WARNING: This method will call <see cref="IDocumentSession.Delete"/> if called during OnBeforeStore listener!</para>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="entity">The entity.</param>
@@ -553,10 +554,17 @@ more responsive application.
                 throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
             }
 
-            DeletedEntities.Add(entity);
-            IncludedDocumentsById.Remove(value.Id);
-            _countersByDocId?.Remove(value.Id);
-            _knownMissingIds.Add(value.Id);
+            if (DocumentsByEntity.PreparingEntitiesPuts)
+            {
+                Delete(value.Id);
+            }
+            else
+            {
+                DeletedEntities.Add(entity);
+                IncludedDocumentsById.Remove(value.Id);
+                _countersByDocId?.Remove(value.Id);
+                _knownMissingIds.Add(value.Id);
+            }
         }
 
         /// <summary>
@@ -1947,9 +1955,9 @@ more responsive application.
 
         private Dictionary<object, DocumentInfo> _onBeforeStoreDocumentsByEntity;
 
-        private bool _prepareEntitiesPuts;
+        public bool PreparingEntitiesPuts { get; private set; }
 
-        public int Count => _documentsByEntity.Count + _onBeforeStoreDocumentsByEntity?.Count ?? 0;
+        public int Count => _documentsByEntity.Count + (_onBeforeStoreDocumentsByEntity?.Count ?? 0);
 
         public void Remove(object entity)
         {
@@ -1959,7 +1967,7 @@ more responsive application.
 
         public void Evict(object entity)
         {
-            if (_prepareEntitiesPuts)
+            if (PreparingEntitiesPuts)
                 throw new InvalidOperationException("Cannot Evict entity during OnBeforeStore");
 
             _documentsByEntity.Remove(entity);
@@ -1967,7 +1975,7 @@ more responsive application.
 
         public void Add(object entity, DocumentInfo documentInfo)
         {
-            if (_prepareEntitiesPuts == false)
+            if (PreparingEntitiesPuts == false)
             {
                 _documentsByEntity.Add(entity, documentInfo);
                 return;
@@ -1981,7 +1989,7 @@ more responsive application.
         {
             set
             {
-                if (_prepareEntitiesPuts == false)
+                if (PreparingEntitiesPuts == false)
                 {
                     _documentsByEntity[obj] = value;
                 }
@@ -2043,9 +2051,9 @@ more responsive application.
 
         public IDisposable PrepareEntitiesPuts()
         {
-            _prepareEntitiesPuts = true;
+            PreparingEntitiesPuts = true;
 
-            return new DisposableAction(() => _prepareEntitiesPuts = false);
+            return new DisposableAction(() => PreparingEntitiesPuts = false);
         }
 
         internal class DocumentsByEntityEnumeratorResult
@@ -2057,7 +2065,7 @@ more responsive application.
             public bool ExecuteOnBeforeStore { get; set; }
         }
     }
-    
+
     internal class DeletedEntitiesHolder
     {
         private readonly HashSet<object> _deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
@@ -2066,7 +2074,7 @@ more responsive application.
 
         private bool _prepareEntitiesDeletes;
 
-        public int Count => _deletedEntities.Count + _onBeforeDeletedEntities?.Count ?? 0;
+        public int Count => _deletedEntities.Count + (_onBeforeDeletedEntities?.Count ?? 0);
 
         public void Add(object entity)
         {
@@ -2126,7 +2134,10 @@ more responsive application.
 
             if (_onBeforeDeletedEntities != null)
             {
-                foreach (var entity in _onBeforeDeletedEntities)
+                var list = new HashSet<object>(_onBeforeDeletedEntities, ObjectReferenceEqualityComparer<object>.Default);
+                _onBeforeDeletedEntities = null;
+
+                foreach (var entity in list)
                 {
                     yield return new DeletedEntitiesEnumeratorResult
                     {

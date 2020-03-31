@@ -190,6 +190,7 @@ namespace FastTests.Client
                     {
                         var user2 = session.Load<User>("users/2");
                         args.Session.Delete(user2);
+                        Assert.Equal(2, args.Session.DocumentsByEntity.Count);
                     };
 
                     var user1 = session.Load<User>("users/1");
@@ -204,6 +205,49 @@ namespace FastTests.Client
 
                     var user2 = session.Load<User>("users/2");
                     Assert.Null(user2);
+                }
+            }
+        }
+
+        [Fact]
+        public void Before_Store_Session_Listener_With_Delete_Inside()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Foo" }, "users/1");
+                    session.Store(new User { Name = "Bar" }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.OnBeforeStore += delegate (object sender, BeforeStoreEventArgs args)
+                    {
+                        var user = session.Load<User>("users/2");
+                        args.Session.Delete(user);
+
+                        Assert.Equal(1, args.Session.DeletedEntities.Count);
+                    };
+
+                    var user1 = session.Load<User>("users/1");
+                    session.Delete(user1);
+                    session.Store(new User { Name = "Egor" }, "users/322");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>("users/1");
+                    Assert.Null(user1);
+
+                    var user2 = session.Load<User>("users/2");
+                    Assert.Null(user2);
+
+                    var user322 = session.Load<User>("users/322");
+                    Assert.NotNull(user322);
                 }
             }
         }
