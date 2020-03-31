@@ -1619,6 +1619,8 @@ namespace Raven.Server.ServerWide
             }
 
             watcher = JsonDeserializationClient.ExternalReplication(watcherBlittable);
+            Server.ServerStore.LicenseManager.AssertCanAddExternalReplication(watcher.DelayReplicationFor);
+
             var addWatcherCommand = new UpdateExternalReplicationCommand(dbName, raftRequestId)
             {
                 Watcher = watcher

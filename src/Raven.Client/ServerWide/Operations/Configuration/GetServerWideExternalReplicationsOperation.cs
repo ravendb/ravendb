@@ -3,7 +3,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
@@ -36,7 +36,6 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                 if (response == null)
                     return;
 
-                Result = JsonDeserializationClient.GetServerWideExternalReplicationResponse(response).Results;
             }
         }
     }
