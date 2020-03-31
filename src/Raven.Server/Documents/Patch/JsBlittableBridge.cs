@@ -496,6 +496,7 @@ namespace Raven.Server.Documents.Patch
 
             return property == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName ||
                    property == Constants.Documents.Indexing.Fields.DocumentIdFieldName ||
+                   property == Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName ||
                    property == Constants.Documents.Metadata.Id ||
                    property == Constants.Documents.Metadata.LastModified ||
                    property == Constants.Documents.Metadata.IndexScore ||
