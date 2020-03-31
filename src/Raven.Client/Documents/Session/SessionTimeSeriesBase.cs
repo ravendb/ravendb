@@ -63,7 +63,6 @@ namespace Raven.Client.Documents.Session
 
             var op = new TimeSeriesOperation.AppendOperation
             {
-                Name = Name,
                 Timestamp = timestamp,
                 Tag = tag,
                 Values = values is double[] arr
@@ -71,7 +70,7 @@ namespace Raven.Client.Documents.Session
                     : values.ToArray()
             };
 
-            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, null), out var command))
+            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
             {
                 var tsCmd = (TimeSeriesBatchCommandData)command;
 
@@ -82,7 +81,7 @@ namespace Raven.Client.Documents.Session
             }
             else
             {
-                Session.Defer(new TimeSeriesBatchCommandData(DocId, appends: new List<TimeSeriesOperation.AppendOperation> { op }, removals: null));
+                Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: new List<TimeSeriesOperation.AppendOperation> { op }, removals: null));
             }
         }
 
@@ -115,7 +114,7 @@ namespace Raven.Client.Documents.Session
             }
             else
             {
-                Session.Defer(new TimeSeriesBatchCommandData(DocId, appends: null, removals: new List<TimeSeriesOperation.RemoveOperation> { op }));
+                Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: null, removals: new List<TimeSeriesOperation.RemoveOperation> { op }));
             }
         }
 

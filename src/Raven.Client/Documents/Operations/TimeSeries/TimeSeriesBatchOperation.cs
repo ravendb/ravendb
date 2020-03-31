@@ -28,10 +28,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public TimeSeriesBatchOperation(TimeSeriesBatch batch)
         {
-            if (batch == null)
-                throw new ArgumentNullException(nameof(batch));
-
-            _timeSeriesBatch = batch;
+            _timeSeriesBatch = batch ?? throw new ArgumentNullException(nameof(batch));
         }
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
