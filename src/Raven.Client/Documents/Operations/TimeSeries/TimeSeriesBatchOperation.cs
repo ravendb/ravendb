@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -16,10 +15,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal TimeSeriesBatchOperation(TimeSeriesOperation operation)
             : this(new TimeSeriesBatch
             {
-                Documents = new List<TimeSeriesOperation>
-                {
-                    operation
-                }
+                Operation = operation
             })
         {
             if (operation == null)

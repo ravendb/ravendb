@@ -98,12 +98,11 @@ namespace Raven.Client.Documents.Session
 
             var op = new TimeSeriesOperation.RemoveOperation
             {
-                Name = Name,
                 From = from,
                 To = to
             };
 
-            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, null), out var command))
+            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
             {
                 var tsCmd = (TimeSeriesBatchCommandData)command;
 
