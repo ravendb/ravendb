@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesBatch
     {
-        public List<TimeSeriesOperation> Documents = new List<TimeSeriesOperation>();
+        public TimeSeriesOperation Operation;
     }
 
     public class TimeSeriesOperation
@@ -104,9 +104,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             internal static AppendOperation Parse(BlittableJsonReaderObject input)
             {
-                /*if (input.TryGet(nameof(Name), out string name) == false || name == null)
-                    throw new InvalidDataException($"Missing '{nameof(Name)}' property");*/
-
                 if (input.TryGet(nameof(Timestamp), out DateTime ts) == false)
                     throw new InvalidDataException($"Missing '{nameof(Timestamp)}' property");
 
@@ -148,23 +145,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public class RemoveOperation
         {
-            public string Name;
             public DateTime From, To;
 
             internal static RemoveOperation Parse(BlittableJsonReaderObject input)
             {
-                if (input.TryGet(nameof(Name), out string name) == false || name == null)
-                    throw new InvalidDataException($"Missing '{nameof(Name)}' property");
-
-                if (input.TryGet(nameof(From), out DateTime from) == false || name == null)
+                if (input.TryGet(nameof(From), out DateTime from) == false)
                     throw new InvalidDataException($"Missing '{nameof(From)}' property");
 
-                if (input.TryGet(nameof(To), out DateTime to) == false || name == null)
+                if (input.TryGet(nameof(To), out DateTime to) == false)
                     throw new InvalidDataException($"Missing '{nameof(To)}' property");
 
                 var op = new RemoveOperation
                 {
-                    Name = name,
                     From = from,
                     To = to
                 };
@@ -176,7 +168,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 return new DynamicJsonValue
                 {
-                    [nameof(Name)] = Name,
                     [nameof(From)] = From,
                     [nameof(To)] = To,
                 };

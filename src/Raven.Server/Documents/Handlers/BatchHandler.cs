@@ -985,7 +985,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         case CommandType.TimeSeries:
                             cmd.TimeSeries.DocumentId = cmd.Id;
-                            var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, new List<TimeSeriesOperation> { cmd.TimeSeries }, false);
+                            var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.TimeSeries, false);
 
                             tsCmd.ExecuteDirectly(context);
 

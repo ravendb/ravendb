@@ -364,7 +364,7 @@ namespace Raven.Server.Documents.Handlers
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(blittable.ToString(), TrafficWatchChangeType.TimeSeries);
 
-                var cmd = new ExecuteTimeSeriesBatchCommand(Database, timeSeriesBatch.Documents, false);
+                var cmd = new ExecuteTimeSeriesBatchCommand(Database, timeSeriesBatch.Operation, false);
 
                 try
                 {
@@ -411,77 +411,79 @@ namespace Raven.Server.Documents.Handlers
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
-            private readonly List<TimeSeriesOperation> _operations;
+            private readonly TimeSeriesOperation _operation;
             private readonly bool _fromEtl;
 
             public string LastChangeVector;
 
-            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, List<TimeSeriesOperation> operations, bool fromEtl)
+            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, TimeSeriesOperation operation, bool fromEtl)
             {
                 _database = database;
-                _operations = operations;
+                _operation = operation;
                 _fromEtl = fromEtl;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+                string docCollection = GetDocumentCollection(context, _operation);
+
+                if (docCollection == null)
+                    return 0L;
+
                 var changes = 0L;
+                var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
-                foreach (var operation in _operations)
+                if (_operation.Removals?.Count > 0)
                 {
-                    string docCollection = GetDocumentCollection(context, operation);
-
-                    if (docCollection == null)
-                        continue;
-
-                    var tss = _database.DocumentsStorage.TimeSeriesStorage;
-
-                    if (operation.Removals != null)
+                    foreach (var removal in _operation.Removals)
                     {
-                        foreach (var removal in operation.Removals)
+                        var deletionRange = new TimeSeriesStorage.DeletionRangeRequest
                         {
-                            var deletionRange = new TimeSeriesStorage.DeletionRangeRequest
-                            {
-                                DocumentId = operation.DocumentId,
-                                Collection = docCollection,
-                                Name = removal.Name,
-                                From = removal.From,
-                                To = removal.To
-                            };
+                            DocumentId = _operation.DocumentId,
+                            Collection = docCollection,
+                            Name = _operation.Name,
+                            From = removal.From,
+                            To = removal.To
+                        };
 
-                            LastChangeVector = tss.RemoveTimestampRange(context, deletionRange);
-                            
-                            changes++;
-                        }
-                    }
-
-                    if (operation.Appends?.Count > 0 == false)
-                        continue;
-
-                    if (operation.Appends.Count == 1)
-                    {
-                        LastChangeVector = tss.AppendTimestamp(context,
-                            operation.DocumentId,
-                            docCollection,
-                            operation.Name,
-                            new[]
-                            {
-                                operation.Appends[0]
-                            });
+                        LastChangeVector = tss.RemoveTimestampRange(context, deletionRange);
 
                         changes++;
                     }
-                    else
-                    {
-                        LastChangeVector = tss.AppendTimestamp(context,
-                            operation.DocumentId,
-                            docCollection,
-                            operation.Name,
-                            operation.Appends
-                        );
+                }
 
-                        changes += operation.Appends.Count;
+                if (_operation.Appends?.Count > 0 == false)
+                    return changes;
+
+                if (_operation.Appends.Count == 1)
+                {
+                    LastChangeVector = tss.AppendTimestamp(context,
+                        _operation.DocumentId,
+                        docCollection,
+                        _operation.Name,
+                        new[] {_operation.Appends[0]});
+
+                    changes++;
+                }
+                else
+                {
+                    // todo - can we avoid using this sorted list? 
+
+                    var sorted = new SortedList<long, TimeSeriesOperation.AppendOperation>();
+
+                    foreach (var item in _operation.Appends)
+                    {
+                        sorted[item.Timestamp.Ticks] = item;
                     }
+
+                    LastChangeVector = tss.AppendTimestamp(context,
+                        _operation.DocumentId,
+                        docCollection,
+                        _operation.Name,
+                        sorted.Values
+                    );
+
+                    changes += sorted.Values.Count;
                 }
 
                 return changes;
