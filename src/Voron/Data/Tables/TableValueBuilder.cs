@@ -5,8 +5,6 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
-using Voron.Data.RawData;
-using Voron.Impl;
 using Voron.Util;
 
 namespace Voron.Data.Tables
@@ -14,27 +12,28 @@ namespace Voron.Data.Tables
     public unsafe class TableValueBuilder : IEnumerable
     {
         private readonly FastList<PtrSize> _values = new FastList<PtrSize>();
-        private Transaction _currentTransaction;
         private int _elementSize = 1;
         private bool _isDirty;
-        private ByteString _compressed, _raw;
-        private ZstdLib.CompressionDictionary _previousDictionary;
         private int _size;
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope _compressedScope, _rawScope;
-        public bool Compressed => _compressed.HasValue;
 
-        public byte CompressionRatio
+        public TableValueCompressor Compression;
+
+        public TableValueBuilder()
+        {
+            Compression = new TableValueCompressor(this);
+        }
+
+        public int SizeLarge
         {
             get
             {
-                if (_compressed.HasValue == false)
-                    throw new InvalidOperationException("Cannot compute compression ratio if not compressed");
-
-                var result = (byte)((_compressed.Length / (float)_raw.Length) * 100);
-                return result;
+                if (Compression.IsValid)
+                {
+                    return Compression.SizeLarge;
+                }
+                return Size;
             }
         }
-        
 
         public int ElementSize
         {
@@ -58,23 +57,12 @@ namespace Voron.Data.Tables
             }
         }
 
-        public int SizeLarge
-        {
-            get
-            {
-                if (_compressed.HasValue)
-                    return _compressed.Length + _previousDictionary.Hash.Size;
-                
-                return Size;
-            }
-        }
-
         public int Size
         {
             get
             {
-                if (_compressed.HasValue)
-                    return _compressed.Length;
+                if (Compression.IsValid)
+                    return Compression.Size;
 
                 return _size + ElementSize * _values.Count + JsonParserState.VariableSizeIntSize(_values.Count);
             }
@@ -93,24 +81,9 @@ namespace Voron.Data.Tables
             _size = 0;
             _elementSize = 1;
             _isDirty = false;
-            _currentTransaction = null;
-            
-            ResetCompression();
+            Compression.Reset();
         }
 
-        private void ResetCompression()
-        {
-            _compressed = default;
-            _raw = default;
-            _rawScope.Dispose();
-            _compressedScope.Dispose();
-            _previousDictionary = null;
-        }
-
-        public void SetCurrentTransaction(Transaction value)
-        {
-            _currentTransaction = value;
-        }
 
         public int SizeOf(int index)
         {
@@ -167,101 +140,11 @@ namespace Voron.Data.Tables
             throw new ArgumentException("Size cannot be negative", argument);
         }
 
-        public bool ShouldReplaceDictionary(ZstdLib.CompressionDictionary newDic)
-        {
-            int maxSpace = ZstdLib.GetMaxCompression(_raw.Length);
-            //TODO: Handle encrypted buffer here if encrypted
-
-            var newCompressBufferScope = _currentTransaction.Allocator.Allocate(maxSpace, out var newCompressBuffer);
-            try
-            {
-                var size = ZstdLib.Compress(_raw.ToReadOnlySpan(), newCompressBuffer.ToSpan(), newDic);
-                // we want to be conservative about changing dictionaries, we'll only replace it if there
-                // is a > 10% change in the data
-                if (size >= _compressed.Length - (_compressed.Length/10))
-                {
-                    // couldn't get better rate, abort and use the current one
-                    newCompressBufferScope.Dispose();
-                    return false;
-                }
-
-                newCompressBuffer.Truncate(size);
-                _compressedScope.Dispose();
-                _compressed = newCompressBuffer;
-                _compressedScope = newCompressBufferScope;
-                return true;
-            }
-            catch 
-            {
-                newCompressBufferScope.Dispose();
-                throw;
-            }
-
-        }
-        
-        public void TryCompression(ZstdLib.CompressionDictionary compressionDictionary)
-        {
-            if (_compressed.HasValue)
-            {
-                if (_previousDictionary == compressionDictionary)
-                {
-                    // we might be called first from update and then from insert, if the same dictionary is used, great, nothing to do
-                    return;
-                }
-                // different dictionaries are used, need to re-compress
-                ResetCompression();
-            }
-
-            _previousDictionary = compressionDictionary;
-
-            int actualSize = Size;
-            int maxSpace = ZstdLib.GetMaxCompression(actualSize);
-            //TODO: Handle encrypted buffer here if encrypted
-            _rawScope  = _currentTransaction.Allocator.Allocate(actualSize, out _raw);
-
-            CopyTo(_raw.Ptr);
-
-            _compressedScope = _currentTransaction.Allocator.Allocate(maxSpace, out var compressed);
-
-            try
-            {
-                var size = ZstdLib.Compress(_raw.ToReadOnlySpan(), compressed.ToSpan(), compressionDictionary);
-                const int sizeOfHash = 32;
-                if (size + sizeOfHash >= _raw.Length)
-                {
-                    // we compressed large, so we skip compression here
-                    _compressedScope.Dispose();
-                    _rawScope.Dispose();
-                    return;
-                }
-
-                _compressed = compressed;
-                _compressed.Truncate(size);
-            }
-            catch 
-            {
-                _compressedScope.Dispose();
-                _rawScope.Dispose();
-                throw;
-            }
-
-        }
-
-        public void CopyToLarge(byte* ptr)
-        {
-            if (_compressed.HasValue)
-            {
-                _previousDictionary.Hash.CopyTo(ptr);
-                ptr += _previousDictionary.Hash.Size;
-            }
-            CopyTo(ptr);
-        }
-
         public void CopyTo(byte* ptr)
         {
-            if (_compressed.HasValue)
+            if (Compressed)
             {
-                _compressed.CopyTo(ptr);
+                Compression.CopyTo(ptr);
                 return;
             }
 
@@ -328,9 +211,35 @@ namespace Voron.Data.Tables
             }
         }
 
+        public void TryCompression(ZstdLib.CompressionDictionary compressionDictionary)
+        {
+            if (Compression.IsSetup)
+                return;
+
+            Compression.Prepare(Size);
+            CopyTo(Compression.RawBuffer.Ptr);
+            Compression.TryCompression(compressionDictionary);
+
+            Compression.IsSetup = true;
+        }
+
+        public bool Compressed => Compression.Compressed;
+
+        public void CopyToLarge(byte* pos)
+        {
+            if (Compression.IsValid)
+            {
+                Compression.CopyToLarge(pos);
+                return;
+            }
+            CopyTo(pos);
+        }
+
         public TableValueReader CreateReader(byte* pos)
         {
-            return _compressed.HasValue ? new TableValueReader(_raw.Ptr, _raw.Length) : new TableValueReader(pos, Size);
+            if (Compression.IsValid)
+                return Compression.CreateReader(pos);
+            return new TableValueReader(pos, Size);
         }
     }
 }

@@ -170,11 +170,13 @@ namespace Voron.Data.Tables
             public void* Compression;
             public void* Decompression;
             public Slice Hash;
+            public string HashBase64;
             public byte ExpectedCompressionRatio;
 
             public CompressionDictionary(Slice hash, byte* buffer, int size, int compressionLevel)
             {
                 Hash = hash;
+                HashBase64 = Convert.ToBase64String(hash.AsSpan());
                 if (buffer != null)
                 {
                     Compression = ZSTD_createCDict(buffer, (UIntPtr)size, compressionLevel);
@@ -185,6 +187,11 @@ namespace Voron.Data.Tables
                         throw new OutOfMemoryException("Unable to allocate memory fro dictionary");
                     }
                 }
+            }
+
+            public override string ToString()
+            {
+                return HashBase64;
             }
 
             ~CompressionDictionary()
