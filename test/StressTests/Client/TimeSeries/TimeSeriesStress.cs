@@ -50,16 +50,16 @@ namespace StressTests.Client.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
 
                     for (int i = 0; i < total; i++)
                     {
                         session.TimeSeriesFor("users/karmel", "Heartrate")
-                            .Append(baseline.AddMilliseconds(i), new[] {29d * i, i, i * 0.01, i * 0.1}, "watches/fitbit");
+                            .Append(baseline.AddMilliseconds(i), new[] { 29d * i, i, i * 0.01, i * 0.1 }, "watches/fitbit");
                     }
                     session.SaveChanges();
 
-                    session.Store(new User(),"marker");
+                    session.Store(new User(), "marker");
                     session.SaveChanges();
 
                     await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15));
