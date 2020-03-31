@@ -1429,24 +1429,29 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        public void AssertCanAddExternalReplication()
+        public void AssertCanAddExternalReplication(TimeSpan delayReplicationFor)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasExternalReplication)
-                return;
+            if (_licenseStatus.HasExternalReplication == false)
+            {
+                var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
+                throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
+            }
 
-            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
-            throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
+            AssertCanDelayReplication(delayReplicationFor);
         }
 
-        public void AssertCanDelayReplication()
+        public void AssertCanDelayReplication(TimeSpan delayReplicationFor)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasDelayedExternalReplication)
+            if ( _licenseStatus.HasDelayedExternalReplication)
+                return;
+
+            if (delayReplicationFor.Ticks == 0)
                 return;
 
             const string message = "Your current license doesn't include the delayed replication feature";

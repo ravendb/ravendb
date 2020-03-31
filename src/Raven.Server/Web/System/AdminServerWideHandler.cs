@@ -97,7 +97,7 @@ namespace Raven.Server.Web.System
                 var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-external-replication-configuration");
                 var configuration = JsonDeserializationCluster.ServerWideExternalReplication(configurationBlittable);
 
-                ServerStore.LicenseManager.AssertCanAddExternalReplication();
+                ServerStore.LicenseManager.AssertCanAddExternalReplication(configuration.DelayReplicationFor);
 
                 var (newIndex, _) = await ServerStore.PutServerWideExternalReplicationAsync(configuration, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
@@ -107,7 +107,7 @@ namespace Raven.Server.Web.System
                 {
                     var taskName = ServerStore.Cluster.GetServerWideTaskNameByTaskId(context, ClusterStateMachine.ServerWideConfigurationKey.Backup, newIndex);
                     if (taskName == null)
-                        throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
+                        throw new InvalidOperationException($"External replication name is null for server-wide external replication with task id: {newIndex}");
 
                     var putResponse = new ServerWideTaskResponse
                     {
