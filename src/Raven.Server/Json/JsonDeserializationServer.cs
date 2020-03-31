@@ -45,7 +45,6 @@ using Raven.Server.ServerWide;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Smuggler.Documents;
-using Raven.Server.Documents.TimeSeries;
 
 namespace Raven.Server.Json
 {

@@ -462,8 +462,8 @@ namespace Raven.Server.ServerWide
                         cmd.TryGet(nameof(DeleteServerWideBackupConfigurationCommand.Name), out string name);
                         var deleteServerWideTaskConfiguration = new DeleteServerWideTaskCommand.DeleteConfiguration
                         {
-                            Name = name,
-                            Type = DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.Backup
+                            TaskName = name,
+                            Type = OngoingTaskType.Backup
                         };
                         DeleteServerWideBackupConfigurationFromAllDatabases(deleteServerWideTaskConfiguration, context, type, index);
                         break;
@@ -3555,7 +3555,7 @@ namespace Raven.Server.ServerWide
 
         private void DeleteServerWideBackupConfigurationFromAllDatabases(DeleteServerWideTaskCommand.DeleteConfiguration deleteConfiguration, ClusterOperationContext context, string type, long index)
         {
-            if (string.IsNullOrWhiteSpace(deleteConfiguration.Name))
+            if (string.IsNullOrWhiteSpace(deleteConfiguration.TaskName))
                 throw new RachisInvalidOperationException($"Task name to delete cannot be null or white space for command type: {type}");
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -3574,7 +3574,7 @@ namespace Raven.Server.ServerWide
 
                     switch (deleteConfiguration.Type)
                     {
-                        case DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.Backup:
+                        case OngoingTaskType.Backup:
                             if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups) == false)
                                 continue;
 
@@ -3596,7 +3596,7 @@ namespace Raven.Server.ServerWide
                             };
 
                             break;
-                        case DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.ExternalReplication:
+                        case OngoingTaskType.Replication:
                             if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.ExternalReplications), out BlittableJsonReaderArray externalReplications) == false)
                                 continue;
 
@@ -3614,7 +3614,7 @@ namespace Raven.Server.ServerWide
 
                             if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings))
                             {
-                                var connectionStringName = PutServerWideExternalReplicationCommand.GetRavenConnectionStringName(deleteConfiguration.Name);
+                                var connectionStringName = PutServerWideExternalReplicationCommand.GetRavenConnectionStringName(deleteConfiguration.TaskName);
                                 var propertyIndex = ravenConnectionStrings.GetPropertyIndex(connectionStringName);
                                 if (propertyIndex != -1)
                                 {

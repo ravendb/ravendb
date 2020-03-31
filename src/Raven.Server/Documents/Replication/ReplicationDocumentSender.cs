@@ -463,10 +463,9 @@ namespace Raven.Server.Documents.Replication
             if (_parent.Destination is ExternalReplication external)
             {
                 delayReplicationFor = external.DelayReplicationFor;
-
-                if (delayReplicationFor.Ticks > 0)
-                    _parent._parent._server.LicenseManager.AssertCanDelayReplication();
+                _parent._parent._server.LicenseManager.AssertCanDelayReplication(delayReplicationFor);
             }
+
             return delayReplicationFor;
         }
 

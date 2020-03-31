@@ -10,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Routing;
@@ -76,7 +75,7 @@ namespace Raven.Server.Web.System
                     if (backupName == null)
                         throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
                     
-                    var putResponse = new PutServerWideConfigurationResponse
+                    var putResponse = new ServerWideTaskResponse
                     {
                         Name = backupName,
                         RaftCommandIndex = newIndex 
@@ -97,7 +96,7 @@ namespace Raven.Server.Web.System
                 var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-external-replication-configuration");
                 var configuration = JsonDeserializationCluster.ServerWideExternalReplication(configurationBlittable);
 
-                ServerStore.LicenseManager.AssertCanAddExternalReplication();
+                ServerStore.LicenseManager.AssertCanAddExternalReplication(configuration.DelayReplicationFor);
 
                 var (newIndex, _) = await ServerStore.PutServerWideExternalReplicationAsync(configuration, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
@@ -107,9 +106,9 @@ namespace Raven.Server.Web.System
                 {
                     var taskName = ServerStore.Cluster.GetServerWideTaskNameByTaskId(context, ClusterStateMachine.ServerWideConfigurationKey.Backup, newIndex);
                     if (taskName == null)
-                        throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
+                        throw new InvalidOperationException($"External replication name is null for server-wide external replication with task id: {newIndex}");
 
-                    var putResponse = new PutServerWideConfigurationResponse
+                    var putResponse = new ServerWideTaskResponse
                     {
                         Name = taskName,
                         RaftCommandIndex = newIndex
@@ -126,7 +125,7 @@ namespace Raven.Server.Web.System
         public async Task DeleteServerWideExternalReplicationConfigurationCommand()
         {
             // backward compatibility
-            await DeleteServerWideTaskCommand(ServerWide.Commands.DeleteServerWideTaskCommand.DeleteConfiguration.TaskType.Backup);
+            await DeleteServerWideTaskCommand(OngoingTaskType.Backup);
         }
 
         [RavenAction("/admin/configuration/server-wide/task", "DELETE", AuthorizationStatus.ClusterAdmin)]
@@ -134,7 +133,7 @@ namespace Raven.Server.Web.System
         {
             var typeAsString = GetStringQueryString("type", required: true);
 
-            if (Enum.TryParse(typeAsString, out ServerWide.Commands.DeleteServerWideTaskCommand.DeleteConfiguration.TaskType type) == false)
+            if (Enum.TryParse(typeAsString, out OngoingTaskType type) == false)
                 throw new ArgumentException($"{typeAsString} is unknown task type.");
 
             await DeleteServerWideTaskCommand(type);
@@ -186,7 +185,7 @@ namespace Raven.Server.Web.System
                 var blittables = ServerStore.Cluster.GetServerWideConfigurations(context, OngoingTaskType.Backup, taskName);
                 foreach (var blittable in blittables)
                 {
-                    var backup = JsonDeserializationServer.ServerWideBackupConfiguration(blittable);
+                    var backup = JsonDeserializationServer.ServerWideBackupConfigurationForStudio(blittable);
                     result.Backups.Add(backup);
                 }
 
@@ -228,7 +227,7 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var toggleResponse = new PutServerWideConfigurationResponse
+                    var toggleResponse = new ServerWideTaskResponse
                     {
                         Name = taskName,
                         RaftCommandIndex = newIndex 
@@ -251,14 +250,14 @@ namespace Raven.Server.Web.System
             await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, databaseName: null, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
         }
 
-        private async Task DeleteServerWideTaskCommand(DeleteServerWideTaskCommand.DeleteConfiguration.TaskType taskType)
+        private async Task DeleteServerWideTaskCommand(OngoingTaskType taskType)
         {
             var name = GetStringQueryString("name", required: true);
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var deleteConfiguration = new DeleteServerWideTaskCommand.DeleteConfiguration
                 {
-                    Name = name,
+                    TaskName = name,
                     Type = taskType
                 };
 
@@ -268,7 +267,7 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
-                    var deleteResponse = new PutServerWideConfigurationResponse
+                    var deleteResponse = new ServerWideTaskResponse
                     {
                         Name = name,
                         RaftCommandIndex = newIndex

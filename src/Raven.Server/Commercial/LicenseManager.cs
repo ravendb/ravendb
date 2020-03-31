@@ -1133,16 +1133,33 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        public void AssertCanAddExternalReplication()
+        public void AssertCanAddExternalReplication(TimeSpan delayReplicationFor)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (LicenseStatus.HasExternalReplication)
+            if (LicenseStatus.HasExternalReplication == false)
+            {
+                var details = $"Your current license ({LicenseStatus.Type}) does not allow adding external replication";
+                throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
+            }
+
+            AssertCanDelayReplication(delayReplicationFor);
+        }
+
+        public void AssertCanDelayReplication(TimeSpan delayReplicationFor)
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasDelayedExternalReplication)
                 return;
 
-            var details = $"Your current license ({LicenseStatus.Type}) does not allow adding external replication";
-            throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
+            if (delayReplicationFor.Ticks == 0)
+                return;
+
+            const string message = "Your current license doesn't include the delayed replication feature";
+            throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message, addNotification: true);
         }
 
         public void AssertCanUseDocumentsCompression()
@@ -1155,18 +1172,6 @@ namespace Raven.Server.Commercial
 
             var details = $"Your current license ({LicenseStatus.Type}) does not allow documents compression";
             throw GenerateLicenseLimit(LimitType.DocumentsCompression, details);
-        }
-
-        public void AssertCanDelayReplication()
-        {
-            if (IsValid(out var licenseLimit) == false)
-                throw licenseLimit;
-
-            if (LicenseStatus.HasDelayedExternalReplication)
-                return;
-
-            const string message = "Your current license doesn't include the delayed replication feature";
-            throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message, addNotification: true);
         }
 
         public void AssertCanAddPullReplicationAsHub()

@@ -407,7 +407,17 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
                 "update-periodic-backup",
                 GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: BeforeSetupConfiguration,
+                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
+                {
+                    var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(readerObject);
+
+                    ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
+                    BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
+                    BackupConfigurationHelper.AssertBackupConfiguration(configuration);
+                    BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
+
+                    readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
+                },
                 fillJson: (json, readerObject, index) =>
                 {
                     var taskIdName = nameof(PeriodicBackupConfiguration.TaskId);
@@ -416,18 +426,6 @@ namespace Raven.Server.Web.System
                         taskId = index;
                     json[taskIdName] = taskId;
                 });
-        }
-
-        private void BeforeSetupConfiguration(string _, ref BlittableJsonReaderObject readerObject, JsonOperationContext context)
-        {
-            var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(readerObject);
-
-            ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
-            BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
-            BackupConfigurationHelper.AssertBackupConfiguration(configuration);
-            BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
-
-            readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
         }
 
         [RavenAction("/databases/*/admin/backup-data-directory", "GET", AuthorizationStatus.DatabaseAdmin)]
@@ -1276,10 +1274,9 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                ServerStore.LicenseManager.AssertCanAddExternalReplication();
-
                 ExternalReplication watcher = null;
-                await DatabaseConfigurations((_, databaseName, blittableJson, guid) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, guid, out watcher), "update_external_replication",
+                await DatabaseConfigurations(
+                    (_, databaseName, blittableJson, guid) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, guid, out watcher), "update_external_replication",
                     GetRaftRequestIdFromQuery(),
                     fillJson: (json, _, index) =>
                     {
