@@ -258,9 +258,14 @@ namespace Sparrow.Json
             }
         }
 
-        public void LowMemory()
+        public void LowMemory(bool extremelyLow)
         {
-            if (!LowMemoryFlag.Raise())
+            var alreadyInLowMem = !LowMemoryFlag.Raise();
+
+            if (extremelyLow == false)
+                return;
+
+            if (alreadyInLowMem)
                 return;
 
             Interlocked.Increment(ref _generation);

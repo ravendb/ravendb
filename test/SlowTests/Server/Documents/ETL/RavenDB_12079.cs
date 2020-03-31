@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 var etlProcess = (RavenEtl)database.EtlLoader.Processes.First();
 
-                etlProcess.LowMemory();
+                etlProcess.LowMemory(true);
 
                 var numberOfDocs = EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString>.MinBatchSize + 50;
 
