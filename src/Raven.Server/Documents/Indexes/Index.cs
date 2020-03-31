@@ -1004,8 +1004,7 @@ namespace Raven.Server.Documents.Indexes
 
                         var message = $"There are still some {_itemType}s to process from collection '{collection}'. " +
                                    $"The last {_itemType} etag in that collection is '{lastItemEtag:#,#;;0}' " +
-                                   $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
-                                   $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
+                                   $"({lastDoc}), " +
                                    $"but last committed {_itemType} etag for that collection is '{lastProcessedItemEtag:#,#;;0}'";
                         if (stats != null)
                             message += $" (last processed etag is: '{stats.LastProcessedDocumentEtag:#,#;;0}')";
@@ -1024,8 +1023,7 @@ namespace Raven.Server.Documents.Indexes
 
                         var message = $"There are still some tombstones to process from collection '{collection}'. " +
                                    $"The last tombstone etag in that collection is '{lastTombstoneEtag:#,#;;0}' " +
-                                   $"({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', " +
-                                   $"{Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), " +
+                                   $"({lastTombstone}), " +
                                    $"but last committed tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.";
                         if (stats != null)
                             message += $" (last processed etag is: '{stats.LastProcessedTombstoneEtag:#,#;;0}')";
@@ -1045,8 +1043,7 @@ namespace Raven.Server.Documents.Indexes
 
                         var message = $"There are still some {_itemType}s to process from collection '{collection}'. " +
                                    $"The last {_itemType} etag in that collection is '{lastItemEtag:#,#;;0}' " +
-                                   $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
-                                   $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
+                                   $"({lastDoc}) " +
                                    $"with cutoff set to '{cutoff.Value}', " +
                                    $"but last committed {_itemType} etag for that collection is '{lastProcessedItemEtag:#,#;;0}'.";
                         if (stats != null)

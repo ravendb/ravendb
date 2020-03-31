@@ -1,8 +1,6 @@
 ﻿using System;
-using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Client;
 using Sparrow.Json;
-using Sparrow.Server.Utils;
-using Voron;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -42,10 +40,17 @@ namespace Raven.Server.Documents.Indexes
             ItemType = itemType;
         }
 
+        protected abstract string ToStringInternal();
+
         public void Dispose()
         {
             if (Item is IDisposable disposable)
                 disposable.Dispose();
+        }
+
+        public override string ToString()
+        {
+            return ToStringInternal();
         }
     }
 
@@ -55,6 +60,11 @@ namespace Raven.Server.Documents.Indexes
             : base(id, lowerId, null, null, etag, lastModified, null, size, item, IndexItemType.Document)
         {
         }
+
+        protected override string ToStringInternal()
+        {
+            return $"{Constants.Documents.Metadata.Id}: '{Id}', {Constants.Documents.Metadata.LastModified}: '{LastModified}'";
+        }
     }
 
     public class TimeSeriesIndexItem : IndexItem
@@ -63,6 +73,11 @@ namespace Raven.Server.Documents.Indexes
             : base(id, id, sourceDocumentId, sourceDocumentId, etag, lastModified, timeSeriesName, size, item, IndexItemType.TimeSeries)
         {
         }
+
+        protected override string ToStringInternal()
+        {
+            return $"@key: '{SourceDocumentId}|{IndexingKey}', {Constants.Documents.Metadata.LastModified}: '{LastModified}'";
+        }
     }
 
     public class CounterIndexItem : IndexItem
@@ -70,6 +85,11 @@ namespace Raven.Server.Documents.Indexes
         public CounterIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, LazyStringValue counterName, int size, object item)
             : base(id, id, sourceDocumentId, sourceDocumentId, etag, default, counterName, size, item, IndexItemType.Counters)
         {
+        }
+
+        protected override string ToStringInternal()
+        {
+            return $"@key: '{SourceDocumentId}|{IndexingKey}'";
         }
     }
 }
