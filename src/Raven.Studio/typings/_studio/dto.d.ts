@@ -644,6 +644,6 @@ interface rawStackTraceResponseItem {
 
 type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle";
 
-interface Configuration {
+interface MigratorPathConfiguration {
     HasMigratorPath: boolean;
 }

@@ -3,10 +3,10 @@ import endpoints = require("endpoints");
 
 class getMigratorPathConfigurationCommand extends commandBase {
 
-    execute(): JQueryPromise<Configuration> {
+    execute(): JQueryPromise<MigratorPathConfiguration> {
         const url = endpoints.global.studioTasks.studioTasksAdminMigratorPath;
        
-        return this.query<Configuration>(url, null)
+        return this.query<MigratorPathConfiguration>(url, null)
             .fail((response: JQueryXHR) =>
                 this.reportError("Failed to get information about Migrator Path", response.responseText, response.statusText));
     }
