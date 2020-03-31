@@ -52,7 +52,6 @@ class indexDefinition {
 
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
-    numberOfAdditionalSources = ko.pureComputed(() => this.additionalSources() ? this.additionalSources().length : 0);
 
     configuration = ko.observableArray<configurationItem>();
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
