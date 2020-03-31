@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
+        private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
         private Dictionary<string, Document> _loadedDocuments;
         private Dictionary<string, Document> _loadedDocumentsByAliasName;
@@ -52,12 +53,13 @@ namespace Raven.Server.Documents.Queries.Results
 
         private TimeSeriesRetriever _timeSeriesRetriever;
 
-        protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand)
+        protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand)
         {
             _database = database;
             _query = query;
             _context = context;
             _includeDocumentsCommand = includeDocumentsCommand;
+            _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
 
             DocumentsStorage = documentsStorage;
             RetrieverScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Retriever), start: false);
@@ -638,7 +640,6 @@ namespace Raven.Server.Documents.Queries.Results
                 args[args.Length - 1] = _query.QueryParameters;
 
                 var value = InvokeFunction(
-                    fieldToFetch,
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
                     documentId,
@@ -659,8 +660,8 @@ namespace Raven.Server.Documents.Queries.Results
 
                 foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
-                    if (other._functions != null && 
-                        (other._functions.TryGetValue(function.Key, out var otherVal) == false || 
+                    if (other._functions != null &&
+                        (other._functions.TryGetValue(function.Key, out var otherVal) == false ||
                          function.Value.FunctionText != otherVal.FunctionText))
                         return false;
                 }
@@ -718,7 +719,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         }
 
-        public object InvokeFunction(FieldsToFetch.FieldToFetch fieldToFetch, string methodName, Query query, string documentId, object[] args)
+        private object InvokeFunction(string methodName, Query query, string documentId, object[] args)
         {
             if (query.DeclaredFunctions != null &&
                 query.DeclaredFunctions.TryGetValue(methodName, out var func) &&
@@ -733,6 +734,7 @@ namespace Raven.Server.Documents.Queries.Results
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
             {
                 _includeDocumentsCommand?.AddRange(run.Includes, documentId);
+                _includeCompareExchangeValuesCommand?.AddRange(run.CompareExchangeValueIncludes);
 
                 if (result.IsNull)
                     return null;

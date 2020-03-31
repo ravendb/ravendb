@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasCmpXchg { get; private set; }
 
-        public bool HasCmpXchgIncludes { get; private set; }
+        public bool HasCmpXchgIncludes { get; internal set; }
 
         public bool HasHighlightings { get; private set; }
 
@@ -1370,7 +1370,7 @@ namespace Raven.Server.Documents.Queries
 
         private void CheckIfProjectionHasSpecialMethod(Esprima.Ast.Program ast)
         {
-            if (ast == null || (HasIncludeOrLoad && HasCounterSelect && HasCmpXchg && HasTimeSeriesSelect))
+            if (ast == null || (HasIncludeOrLoad && HasCounterSelect && HasCmpXchg && HasTimeSeriesSelect && HasCmpXchgIncludes))
                 return;
 
             var visitor = new HasSpecialMethodVisitor(this);

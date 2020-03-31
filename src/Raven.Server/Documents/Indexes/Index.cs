@@ -2613,7 +2613,6 @@ namespace Raven.Server.Documents.Indexes
                                 var skippedResults = new Reference<int>();
                                 IncludeCountersCommand includeCountersCommand = null;
                                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
-                                IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand = null;
 
                                 var fieldsToFetch = new FieldsToFetch(query, Definition);
 
@@ -2621,6 +2620,8 @@ namespace Raven.Server.Documents.Indexes
                                     DocumentDatabase.DocumentsStorage, queryContext.Documents,
                                     query.Metadata.Includes,
                                     fieldsToFetch.IsProjection);
+
+                                var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(queryContext, query.Metadata.CompareExchangeValueIncludes);
 
                                 if (query.Metadata.CounterIncludes != null)
                                 {
@@ -2637,10 +2638,7 @@ namespace Raven.Server.Documents.Indexes
                                         query.Metadata.TimeSeriesIncludes.TimeSeries);
                                 }
 
-                                if (query.Metadata.HasCmpXchgIncludes)
-                                    includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(queryContext, query.Metadata.CompareExchangeValueIncludes);
-
-                                var retriever = GetQueryResultRetriever(query, queryScope, queryContext.Documents, fieldsToFetch, includeDocumentsCommand);
+                                var retriever = GetQueryResultRetriever(query, queryScope, queryContext.Documents, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand);
 
                                 IEnumerable<IndexReadOperation.QueryResult> documents;
 
@@ -3484,7 +3482,7 @@ namespace Raven.Server.Documents.Indexes
             return _lastStats;
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand);
+        public abstract IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand);
 
         public abstract void SaveLastState();
 

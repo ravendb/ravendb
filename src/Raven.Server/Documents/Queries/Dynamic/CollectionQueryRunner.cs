@@ -136,6 +136,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var fieldsToFetch = new FieldsToFetch(query, null);
                 var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
+                var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
 
                 var totalResults = new Reference<int>();
 
@@ -143,7 +144,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (pulseReadingTransaction == false)
                 {
-                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, totalResults);
+                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeCompareExchangeValuesCommand, totalResults);
 
                     enumerator = documents.GetEnumerator();
                 }
@@ -155,7 +156,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             query.Start = state.Start;
                             query.PageSize = state.Take;
 
-                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, totalResults);
+                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeCompareExchangeValuesCommand, totalResults);
 
                             return documents;
                         },
@@ -168,7 +169,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 IncludeCountersCommand includeCountersCommand = null;
                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
-                IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand = null;
+
                 if (query.Metadata.CounterIncludes != null)
                 {
                     includeCountersCommand = new IncludeCountersCommand(
@@ -184,76 +185,70 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         query.Metadata.TimeSeriesIncludes.TimeSeries);
                 }
 
-                if (query.Metadata.HasCmpXchgIncludes)
-                    includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
-
-                using (includeCompareExchangeValuesCommand)
+                try
                 {
-                    try
+                    using (enumerator)
                     {
-                        using (enumerator)
+                        while (enumerator.MoveNext())
                         {
-                            while (enumerator.MoveNext())
+                            var document = enumerator.Current;
+
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            resultToFill.AddResult(document);
+
+                            using (gatherScope?.Start())
                             {
-                                var document = enumerator.Current;
-
-                                cancellationToken.ThrowIfCancellationRequested();
-
-                                resultToFill.AddResult(document);
-
-                                using (gatherScope?.Start())
-                                {
-                                    includeDocumentsCommand.Gather(document);
-                                    includeCompareExchangeValuesCommand?.Gather(document);
-                                }
-
-                                includeCountersCommand?.Fill(document);
-
-                                includeTimeSeriesCommand?.Fill(document);
+                                includeDocumentsCommand.Gather(document);
+                                includeCompareExchangeValuesCommand?.Gather(document);
                             }
+
+                            includeCountersCommand?.Fill(document);
+
+                            includeTimeSeriesCommand?.Fill(document);
                         }
                     }
-                    catch (Exception e)
-                    {
-                        if (resultToFill.SupportsExceptionHandling == false)
-                            throw;
+                }
+                catch (Exception e)
+                {
+                    if (resultToFill.SupportsExceptionHandling == false)
+                        throw;
 
-                        resultToFill.HandleException(e);
+                    resultToFill.HandleException(e);
+                }
+
+                using (fillScope?.Start())
+                {
+                    includeDocumentsCommand.Fill(resultToFill.Includes);
+
+                    includeCompareExchangeValuesCommand.Materialize();
+                }
+
+                if (includeCompareExchangeValuesCommand != null)
+                    resultToFill.AddCompareExchangeValueIncludes(includeCompareExchangeValuesCommand);
+
+                if (includeCountersCommand != null)
+                    resultToFill.AddCounterIncludes(includeCountersCommand);
+
+                if (includeTimeSeriesCommand != null)
+                    resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
+
+                resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
+
+                resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
+
+                if (query.Offset != null || query.Limit != null)
+                {
+                    if (resultToFill.TotalResults == -1)
+                    {
+                        resultToFill.CappedMaxResults = query.Limit ?? -1;
                     }
-
-                    using (fillScope?.Start())
+                    else
                     {
-                        includeDocumentsCommand.Fill(resultToFill.Includes);
-
-                        includeCompareExchangeValuesCommand?.Materialize();
-                    }
-
-                    if (includeCompareExchangeValuesCommand != null)
-                        resultToFill.AddCompareExchangeValueIncludes(includeCompareExchangeValuesCommand);
-
-                    if (includeCountersCommand != null)
-                        resultToFill.AddCounterIncludes(includeCountersCommand);
-
-                    if (includeTimeSeriesCommand != null)
-                        resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
-
-                    resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
-
-                    resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
-
-                    if (query.Offset != null || query.Limit != null)
-                    {
-                        if (resultToFill.TotalResults == -1)
-                        {
-                            resultToFill.CappedMaxResults = query.Limit ?? -1;
-                        }
-                        else
-                        {
-                            resultToFill.CappedMaxResults = Math.Min(
-                                query.Limit ?? int.MaxValue,
-                                resultToFill.TotalResults - (query.Offset ?? 0)
-                            );
-                        }
+                        resultToFill.CappedMaxResults = Math.Min(
+                            query.Limit ?? int.MaxValue,
+                            resultToFill.TotalResults - (query.Offset ?? 0)
+                        );
                     }
                 }
             }

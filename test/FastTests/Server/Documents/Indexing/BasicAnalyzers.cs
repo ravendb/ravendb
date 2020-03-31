@@ -151,7 +151,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch,
-            IncludeDocumentsCommand includeDocumentsCommand)
+            IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand)
         {
             throw new NotImplementedException();
         }

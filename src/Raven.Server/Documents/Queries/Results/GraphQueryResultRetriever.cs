@@ -24,8 +24,9 @@ namespace Raven.Server.Documents.Queries.Results
             DocumentsStorage documentsStorage,
             DocumentsOperationContext context,
             FieldsToFetch fieldsToFetch,
-            IncludeDocumentsCommand includeDocumentsCommand)
-            : base(database, query, queryTimings, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand)
+            IncludeDocumentsCommand includeDocumentsCommand,
+            IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand)
+            : base(database, query, queryTimings, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand)
         {
             _graphQuery = graphQuery;
             _context = context;

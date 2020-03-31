@@ -262,6 +262,102 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var employee = new Employee { Id = "employees/1", Notes = new List<string> { "companies/cf", "companies/hr" } };
+                    session.Store(employee);
+
+                    var company = new Company { Id = "companies/1", ExternalId = "companies/cf", Name = "CF" };
+                    session.Store(company);
+
+                    var address1 = new Address { City = "Torun" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", address1);
+
+                    var address2 = new Address { City = "Hadera" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", address2);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var companies = session.Advanced
+                        .RawQuery<Company>(
+                        @"
+declare function incl(c) {
+    includes.cmpxchg(c.ExternalId);
+    return c;
+}
+from Companies as c
+select incl(c)"
+                        )
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.True(stats.DurationInMs >= 0);
+                    var resultEtag = stats.ResultEtag;
+
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+
+                    var value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+
+                    companies = companies = session.Advanced
+                        .RawQuery<Company>(
+                        @"
+declare function incl(c) {
+    includes.cmpxchg(c.ExternalId);
+    return c;
+}
+from Companies as c
+select incl(c)"
+                        )
+                        .Statistics(out stats)
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.Equal(-1, stats.DurationInMs); // from cache
+                    Assert.Equal(resultEtag, stats.ResultEtag);
+
+                    using (var innerSession = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var value = innerSession.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                        value.Value.City = "Bydgoszcz";
+
+                        innerSession.SaveChanges();
+                    }
+
+                    companies = companies = session.Advanced
+                        .RawQuery<Company>(
+                        @"
+declare function incl(c) {
+    includes.cmpxchg(c.ExternalId);
+    return c;
+}
+from Companies as c
+select incl(c)"
+                        )
+                        .Statistics(out stats)
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.True(stats.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(resultEtag, stats.ResultEtag);
+
+                    value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                    Assert.Equal("Bydgoszcz", value1.Value.City);
+                }
+            }
+        }
+
+        [Fact]
         public void CanUseCompareExchangeValueIncludesInQueries_Static()
         {
             using (var store = GetDocumentStore())
@@ -327,6 +423,108 @@ namespace SlowTests.Issues
                     companies = session.Query<Company, Companies_ByName>()
                         .Statistics(out stats)
                         .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.True(stats.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(resultEtag, stats.ResultEtag);
+
+                    value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                    Assert.Equal("Bydgoszcz", value1.Value.City);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseCompareExchangeValueIncludesInQueries_Static_JavaScript()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Companies_ByName().Execute(store);
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var employee = new Employee { Id = "employees/1", Notes = new List<string> { "companies/cf", "companies/hr" } };
+                    session.Store(employee);
+
+                    var company = new Company { Id = "companies/1", ExternalId = "companies/cf", Name = "CF" };
+                    session.Store(company);
+
+                    var address1 = new Address { City = "Torun" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", address1);
+
+                    var address2 = new Address { City = "Hadera" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", address2);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var companies = session.Advanced
+                        .RawQuery<Company>(
+    @"
+declare function incl(c) {
+    includes.cmpxchg(c.ExternalId);
+    return c;
+}
+from index 'Companies/ByName' as c
+select incl(c)"
+    )
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.True(stats.DurationInMs >= 0);
+                    var resultEtag = stats.ResultEtag;
+
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+
+                    var value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+
+                    companies = session.Advanced
+                        .RawQuery<Company>(
+    @"
+declare function incl(c) {
+    includes.cmpxchg(c.ExternalId);
+    return c;
+}
+from index 'Companies/ByName' as c
+select incl(c)"
+    )
+                        .Statistics(out stats)
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.Equal(-1, stats.DurationInMs); // from cache
+                    Assert.Equal(resultEtag, stats.ResultEtag);
+
+                    using (var innerSession = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var value = innerSession.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                        value.Value.City = "Bydgoszcz";
+
+                        innerSession.SaveChanges();
+
+                        WaitForIndexing(store);
+                    }
+
+                    companies = session.Advanced
+                        .RawQuery<Company>(
+    @"
+declare function incl(c) {
+    includes.cmpxchg(c.ExternalId);
+    return c;
+}
+from index 'Companies/ByName' as c
+select incl(c)"
+    )
+                        .Statistics(out stats)
                         .ToList();
 
                     Assert.Equal(1, companies.Count);
