@@ -50,6 +50,7 @@ interface computedAppUrls {
     revisions: KnockoutComputed<string>;
     revertRevisions: KnockoutComputed<string>;
     expiration: KnockoutComputed<string>;
+    timeSeries: KnockoutComputed<string>;
     refresh: KnockoutComputed<string>;
     customSorters: KnockoutComputed<string>;
     editCustomSorter: KnockoutComputed<string>;

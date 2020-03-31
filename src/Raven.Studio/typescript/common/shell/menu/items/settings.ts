@@ -84,6 +84,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.expiration
         }),
         new leafMenuItem({
+            route: 'databases/settings/timeSeries',
+            moduleId: 'viewmodels/database/settings/timeSeries',
+            title: 'Time Series',
+            nav: true, 
+            css: 'icon-timeseries-settings',
+            dynamicHash: appUrls.timeSeries
+        }),
+        new leafMenuItem({
             route: 'databases/settings/customSorters',
             moduleId: 'viewmodels/database/settings/customSorters',
             title: 'Custom Sorters',
