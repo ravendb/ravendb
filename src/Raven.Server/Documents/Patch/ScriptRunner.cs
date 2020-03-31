@@ -289,10 +289,8 @@ namespace Raven.Server.Documents.Patch
             private void FillDoubleArrayFromJsArray(double[] array, ArrayInstance jsArray, string signature)
             {
                 var i = 0;
-                foreach (var (key, value) in jsArray.GetOwnProperties())
+                foreach (var (key, value) in jsArray.GetOwnPropertiesWithoutLength())
                 {
-                    if (key == "length")
-                        continue;
                     if (value.Value.IsNumber() == false)
                         throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {GetTypes(value.Value)} key({key}) value({value})");
                     array[i] = value.Value.AsNumber();
@@ -560,7 +558,7 @@ namespace Raven.Server.Documents.Patch
                 if (args[0].IsArray())// recursive call ourselves
                 {
                     var array = args[0].AsArray();
-                    foreach (var pair in array.GetOwnProperties())
+                    foreach (var pair in array.GetOwnPropertiesWithoutLength())
                     {
                         args[0] = pair.Value.Value;
                         if (args[0].IsString())
@@ -592,7 +590,7 @@ namespace Raven.Server.Documents.Patch
                 if (args[0].IsArray())// recursive call ourselves
                 {
                     var array = args[0].AsArray();
-                    foreach (var pair in array.GetOwnProperties())
+                    foreach (var pair in array.GetOwnPropertiesWithoutLength())
                     {
                         args[0] = pair.Value.Value;
                         if (args[0].IsString())
@@ -902,10 +900,8 @@ namespace Raven.Server.Documents.Patch
                 {
                     var results = (ArrayInstance)ScriptEngine.Array.Construct(Array.Empty<JsValue>());
                     var arrayInstance = args[0].AsArray();
-                    foreach (var kvp in arrayInstance.GetOwnProperties())
+                    foreach (var kvp in arrayInstance.GetOwnPropertiesWithoutLength())
                     {
-                        if (kvp.Key == "length")
-                            continue;
                         if (kvp.Value.Value.IsString() == false)
                             throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + kvp.Value.Value.Type + " - " + kvp.Value.Value);
                         var result = LoadDocumentInternal(kvp.Value.Value.AsString());

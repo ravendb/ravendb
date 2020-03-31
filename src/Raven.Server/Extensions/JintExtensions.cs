@@ -1,13 +1,28 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Esprima.Ast;
 using Jint;
+using Jint.Native;
+using Jint.Native.Array;
+using Jint.Runtime.Descriptors;
 using Raven.Client.Util;
 
 namespace Raven.Server.Extensions
 {
     public static class JintExtensions
     {
+        public static IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetOwnPropertiesWithoutLength(this ArrayInstance array)
+        {
+            foreach (var kvp in array.GetOwnProperties())
+            {
+                if (kvp.Key == "length")
+                    continue;
+
+                yield return kvp;
+            }
+        }
+
         public static IDisposable DisableMaxStatements(this Engine engine)
         {
             var oldMaxStatements = engine.MaxStatements;
