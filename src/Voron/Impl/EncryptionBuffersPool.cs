@@ -111,8 +111,10 @@ namespace Voron.Impl
             }
         }
 
-        public void LowMemory()
+        public void LowMemory(bool extremelyLow)
         {
+            if (extremelyLow == false)
+                return;
             ReleaseUnmanagedResources();
         }
 

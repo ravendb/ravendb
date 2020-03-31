@@ -32,8 +32,11 @@ namespace Sparrow.Json
             }
         }
 
-        public void LowMemory()
+        public void LowMemory(bool extremelyLow)
         {
+            if (extremelyLow == false)
+                return;
+
             var size = FreeAllPooledMemory();
             if(_log.IsInfoEnabled)
                 _log.Info($"{_debugTag}: HandleLowMemory freed {size:#,#;;0} bytes in {_debugTag}");

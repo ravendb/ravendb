@@ -27,6 +27,8 @@ namespace Raven.Server.Dashboard
 
         public bool IsLowMemory { get; set; }
 
+        public bool ExtremelyLow { get; set; }
+
         public long LowMemoryThreshold { get; set; } // in bytes
 
         public long CommitChargeThreshold { get; set; } // in bytes

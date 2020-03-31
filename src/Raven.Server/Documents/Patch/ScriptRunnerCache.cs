@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Patch
             return count;
         }
 
-        public void LowMemory()
+        public void LowMemory(bool extremelyLow)
         {
             _cache.Clear();
         }
