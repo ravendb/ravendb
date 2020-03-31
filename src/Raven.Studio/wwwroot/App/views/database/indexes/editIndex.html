@@ -90,8 +90,8 @@
                         <i class="icon-plus"></i><span>Add Reduction</span>
                     </button>
                 </div>
-                <div class="panel padding">
-                    <div class="row" data-bind="visible: hasReduce()">
+                <div class="panel padding" data-bind="visible: hasReduce()">
+                    <div class="row">
                         <div class="col-lg-4">
                             <div class="toggle margin-left">
                                 <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection">
@@ -107,7 +107,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row" data-bind="collapse: hasReduce() && outputReduceToCollection()">
+                    <div class="row" data-bind="collapse: outputReduceToCollection()">
                         <div class="col-lg-5">
                             <div class="toggle margin-top margin-top-sm margin-left margin-left-lg">
                                 <input id="togglePatternForReferences" type="checkbox" data-bind="checked: createReferencesToResultsCollection">
@@ -343,7 +343,6 @@
         <span class="item active"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Spatial</span></span>
     </div>
 </script>
-
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
 <script type="text/html" id="field-template">

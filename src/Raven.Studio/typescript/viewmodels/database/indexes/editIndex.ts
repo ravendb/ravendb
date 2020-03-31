@@ -272,16 +272,6 @@ class editIndex extends viewModelBase {
            }
            return false;
         });
-
-        const hasAnyDirtyAdditionalSource = ko.pureComputed(() => {
-            let anyDirty = false;
-            indexDef.additionalSources().forEach(source =>  {
-                if (source.dirtyFlag().isDirty()) {
-                    anyDirty = true;
-                }
-            });
-            return anyDirty;
-        });
         
         this.dirtyFlag = new ko.DirtyFlag([
             indexDef.name, 
@@ -290,15 +280,15 @@ class editIndex extends viewModelBase {
             indexDef.numberOfFields,
             indexDef.numberOfConfigurationFields,
             indexDef.outputReduceToCollection,
+            indexDef.createReferencesToResultsCollection,
             indexDef.reduceOutputCollectionName,
             indexDef.patternForReferencesToReduceOutputCollection,
             indexDef.collectionNameForReferenceDocuments,
-            indexDef.numberOfAdditionalSources,
+            indexDef.additionalSources,
             hasAnyDirtyField,
             hasAnyDirtyConfiguration,
             hasDefaultFieldOptions,
-            hasAnyDirtyDefaultFieldOptions,
-            hasAnyDirtyAdditionalSource
+            hasAnyDirtyDefaultFieldOptions
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {
@@ -571,10 +561,6 @@ class editIndex extends viewModelBase {
 
         indexDef.configuration().forEach((config) => {
             config.dirtyFlag().reset();
-        });
-
-        indexDef.additionalSources().forEach((source) => {
-            source.dirtyFlag().reset();
         });
         
         this.dirtyFlag().reset();

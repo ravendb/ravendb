@@ -305,7 +305,7 @@ namespace Raven.Server.Web.Studio
         }
 
         [RavenAction("/studio-tasks/admin/migrator-path", "GET", AuthorizationStatus.Operator)]
-        public Task HasConfigurationMigratorPath()
+        public Task HasMigratorPathInConfiguration()
         {
             // If the path from the configuration is defined, the Studio will block the option to set the path in the import view
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))

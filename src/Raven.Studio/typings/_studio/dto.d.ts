@@ -665,6 +665,10 @@ interface rawStackTraceResponseItem {
 
 type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle";
 
+interface MigratorPathConfiguration {
+    HasMigratorPath: boolean;
+}
+
 type timeSeriesResultType = "grouped" | "raw";
 
 interface timeSeriesQueryResultDto {

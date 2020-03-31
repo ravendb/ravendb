@@ -2386,7 +2386,7 @@ namespace Raven.Server.Documents.Indexes
                     stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
                     stats.LastQueryingTime = _lastQueryingTime;
 
-                    if (Type == IndexType.MapReduce)
+                    if (Type == IndexType.MapReduce || Type == IndexType.JavaScriptMapReduce)
                     {
                         var mapReduceIndex = this as MapReduceIndex;
                         stats.ReduceOutputCollection = mapReduceIndex.OutputReduceToCollection?.GetCollectionOfReduceOutput();
