@@ -286,10 +286,8 @@ namespace Sparrow.LowMemory
                     // AvailableWithoutTotalCleanMemory: AvailableMemory actually does add reclaimable memory (divided by 2), so if AvailableMemory is equal or lower then the _real_ available memory
                     // If it is lower the the real value because of RavenDB's Clean memory - then we use 'totalClean' as reference
                     // Otherwise - either it is correct value, or it is lower because of (clean or dirty memory of) another process
-                    long maximumPossibleAvailableMemory =
-                        Math.Min(totalClean.GetValue(SizeUnit.Bytes), procMemInfoResults.MemAvailable.GetValue(SizeUnit.Bytes) * 2L); // *2L because of meminfo.c performs
                     procMemInfoResults.AvailableWithoutTotalCleanMemory =
-                        new Size(Math.Max(maximumPossibleAvailableMemory, procMemInfoResults.MemAvailable.GetValue(SizeUnit.Bytes)), SizeUnit.Bytes);
+                        new Size(Math.Max(totalClean.GetValue(SizeUnit.Bytes), procMemInfoResults.MemAvailable.GetValue(SizeUnit.Bytes)), SizeUnit.Bytes);
 
                     procMemInfoResults.SharedCleanMemory = sharedCleanMemory;
                     procMemInfoResults.TotalDirty = totalDirty;
