@@ -2,7 +2,7 @@
 {
     public interface ILowMemoryHandler
     {
-        void LowMemory(bool extremelyLow);
+        void LowMemory(LowMemSeverity lowMemSeverity);
         void LowMemoryOver();
     }
 }

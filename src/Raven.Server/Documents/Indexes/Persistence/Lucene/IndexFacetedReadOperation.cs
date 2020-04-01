@@ -456,7 +456,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 //});
             }
 
-            public void LowMemory(bool extremelyLow)
+            public void LowMemory(LowMemSeverity lowMemSeverity)
             {
                 RunIdleOperations();
             }

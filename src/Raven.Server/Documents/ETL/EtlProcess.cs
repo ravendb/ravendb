@@ -1142,7 +1142,7 @@ namespace Raven.Server.Documents.ETL
             public readonly List<string> DebugOutput = new List<string>();
         }
 
-        public void LowMemory(bool extremelyLow)
+        public void LowMemory(LowMemSeverity lowMemSeverity)
         {
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
             _lowMemoryFlag.Raise();

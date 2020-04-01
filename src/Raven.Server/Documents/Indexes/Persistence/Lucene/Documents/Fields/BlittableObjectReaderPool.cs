@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             _pool.Free(reader);
         }
 
-        public void LowMemory(bool extremelyLow)
+        public void LowMemory(LowMemSeverity lowMemSeverity)
         {
             _isLowMemory = true;
         }

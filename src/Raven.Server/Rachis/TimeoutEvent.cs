@@ -190,7 +190,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void LowMemory(bool extremelyLow)
+        public void LowMemory(LowMemSeverity lowMemSeverity)
         {
             // will defer the timeout event if we detected low-memory
             _timeoutEventSlim.Set();

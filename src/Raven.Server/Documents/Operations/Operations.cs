@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Operations
 
         public ICollection<Operation> GetActive() => _active.Values;
 
-        public void LowMemory(bool extremelyLow)
+        public void LowMemory(LowMemSeverity lowMemSeverity)
         {
             // cleanup operations older than 1 minute only
             // Client API might still be waiting for the status

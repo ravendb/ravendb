@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.LowMemory;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 var etlProcess = (RavenEtl)database.EtlLoader.Processes.First();
 
-                etlProcess.LowMemory(true);
+                etlProcess.LowMemory(LowMemSeverity.ExtremelyLow);
 
                 var numberOfDocs = EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString>.MinBatchSize + 50;
 

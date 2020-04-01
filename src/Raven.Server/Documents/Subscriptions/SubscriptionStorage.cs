@@ -548,7 +548,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public void LowMemory(bool extremelyLow)
+        public void LowMemory(LowMemSeverity lowMemSeverity)
         {
             foreach (var state in _subscriptionConnectionStates)
             {

@@ -27,13 +27,6 @@ namespace Sparrow.LowMemory
             LowMemHandler
         }
 
-        internal enum LowMemSeverity
-        {
-            None = 0,
-            LowMem,
-            ExtremelyLow
-        }
-
         internal class LowMemEventDetails
         {
             public LowMemReason Reason;
@@ -51,7 +44,7 @@ namespace Sparrow.LowMemory
         private int _clearInactiveHandlersCounter;
         private bool _wasLowMemory;
 
-        private void RunLowMemoryHandlers(bool isLowMemory, bool extremelyLow = true)
+        private void RunLowMemoryHandlers(bool isLowMemory, LowMemSeverity lowMemSeverity = LowMemSeverity.ExtremelyLow)
         {
             try
             {
@@ -62,7 +55,7 @@ namespace Sparrow.LowMemory
                         try
                         {
                             if (isLowMemory)
-                                handler.LowMemory(extremelyLow);
+                                handler.LowMemory(lowMemSeverity);
                             else if (_wasLowMemory)
                                 handler.LowMemoryOver();
                         }
@@ -255,7 +248,7 @@ namespace Sparrow.LowMemory
             if (_logger.IsInfoEnabled)
                 _logger.Info("Simulating : " + (LowMemoryState ? "Low memory event" : "Back to normal memory usage"));
 
-            RunLowMemoryHandlers(LowMemoryState, true);
+            RunLowMemoryHandlers(LowMemoryState, LowMemSeverity.ExtremelyLow);
         }
 
         internal int CheckMemoryStatus(AbstractLowMemoryMonitor monitor)
@@ -306,9 +299,13 @@ namespace Sparrow.LowMemory
 
                 timeout = 500;
 
-                var freeReserveMemory = isLowMemory == LowMemSeverity.ExtremelyLow || (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx) == false;
+                if (isLowMemory == LowMemSeverity.LowMem &&
+                    (PlatformDetails.RunningOnLinux == false || PlatformDetails.RunningOnMacOsx))
+                {
+                    isLowMemory = LowMemSeverity.ExtremelyLow; // On linux we want two severity steps
+                }
                 _clearInactiveHandlersCounter = 0;
-                RunLowMemoryHandlers(true, freeReserveMemory);
+                RunLowMemoryHandlers(true, isLowMemory);
             }
             else
             {
