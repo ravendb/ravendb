@@ -30,11 +30,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     DocumentId = "users/ayende",
+                    Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                     {
                         new TimeSeriesOperation.AppendOperation
                         {
-                            Name = "Heartrate",
                             Timestamp = baseline.AddSeconds(1),
                             Values = new[]
                             {

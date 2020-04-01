@@ -1480,7 +1480,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (canAppend)
                 {
-                    // either the range is too high to fit in a single segment (~50 days) or the
+                    // either the range is too high to fit in a single segment (~25 days) or the
                     // previous segment is full, we can just create a completely new segment with the
                     // new value
                     segmentHolder.AppendToNewSegment(current);
