@@ -1467,7 +1467,10 @@ namespace Voron.Data.Tables
             using (var it = fst.Iterate())
             {
                 if (it.Seek(value) == false)
-                    return true;
+                    return false;
+
+                if (it.CurrentKey != value)
+                    return false;
 
                 Delete(it.CreateReaderForCurrent().ReadLittleEndianInt64());
                 return true;
