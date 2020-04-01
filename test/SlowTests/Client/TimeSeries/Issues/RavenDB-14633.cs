@@ -38,6 +38,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     DocumentId = "users/ayende",
+                    Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
 
@@ -45,7 +46,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
                     {
-                        Name = "Heartrate",
                         Tag = "watches/fitbit",
                         Timestamp = baseline.AddSeconds(i * 10),
                         Values = new[] { 59d }
@@ -87,6 +87,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     DocumentId = "users/ayende",
+                    Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
 
@@ -94,7 +95,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
                     {
-                        Name = "Heartrate",
                         Tag = "watches/fitbit",
                         Timestamp = baseline.AddSeconds(i * 10),
                         Values = new[] { 59d }
@@ -140,6 +140,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     DocumentId = "users/ayende",
+                    Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
 
@@ -147,7 +148,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
                     {
-                        Name = "Heartrate",
                         Tag = "watches/fitbit",
                         Timestamp = baseline.AddSeconds(i * 10),
                         Values = new[] { 59d }
@@ -230,6 +230,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     DocumentId = "users/ayende",
+                    Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
 
@@ -237,7 +238,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
                     {
-                        Name = "Heartrate",
                         Tag = "watches/fitbit",
                         Timestamp = baseline.AddSeconds(i * 10),
                         Values = new[] { 59d }
@@ -337,6 +337,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     DocumentId = "users/ayende",
+                    Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
 
@@ -344,7 +345,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
                     {
-                        Name = "Heartrate",
                         Tag = "watches/fitbit",
                         Timestamp = baseline.AddSeconds(i * 10),
                         Values = new[] { 59d }
@@ -421,6 +421,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     DocumentId = "users/ayende",
+                    Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
 
@@ -428,7 +429,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
                     {
-                        Name = "Heartrate",
                         Tag = "watches/fitbit",
                         Timestamp = baseline.AddSeconds(i * 10),
                         Values = new[] { 59d }
@@ -505,6 +505,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     DocumentId = "users/ayende",
+                    Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
 
@@ -512,7 +513,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
                     {
-                        Name = "Heartrate",
                         Tag = "watches/fitbit",
                         Timestamp = baseline.AddSeconds(i * 10),
                         Values = new[] { 59d }
@@ -622,6 +622,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     DocumentId = "users/ayende",
+                    Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
 
@@ -629,7 +630,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
                     {
-                        Name = "Heartrate",
                         Tag = "watches/fitbit",
                         Timestamp = baseline.AddSeconds(i * 10),
                         Values = new[] { 59d }
