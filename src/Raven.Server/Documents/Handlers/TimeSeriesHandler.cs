@@ -359,12 +359,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "timeseries");
 
-                var timeSeriesBatch = JsonDeserializationClient.TimeSeriesBatch(blittable);
+                var operation = JsonDeserializationClient.TimeSeriesOperation(blittable);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(blittable.ToString(), TrafficWatchChangeType.TimeSeries);
 
-                var cmd = new ExecuteTimeSeriesBatchCommand(Database, timeSeriesBatch.Operation, false);
+                var cmd = new ExecuteTimeSeriesBatchCommand(Database, operation, false);
 
                 try
                 {
@@ -467,8 +467,6 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                 {
-                    // todo - can we avoid using this sorted list? 
-
                     var sorted = new SortedList<long, TimeSeriesOperation.AppendOperation>();
 
                     foreach (var item in _operation.Appends)

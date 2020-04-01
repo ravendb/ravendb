@@ -7,11 +7,6 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesBatch
-    {
-        public TimeSeriesOperation Operation;
-    }
-
     public class TimeSeriesOperation
     {
         public List<AppendOperation> Appends;
@@ -110,7 +105,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (input.TryGet(nameof(Values), out BlittableJsonReaderArray values) == false || values == null)
                     throw new InvalidDataException($"Missing '{nameof(Values)}' property");
 
-                input.TryGet(nameof(Tag), out string tag);
+                input.TryGet(nameof(Tag), out string tag); // optional
 
                 var doubleValues = new double[values.Length];
                 for (int i = 0; i < doubleValues.Length; i++)
@@ -169,7 +164,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 return new DynamicJsonValue
                 {
                     [nameof(From)] = From,
-                    [nameof(To)] = To,
+                    [nameof(To)] = To
                 };
             }
         }

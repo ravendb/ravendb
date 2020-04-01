@@ -10,35 +10,26 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesBatchOperation : IOperation
     {
-        private readonly TimeSeriesBatch _timeSeriesBatch;
+        private readonly TimeSeriesOperation _operation;
 
-        internal TimeSeriesBatchOperation(TimeSeriesOperation operation)
-            : this(new TimeSeriesBatch
-            {
-                Operation = operation
-            })
+        public TimeSeriesBatchOperation(TimeSeriesOperation operation)
         {
-            if (operation == null)
-                throw new ArgumentNullException(nameof(operation));
+            _operation = operation ?? throw new ArgumentNullException(nameof(operation));
         }
 
-        public TimeSeriesBatchOperation(TimeSeriesBatch batch)
-        {
-            _timeSeriesBatch = batch ?? throw new ArgumentNullException(nameof(batch));
-        }
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new TimeSeriesBatchCommand(_timeSeriesBatch);
+            return new TimeSeriesBatchCommand(_operation);
         }
 
         private class TimeSeriesBatchCommand : RavenCommand
         {
-            private readonly TimeSeriesBatch _timeSeriesBatch;
+            private readonly TimeSeriesOperation _operation;
 
-            public TimeSeriesBatchCommand(TimeSeriesBatch batch)
+            public TimeSeriesBatchCommand(TimeSeriesOperation operation)
             {
-                _timeSeriesBatch = batch ?? throw new ArgumentNullException(nameof(batch));
+                _operation = operation;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -51,7 +42,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertCommandToBlittable(_timeSeriesBatch, ctx);
+                        var config = EntityToBlittable.ConvertCommandToBlittable(_operation, ctx);
                         ctx.Write(stream, config);
                     })
                 };

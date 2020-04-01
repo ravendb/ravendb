@@ -469,7 +469,6 @@ namespace TypingsGenerator
             // time series
             scripter.AddType(typeof(TimeSeriesStats));
             scripter.AddType(typeof(TimeSeriesDetails));
-            scripter.AddType(typeof(TimeSeriesBatch));
             scripter.AddType(typeof(TimeSeriesOperation));
             scripter.AddType(typeof(TimeSeriesOperation.AppendOperation));
             scripter.AddType(typeof(TimeSeriesOperation.RemoveOperation));
