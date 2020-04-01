@@ -20,10 +20,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal static TimeSeriesOperation Parse(BlittableJsonReaderObject input)
         {
             if (input.TryGet(nameof(DocumentId), out string docId) == false || docId == null)
-                ThrowMissingDocumentId();
+                ThrowMissingProperty(nameof(DocumentId));
 
             if (input.TryGet(nameof(Name), out string name) == false || name == null)
-                ThrowMissingName(); 
+                ThrowMissingProperty(nameof(Name));
 
             var result = new TimeSeriesOperation
             {
@@ -71,15 +71,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             throw new InvalidDataException($"'Operations' should contain items of type BlittableJsonReaderObject only, but got {op.GetType()}");
         }
 
-        private static void ThrowMissingDocumentId()
+        private static void ThrowMissingProperty(string prop)
         {
-            throw new InvalidDataException($"Missing '{nameof(DocumentId)}' property on 'TimeSeriesOperation'");
+            throw new InvalidDataException($"Missing '{prop}' property on 'TimeSeriesOperation'");
         }
-        private static void ThrowMissingName()
-        {
-            throw new InvalidDataException($"Missing '{nameof(Name)}' property on 'TimeSeriesOperation'");
-        }
-
+        
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
