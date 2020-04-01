@@ -258,11 +258,11 @@ namespace Sparrow.Json
             }
         }
 
-        public void LowMemory(bool extremelyLow)
+        public void LowMemory(LowMemSeverity lowMemSeverity)
         {
             var alreadyInLowMem = !LowMemoryFlag.Raise();
 
-            if (extremelyLow == false)
+            if (lowMemSeverity != LowMemSeverity.ExtremelyLow)
                 return;
 
             if (alreadyInLowMem)

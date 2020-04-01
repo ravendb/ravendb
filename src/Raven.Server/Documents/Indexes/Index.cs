@@ -3841,7 +3841,7 @@ namespace Raven.Server.Documents.Indexes
             return Name;
         }
 
-        public void LowMemory(bool extremelyLow)
+        public void LowMemory(LowMemSeverity lowMemSeverity)
         {
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
             Interlocked.Increment(ref _allocationCleanupNeeded);
@@ -3862,7 +3862,7 @@ namespace Raven.Server.Documents.Indexes
         internal void SimulateLowMemory()
         {
             _lowMemoryPressure = LowMemoryPressure;
-            LowMemory(true);
+            LowMemory(LowMemSeverity.ExtremelyLow);
         }
 
         private Regex GetOrAddRegex(string arg)

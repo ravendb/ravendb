@@ -263,7 +263,7 @@ namespace Sparrow.LowMemory
                     var swapTotalInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(SwapTotal);
                     var commitedInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
 
-                    var totalClean = new Size(memAvailableInKb, SizeUnit.Kilobytes);
+                    var totalClean = new Size(0, SizeUnit.Kilobytes);
                     var totalDirty = new Size(0, SizeUnit.Bytes);
                     var sharedCleanMemory = new Size(0, SizeUnit.Bytes);
                     if (smapsReader != null)

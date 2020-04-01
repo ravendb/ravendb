@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using Sparrow.Binary;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 #if MEM_GUARD
 using Sparrow.Platform;
 #endif
@@ -32,9 +33,9 @@ namespace Sparrow.Json
             }
         }
 
-        public void LowMemory(bool extremelyLow)
+        public void LowMemory(LowMemSeverity lowMemSeverity)
         {
-            if (extremelyLow == false)
+            if (lowMemSeverity != LowMemSeverity.ExtremelyLow)
                 return;
 
             var size = FreeAllPooledMemory();
