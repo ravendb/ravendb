@@ -46,12 +46,15 @@ namespace Tests.Infrastructure.Utils
 
         public bool FailedOnAssertion => Exception is XunitException;
 
-        public bool ThrewRavenTimeoutException()
+        public bool ShouldSaveDebugPackage()
         {
             var exception = Exception;
 
             if (exception == null)
                 return false;
+
+            if (NightlyBuildTheoryAttribute.IsNightlyBuild)
+                return true;
             
             if (exception is RavenException == false)
                 return false;
