@@ -175,6 +175,9 @@ class genUtils {
     }
 
     static timeSpanToSeconds(input: string) {
+        if (!input) {
+            return null;
+        }
         return moment.duration(input).asSeconds();
     }
 
