@@ -74,6 +74,8 @@ namespace Raven.Server.NotificationCenter
                           $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
                           $"Shared clean: {memoryInfo.SharedCleanMemory}, " +
                           $"Working set: {memoryInfo.WorkingSet}, " +
+                          $"Commited: {memoryInfo.CurrentCommitCharge}, " +
+                          $"Commit Limit: {memoryInfo.TotalCommittableMemory}, " +
                           $"Available memory: {memoryInfo.AvailableMemory}, " +
                           $"Calculated Available memory: {memoryInfo.AvailableWithoutTotalCleanMemory}, " +
                           $"Total Scratch Dirty memory: {memoryInfo.TotalScratchDirtyMemory}, " +
