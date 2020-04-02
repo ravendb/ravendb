@@ -232,6 +232,20 @@ namespace Raven.Server.Utils
                     LongRunningWork.Current = _workIsDone;
                     _action(_state);
                 }
+                catch (OutOfMemoryException e)
+                {
+                    try
+                    {
+                        if (_log.IsOperationsEnabled)
+                        {
+                            _log.Operations($"Failed to complete the run of '{_name}' because of out of memory exception", e);
+                        }
+                    }
+                    catch
+                    {
+                        // nothing we can do here
+                    }
+                }
                 catch (Exception e)
                 {
                     if (_log.IsOperationsEnabled)
