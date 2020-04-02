@@ -14,6 +14,7 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import deleteTimeSeries = require("viewmodels/database/timeSeries/deleteTimeSeries");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
+import timeSeriesModel = require("models/database/timeSeries/timeSeriesModel");
 
 class editTimeSeries extends viewModelBase {
     static timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
@@ -26,6 +27,7 @@ class editTimeSeries extends viewModelBase {
     canDeleteSelected: KnockoutComputed<boolean>;
     deleteCriteria: KnockoutComputed<timeSeriesDeleteCriteria>;
     deleteButtonText: KnockoutComputed<string>;
+    isAggregation: KnockoutComputed<boolean>;
 
     private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
     private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>();
@@ -71,15 +73,18 @@ class editTimeSeries extends viewModelBase {
                 title: () => 'Edit item'
             });
         
-        grid.init((s, t) => this.fetchSeries(s, t), () =>
-            [
+        grid.init((s, t) => this.fetchSeries(s, t), () => {
+            const columns = timeSeriesModel.aggregationColumns.join(", ")
+            const valuesHeader = this.isAggregation() ? "Values (" + columns + ")" : "Values";
+            
+            return [
                 new checkedColumn(true),
                 editColumn,
                 new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => formatTimeSeriesDate(x.Timestamp), "Date", "20%"),
                 new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Tag, "Tag", "20%"),
-                new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Values.join(", "), "Values", "40%")
+                new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Values.join(", "), valuesHeader, "40%")
             ]
-        );
+        });
 
         this.columnPreview.install("virtual-grid", ".js-time-series-tooltip",
             (item: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry, column: textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>,
@@ -131,8 +136,8 @@ class editTimeSeries extends viewModelBase {
         return fetchTask;
     }
 
-    private refresh() {
-        this.gridController().reset(false);
+    private refresh(hard = false) {
+        this.gridController().reset(hard);
     }
 
     private activateByCreateNew(docId: string) {
@@ -180,7 +185,7 @@ class editTimeSeries extends viewModelBase {
         
         router.navigate(appUrl.forEditTimeSeries(name, this.documentId(), this.activeDatabase()), false);
         
-        this.refresh();
+        this.refresh(true);
     }
     
     deleteTimeSeries() {
@@ -234,6 +239,8 @@ class editTimeSeries extends viewModelBase {
     }
 
     private initObservables() {
+        this.isAggregation = ko.pureComputed(() => this.timeSeriesName().includes("@"));
+        
         this.urlForDocument = ko.pureComputed(() => {
             return appUrl.forEditDoc(this.documentId(), this.activeDatabase());
         });
