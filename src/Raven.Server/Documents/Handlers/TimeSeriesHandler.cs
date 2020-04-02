@@ -117,14 +117,14 @@ namespace Raven.Server.Documents.Handlers
         public Task Read()
         {
             var documentId = GetStringQueryString("id");
-            var name = GetStringQueryString("name");
+            var names = GetStringValuesQueryString("name");
             var fromList = GetStringValuesQueryString("from", required: false);
             var toList = GetStringValuesQueryString("to", required: false);
 
             var start = GetStart();
             var pageSize = GetPageSize();
 
-            if (fromList.Count != toList.Count)
+            if (fromList.Count != toList.Count || fromList.Count != names.Count)
             {
                 throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
             }
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var ranges = GetTimeSeriesRangeResults(context, documentId, name, fromList, toList, start, pageSize);
+                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize);
 
                 var actualEtag = ranges.Count == 1
                     ? ranges[0].Hash
@@ -147,32 +147,34 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-                WriteResponse(context, documentId, name, ranges, addTotalCount: fromList.Count == 0);
+                WriteResponse(context, documentId, ranges);
 
                 return Task.CompletedTask;
             }
 
         }
 
-        private static List<TimeSeriesRangeResult> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, string name, StringValues fromList, StringValues toList, int start, int pageSize)
+        private static List<TimeSeriesRangeResult> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
         {
             var result = new List<TimeSeriesRangeResult>();
+            DateTime from, to;
 
-            if (fromList.Count == 0)
+            for (int i = 0; i < fromList.Count; i++)
             {
-                var rangeResult = GetTimeSeriesRange(context, documentId, name, DateTime.MinValue, DateTime.MaxValue, ref start, ref pageSize);
-                result.Add(rangeResult);
-            }
-            else
-            {
-                for (int i = 0; i < fromList.Count; i++)
+                if (fromList[i] == null)
                 {
-                    var from = ParseDate(fromList[i], name);
-                    var to = ParseDate(toList[i], name);
-
-                    var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize);
-                    result.Add(rangeResult);
+                    Debug.Assert(toList[i] == null, $"Non matching from/to dates. got from = null, expected to have to = null as well, bot got to = '{toList[i]}'");
+                    from = DateTime.MinValue;
+                    to = DateTime.MaxValue;
                 }
+                else
+                {
+                    from = ParseDate(fromList[i], names[i]);
+                    to = ParseDate(toList[i], names[i]);
+                }
+
+                var rangeResult = GetTimeSeriesRange(context, documentId, names[i], from, to, ref start, ref pageSize);
+                result.Add(rangeResult);
             }
 
             return result;
@@ -260,7 +262,7 @@ namespace Raven.Server.Documents.Handlers
             return ComputeHttpEtags.FinalizeHash(size, state);
         }
 
-        private void WriteRange(BlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult)
+        private void WriteRange(BlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalResults)
         {
             writer.WriteStartObject();
             {
@@ -274,10 +276,6 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.To));
                 writer.WriteDateTime(rangeResult.To, true);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(TimeSeriesRangeResult.FullRange));
-                writer.WriteBool(false); // TODO: Need to figure this out
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.Entries));
@@ -302,55 +300,88 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
                 writer.WriteEndArray();
+
+                if (totalResults.HasValue)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(FullTimeSeriesRangeResult.TotalResults));
+                    writer.WriteInteger(totalResults.Value);
+                }
             }
             writer.WriteEndObject();
         }
 
-        private void WriteResponse(DocumentsOperationContext context, string documentId, string name, List<TimeSeriesRangeResult> ranges, bool addTotalCount)
+        private void WriteResponse(DocumentsOperationContext context, string documentId, List<TimeSeriesRangeResult> ranges)
         {
+            List<FullTimeSeriesRangeResult> fullRangeResults = null;
+
+            foreach (var range in ranges)
+            {
+                if (range.From == DateTime.MinValue && range.To == DateTime.MaxValue)
+                {
+                    fullRangeResults ??= new List<FullTimeSeriesRangeResult>();
+
+                    fullRangeResults.Add(new FullTimeSeriesRangeResult
+                    {
+                        Entries = range.Entries, 
+                        From = range.From, 
+                        To = range.To, 
+                        Name = range.Name
+                    });
+
+                    ranges.Remove(range);
+                }
+            }
+
+
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 {
                     writer.WritePropertyName(nameof(TimeSeriesDetails.Id));
                     writer.WriteString(documentId);
-                    writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
-                    writer.WriteStartObject();
+                    if (fullRangeResults != null)
                     {
-                        writer.WritePropertyName(name);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(TimeSeriesDetails.FullRanges));
+
+                        writer.WriteStartArray();
+
+                        foreach (var range in fullRangeResults)
+                        {
+                            var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, range.Name);
+                            var totalResults = stats.Count;
+
+                            WriteRange(writer, range, totalResults);
+                        }
+
+                        writer.WriteEndArray();
+                    }
+
+                    if (ranges.Count > 0)
+                    {
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(TimeSeriesDetails.PartialRanges));
 
                         writer.WriteStartArray();
 
                         foreach (var range in ranges)
                         {
-                            WriteRange(writer, range);
+                            WriteRange(writer, range, null);
                         }
 
                         writer.WriteEndArray();
                     }
-                    writer.WriteEndObject();
 
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(TimeSeriesDetails.TotalResults));
-
-                    if (addTotalCount)
-                    {
-                        // add total entries count to the response 
-                        var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
-                        writer.WriteInteger(stats.Count);
-                    }
-                    else
-                    {
-                        writer.WriteInteger(-1);
-                    }
                 }
+
                 writer.WriteEndObject();
 
                 writer.Flush();
             }
         }
+
 
         [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser)]
         public async Task Batch()
