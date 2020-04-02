@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -1630,10 +1631,15 @@ namespace Raven.Server.Documents.TimeSeries
         private Reader.SingleResult GetNext(IEnumerator<Reader.SingleResult> reader, bool fromReplication)
         {
             Reader.SingleResult next = null;
+            var current = reader.Current?.Timestamp;
+
             if (reader.MoveNext())
             {
                 next = reader.Current;
 
+                if (current >= next?.Timestamp)
+                    throw new InvalidDataException("TimeSeries entries must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
+                                                   $"Got: current '{current}', next '{next.Timestamp}'.");
                 if (next != null)
                     next.Timestamp = EnsureMillisecondsPrecision(next.Timestamp);
 
