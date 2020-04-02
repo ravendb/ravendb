@@ -317,6 +317,8 @@ namespace Raven.Client.Documents.BulkInsert
                     WriteId(_currentWriter, id);
                     _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
 
+                    _currentWriter.Flush();
+
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
                         using (var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context,
@@ -324,9 +326,7 @@ namespace Raven.Client.Documents.BulkInsert
                             {
                                 MetadataInstance = metadata
                             }))
-
                         {
-                            _currentWriter.Flush();
                             json.WriteJsonTo(_currentWriter.BaseStream);
                         }
                     }
