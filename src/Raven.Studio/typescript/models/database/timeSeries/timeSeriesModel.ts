@@ -2,6 +2,8 @@ import timeSeriesValue = require("models/database/timeSeries/timeSeriesValue");
 
 class timeSeriesModel {
     
+    static aggregationColumns = ["First", "Last", "Min", "Max", "Sum", "Count"];
+    
     constructor(name: string, dto: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         this.name(name);
         this.tag(dto.Tag);

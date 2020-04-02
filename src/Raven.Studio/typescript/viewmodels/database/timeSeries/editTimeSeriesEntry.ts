@@ -6,6 +6,8 @@ import saveTimeSeriesCommand = require("commands/database/documents/timeSeries/s
 
 class editTimeSeriesEntry extends dialogViewModelBase {
 
+    static aggregationColumns = timeSeriesModel.aggregationColumns;
+    
     static utcTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     static localTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     
@@ -22,6 +24,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     
     dateFormattedAsUtc: KnockoutComputed<string>;
     dateFormattedAsLocal: KnockoutComputed<string>;
+    isAggregation: KnockoutComputed<boolean>;
     
     lockSeriesName: boolean;
     lockTimeStamp: boolean;
@@ -51,6 +54,8 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             const date = moment(model.timestamp());
             return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (local)"
         });
+        
+        this.isAggregation = ko.pureComputed(() => this.model().name().includes("@"));
     }
     
     save() {
