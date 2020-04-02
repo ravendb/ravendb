@@ -39,7 +39,7 @@ namespace Raven.Server.Config.Categories
             string GetValue(IConfiguration cfg, string name)
             {
                 var section = cfg.GetSection(name);
-                if (section == null) 
+                if (section == null)
                     return null;
 
                 if (section.Value != null)
@@ -47,8 +47,8 @@ namespace Raven.Server.Config.Categories
 
                 var children = section.GetChildren().ToList();
 
-                return children.Count != 0 
-                    ? string.Join(";", children.Where(x => x.Value != null).Select(x => x.Value)) 
+                return children.Count != 0
+                    ? string.Join(";", children.Where(x => x.Value != null).Select(x => x.Value))
                     : null;
             }
 
