@@ -691,3 +691,7 @@ interface timeSeriesRawItemResultDto {
     Timestamp: string;
     Values: number[];
 }
+
+type timeSeriesAggregationUnits = "yearly" | "monthly" | "daily" | "every minute" | "every second";
+
+type timeSeriesRetentionUnits = "year" | "month" | "day" | "minute" | "seconds";
