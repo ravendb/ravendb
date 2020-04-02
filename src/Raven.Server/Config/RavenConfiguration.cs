@@ -221,9 +221,9 @@ namespace Raven.Server.Config
             return ServerWideSettings?[key];
         }
 
-        private static readonly Lazy<HashSet<string>> AllConfigurationKeys = new Lazy<HashSet<string>>(() =>
+        internal static readonly Lazy<HashSet<ConfigurationEntryMetadata>> AllConfigurationEntries = new Lazy<HashSet<ConfigurationEntryMetadata>>(() =>
         {
-            var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var results = new HashSet<ConfigurationEntryMetadata>();
 
             var type = typeof(RavenConfiguration);
             foreach (var configurationProperty in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
@@ -234,20 +234,19 @@ namespace Raven.Server.Config
 
                 foreach (var property in propertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 {
-                    foreach (var configurationEntryAttribute in property.GetCustomAttributes<ConfigurationEntryAttribute>())
-                    {
-                        results.Add(configurationEntryAttribute.Key);
-                    }
+                    if (property.GetCustomAttributes<ConfigurationEntryAttribute>(inherit: true).Any() == false)
+                        continue;
+
+                    results.Add(new ConfigurationEntryMetadata(property));
                 }
             }
 
             return results;
         });
 
-
         public static bool ContainsKey(string key)
         {
-            return AllConfigurationKeys.Value.Contains(key, StringComparer.OrdinalIgnoreCase);
+            return AllConfigurationEntries.Value.Any(x => x.IsMatch(key));
         }
 
         public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
@@ -389,7 +388,6 @@ namespace Raven.Server.Config
 
                     var fileName = Guid.NewGuid().ToString("N");
 
-
                     var path = pathSettingValue.ToFullPath();
                     var fullPath = Path.Combine(path, fileName);
 
@@ -442,7 +440,6 @@ namespace Raven.Server.Config
                             IOExtensions.DeleteDirectory(createdDirectory);
                         }
                     }
-
                 }
             }
 
@@ -482,7 +479,7 @@ namespace Raven.Server.Config
                     if (key == null)
                         continue;
 
-                    if (key.StartsWith(Prefix1, StringComparison.OrdinalIgnoreCase) == false && 
+                    if (key.StartsWith(Prefix1, StringComparison.OrdinalIgnoreCase) == false &&
                         key.StartsWith(Prefix2, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 

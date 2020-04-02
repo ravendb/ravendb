@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -11,6 +12,19 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminConfigurationHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/admin/configuration", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetConfiguration()
+        {
+            foreach (var configurationEntryMetadata in RavenConfiguration.AllConfigurationEntries.Value)
+            {
+
+
+                //var serverWide = Database.Configuration.GetServerWideSetting(configurationEntryMetadata);
+                //var databaseOnly = Database.Configuration.GetSetting(configurationEntryMetadata);
+            }
+        }
+
+
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutStudioConfiguration()
         {
