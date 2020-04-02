@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             if (input.TryGet(nameof(Appends), out BlittableJsonReaderArray operations) && operations != null)
             {
-                result.Appends = new List<AppendOperation>();
+                var sorted = new SortedList<long, AppendOperation>();
 
                 foreach (var op in operations)
                 {
@@ -43,8 +43,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                         return null; //never hit
                     }
 
-                    result.Appends.Add(AppendOperation.Parse(bjro));
+                    var append = AppendOperation.Parse(bjro);
+
+                    sorted[append.Timestamp.Ticks] = append;
                 }
+
+                result.Appends = new List<AppendOperation>(sorted.Values);
             }
 
             if (input.TryGet(nameof(Removals), out operations) && operations != null)

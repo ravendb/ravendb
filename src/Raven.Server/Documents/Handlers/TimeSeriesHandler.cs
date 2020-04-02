@@ -467,21 +467,14 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                 {
-                    var sorted = new SortedList<long, TimeSeriesOperation.AppendOperation>();
-
-                    foreach (var item in _operation.Appends)
-                    {
-                        sorted[item.Timestamp.Ticks] = item;
-                    }
-
                     LastChangeVector = tss.AppendTimestamp(context,
                         _operation.DocumentId,
                         docCollection,
                         _operation.Name,
-                        sorted.Values
+                        _operation.Appends
                     );
 
-                    changes += sorted.Values.Count;
+                    changes += _operation.Appends.Count;
                 }
 
                 return changes;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -30,6 +31,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             public TimeSeriesBatchCommand(TimeSeriesOperation operation)
             {
                 _operation = operation;
+
+                if (_operation.Appends != null)
+                {
+                    var sorted = new SortedList<long, TimeSeriesOperation.AppendOperation>();
+
+                    foreach (var append in _operation.Appends)
+                    {
+                        sorted.Add(append.Timestamp.Ticks, append);
+                    }
+
+                    _operation.Appends = new List<TimeSeriesOperation.AppendOperation>(sorted.Values);
+                }
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
