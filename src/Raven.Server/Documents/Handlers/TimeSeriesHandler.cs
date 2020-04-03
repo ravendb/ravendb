@@ -357,14 +357,15 @@ namespace Raven.Server.Documents.Handlers
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "timeseries");
+                var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
+                var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "timeseries");
                 var operation = JsonDeserializationClient.TimeSeriesOperation(blittable);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(blittable.ToString(), TrafficWatchChangeType.TimeSeries);
 
-                var cmd = new ExecuteTimeSeriesBatchCommand(Database, operation, false);
+                var cmd = new ExecuteTimeSeriesBatchCommand(Database, documentId, operation, false);
 
                 try
                 {
@@ -411,21 +412,23 @@ namespace Raven.Server.Documents.Handlers
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
+            private readonly string _documentId;
             private readonly TimeSeriesOperation _operation;
             private readonly bool _fromEtl;
 
             public string LastChangeVector;
 
-            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, TimeSeriesOperation operation, bool fromEtl)
+            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, string documentId, TimeSeriesOperation operation, bool fromEtl)
             {
                 _database = database;
+                _documentId = documentId;
                 _operation = operation;
                 _fromEtl = fromEtl;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                string docCollection = GetDocumentCollection(_database, context, _operation.DocumentId, _fromEtl);
+                string docCollection = GetDocumentCollection(_database, context, _documentId, _fromEtl);
 
                 if (docCollection == null)
                     return 0L;
@@ -439,7 +442,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var deletionRange = new TimeSeriesStorage.DeletionRangeRequest
                         {
-                            DocumentId = _operation.DocumentId,
+                            DocumentId = _documentId,
                             Collection = docCollection,
                             Name = _operation.Name,
                             From = removal.From,
@@ -458,7 +461,7 @@ namespace Raven.Server.Documents.Handlers
                 if (_operation.Appends.Count == 1)
                 {
                     LastChangeVector = tss.AppendTimestamp(context,
-                        _operation.DocumentId,
+                        _documentId,
                         docCollection,
                         _operation.Name,
                         new[] {_operation.Appends[0]});
@@ -468,7 +471,7 @@ namespace Raven.Server.Documents.Handlers
                 else
                 {
                     LastChangeVector = tss.AppendTimestamp(context,
-                        _operation.DocumentId,
+                        _documentId,
                         docCollection,
                         _operation.Name,
                         _operation.Appends

@@ -21,11 +21,13 @@ namespace SlowTests.Client.TimeSeries.Operations
         [Fact]
         public void CanCreateAndGetSimpleTimeSeriesUsingStoreOperations()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -33,7 +35,6 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                     {
@@ -49,14 +50,14 @@ namespace SlowTests.Client.TimeSeries.Operations
                     }
                 };
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", "Heartrate", DateTime.MinValue, DateTime.MaxValue));
+                    new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                Assert.Equal(documentId, timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
                 Assert.Equal(1, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
@@ -71,11 +72,13 @@ namespace SlowTests.Client.TimeSeries.Operations
         [Fact]
         public void CanStoreAndReadMultipleTimestampsUsingStoreOperations()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -83,7 +86,6 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                     {
@@ -117,14 +119,14 @@ namespace SlowTests.Client.TimeSeries.Operations
                     }
                 };
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", "Heartrate", DateTime.MinValue, DateTime.MaxValue));
+                    new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                Assert.Equal(documentId, timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
                 Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
@@ -140,7 +142,6 @@ namespace SlowTests.Client.TimeSeries.Operations
                 Assert.Equal("watches/fitbit", value.Tag);
                 Assert.Equal(baseline.AddSeconds(2), value.Timestamp);
 
-
                 value = timesSeriesDetails.Values["Heartrate"][0].Entries[2];
 
                 Assert.Equal(60d, value.Values[0]);
@@ -152,11 +153,13 @@ namespace SlowTests.Client.TimeSeries.Operations
         [Fact]
         public void CanDeleteTimestampUsingStoreOperations()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -164,7 +167,6 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                     {
@@ -216,21 +218,20 @@ namespace SlowTests.Client.TimeSeries.Operations
                     }
                 };
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", "Heartrate", DateTime.MinValue, DateTime.MaxValue));
+                    new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                Assert.Equal(documentId, timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
                 Assert.Equal(5, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
 
                 timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Removals = new List<TimeSeriesOperation.RemoveOperation>()
                     {
@@ -242,14 +243,14 @@ namespace SlowTests.Client.TimeSeries.Operations
                     }
                 };
 
-                timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", "Heartrate", DateTime.MinValue, DateTime.MaxValue));
+                    new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                Assert.Equal(documentId, timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
                 Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
@@ -274,8 +275,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
-                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    session.Store(new { Name = "Oren" }, documentId);
+                    var tsf = session.TimeSeriesFor(documentId, "Heartrate");
                     tsf.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
                     tsf.Append(baseline.AddMinutes(2), new[] { 69d }, "watches/fitbit");
                     tsf.Append(baseline.AddMinutes(3), new[] { 79d }, "watches/fitbit");
@@ -285,8 +286,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                    session.Store(new { Name = "Oren" }, documentId);
+                    session.TimeSeriesFor(documentId, "Heartrate")
                         .Remove(baseline.AddMinutes(2));
 
                     session.SaveChanges();
@@ -294,7 +295,7 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
                          .Get(DateTime.MinValue, DateTime.MaxValue)
                          .ToList();
                     Assert.Equal(2, vals.Count);
@@ -427,11 +428,13 @@ namespace SlowTests.Client.TimeSeries.Operations
         [Fact]
         public void CanAppendAndRemoveTimestampsInSingleBatch()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -439,7 +442,6 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                     {
@@ -473,20 +475,19 @@ namespace SlowTests.Client.TimeSeries.Operations
                     }
                 };
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", "Heartrate", DateTime.MinValue, DateTime.MaxValue));
+                    new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                Assert.Equal(documentId, timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
                 Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
                 timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                     {
@@ -528,14 +529,14 @@ namespace SlowTests.Client.TimeSeries.Operations
                     }
                 };
 
-                timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", "Heartrate", DateTime.MinValue, DateTime.MaxValue));
+                    new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                Assert.Equal(documentId, timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
                 Assert.Equal(4, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
 
@@ -563,12 +564,12 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                    session.Store(new { Name = "Oren" }, documentId);
+                    session.TimeSeriesFor(documentId, "Heartrate")
                         .Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
-                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                    session.TimeSeriesFor(documentId, "Heartrate")
                         .Append(baseline.AddMinutes(2), new[] { 69d }, "watches/fitbit");
-                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                    session.TimeSeriesFor(documentId, "Heartrate")
                      .Append(baseline.AddMinutes(3), new[] { 79d }, "watches/fitbit");
 
                     session.SaveChanges();
@@ -576,8 +577,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                    session.Store(new { Name = "Oren" }, documentId);
+                    session.TimeSeriesFor(documentId, "Heartrate")
                         .Remove(baseline.AddMinutes(2));
 
                     session.SaveChanges();
@@ -585,7 +586,7 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
                          .Get(DateTime.MinValue, DateTime.MaxValue)
                          .ToList();
                     Assert.Equal(2, vals.Count);
@@ -609,7 +610,6 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                     {
@@ -622,23 +622,24 @@ namespace SlowTests.Client.TimeSeries.Operations
                     }
                 };
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation("users/ayende", timeSeriesOp);
 
                 var ex = Assert.Throws<DocumentDoesNotExistException>(() => store.Operations.Send(timeSeriesBatch));
 
                 Assert.Contains("Cannot operate on time series of a missing document", ex.Message);
-
             }
         }
 
         [Fact]
         public void CanGetMultipleRangesInSingleRequest()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -646,7 +647,6 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -661,12 +661,12 @@ namespace SlowTests.Client.TimeSeries.Operations
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", "Heartrate", new List<TimeSeriesRange>
+                    new GetTimeSeriesOperation(documentId, "Heartrate", new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -687,7 +687,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                         }
                     }));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                Assert.Equal(documentId, timesSeriesDetails.Id);
                 Assert.Equal(1, timesSeriesDetails.Values.Count);
                 Assert.Equal(3, timesSeriesDetails.Values["Heartrate"].Count);
 

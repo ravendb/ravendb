@@ -25,11 +25,13 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public void CanGetAll()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -37,7 +39,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -52,14 +53,14 @@ namespace SlowTests.Client.TimeSeries.Issues
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", null, 0, int.MaxValue);
+                    var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, 0, int.MaxValue);
                     re.Execute(tsCommand, context);
                     var res = tsCommand.Result;
 
@@ -74,11 +75,13 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public void CanGetAll_WithPaging()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -86,7 +89,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -101,14 +103,14 @@ namespace SlowTests.Client.TimeSeries.Issues
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", null, start: 100, pageSize: 200);
+                    var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 100, pageSize: 200);
                     re.Execute(tsCommand, context);
                     var res = tsCommand.Result;
 
@@ -127,11 +129,13 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public void GetAllShouldReturnNotModifiedCode()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -139,7 +143,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -154,7 +157,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
@@ -163,7 +166,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     for (int i = 0; i < 3; i++)
                     {
-                        var tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", null, start: 0, pageSize: int.MaxValue);
+                        var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 0, pageSize: int.MaxValue);
 
                         re.Execute(tsCommand, context);
                         var res = tsCommand.Result;
@@ -188,13 +191,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = store.OpenSession())
                     {
                         // add a new entry to the series
-                        session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddSeconds(100).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
+                        session.TimeSeriesFor(documentId, "Heartrate").Append(baseline.AddSeconds(100).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
                         session.SaveChanges();
                     }
 
                     // verify that we don't get cached results
 
-                    var command = new GetTimeSeriesCommand("users/ayende", "Heartrate", null);
+                    var command = new GetTimeSeriesCommand(documentId, "Heartrate", null);
                     re.Execute(command, context);
 
                     Assert.Equal(HttpStatusCode.OK, command.StatusCode);
@@ -217,11 +220,13 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public void GetAllShouldReturnNotModifiedCode_WithPaging()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -229,7 +234,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -244,7 +248,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
@@ -254,7 +258,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     GetTimeSeriesCommand tsCommand = default;
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", null, start: 100, pageSize: 200);
+                        tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 100, pageSize: 200);
 
                         re.Execute(tsCommand, context);
                         var res = tsCommand.Result;
@@ -280,13 +284,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = store.OpenSession())
                     {
                         // add a new entry to the series
-                        session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddSeconds(2000).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
+                        session.TimeSeriesFor(documentId, "Heartrate").Append(baseline.AddSeconds(2000).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
                         session.SaveChanges();
                     }
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", null, start: 100, pageSize: 200);
+                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 100, pageSize: 200);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -306,7 +310,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     // request with a different 'start'
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", null, start: 101, pageSize: 200);
+                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 101, pageSize: 200);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -324,11 +328,13 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public void CanGetRanges()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -336,7 +342,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -351,7 +356,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
@@ -365,11 +370,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                         new TimeSeriesRange {From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)}
                     };
 
-                    var tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", ranges, 0, int.MaxValue);
+                    var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges, 0, int.MaxValue);
                     re.Execute(tsCommand, context);
                     var timesSeriesDetails = tsCommand.Result;
 
-                    Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                    Assert.Equal(documentId, timesSeriesDetails.Id);
                     Assert.Equal(1, timesSeriesDetails.Values.Count);
                     Assert.Equal(3, timesSeriesDetails.Values["Heartrate"].Count);
 
@@ -408,11 +413,13 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public void CanGetRanges_WithPaging()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -420,7 +427,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -435,7 +441,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
@@ -449,11 +455,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                         new TimeSeriesRange {From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)}
                     };
 
-                    var tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", ranges, 10, 150);
+                    var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges, 10, 150);
                     re.Execute(tsCommand, context);
                     var timesSeriesDetails = tsCommand.Result;
 
-                    Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                    Assert.Equal(documentId, timesSeriesDetails.Id);
                     Assert.Equal(1, timesSeriesDetails.Values.Count);
                     Assert.Equal(3, timesSeriesDetails.Values["Heartrate"].Count);
 
@@ -492,11 +498,13 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public void GetRangesShouldReturnNotModifiedCode()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -504,7 +512,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -519,7 +526,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
@@ -537,7 +544,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", ranges);
+                        tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges);
                         re.Execute(tsCommand, context);
                         var timesSeriesDetails = tsCommand.Result;
 
@@ -550,7 +557,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                             Assert.Equal(HttpStatusCode.NotModified, tsCommand.StatusCode);
                         }
 
-                        Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                        Assert.Equal(documentId, timesSeriesDetails.Id);
                         Assert.Equal(1, timesSeriesDetails.Values.Count);
                         Assert.Equal(3, timesSeriesDetails.Values["Heartrate"].Count);
 
@@ -585,13 +592,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = store.OpenSession())
                     {
                         // add a new entry to the series
-                        session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(5).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
+                        session.TimeSeriesFor(documentId, "Heartrate").Append(baseline.AddMinutes(5).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
                         session.SaveChanges();
                     }
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", ranges);
+                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -609,11 +616,13 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public void GetRangesShouldReturnNotModifiedCode_WithPaging()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -621,7 +630,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -636,7 +644,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
@@ -654,7 +662,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", ranges, 10, 150);
+                        tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges, 10, 150);
                         re.Execute(tsCommand, context);
                         var timesSeriesDetails = tsCommand.Result;
 
@@ -667,7 +675,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                             Assert.Equal(HttpStatusCode.NotModified, tsCommand.StatusCode);
                         }
 
-                        Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                        Assert.Equal(documentId, timesSeriesDetails.Id);
                         Assert.Equal(1, timesSeriesDetails.Values.Count);
                         Assert.Equal(3, timesSeriesDetails.Values["Heartrate"].Count);
 
@@ -703,13 +711,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = store.OpenSession())
                     {
                         // add a new entry to the series
-                        session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(15).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
+                        session.TimeSeriesFor(documentId, "Heartrate").Append(baseline.AddMinutes(15).AddMilliseconds(50), new[] { 1000d }, "watches/apple");
                         session.SaveChanges();
                     }
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", ranges, 10, 150);
+                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges, 10, 150);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -722,7 +730,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     // request with a different 'start'
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand("users/ayende", "Heartrate", null, start: 12, pageSize: 150);
+                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 12, pageSize: 150);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);

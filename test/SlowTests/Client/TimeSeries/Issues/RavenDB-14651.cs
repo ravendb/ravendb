@@ -17,11 +17,13 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public void CanAvoidPassingTagInBatchOperation()
         {
+            const string documentId = "users/ayende";
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -29,7 +31,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                     {
@@ -44,7 +45,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     }
                 };
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
@@ -98,7 +99,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Null(value.Tag);
                 Assert.Equal(baseline.AddSeconds(1), value.Timestamp);
-
             }
         }
 
@@ -134,9 +134,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);
                 Assert.Equal(baseline.AddSeconds(1), value.Timestamp);
-
             }
         }
-
     }
 }
