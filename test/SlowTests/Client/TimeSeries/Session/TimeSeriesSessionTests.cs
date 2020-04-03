@@ -397,7 +397,6 @@ namespace SlowTests.Client.TimeSeries.Session
                         Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp);
                         Assert.Equal(offset, vals[i].Values[0]);
 
-
                         offset += 4;
                     }
                 }
@@ -446,7 +445,6 @@ namespace SlowTests.Client.TimeSeries.Session
                         {
                             Assert.Equal(new[] { j + i }, vals[(int)j].Values);
                         }
-
                     }
                 }
 
@@ -467,11 +465,8 @@ namespace SlowTests.Client.TimeSeries.Session
                         {
                             Assert.Equal(new[] { j }, vals[(int)j].Values);
                         }
-
                     }
                 }
-
-
             }
         }
 

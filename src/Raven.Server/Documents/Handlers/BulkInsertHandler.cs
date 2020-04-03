@@ -290,16 +290,13 @@ namespace Raven.Server.Documents.Handlers
                     }
                     else if (cmd.Type == CommandType.TimeSeries)
                     {
-                        foreach (var appendOperation in cmd.TimeSeries.Appends)
-                        {
-                            var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
-                            Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
-                                cmd.Id,
-                                docCollection,
-                                appendOperation.Name,
-                                new[] { appendOperation }
-                            );
-                        }
+                        var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
+                        Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                            cmd.Id,
+                            docCollection,
+                            cmd.TimeSeries.Name,
+                            cmd.TimeSeries.Appends
+                        );
                     }
                 }
 
