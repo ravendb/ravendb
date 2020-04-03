@@ -21,6 +21,7 @@ using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Threading;
+using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.BulkInsert
 {
@@ -564,165 +565,6 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        public class TimeSeriesBulkInsert : IDisposable
-        {
-            private readonly BulkInsertOperation _operation;
-            private readonly string _id;
-            private readonly string _name;
-            private bool _first = true;
-            private const int _maxTimeSeriesInBatch = 10 * 128;
-            private int _timeSeriesInBatch = 0;
-
-            public TimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name)
-            {
-                switch (_operation._inProgressCommand)
-                {
-                    case CommandType.TimeSeries:
-                        throw new InvalidOperationException($"Cannot");
-                    case CommandType.Counters:
-                        _operation._countersOperation.EndPreviousCommandIfNeeded();
-                        break;
-                }
-
-                _operation = operation;
-                _id = id;
-                _name = name;
-
-                _operation._inProgressCommand = CommandType.TimeSeries;
-            }
-
-            public void Append(DateTime timestamp, double value, string tag = null)
-            {
-                AsyncHelpers.RunSync(() => AppendAsync(timestamp, value, tag));
-            }
-            
-            public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
-            {
-                //AsyncHelpers.RunSync(() => AppendAsync(timestamp, value, tag));
-            }
-
-            public async Task AppendAsync(DateTime timestamp, double value, string tag = null)
-            {
-                using (_operation.ConcurrencyCheck())
-                {
-                    await _operation.ExecuteBeforeStore().ConfigureAwait(false);
-
-                    try
-                    {
-                        if (_first)
-                        {
-                            if (_operation._first == false)
-                                _operation._currentWriter.Write(",");
-
-                            WritePrefixForNewCommand();
-                        }
-                        else if (_timeSeriesInBatch >= _maxTimeSeriesInBatch)
-                        {
-                            _operation._currentWriter.Write("]}},");
-                            WritePrefixForNewCommand();
-                        }
-
-                        _timeSeriesInBatch++;
-
-                        if (_first == false)
-                        {
-                            _operation._currentWriter.Write(",");
-                        }
-
-                        _first = false;
-
-
-
-                        //TODO: optimize to send multiple appends for the same document
-
-                        //var appendOperation = new TimeSeriesOperation.AppendOperation
-                        //{
-                        //    Name = _name,
-                        //    Timestamp = time,
-                        //    Tag = tag,
-                        //    Values = values is double[] arr
-                        //        ? arr
-                        //        : values.ToArray()
-                        //};
-
-                        //using (var json = _operation._context.ReadObject(appendOperation.ToJson(), id))
-                        //{
-                        //    _currentWriter.Flush();
-                        //    json.WriteJsonTo(_currentWriter.BaseStream);
-                        //}
-
-                        //_currentWriter.Write("]}}");
-
-                        //var isFirst = _id == null;
-                        //if (isFirst || _id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
-                        //{
-                        //    if (isFirst == false)
-                        //    {
-                        //        //we need to end the command for the previous document id
-                        //        _operation._currentWriter.Write("]}},");
-                        //    }
-                        //    else if (_operation._first == false)
-                        //    {
-                        //        _operation._currentWriter.Write(",");
-                        //    }
-
-                        //    _operation._first = false;
-
-                        //    _id = id;
-                        //    _operation._inProgressCommand = CommandType.Counters;
-
-                        //    WritePrefixForNewCommand();
-                        //}
-
-                        //if (_countersInBatch >= _maxCountersInBatch)
-                        //{
-                        //    _operation._currentWriter.Write("]}},");
-
-                        //    WritePrefixForNewCommand();
-                        //}
-
-
-                        //_operation._currentWriter.Write("{\"Type\":\"Increment\",\"CounterName\":\"");
-                        //WriteString(_operation._currentWriter, name);
-                        //_operation._currentWriter.Write("\",\"Delta\":");
-                        //_operation._currentWriter.Write(delta);
-                        //_operation._currentWriter.Write("}");
-
-                        await _operation.FlushIfNeeded().ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        await _operation.HandleErrors(_id, e).ConfigureAwait(false);
-                    }
-                }
-            }
-
-            private void WritePrefixForNewCommand()
-            {
-                _first = true;
-                _timeSeriesInBatch = 0;
-
-                _operation._currentWriter.Write("{\"Id\":\"");
-                WriteString(_operation._currentWriter, _id);
-                _operation._currentWriter.Write("\",\"Type\":\"TimeSeries\",\"TimeSeries\":{\"DocumentId\":\"");
-                WriteString(_operation._currentWriter, _id);
-                _operation._currentWriter.Write("\",\"Appends\":[");
-            }
-
-            public static void EndCommand(StreamWriter currentWriter)
-            {
-                currentWriter.Write("]}}");
-            }
-
-            public void Dispose()
-            {
-                _operation._inProgressCommand = CommandType.None;
-
-                if (_first == false)
-                    EndCommand(_operation._currentWriter);
-            }
-        }
-
         internal class CountersBulkInsertOperation
         {
             private readonly BulkInsertOperation _operation;
@@ -820,6 +662,145 @@ namespace Raven.Client.Documents.BulkInsert
                 _operation._currentWriter.Write("\",\"Type\":\"Counters\",\"Counters\":{\"DocumentId\":\"");
                 WriteString(_operation._currentWriter, _id);
                 _operation._currentWriter.Write("\",\"Operations\":[");
+            }
+        }
+
+        public class TimeSeriesBulkInsert : IDisposable
+        {
+            private readonly BulkInsertOperation _operation;
+            private readonly string _id;
+            private readonly string _name;
+            private bool _first = true;
+            private const int _maxTimeSeriesInBatch = 128;
+            private int _timeSeriesInBatch = 0;
+
+            public TimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name)
+            {
+                switch (operation._inProgressCommand)
+                {
+                    case CommandType.TimeSeries:
+                        throw new InvalidOperationException($"Cannot");
+                    case CommandType.Counters:
+                        _operation._countersOperation.EndPreviousCommandIfNeeded();
+                        break;
+                }
+
+                _operation = operation;
+                _id = id;
+                _name = name;
+
+                _operation._inProgressCommand = CommandType.TimeSeries;
+            }
+
+            public void Append(DateTime timestamp, double value, string tag = null)
+            {
+                AsyncHelpers.RunSync(() => AppendAsync(timestamp, new[] { value }, tag));
+            }
+
+            public Task AppendAsync(DateTime timestamp, double value, string tag = null)
+            {
+                return AppendAsyncInternal(timestamp, new[] { value }, tag);
+            }
+
+            public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
+            {
+                AsyncHelpers.RunSync(() => AppendAsync(timestamp, values, tag));
+            }
+
+            public Task AppendAsync(DateTime timestamp, IEnumerable<double> values, string tag = null)
+            {
+                return AppendAsyncInternal(timestamp, values, tag);
+            }
+
+            private async Task AppendAsyncInternal(DateTime timestamp, IEnumerable<double> values, string tag = null)
+            {
+                using (_operation.ConcurrencyCheck())
+                {
+                    await _operation.ExecuteBeforeStore().ConfigureAwait(false);
+
+                    try
+                    {
+                        if (_first)
+                        {
+                            if (_operation._first == false)
+                                _operation._currentWriter.Write(",");
+
+                            WritePrefixForNewCommand();
+                        }
+                        else if (_timeSeriesInBatch >= _maxTimeSeriesInBatch)
+                        {
+                            _operation._currentWriter.Write("]}},");
+                            WritePrefixForNewCommand();
+                        }
+
+                        _timeSeriesInBatch++;
+
+                        if (_first == false)
+                        {
+                            _operation._currentWriter.Write(",");
+                        }
+
+                        _first = false;
+
+                        _operation._currentWriter.Write("{\"Timestamp\":\"");
+                        _operation._currentWriter.Write(timestamp.GetDefaultRavenFormat());
+                        _operation._currentWriter.Write("\",\"Values\":[");
+
+                        var firstValue = true;
+                        foreach (var value in values)
+                        {
+                            if (firstValue == false)
+                                _operation._currentWriter.Write(",");
+
+                            firstValue = false;
+                            _operation._currentWriter.Write(value);
+                        }
+
+                        _operation._currentWriter.Write("]");
+
+                        if (tag != null)
+                        {
+                            _operation._currentWriter.Write(",\"Tag\":\"");
+                            WriteString(_operation._currentWriter, tag);
+                            _operation._currentWriter.Write("\"");
+                        }
+
+                        _operation._currentWriter.Write("}");
+
+                        await _operation.FlushIfNeeded().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        await _operation.HandleErrors(_id, e).ConfigureAwait(false);
+                    }
+                }
+            }
+
+            private void WritePrefixForNewCommand()
+            {
+                _first = true;
+                _timeSeriesInBatch = 0;
+
+                _operation._currentWriter.Write("{\"Id\":\"");
+                WriteString(_operation._currentWriter, _id);
+                _operation._currentWriter.Write("\",\"Type\":\"TimeSeries\",\"TimeSeries\":{\"DocumentId\":\"");
+                WriteString(_operation._currentWriter, _id);
+                _operation._currentWriter.Write("\",\"Name\":\"");
+                WriteString(_operation._currentWriter, _name);
+                _operation._currentWriter.Write("\",\"Appends\":[");
+            }
+
+            internal static void EndCommand(StreamWriter currentWriter)
+            {
+                currentWriter.Write("]}}");
+            }
+
+            public void Dispose()
+            {
+                _operation._inProgressCommand = CommandType.None;
+
+                if (_first == false)
+                    EndCommand(_operation._currentWriter);
             }
         }
     }

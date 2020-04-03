@@ -99,7 +99,8 @@ namespace SlowTests.Client.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, documentId);
-                    session.TimeSeriesFor(documentId, "Heartrate").Remove(baseline.AddMinutes(2));
+                    session.TimeSeriesFor(documentId, "Heartrate")
+                        .Remove(baseline.AddMinutes(2));
 
                     session.SaveChanges();
                 }
@@ -137,7 +138,7 @@ namespace SlowTests.Client.TimeSeries
                     using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
                     {
                         timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
-                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), 70d, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), 70d, "watches/apple");
                     }
                 }
 
@@ -175,7 +176,7 @@ namespace SlowTests.Client.TimeSeries
                     using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
                     {
                         timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
-                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), new[] { 70d, 120d, 80d }, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(2), new[] { 70d, 120d, 80d }, "watches/apple");
                         timeSeriesBulkInsert.Append(baseline.AddMinutes(3), 69d, "watches/fitbit");
                     }
                 }
@@ -216,7 +217,7 @@ namespace SlowTests.Client.TimeSeries
 
                     using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
                     {
-                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new[] { 70d, 120d, 80d }, "watches/fitbit");
+                        timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new[] { 70d, 120d, 80d }, "watches/apple");
                         timeSeriesBulkInsert.Append(baseline.AddMinutes(2), new[] { 59d }, "watches/fitbit");
                         timeSeriesBulkInsert.Append(baseline.AddMinutes(3), new[] { 69d }, "watches/fitbit");
                     }
@@ -256,7 +257,8 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
-                    bulkInsert.TimeSeriesFor(documentId, "Heartrate").Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+                    bulkInsert.TimeSeriesFor(documentId, "Heartrate")
+                        .Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
                 }
 
                 using (var bulkInsert = store.BulkInsert())
@@ -315,7 +317,7 @@ namespace SlowTests.Client.TimeSeries
 
                         for (int j = 0; j < 1000; j++)
                         {
-                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new double[] { offset }, "watches/fitbit");
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(offset++), new double[] { offset }, "watches/fitbit");
                         }
                     }
                 }
@@ -418,7 +420,8 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
-                    bulkInsert.TimeSeriesFor(documentId, "Heartrate").Append(baseline, new[] { 0d }, "watches/fitbit");
+                    bulkInsert.TimeSeriesFor(documentId, "Heartrate")
+                        .Append(baseline, new[] { 0d }, "watches/fitbit");
                 }
 
                 using (var bulkInsert = store.BulkInsert())
@@ -427,7 +430,7 @@ namespace SlowTests.Client.TimeSeries
                     {
                         for (double i = 1; i < 10; i++)
                         {
-                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), i, "watches/fitbit");
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(i), i, "watches/fitbit");
                         }
                     }
                 }
@@ -446,10 +449,8 @@ namespace SlowTests.Client.TimeSeries
                         {
                             Assert.Equal(new[] { j + i }, vals[(int)j].Values);
                         }
-
                     }
                 }
-
 
                 var maxTimeStamp = baseline.AddMinutes(9);
 
@@ -484,11 +485,10 @@ namespace SlowTests.Client.TimeSeries
                 {
                     bulkInsert.Store(new { Name = "Oren" }, documentId);
 
-                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
-                    {
-                        timeSeriesBulkInsert.Append(baseline, new[] { 58d }, "watches/fitbit");
-                        timeSeriesBulkInsert.Append(baseline.AddMinutes(10), new[] { 60d }, "watches/fitbit");
-                    }
+                    var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate");
+
+                    timeSeriesBulkInsert.Append(baseline, new[] { 58d }, "watches/fitbit");
+                    timeSeriesBulkInsert.Append(baseline.AddMinutes(10), new[] { 60d }, "watches/fitbit");
                 }
 
                 using (var session = store.OpenSession())
@@ -519,23 +519,27 @@ namespace SlowTests.Client.TimeSeries
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new User(), documentId1);
-                    bulkInsert.TimeSeriesFor(documentId1, "Nasdaq2").Append(DateTime.Now, new[] { 7547.31 }, "web");
+                    bulkInsert.TimeSeriesFor(documentId1, "Nasdaq2")
+                        .Append(DateTime.Now, new[] { 7547.31 }, "web");
                 }
 
                 using (var bulkInsert = store.BulkInsert())
                 {
-                    bulkInsert.TimeSeriesFor(documentId1, "Heartrate2").Append(DateTime.Now, new[] { 7547.31 }, "web");
+                    bulkInsert.TimeSeriesFor(documentId1, "Heartrate2")
+                        .Append(DateTime.Now, new[] { 7547.31 }, "web");
                 }
 
                 using (var bulkInsert = store.BulkInsert())
                 {
                     bulkInsert.Store(new User(), documentId2);
-                    bulkInsert.TimeSeriesFor(documentId1, "Nasdaq").Append(DateTime.Now, new[] { 7547.31 }, "web");
+                    bulkInsert.TimeSeriesFor(documentId2, "Nasdaq")
+                        .Append(DateTime.Now, new[] { 7547.31 }, "web");
                 }
 
                 using (var bulkInsert = store.BulkInsert())
                 {
-                    bulkInsert.TimeSeriesFor(documentId1, "Heartrate").Append(DateTime.Now, new[] { 58d }, "fitbit");
+                    bulkInsert.TimeSeriesFor(documentId2, "Heartrate")
+                        .Append(DateTime.Now, new[] { 58d }, "fitbit");
                 }
 
                 using (var session = store.OpenSession())
