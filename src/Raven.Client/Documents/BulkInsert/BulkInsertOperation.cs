@@ -679,7 +679,7 @@ namespace Raven.Client.Documents.BulkInsert
                 switch (operation._inProgressCommand)
                 {
                     case CommandType.TimeSeries:
-                        throw new InvalidOperationException($"Cannot");
+                        throw new InvalidOperationException("Please dispose the previous time series operation before starting a new one");
                     case CommandType.Counters:
                         _operation._countersOperation.EndPreviousCommandIfNeeded();
                         break;
