@@ -19,6 +19,8 @@ namespace Raven.Server.Config
 
         public readonly string DefaultValue;
 
+        public readonly bool IsDefaultValueDynamic;
+
         public readonly string Description;
 
         public readonly ConfigurationEntryType Type;
@@ -39,6 +41,8 @@ namespace Raven.Server.Config
 
         public ConfigurationEntryMetadata(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty)
         {
+            if (configurationCategoryProperty is null)
+                throw new ArgumentNullException(nameof(configurationCategoryProperty));
             if (configurationProperty is null)
                 throw new ArgumentNullException(nameof(configurationProperty));
 
@@ -57,7 +61,7 @@ namespace Raven.Server.Config
             Keys = keys.ToArray();
             Description = configurationProperty.GetCustomAttribute<DescriptionAttribute>(inherit: true)?.Description;
             Type = GetConfigurationEntryType(configurationProperty);
-            DefaultValue = GetDefaultValue(configurationCategoryProperty, configurationProperty);
+            DefaultValue = GetDefaultValue(configurationCategoryProperty, configurationProperty, out IsDefaultValueDynamic);
         }
 
         internal bool IsMatch(string key)
@@ -78,6 +82,7 @@ namespace Raven.Server.Config
                 [nameof(Keys)] = new DynamicJsonArray(Keys),
                 [nameof(Scope)] = Scope,
                 [nameof(DefaultValue)] = DefaultValue,
+                [nameof(IsDefaultValueDynamic)] = IsDefaultValueDynamic,
                 [nameof(Description)] = Description,
                 [nameof(Type)] = Type,
                 [nameof(SizeUnit)] = SizeUnit,
@@ -90,11 +95,14 @@ namespace Raven.Server.Config
             };
         }
 
-        private string GetDefaultValue(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty)
+        private string GetDefaultValue(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty, out bool isDefaultValueDynamic)
         {
+            isDefaultValueDynamic = false;
             var defaultValue = configurationProperty.GetCustomAttribute<DefaultValueAttribute>(inherit: true)?.Value?.ToString();
             if (defaultValue == ConfigurationCategory.DefaultValueSetInConstructor)
             {
+                isDefaultValueDynamic = true;
+
                 var configurationCategory = configurationCategoryProperty.GetValue(RavenConfiguration.Default);
                 var configurationValue = configurationProperty.GetValue(configurationCategory);
                 if (configurationValue == null)
