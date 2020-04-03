@@ -57,7 +57,6 @@ class timeSeriesModel {
     
     public toDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation {
         return {
-            Name: this.name(),
             Tag: this.tag(),
             Timestamp: this.timestamp().utc().format(),
             Values: this.values().map(x => x.value())

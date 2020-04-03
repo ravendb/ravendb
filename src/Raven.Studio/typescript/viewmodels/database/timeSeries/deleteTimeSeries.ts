@@ -79,14 +79,12 @@ class deleteTimeSeries extends dialogViewModelBase {
             case "all":
                 return [
                     {
-                        Name: this.timeSeriesName,
                         From: deleteTimeSeries.minDate,
                         To: deleteTimeSeries.maxDate
                     }
                 ];
             case "selection":
                 return this.criteria.selection.map(x => ({
-                    Name: this.timeSeriesName,
                     From: x.Timestamp,
                     To: x.Timestamp
                 }));
@@ -94,7 +92,6 @@ class deleteTimeSeries extends dialogViewModelBase {
                 return [{
                     From: this.startDateToUse(),
                     To: this.endDateToUse(),
-                    Name: this.timeSeriesName
                 }];
         }
     }
@@ -107,7 +104,7 @@ class deleteTimeSeries extends dialogViewModelBase {
             
             this.spinners.delete(true);
             
-            new deleteTimeSeriesCommand(this.documentId, dto, this.db)
+            new deleteTimeSeriesCommand(this.documentId, this.timeSeriesName, dto, this.db)
                 .execute()
                 .done(() => {
                     const postDelete: postTimeSeriesDeleteAction = this.criteria.mode === "all" ? "changeTimeSeries" : "reloadCurrent";
