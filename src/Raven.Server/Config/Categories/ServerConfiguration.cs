@@ -59,24 +59,24 @@ namespace Raven.Server.Config.Categories
 
         [Description("EXPERT: A command or executable that will provide RavenDB with the current CPU credits balance.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Server.CpuCredits.Exec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Server.CpuCredits.Exec", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
         public string CpuCreditsExec { get; set; }
 
         [Description("EXPERT: The command line arguments for the Server.CpuCredits.Exec command or executable.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Server.CpuCredits.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Server.CpuCredits.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
         public string CpuCreditsExecArguments { get; set; }
 
         [Description("EXPERT: The number of minutes between every invocation of the CPU Credits executable. Default: 30 minutes.")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Server.CpuCredits.Exec.SyncIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Server.CpuCredits.Exec.SyncIntervalInMin", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
         public TimeSetting CpuCreditsExecSyncInterval { get; set; }
 
         [Description("EXPERT: The number of seconds to wait for the CPU Credits executable to exit. Default: 30 seconds.")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Server.CpuCredits.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Server.CpuCredits.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
         public TimeSetting CpuCreditsExecTimeout { get; set; }
     }
 }
