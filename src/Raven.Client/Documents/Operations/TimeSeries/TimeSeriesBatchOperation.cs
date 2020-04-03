@@ -11,25 +11,28 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesBatchOperation : IOperation
     {
+        private readonly string _documentId;
         private readonly TimeSeriesOperation _operation;
 
-        public TimeSeriesBatchOperation(TimeSeriesOperation operation)
+        public TimeSeriesBatchOperation(string documentId, TimeSeriesOperation operation)
         {
+            _documentId = documentId ?? throw new ArgumentNullException(nameof(documentId));
             _operation = operation ?? throw new ArgumentNullException(nameof(operation));
         }
 
-
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new TimeSeriesBatchCommand(_operation);
+            return new TimeSeriesBatchCommand(_documentId, _operation);
         }
 
         private class TimeSeriesBatchCommand : RavenCommand
         {
+            private readonly string _documentId;
             private readonly TimeSeriesOperation _operation;
 
-            public TimeSeriesBatchCommand(TimeSeriesOperation operation)
+            public TimeSeriesBatchCommand(string documentId, TimeSeriesOperation operation)
             {
+                _documentId = documentId;
                 _operation = operation;
 
                 if (_operation.Appends != null)
@@ -47,7 +50,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/timeseries";
+                url = $"{node.Url}/databases/{node.Database}/timeseries?id={_documentId}";
 
                 return new HttpRequestMessage
                 {

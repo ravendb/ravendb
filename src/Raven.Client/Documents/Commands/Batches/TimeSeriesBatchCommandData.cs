@@ -23,7 +23,6 @@ namespace Raven.Client.Documents.Commands.Batches
 
             TimeSeries = new TimeSeriesOperation
             {
-                DocumentId = documentId,
                 Name = name,
                 Appends = appends,
                 Removals = removals

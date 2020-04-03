@@ -13,21 +13,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public List<RemoveOperation> Removals;
 
-        public string DocumentId;
-
         public string Name;
 
         internal static TimeSeriesOperation Parse(BlittableJsonReaderObject input)
         {
-            if (input.TryGet(nameof(DocumentId), out string docId) == false || docId == null)
-                ThrowMissingProperty(nameof(DocumentId));
-
             if (input.TryGet(nameof(Name), out string name) == false || name == null)
                 ThrowMissingProperty(nameof(Name));
 
             var result = new TimeSeriesOperation
             {
-                DocumentId = docId,
                 Name = name
             };
 
@@ -84,7 +78,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             return new DynamicJsonValue
             {
-                [nameof(DocumentId)] = DocumentId,
                 [nameof(Name)] = Name,
                 [nameof(Appends)] = Appends?.Select(x => x.ToJson()),
                 [nameof(Removals)] = Removals?.Select(x => x.ToJson())
