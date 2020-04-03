@@ -1,4 +1,3 @@
-using System;
 using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.Changes
@@ -27,7 +26,7 @@ namespace Raven.Client.Documents.Changes
         IChangesObservable<OperationStatusChange> ForOperationId(long operationId);
 
         /// <summary>
-        /// Subscribe to change for all operation statuses. 
+        /// Subscribe to change for all operation statuses.
         /// </summary>
         /// <returns></returns>
         IChangesObservable<OperationStatusChange> ForAllOperations();
@@ -71,5 +70,25 @@ namespace Raven.Client.Documents.Changes
         /// Subscribe to changes for all counters from a given document.
         /// </summary>
         IChangesObservable<CounterChange> ForCountersOfDocument(string documentId);
+
+        /// <summary>
+        /// Subscribe to changes for all timeseries.
+        /// </summary>
+        IChangesObservable<TimeSeriesChange> ForAllTimeSeries();
+
+        /// <summary>
+        /// Subscribe to changes for all timeseries with a given name.
+        /// </summary>
+        IChangesObservable<TimeSeriesChange> ForTimeSeries(string timeSeriesName);
+
+        /// <summary>
+        /// Subscribe to changes for timeseries from a given document and with given name.
+        /// </summary>
+        IChangesObservable<TimeSeriesChange> ForTimeSeriesOfDocument(string documentId, string timeSeriesName);
+
+        /// <summary>
+        /// Subscribe to changes for all timeseries from a given document.
+        /// </summary>
+        IChangesObservable<TimeSeriesChange> ForTimeSeriesOfDocument(string documentId);
     }
 }

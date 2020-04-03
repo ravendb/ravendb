@@ -16,7 +16,6 @@ using Sparrow.Threading;
 
 namespace Raven.Server.Documents
 {
-
     public class ChangesClientConnection : IDisposable
     {
         private static long _counter;
@@ -44,7 +43,13 @@ namespace Raven.Server.Documents
 
         private readonly ConcurrentSet<string> _matchingDocumentCounters = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentSet<DocumentIdAndCounterNamePair> _matchingDocumentCounter = new ConcurrentSet<DocumentIdAndCounterNamePair>();
+        private readonly ConcurrentSet<DocumentIdAndNamePair> _matchingDocumentCounter = new ConcurrentSet<DocumentIdAndNamePair>();
+
+        private readonly ConcurrentSet<string> _matchingTimeSeries = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<string> _matchingAllDocumentTimeSeries = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<DocumentIdAndNamePair> _matchingDocumentTimeSeries = new ConcurrentSet<DocumentIdAndNamePair>();
 
         private readonly ConcurrentSet<long> _matchingOperations = new ConcurrentSet<long>();
 
@@ -54,6 +59,7 @@ namespace Raven.Server.Documents
         private int _watchAllOperations;
         private int _watchAllIndexes;
         private int _watchAllCounters;
+        private int _watchAllTimeSeries;
 
         public class ChangeValue
         {
@@ -122,14 +128,14 @@ namespace Raven.Server.Documents
 
         public void WatchDocumentCounter(BlittableJsonReaderArray parameters)
         {
-            var val = GetDocumentCounterParameters(parameters);
+            var val = GetParameters(parameters);
 
             _matchingDocumentCounter.TryAdd(val);
         }
 
         public void UnwatchDocumentCounter(BlittableJsonReaderArray parameters)
         {
-            var val = GetDocumentCounterParameters(parameters);
+            var val = GetParameters(parameters);
 
             _matchingDocumentCounter.TryRemove(val);
         }
@@ -142,6 +148,50 @@ namespace Raven.Server.Documents
         public void UnwatchAllCounters()
         {
             Interlocked.Decrement(ref _watchAllCounters);
+        }
+
+        public void WatchTimeSeries(string name)
+        {
+            _matchingTimeSeries.TryAdd(name);
+        }
+
+        public void UnwatchTimeSeries(string name)
+        {
+            _matchingTimeSeries.TryRemove(name);
+        }
+
+        public void WatchAllDocumentTimeSeries(string docId)
+        {
+            _matchingAllDocumentTimeSeries.TryAdd(docId);
+        }
+
+        public void UnwatchAllDocumentTimeSeries(string docId)
+        {
+            _matchingAllDocumentTimeSeries.TryRemove(docId);
+        }
+
+        public void WatchDocumentTimeSeries(BlittableJsonReaderArray parameters)
+        {
+            var val = GetParameters(parameters);
+
+            _matchingDocumentTimeSeries.TryAdd(val);
+        }
+
+        public void UnwatchDocumentTimeSeries(BlittableJsonReaderArray parameters)
+        {
+            var val = GetParameters(parameters);
+
+            _matchingDocumentTimeSeries.TryRemove(val);
+        }
+
+        public void WatchAllTimeSeries()
+        {
+            Interlocked.Increment(ref _watchAllTimeSeries);
+        }
+
+        public void UnwatchAllTimeSeries()
+        {
+            Interlocked.Decrement(ref _watchAllTimeSeries);
         }
 
         public void WatchDocumentPrefix(string name)
@@ -243,7 +293,7 @@ namespace Raven.Server.Documents
 
             if (change.DocumentId != null && change.Name != null && _matchingDocumentCounter.Count > 0)
             {
-                var parameters = new DocumentIdAndCounterNamePair(change.DocumentId, change.Name);
+                var parameters = new DocumentIdAndNamePair(change.DocumentId, change.Name);
                 if (_matchingDocumentCounter.Contains(parameters))
                 {
                     Send(change);
@@ -257,7 +307,33 @@ namespace Raven.Server.Documents
             if (IsDisposed)
                 return;
 
-            // TODO [ppekrol]
+            if (_watchAllTimeSeries > 0)
+            {
+                Send(change);
+                return;
+            }
+
+            if (change.Name != null && _matchingTimeSeries.Contains(change.Name))
+            {
+                Send(change);
+                return;
+            }
+
+            if (change.DocumentId != null && _matchingAllDocumentTimeSeries.Contains(change.DocumentId))
+            {
+                Send(change);
+                return;
+            }
+
+            if (change.DocumentId != null && change.Name != null && _matchingDocumentTimeSeries.Count > 0)
+            {
+                var parameters = new DocumentIdAndNamePair(change.DocumentId, change.Name);
+                if (_matchingDocumentTimeSeries.Contains(parameters))
+                {
+                    Send(change);
+                    return;
+                }
+            }
         }
 
         public void SendDocumentChanges(DocumentChange change)
@@ -341,6 +417,22 @@ namespace Raven.Server.Documents
             var value = new DynamicJsonValue
             {
                 ["Type"] = nameof(CounterChange),
+                ["Value"] = change.ToJson()
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(new ChangeValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = true
+                });
+        }
+
+        private void Send(TimeSeriesChange change)
+        {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = nameof(TimeSeriesChange),
                 ["Value"] = change.ToJson()
             };
 
@@ -668,6 +760,38 @@ namespace Raven.Server.Documents
             {
                 UnwatchDocumentCounter(commandParameters);
             }
+            else if (Match(command, "watch-all-timeseries"))
+            {
+                WatchAllTimeSeries();
+            }
+            else if (Match(command, "unwatch-all-timeseries"))
+            {
+                UnwatchAllTimeSeries();
+            }
+            else if (Match(command, "watch-timeseries"))
+            {
+                WatchTimeSeries(commandParameter);
+            }
+            else if (Match(command, "unwatch-timeseries"))
+            {
+                UnwatchTimeSeries(commandParameter);
+            }
+            else if (Match(command, "watch-all-document-timeseries"))
+            {
+                WatchAllDocumentTimeSeries(commandParameter);
+            }
+            else if (Match(command, "unwatch-all-document-timeseries"))
+            {
+                UnwatchAllDocumentTimeSeries(commandParameter);
+            }
+            else if (Match(command, "watch-document-timeseries"))
+            {
+                WatchDocumentTimeSeries(commandParameters);
+            }
+            else if (Match(command, "unwatch-document-timeseries"))
+            {
+                UnwatchDocumentTimeSeries(commandParameters);
+            }
             else if (Match(command, "watch-topology-change"))
             {
                 WatchTopology();
@@ -696,6 +820,7 @@ namespace Raven.Server.Documents
                 ["WatchAllDocuments"] = _watchAllDocuments > 0,
                 ["WatchAllIndexes"] = _watchAllIndexes > 0,
                 ["WatchAllCounters"] = _watchAllCounters > 0,
+                ["WatchAllTimeSeries"] = _watchAllTimeSeries > 0,
                 ["WatchAllOperations"] = _watchAllOperations > 0,
                 ["WatchDocumentPrefixes"] = _matchingDocumentPrefixes.ToArray(),
                 ["WatchDocumentsInCollection"] = _matchingDocumentsInCollection.ToArray(),
@@ -703,11 +828,14 @@ namespace Raven.Server.Documents
                 ["WatchDocuments"] = _matchingDocuments.ToArray(),
                 ["WatchCounters"] = _matchingCounters.ToArray(),
                 ["WatchCounterOfDocument"] = _matchingDocumentCounter.Select(x => x.ToJson()).ToArray(),
-                ["WatchCountersOfDocument"] = _matchingDocumentCounters.ToArray()
+                ["WatchCountersOfDocument"] = _matchingDocumentCounters.ToArray(),
+                ["WatchTimeSeries"] = _matchingTimeSeries.ToArray(),
+                ["WatchTimeSeriesOfDocument"] = _matchingDocumentTimeSeries.Select(x => x.ToJson()).ToArray(),
+                ["WatchAllTimeSeriesOfDocument"] = _matchingAllDocumentTimeSeries.ToArray()
             };
         }
 
-        private static DocumentIdAndCounterNamePair GetDocumentCounterParameters(BlittableJsonReaderArray parameters)
+        private static DocumentIdAndNamePair GetParameters(BlittableJsonReaderArray parameters)
         {
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
@@ -715,25 +843,25 @@ namespace Raven.Server.Documents
             if (parameters.Length != 2)
                 throw new InvalidOperationException("Expected to get 2 parameters, but got " + parameters.Length);
 
-            return new DocumentIdAndCounterNamePair(parameters[0].ToString(), parameters[1].ToString());
+            return new DocumentIdAndNamePair(parameters[0].ToString(), parameters[1].ToString());
         }
 
-        private struct DocumentIdAndCounterNamePair
+        private struct DocumentIdAndNamePair
         {
-            public DocumentIdAndCounterNamePair(string documentId, string counterName)
+            public DocumentIdAndNamePair(string documentId, string name)
             {
                 DocumentId = documentId;
-                CounterName = counterName;
+                Name = name;
             }
 
             public readonly string DocumentId;
 
-            public readonly string CounterName;
+            public readonly string Name;
 
-            private bool Equals(DocumentIdAndCounterNamePair other)
+            private bool Equals(DocumentIdAndNamePair other)
             {
                 return string.Equals(DocumentId, other.DocumentId, StringComparison.OrdinalIgnoreCase)
-                       && string.Equals(CounterName, other.CounterName, StringComparison.OrdinalIgnoreCase);
+                       && string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase);
             }
 
             public override bool Equals(object obj)
@@ -741,7 +869,7 @@ namespace Raven.Server.Documents
                 if (ReferenceEquals(null, obj))
                     return false;
 
-                return obj is DocumentIdAndCounterNamePair pair && Equals(pair);
+                return obj is DocumentIdAndNamePair pair && Equals(pair);
             }
 
             public override int GetHashCode()
@@ -749,7 +877,7 @@ namespace Raven.Server.Documents
                 unchecked
                 {
                     return ((DocumentId != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(DocumentId) : 0) * 397)
-                           ^ (CounterName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(CounterName) : 0);
+                           ^ (Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0);
                 }
             }
 
@@ -758,7 +886,7 @@ namespace Raven.Server.Documents
                 return new DynamicJsonValue
                 {
                     [nameof(DocumentId)] = DocumentId,
-                    [nameof(CounterName)] = CounterName
+                    [nameof(Name)] = Name
                 };
             }
         }
