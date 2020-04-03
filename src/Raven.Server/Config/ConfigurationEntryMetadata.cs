@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Sparrow;
 using Sparrow.Json.Parsing;
@@ -16,7 +17,7 @@ namespace Raven.Server.Config
 
         public ConfigurationEntryScope Scope;
 
-        public readonly object DefaultValue;
+        public readonly string DefaultValue;
 
         public readonly string Description;
 
@@ -32,27 +33,31 @@ namespace Raven.Server.Config
 
         public bool IsNullable { get; private set; }
 
+        public bool IsSecured { get; private set; }
+
         public string[] AvailableValues { get; private set; }
 
-        public ConfigurationEntryMetadata(PropertyInfo property)
+        public ConfigurationEntryMetadata(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty)
         {
-            if (property is null)
-                throw new ArgumentNullException(nameof(property));
+            if (configurationProperty is null)
+                throw new ArgumentNullException(nameof(configurationProperty));
 
             var keys = new List<string>();
-            foreach (var configurationEntry in property.GetCustomAttributes<ConfigurationEntryAttribute>(inherit: true).OrderBy(x => x.Order))
+            foreach (var configurationEntry in configurationProperty.GetCustomAttributes<ConfigurationEntryAttribute>(inherit: true).OrderBy(x => x.Order))
             {
                 keys.Add(configurationEntry.Key);
+
                 Scope = configurationEntry.Scope;
+                IsSecured = configurationEntry.IsSecured;
             }
 
             if (keys.Count == 0)
-                throw new InvalidOperationException($"Property '{property.Name}' does not have any configuration entry attributes.");
+                throw new InvalidOperationException($"Property '{configurationProperty.Name}' does not have any configuration entry attributes.");
 
             Keys = keys.ToArray();
-            DefaultValue = property.GetCustomAttribute<DefaultValueAttribute>(inherit: true)?.Value;
-            Description = property.GetCustomAttribute<DescriptionAttribute>(inherit: true)?.Description;
-            Type = GetConfigurationEntryType(property);
+            Description = configurationProperty.GetCustomAttribute<DescriptionAttribute>(inherit: true)?.Description;
+            Type = GetConfigurationEntryType(configurationProperty);
+            DefaultValue = GetDefaultValue(configurationCategoryProperty, configurationProperty);
         }
 
         internal bool IsMatch(string key)
@@ -80,8 +85,43 @@ namespace Raven.Server.Config
                 [nameof(MinValue)] = MinValue,
                 [nameof(IsArray)] = IsArray,
                 [nameof(IsNullable)] = IsNullable,
+                [nameof(IsSecured)] = IsSecured,
                 [nameof(AvailableValues)] = AvailableValues != null ? new DynamicJsonArray(AvailableValues) : null
             };
+        }
+
+        private string GetDefaultValue(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty)
+        {
+            var defaultValue = configurationProperty.GetCustomAttribute<DefaultValueAttribute>(inherit: true)?.Value?.ToString();
+            if (defaultValue == ConfigurationCategory.DefaultValueSetInConstructor)
+            {
+                var configurationCategory = configurationCategoryProperty.GetValue(RavenConfiguration.Default);
+                var configurationValue = configurationProperty.GetValue(configurationCategory);
+                if (configurationValue == null)
+                    return null;
+
+                switch (Type)
+                {
+                    case ConfigurationEntryType.String:
+                    case ConfigurationEntryType.Boolean:
+                    case ConfigurationEntryType.Enum:
+                    case ConfigurationEntryType.Uri:
+                    case ConfigurationEntryType.Path:
+                    case ConfigurationEntryType.Integer:
+                    case ConfigurationEntryType.Double:
+                        return configurationValue.ToString();
+                    case ConfigurationEntryType.Size:
+                        var configurationValueAsSize = (Size)configurationValue;
+                        return configurationValueAsSize.GetValue(SizeUnit.Value).ToString();
+                    case ConfigurationEntryType.Time:
+                        var configurationValueAsTime = (TimeSetting)configurationValue;
+                        return configurationValueAsTime.GetValue(TimeUnit.Value).ToString();
+                    default:
+                        throw new NotSupportedException($"Type '{Type}' is not supported.");
+                }
+            }
+
+            return defaultValue;
         }
 
         private ConfigurationEntryType GetConfigurationEntryType(PropertyInfo property)

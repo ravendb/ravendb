@@ -12,11 +12,12 @@ namespace Raven.Server.Config.Attributes
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
     public class ConfigurationEntryAttribute : Attribute
     {
-        public ConfigurationEntryAttribute(string key, ConfigurationEntryScope scope, [CallerLineNumber]int order = 0, bool setDefaultValueIfNeeded = true) // the default order is the order of declaration in a configuration class
+        public ConfigurationEntryAttribute(string key, ConfigurationEntryScope scope, [CallerLineNumber]int order = 0, bool setDefaultValueIfNeeded = true, bool isSecured = false) // the default order is the order of declaration in a configuration class
         {
             Key = key;
             Order = order;
             SetDefaultValueIfNeeded = setDefaultValueIfNeeded;
+            IsSecured = isSecured;
             Scope = scope;
         }
 
@@ -25,6 +26,8 @@ namespace Raven.Server.Config.Attributes
         public readonly int Order;
 
         public readonly bool SetDefaultValueIfNeeded;
+
+        public readonly bool IsSecured;
 
         public readonly ConfigurationEntryScope Scope;
     }

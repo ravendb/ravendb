@@ -44,6 +44,25 @@ namespace Raven.Server.Config.Settings
                     throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown TimeUnit value");
             }
         }
+
+        internal long GetValue(TimeUnit requestedUnit)
+        {
+            switch (requestedUnit)
+            {
+                case TimeUnit.Milliseconds:
+                    return (long)AsTimeSpan.TotalMilliseconds;
+                case TimeUnit.Seconds:
+                    return (long)AsTimeSpan.TotalSeconds;
+                case TimeUnit.Minutes:
+                    return (long)AsTimeSpan.TotalMinutes;
+                case TimeUnit.Hours:
+                    return (long)AsTimeSpan.TotalHours;
+                case TimeUnit.Days:
+                    return (long)AsTimeSpan.TotalDays;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(requestedUnit), requestedUnit, "Unknown TimeUnit value");
+            }
+        }
     }
 
     public enum TimeUnit

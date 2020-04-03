@@ -1,29 +1,48 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminConfigurationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/configuration", "PUT", AuthorizationStatus.DatabaseAdmin)]
-        public async Task GetConfiguration()
+        [RavenAction("/databases/*/admin/configuration/settings", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public Task GetConfiguration()
         {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var status = feature?.Status ?? RavenServer.AuthenticationStatus.ClusterAdmin;
+
+            var values = new DynamicJsonArray();
+
             foreach (var configurationEntryMetadata in RavenConfiguration.AllConfigurationEntries.Value)
             {
+                var configurationEntryValue = new ConfigurationEntryDatabaseValue(Database.Configuration, configurationEntryMetadata, status);
 
-
-                //var serverWide = Database.Configuration.GetServerWideSetting(configurationEntryMetadata);
-                //var databaseOnly = Database.Configuration.GetSetting(configurationEntryMetadata);
+                values.Add(configurationEntryValue.ToJson());
             }
-        }
 
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DatabaseRecord.Settings)] = values
+                    });
+                }
+            }
+
+            return Task.CompletedTask;
+        }
 
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutStudioConfiguration()
