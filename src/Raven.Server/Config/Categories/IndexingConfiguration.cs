@@ -9,6 +9,7 @@ using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Indexing)]
     public class IndexingConfiguration : ConfigurationCategory
     {
         private bool? _runInMemory;

@@ -5,6 +5,7 @@ using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Tombstones)]
     public class TombstoneConfiguration : ConfigurationCategory
     {
         [DefaultValue(5)]

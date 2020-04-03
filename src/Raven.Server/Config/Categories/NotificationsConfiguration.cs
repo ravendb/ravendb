@@ -5,7 +5,8 @@ using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Config.Categories
 {
-    public class NotificationConfiguration : ConfigurationCategory
+    [ConfigurationCategory(ConfigurationCategoryType.Notifications)]
+    public class NotificationsConfiguration : ConfigurationCategory
     {
         [Description("Semicolon seperated list of notification names which will not be shown in the Studio. If not specified, all notifications are allowed. Example: \"SlowIO;Server_NewVersionAvailable;ClusterTopologyWarning\".")]
         [DefaultValue(null)]

@@ -10,6 +10,7 @@ using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Security)]
     public class SecurityConfiguration : ConfigurationCategory
     {
         [Description("Disable automatic redirection when listening to HTTPS. By default, when using port 443, RavenDB redirects all incoming HTTP traffic on port 80 to HTTPS on port 443.")]

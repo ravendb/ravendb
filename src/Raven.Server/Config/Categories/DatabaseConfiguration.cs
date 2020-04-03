@@ -5,6 +5,7 @@ using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Database)]
     public class DatabaseConfiguration : ConfigurationCategory
     {
         /// <summary>

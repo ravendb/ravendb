@@ -1,0 +1,38 @@
+﻿using System.ComponentModel;
+
+namespace Raven.Server.Config.Categories
+{
+    public enum ConfigurationCategoryType
+    {
+        None,
+        Backup,
+        Cluster,
+        Core,
+        Database,
+        Embedded,
+        [Description("ETL")]
+        Etl,
+        Http,
+        Indexing,
+        License,
+        Logs,
+        Memory,
+        Migration,
+        Monitoring,
+        Notifications,
+        Patching,
+        [Description("Performance Hints")]
+        PerformanceHints,
+        Query,
+        Replication,
+        Security,
+        Server,
+        Storage,
+        Studio,
+        Subscriptions,
+        Tombstones,
+        [Description("Transaction Merger")]
+        TransactionMerger,
+        Updates
+    }
+}

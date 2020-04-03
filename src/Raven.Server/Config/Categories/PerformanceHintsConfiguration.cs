@@ -5,6 +5,7 @@ using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.PerformanceHints)]
     public class PerformanceHintsConfiguration : ConfigurationCategory
     {
         [Description("The size of a document after which it will get into the huge documents collection")]

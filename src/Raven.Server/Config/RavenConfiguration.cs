@@ -74,11 +74,11 @@ namespace Raven.Server.Config
 
         public TombstoneConfiguration Tombstones { get; }
 
-        public SubscriptionConfiguration Subscriptions { get; }
+        public SubscriptionsConfiguration Subscriptions { get; }
 
         public TransactionMergerConfiguration TransactionMergerConfiguration { get; }
 
-        public NotificationConfiguration Notifications { get; }
+        public NotificationsConfiguration Notifications { get; }
 
         public UpdatesConfiguration Updates { get; }
 
@@ -128,9 +128,9 @@ namespace Raven.Server.Config
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
             Tombstones = new TombstoneConfiguration();
-            Subscriptions = new SubscriptionConfiguration();
+            Subscriptions = new SubscriptionsConfiguration();
             TransactionMergerConfiguration = new TransactionMergerConfiguration(Storage.ForceUsing32BitsPager);
-            Notifications = new NotificationConfiguration();
+            Notifications = new NotificationsConfiguration();
             Updates = new UpdatesConfiguration();
             Migration = new MigrationConfiguration();
         }

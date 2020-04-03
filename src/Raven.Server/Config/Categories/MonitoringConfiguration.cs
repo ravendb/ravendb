@@ -6,6 +6,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Monitoring)]
     public class MonitoringConfiguration : ConfigurationCategory
     {
         [Description("A command or executable to run which will provide machine cpu usage and total machine cores to standard output. If specified, RavenDB will use this information for monitoring cpu usage.")]

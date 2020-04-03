@@ -6,6 +6,7 @@ using System.Reflection;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
@@ -13,6 +14,8 @@ namespace Raven.Server.Config
 {
     public class ConfigurationEntryMetadata : IDynamicJson
     {
+        public readonly string Category;
+
         public readonly string[] Keys;
 
         public ConfigurationEntryScope Scope;
@@ -62,6 +65,12 @@ namespace Raven.Server.Config
             Description = configurationProperty.GetCustomAttribute<DescriptionAttribute>(inherit: true)?.Description;
             Type = GetConfigurationEntryType(configurationProperty);
             DefaultValue = GetDefaultValue(configurationCategoryProperty, configurationProperty, out IsDefaultValueDynamic);
+
+            var categoryType = configurationCategoryProperty.PropertyType.GetCustomAttribute<ConfigurationCategoryAttribute>(inherit: true);
+            if (categoryType == null)
+                throw new InvalidOperationException($"Category '{configurationCategoryProperty.PropertyType.Name}' does not have any configuration category attributes.");
+
+            Category = categoryType.Type.GetDescription();
         }
 
         internal bool IsMatch(string key)
@@ -79,6 +88,7 @@ namespace Raven.Server.Config
         {
             return new DynamicJsonValue
             {
+                [nameof(Category)] = Category,
                 [nameof(Keys)] = new DynamicJsonArray(Keys),
                 [nameof(Scope)] = Scope,
                 [nameof(DefaultValue)] = DefaultValue,
