@@ -26,6 +26,8 @@ namespace Raven.Server.Config
 {
     public class RavenConfiguration
     {
+        internal static readonly RavenConfiguration Default = new RavenConfiguration("__default", ResourceType.Server);
+
         private readonly string _customConfigPath;
 
         private readonly IConfigurationBuilder _configBuilder;
@@ -226,18 +228,18 @@ namespace Raven.Server.Config
             var results = new HashSet<ConfigurationEntryMetadata>();
 
             var type = typeof(RavenConfiguration);
-            foreach (var configurationProperty in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            foreach (var configurationCategoryProperty in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
-                var propertyType = configurationProperty.PropertyType;
+                var propertyType = configurationCategoryProperty.PropertyType;
                 if (propertyType.GetTypeInfo().IsSubclassOf(typeof(ConfigurationCategory)) == false)
                     continue;
 
-                foreach (var property in propertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                foreach (var configurationProperty in propertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 {
-                    if (property.GetCustomAttributes<ConfigurationEntryAttribute>(inherit: true).Any() == false)
+                    if (configurationProperty.GetCustomAttributes<ConfigurationEntryAttribute>(inherit: true).Any() == false)
                         continue;
 
-                    results.Add(new ConfigurationEntryMetadata(property));
+                    results.Add(new ConfigurationEntryMetadata(configurationCategoryProperty, configurationProperty));
                 }
             }
 
