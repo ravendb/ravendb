@@ -6,9 +6,10 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>
+    internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>
     {
         public event Action<Exception> OnError;
+
         private readonly Func<Task> _onDisconnect;
         public readonly Func<Task> OnConnect;
         private int _value;
@@ -21,7 +22,7 @@ namespace Raven.Client.Documents.Changes
         {
             if (_firstSet.Task.IsCompleted == false)
             {
-                var task =_firstSet.Task.IgnoreUnobservedExceptions();
+                var task = _firstSet.Task.IgnoreUnobservedExceptions();
 
                 connection.ContinueWith(t =>
                 {
@@ -61,6 +62,12 @@ namespace Raven.Client.Documents.Changes
             return _connected ?? _firstSet.Task;
         }
 
+        event Action<TimeSeriesChange> IChangesConnectionState<TimeSeriesChange>.OnChangeNotification
+        {
+            add => OnTimeSeriesChangeNotification += value;
+            remove => OnTimeSeriesChangeNotification -= value;
+        }
+
         event Action<CounterChange> IChangesConnectionState<CounterChange>.OnChangeNotification
         {
             add => OnCounterChangeNotification += value;
@@ -89,12 +96,14 @@ namespace Raven.Client.Documents.Changes
         {
             Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
             OnDocumentChangeNotification = null;
+            OnCounterChangeNotification = null;
+            OnTimeSeriesChangeNotification = null;
             OnIndexChangeNotification = null;
             OnOperationStatusChangeNotification = null;
             OnError = null;
         }
-        
-        public DatabaseConnectionState( Func<Task> onConnect, Func<Task> onDisconnect)
+
+        public DatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
         {
             OnConnect = onConnect;
             _onDisconnect = onDisconnect;
@@ -109,6 +118,8 @@ namespace Raven.Client.Documents.Changes
 
         private event Action<OperationStatusChange> OnOperationStatusChangeNotification;
 
+        private event Action<TimeSeriesChange> OnTimeSeriesChangeNotification;
+
         public void Send(DocumentChange documentChange)
         {
             OnDocumentChangeNotification?.Invoke(documentChange);
@@ -117,6 +128,11 @@ namespace Raven.Client.Documents.Changes
         public void Send(CounterChange counterChange)
         {
             OnCounterChangeNotification?.Invoke(counterChange);
+        }
+
+        public void Send(TimeSeriesChange timeSeriesChange)
+        {
+            OnTimeSeriesChangeNotification?.Invoke(timeSeriesChange);
         }
 
         public void Send(IndexChange indexChange)
