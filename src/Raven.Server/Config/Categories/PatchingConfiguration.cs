@@ -3,6 +3,7 @@ using Raven.Server.Config.Attributes;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Patching)]
     public class PatchingConfiguration : ConfigurationCategory
     {
         /// <summary>

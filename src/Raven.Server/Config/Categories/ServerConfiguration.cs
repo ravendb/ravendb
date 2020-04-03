@@ -4,6 +4,7 @@ using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Server)]
     public class ServerConfiguration : ConfigurationCategory
     {
         [DefaultValue(30)]

@@ -4,6 +4,7 @@ using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.License)]
     public class LicenseConfiguration : ConfigurationCategory
     {
         // these are actually ServerWideOnly, but we want to support configuring this via env variables, in which

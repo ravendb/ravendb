@@ -5,6 +5,7 @@ using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Storage)]
     public class StorageConfiguration : ConfigurationCategory
     {
         [Description("You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.")]

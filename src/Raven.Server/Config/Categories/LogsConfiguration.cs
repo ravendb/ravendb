@@ -6,6 +6,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Logs)]
     public class LogsConfiguration : ConfigurationCategory
     {
         [DefaultValue("Logs")]

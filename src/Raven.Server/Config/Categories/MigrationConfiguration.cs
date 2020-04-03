@@ -4,6 +4,7 @@ using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Migration)]
     public class MigrationConfiguration : ConfigurationCategory
     {
         [Description("The full path of the directory containing the Raven.Migrator executable. Setting this option here will disable the ability to set a path in the Studio.")]

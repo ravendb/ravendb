@@ -3,6 +3,7 @@ using Raven.Server.Config.Attributes;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Studio)]
     public class StudioConfiguration : ConfigurationCategory
     {
         [Description("The directory in which RavenDB will search the studio files, defaults to the base directory")]

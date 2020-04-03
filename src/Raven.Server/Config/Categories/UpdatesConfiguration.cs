@@ -3,6 +3,7 @@ using Raven.Server.Config.Attributes;
 
 namespace Raven.Server.Config.Categories
 {
+    [ConfigurationCategory(ConfigurationCategoryType.Updates)]
     public class UpdatesConfiguration : ConfigurationCategory
     {
         [Description("Indicates what release channel should be used to perform latest version checks")]
