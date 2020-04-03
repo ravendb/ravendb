@@ -933,5 +933,57 @@ namespace SlowTests.Client.TimeSeries
                 }
             }
         }
+
+        [Theory]
+        [InlineData(128)]
+        [InlineData(1024)]
+        [InlineData(10*1024)]
+        [InlineData(100*1024)]
+        public void CanAppendALotOfTimeSeries(int numberOfTimeSeries)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+                const string documentId = "users/ayende";
+
+                var offset = 0;
+
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.Store(new { Name = "Oren" }, documentId);
+
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                    {
+                        for (int j = 0; j < numberOfTimeSeries; j++)
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(offset++), new double[] { offset }, "watches/fitbit");
+                        }
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    Assert.Equal(numberOfTimeSeries, vals.Count);
+
+                    for (int i = 0; i < numberOfTimeSeries; i++)
+                    {
+                        Assert.Equal(baseline.AddMinutes(i), vals[i].Timestamp);
+                        Assert.Equal(1 + i, vals[i].Values[0]);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(1, tsNames.Count);
+
+                    Assert.Equal("Heartrate", tsNames[0]);
+                }
+            }
+        }
     }
 }
