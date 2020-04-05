@@ -202,6 +202,7 @@ namespace Raven.Client.Documents.Session
                 rangesToGetFromServer ??= new List<TimeSeriesRange>();
                 rangesToGetFromServer.Add(new TimeSeriesRange
                 {
+                    Name = Name,
                     From = ranges[ranges.Count - 1].To,
                     To = to
                 });
@@ -212,7 +213,7 @@ namespace Raven.Client.Documents.Session
             Session.IncrementRequestCount();
 
             var details = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation(DocId, Name, rangesToGetFromServer, start, pageSize), Session.SessionInfo, token: token)
+                    new GetTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize), Session.SessionInfo, token: token)
                 .ConfigureAwait(false);
 
             // merge all the missing parts we got from server
