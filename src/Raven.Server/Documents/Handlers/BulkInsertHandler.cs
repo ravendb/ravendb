@@ -192,18 +192,13 @@ namespace Raven.Server.Documents.Handlers
                 if (_changeVectorSize.HasValue)
                     return _changeVectorSize.Value;
 
-                _changeVectorSize = GetChangeVectorSize(Database);
-                return _changeVectorSize.Value;
-            }
-        }
-
-        internal static int GetChangeVectorSize(DocumentDatabase documentDatabase)
-        {
-            using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                return Encoding.UTF8.GetBytes(databaseChangeVector).Length;
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                    _changeVectorSize = Encoding.UTF8.GetBytes(databaseChangeVector).Length;
+                    return _changeVectorSize.Value;
+                }
             }
         }
 
@@ -324,48 +319,10 @@ namespace Raven.Server.Documents.Handlers
 
         public BulkInsertHandler.MergedInsertBulkCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var changeVectorSize = BulkInsertHandler.GetChangeVectorSize(database);
-
             return new BulkInsertHandler.MergedInsertBulkCommand
             {
                 NumberOfCommands = Commands.Length,
-                TotalSize = Commands.Sum(commandData =>
-                {
-                    switch (commandData.Type)
-                    {
-                        case CommandType.PUT:
-                            return commandData.Document.Size;
-                        case CommandType.Counters:
-                            long size = 0;
-                            foreach (var operation in commandData.Counters.Operations)
-                            {
-                                size += operation.CounterName.Length
-                                        + sizeof(long) // etag 
-                                        + sizeof(long) // counter value
-                                        + changeVectorSize // estimated change vector size
-                                        + 10; // estimated collection name size
-                            }
-
-                            return size;
-                        case CommandType.TimeSeries:
-                            // we don't know the size of the change so we are just estimating
-
-                            long total = 0;
-
-                            foreach (var append in commandData.TimeSeries.Appends)
-                            {
-                                total += 2;
-                                if (string.IsNullOrWhiteSpace(append.Tag) == false)
-                                    total += 4;
-
-                                total += append.Values.Length * 4;
-                            }
-
-                            return total;
-                        default:
-                            throw new ArgumentOutOfRangeException($"'{commandData.Type}' isn't supported");
-                    }
-                }),
+                TotalSize = Commands.Sum(c => c.Document.Size),
                 Commands = Commands,
                 Database = database,
                 Logger = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name)
