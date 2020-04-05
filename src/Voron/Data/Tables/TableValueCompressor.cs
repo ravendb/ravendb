@@ -41,7 +41,6 @@ namespace Voron.Data.Tables
             }
         }
 
-
         public bool Compressed;
 
         public bool TryCompression(ZstdLib.CompressionDictionary compressionDictionary)
@@ -82,9 +81,7 @@ namespace Voron.Data.Tables
                 RawScope.Dispose();
                 throw;
             }
-
         }
-
 
         public bool ShouldReplaceDictionary(ZstdLib.CompressionDictionary newDic)
         {
@@ -116,9 +113,7 @@ namespace Voron.Data.Tables
                 newCompressBufferScope.Dispose();
                 throw;
             }
-
         }
-
 
         public void CopyToLarge(byte* ptr)
         {
@@ -151,7 +146,6 @@ namespace Voron.Data.Tables
 
         public void Reset()
         {
-            Compressed = false;
             RawBuffer = default;
             RawScope.Dispose();
             DiscardCompressedData();
@@ -200,7 +194,7 @@ namespace Voron.Data.Tables
 
         public bool Redundant(ZstdLib.CompressionDictionary current)
         {
-            return current == _previousDictionary;
+            return current == _previousDictionary; 
         }
 
         public void SetDictionary(ZstdLib.CompressionDictionary dic)

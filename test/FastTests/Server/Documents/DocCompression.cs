@@ -1,5 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using Newtonsoft.Json;
+using Raven.Client.Http;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,6 +21,7 @@ namespace FastTests.Server.Documents
         public class User
         {
             public string Desc;
+            public List<string> Items;
         }
 
         public static string RandomString(Random random, int length)
@@ -45,6 +53,93 @@ namespace FastTests.Server.Documents
             }
             s.SaveChanges();
 
+        }
+
+        [Fact]
+        public void Can_set_collection_compressed_when_it_has_docs()
+        {
+            var random = new Random(343);
+            using var store = GetDocumentStore();
+
+            var rnd = Enumerable.Range(1, 10)
+                .Select(i => new string((char)(65+i), 256))
+                .ToList();
+
+            using (var s = store.OpenSession())
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    s.Store(new User
+                    {
+                        Items = Enumerable.Range(1, random.Next(1, 10))
+                            .Select(x=>rnd[x])
+                            .ToList()
+                    }, "users/" + i);
+                }
+
+                s.SaveChanges();
+            }
+
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            record.CompressedCollections.Add("Users");
+            store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
+
+            using (var s = store.OpenSession())
+            {
+                for (int i = 5; i < 1024; i++)
+                {
+                    s.Store(new User
+                    {
+                        Items = Enumerable.Range(1, random.Next(1, 10))
+                            .Select(x => rnd[x])
+                            .ToList()
+                    },"users/" +i);
+                }
+
+                s.SaveChanges();
+            }
+
+            var executor = store.GetRequestExecutor();
+            using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
+            var cmd = new GetDocumentSize("users/1000");
+            executor.Execute(cmd, ctx);
+
+            Assert.True(cmd.Result.ActualSize > cmd.Result.AllocatedSize);
+        }
+
+        public class DocumentSize
+        {
+            public int ActualSize { get; set; }
+            public int AllocatedSize { get; set; }
+            public string DocId { get; set; }
+            public string HumaneActualSize { get; set; }
+            public string HumaneAllocatedSize { get; set; }
+        }
+
+        private class GetDocumentSize : RavenCommand<DocumentSize>
+        {
+            private readonly string _id;
+            public override bool IsReadRequest => true;
+
+            public GetDocumentSize(string id)
+            {
+                _id = id;
+            }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/docs/size?id={Uri.EscapeDataString(_id)}";
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                // quick and dirty for the tests
+                Result = JsonConvert.DeserializeObject<DocumentSize>(response.ToString());
+            }
         }
 
         [Fact]
