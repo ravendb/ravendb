@@ -84,8 +84,8 @@ namespace Sparrow.Logging
             new ConcurrentDictionary<WebSocket, WebSocketContext>();
 
         public LogMode LogMode { get; private set; }
-        public TimeSpan RetentionTime { get; private set; }
-        public long RetentionSize { get; private set; }
+        public TimeSpan? RetentionTime { get; private set; }
+        public long? RetentionSize { get; private set; }
         public bool Compressing => _compressLoggingThread != null;
 
 
@@ -181,7 +181,6 @@ namespace Sparrow.Logging
             {
                 _activePoolMessageEntries[i] = new LimitedConcurrentSet<LogMessageEntry>(1000);
             }
-
 
             SetupLogMode(logMode, path, retentionTime, retentionSize, compress);
         }
@@ -317,7 +316,7 @@ namespace Sparrow.Logging
             var logFilesInfo = logFiles.Select(f => new LogInfo(f));
             var totalLogSize = logFilesInfo.Sum(i => i.Size);
 
-            long retentionSizeMinusCurrentFile = RetentionSize - MaxFileSizeInBytes;
+            long retentionSizeMinusCurrentFile = (long)RetentionSize - MaxFileSizeInBytes;
             foreach (var log in logFilesInfo)
             {
                 if (totalLogSize > retentionSizeMinusCurrentFile)

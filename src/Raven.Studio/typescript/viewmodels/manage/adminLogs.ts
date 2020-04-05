@@ -1,3 +1,4 @@
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import adminLogsWebSocketClient = require("common/adminLogsWebSocketClient");
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
@@ -8,6 +9,9 @@ import fileDownloader = require("common/fileDownloader");
 import virtualListRow = require("widgets/listView/virtualListRow");
 import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
+import adminLogsSettingsDialog = require("viewmodels/manage/adminLogsSettingsDialog");
+import LogMode = Sparrow.Logging.LogMode;
+import getAdminLogsSettingsCommand = require("commands/maintenance/getAdminLogsSettingsCommand");
 
 class heightCalculator {
     
@@ -90,6 +94,9 @@ class adminLogs extends viewModelBase {
 
     validationGroup: KnockoutValidationGroup;
     enableApply: KnockoutComputed<boolean>;
+
+    logMode = ko.observable<LogMode>();
+    logModeText: KnockoutComputed<string>;
     
     constructor() {
         super();
@@ -108,6 +115,7 @@ class adminLogs extends viewModelBase {
                     return "Logger name (ex. Raven.Server.Documents.)"
             }
         });
+        
         this.mouseDown.subscribe(pressed => {
             if (!pressed) {
                 const selected = generalUtils.getSelectedText();
@@ -115,6 +123,15 @@ class adminLogs extends viewModelBase {
                     copyToClipboard.copy(selected, "Selected logs has been copied to clipboard");    
                 }
             }
+        });
+        
+        this.logModeText = ko.pureComputed(() => {
+           switch (this.logMode() as LogMode) {
+               case "None": return "None";
+               case "Operations": return "Operations";
+               case "Information": return "Information";
+               default: return "Unknown"; 
+           }
         });
     }
     
@@ -136,6 +153,7 @@ class adminLogs extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('57BGF7');
+        this.getCurrentLogMode();
     }
     
     deactivate() {
@@ -146,6 +164,11 @@ class adminLogs extends viewModelBase {
         }
     }
 
+    getCurrentLogMode() {
+        return new getAdminLogsSettingsCommand().execute()
+            .done(result => this.logMode(result.CurrentMode));
+    }
+    
     filterLogEntries(fromFilterChange: boolean) {
         const searchText = this.filter().toLocaleLowerCase();
         const errorsOnly = this.onlyErrors();
@@ -281,6 +304,11 @@ class adminLogs extends viewModelBase {
         if (this.tailEnabled()) {
             this.scrollDown();
         }
+    }
+
+    openFilesSettings() {
+        app.showBootstrapDialog(new adminLogsSettingsDialog())
+            .done(() => this.getCurrentLogMode());
     }
     
     clear() {

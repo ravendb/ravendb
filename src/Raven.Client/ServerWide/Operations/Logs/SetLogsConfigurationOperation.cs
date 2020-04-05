@@ -20,6 +20,18 @@ namespace Raven.Client.ServerWide.Operations.Logs
             public TimeSpan? RetentionTime { get; set; }
             public Size? RetentionSize { get; set; }
             public bool Compress { get; set; }
+
+            public Parameters()
+            {
+            }
+            
+            public Parameters(GetLogsConfigurationResult currentLogsConfiguration)
+            {
+                Mode = currentLogsConfiguration.Mode;
+                RetentionTime = currentLogsConfiguration.RetentionTime;
+                RetentionSize = currentLogsConfiguration.RetentionSize;
+                Compress = currentLogsConfiguration.Compress;
+            }
         }
 
         public SetLogsConfigurationOperation(Parameters parameters)

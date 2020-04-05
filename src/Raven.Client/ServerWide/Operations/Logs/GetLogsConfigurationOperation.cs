@@ -3,6 +3,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -59,8 +60,18 @@ namespace Raven.Client.ServerWide.Operations.Logs
         public bool UseUtcTime { get; set; }
 
         /// <summary>
-        /// Logs retention time
+        /// Logs retention time (null if RetentionTime is TimeSpan.MaxValue)
         /// </summary>
         public TimeSpan RetentionTime { get; set; }
+        
+        /// <summary>
+        /// Logs retention size (null if RetentionSize is long.MaxValue)
+        /// </summary>
+        public Size? RetentionSize { get; set; }
+        
+        /// <summary>
+        /// Are logs compressed
+        /// </summary>
+        public bool Compress { get; set; }
     }
 }
