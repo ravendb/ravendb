@@ -39,6 +39,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Commercial;
 using Raven.Server.Dashboard;
@@ -80,6 +81,7 @@ using Raven.Server.Web.Studio;
 using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Server.Meters;
 using TypeScripter;
 using TypeScripter.TypeScript;
@@ -400,6 +402,10 @@ namespace TypingsGenerator
             
             // certificates
             scripter.AddType(typeof(CertificateDefinition));
+
+            // admin logs
+            scripter.AddType(typeof(LogMode));
+            scripter.AddType(typeof(SetLogsConfigurationOperation.Parameters));
 
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));
