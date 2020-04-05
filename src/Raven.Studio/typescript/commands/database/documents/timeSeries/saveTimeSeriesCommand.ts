@@ -9,10 +9,13 @@ class saveTimeSeriesCommand extends commandBase {
     }
     
     execute(): JQueryPromise<void> {
-        const url = endpoints.databases.timeSeries.timeseries;
+        const args = {
+            id: this.documentId
+        };
+
+        const url = endpoints.databases.timeSeries.timeseries + this.urlEncodeArgs(args);
         
         const payload = {
-            DocumentId: this.documentId,
             Name: this.name,
             Removals: this.forceOverride ? [
                     {
