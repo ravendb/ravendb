@@ -64,6 +64,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ReplicationAttachmentMissing = 40_300;
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
         public static readonly int ReplicationWithPullOption = 42_300;
+        public static readonly int ReplicationWithTimeSeries = 50_000;
         public static readonly int SubscriptionBaseLine = 40;
         public static readonly int SubscriptionIncludes = 41_400;
         public static readonly int SubscriptionCounterIncludes = 50_000;
@@ -71,7 +72,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public static readonly int ClusterTcpVersion = ClusterBaseLine;
         public static readonly int HeartbeatsTcpVersion = Heartbeats42000;
-        public static readonly int ReplicationTcpVersion = ReplicationWithPullOption;
+        public static readonly int ReplicationTcpVersion = ReplicationWithTimeSeries;
         public static readonly int SubscriptionTcpVersion = SubscriptionCounterIncludes;
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
@@ -216,6 +217,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool CountersBatch;
                 public bool ClusterTransaction;
                 public bool PullReplication;
+                public bool TimeSeries;
             }
         }
 
@@ -242,6 +244,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new List<int>
                 {
+                    ReplicationWithTimeSeries,
                     ReplicationWithPullOption,
                     ReplicationAttachmentMissingVersion41,
                     ReplicationAttachmentMissing,
@@ -311,6 +314,17 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new Dictionary<int, SupportedFeatures>
                 {
+                    [ReplicationWithTimeSeries] = new SupportedFeatures(ReplicationWithTimeSeries)
+                    {
+                        Replication = new SupportedFeatures.ReplicationFeatures
+                        {
+                            TimeSeries = true,
+                            CountersBatch = true,
+                            ClusterTransaction = true,
+                            MissingAttachments = true,
+                            PullReplication = true
+                        }
+                    },
                     [ReplicationWithPullOption] = new SupportedFeatures(ReplicationWithPullOption)
                     {
                         Replication = new SupportedFeatures.ReplicationFeatures
@@ -333,7 +347,8 @@ namespace Raven.Client.ServerWide.Tcp
                             Counters = true,
 
                             ClusterTransaction = true,
-                            MissingAttachments = true
+                            MissingAttachments = true,
+                            TimeSeries = false
                         }
                     },
                     /*While counter is a newer feature 'ReplicationAttachmentMissing' is a newer release and we must check the version by the order of the release*/
