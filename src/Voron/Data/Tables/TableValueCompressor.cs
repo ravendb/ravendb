@@ -108,6 +108,7 @@ namespace Voron.Data.Tables
                 CompressedScope.Dispose();
                 CompressedBuffer = newCompressBuffer;
                 CompressedScope = newCompressBufferScope;
+                _previousDictionary = newDic;
                 return true;
             }
             catch
@@ -200,6 +201,11 @@ namespace Voron.Data.Tables
         public bool Redundant(ZstdLib.CompressionDictionary current)
         {
             return current == _previousDictionary;
+        }
+
+        public void SetDictionary(ZstdLib.CompressionDictionary dic)
+        {
+            _previousDictionary = dic;
         }
     }
 }

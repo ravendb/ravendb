@@ -518,29 +518,49 @@ namespace Voron.Data.Tables
                         }
                         else
                         {
+                            tmpBuilder.Compression.SetDictionary(currentCompressionDictionary);
                             pos = tmpBuilder.Compression.CompressedBuffer.Ptr;
                             itemSize = newlyCompressedSize;
                         }
                     }
                 }
 
-                if (ActiveDataSmallSection.TryAllocate(itemSize, out long newId) == false)
+                long newId;
+                if (itemSize + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
                 {
-                    newId = AllocateFromAnotherSection(tmpBuilder.Compression, currentCompressionDictionary);
-                    using (ActiveDataSmallSection.CurrentCompressionDictionaryHash(out var hash))
+                    if (ActiveDataSmallSection.TryAllocate(itemSize, out newId) == false)
                     {
-                        currentCompressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
-                            .GetCompressionDictionaryFor(_tx, hash);
+                        newId = AllocateFromAnotherSection(itemSize, tmpBuilder.Compression, currentCompressionDictionary);
+                        if (compressed && tmpBuilder.Compressed)
+                        {
+                            pos = tmpBuilder.Compression.CompressedBuffer.Ptr;
+                            itemSize = tmpBuilder.Compression.CompressedBuffer.Length;
+                        }
+                        using (ActiveDataSmallSection.CurrentCompressionDictionaryHash(out var hash))
+                        {
+                            currentCompressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
+                                .GetCompressionDictionaryFor(_tx, hash);
+                        }
                     }
+
+                    if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, compressed, out byte* writePos) == false)
+                        throw new VoronErrorException($"Cannot write to newly allocated size in {Name} during delete");
+
+                    Memory.Copy(writePos, pos, itemSize);
+                }
+                else // after re-compression, we *can't* fit it into a small data section :-(
+                {
+                    Debug.Assert(compressed, "We should never hit this code path unless we re-compressed");
+                    // so we'll put it a big section, instead
+                    var page = AllocatePageForLargeValue(tmpBuilder.SizeLarge, tmpBuilder.Compressed);
+
+                    newId = page.PageNumber * Constants.Storage.PageSize;
+
+                    tmpBuilder.CopyToLarge(page.DataPointer);
+
                 }
 
-
                 OnDataMoved(idToMove, newId, actualPos, actualSize);
-
-                if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, compressed, out byte* writePos) == false)
-                    throw new VoronErrorException($"Cannot write to newly allocated size in {Name} during delete");
-
-                Memory.Copy(writePos, pos, itemSize);
 
                 tmpBuilder.Compression.CompressedScope.Dispose();
                 tmpBuilder.Compression.RawScope.Dispose();
@@ -624,7 +644,7 @@ namespace Voron.Data.Tables
             {
                 if (ActiveDataSmallSection.TryAllocate(builder.Size, out id) == false)
                 {
-                    id = AllocateFromAnotherSection(builder.Compression, compressionDictionary);
+                    id = AllocateFromAnotherSection(builder.Size, builder.Compression, compressionDictionary);
                 }
                 AssertNoReferenceToThisPage(builder, id);
 
@@ -640,20 +660,9 @@ namespace Voron.Data.Tables
             }
             else
             {
-                var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(builder.SizeLarge);
-                var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
-                _overflowPageCount += numberOfOverflowPages;
+                var page = AllocatePageForLargeValue(builder.SizeLarge, builder.Compressed);
 
-                page.Flags = PageFlags.Overflow | PageFlags.RawData;
-                if(builder.Compressed)
-                    page.Flags |= PageFlags.Compressed;
-                
-                page.OverflowSize = builder.SizeLarge;
-
-                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = ActiveDataSmallSection.SectionOwnerHash;
-                ((RawDataOverflowPageHeader*)page.Pointer)->TableType = _tableType;
-
-                pos = page.Pointer + PageHeader.SizeOf;
+                pos = page.DataPointer;
 
                 builder.CopyToLarge(pos);
 
@@ -676,13 +685,30 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        private long AllocateFromAnotherSection( TableValueCompressor compressor, ZstdLib.CompressionDictionary compressionDictionary)
+        private Page AllocatePageForLargeValue(int size, bool compressed)
+        {
+            var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
+            var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
+            _overflowPageCount += numberOfOverflowPages;
+
+            page.Flags = PageFlags.Overflow | PageFlags.RawData;
+            if (compressed)
+                page.Flags |= PageFlags.Compressed;
+
+            page.OverflowSize = size;
+
+            ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = ActiveDataSmallSection.SectionOwnerHash;
+            ((RawDataOverflowPageHeader*)page.Pointer)->TableType = _tableType;
+            return page;
+        }
+
+        private long AllocateFromAnotherSection(int itemSize, TableValueCompressor compressor, ZstdLib.CompressionDictionary compressionDictionary)
         {
             InactiveSections.Add(_activeDataSmallSection.PageNumber);
 
             var previousActiveSection = ActiveDataSmallSection;
 
-            if (TryFindMatchFromCandidateSections(compressor.Size, compressionDictionary?.Hash, out long id) == false)
+            if (TryFindMatchFromCandidateSections(itemSize, compressionDictionary?.Hash, out long id) == false)
             {
                 Slice newSectionDictionaryHash = default;
 
@@ -702,12 +728,13 @@ namespace Voron.Data.Tables
                         // this will check if we can create a new dictionary that would do better for the current item
                         // than the previous dictionary, creating a new hash for it
                         MaybeTrainCompressionDictionary(previousActiveSection, compressionDictionary, compressor, ref newSectionDictionaryHash);
+                        itemSize = compressor.Size;
                     }
                 }
 
                 CreateNewActiveSection(newSectionDictionaryHash);
 
-                if (ActiveDataSmallSection.TryAllocate(compressor.Size, out id) == false)
+                if (ActiveDataSmallSection.TryAllocate(itemSize, out id) == false)
                 {
                     ThrowBadAllocation(compressor.Size);
                 }
@@ -896,7 +923,7 @@ namespace Voron.Data.Tables
             {
                 if (ActiveDataSmallSection.TryAllocate(dataSize, out id) == false)
                 {
-                    id = AllocateFromAnotherSection(builder.Compression, compressionDic);
+                    id = AllocateFromAnotherSection(dataSize, builder.Compression, compressionDic);
                 }
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, dataSize, compressed, out var pos) == false)

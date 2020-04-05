@@ -259,5 +259,83 @@ namespace FastTests.Voron.Tables
             }
         }
 
+        public static string RandomString(Random random, int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+        [Fact]
+        public void Can_force_small_value_to_compress_to_large()
+        {
+            var random = new Random(222);
+            using (var tx = Env.WriteTransaction())
+            {
+                Slice.From(tx.Allocator, "Compression", out var etagIndexName);
+                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                {
+                    Name = etagIndexName,
+                    IsGlobal = true,
+                    StartIndex = 1,
+                };
+
+                var tableSchema = new TableSchema()
+                    .CompressValues()
+                    .DefineFixedSizeIndex(fixedSizedIndex)
+                    .DefineKey(new TableSchema.SchemaIndexDef
+                    {
+                        StartIndex = 0,
+                        Count = 1,
+                    });
+
+                tableSchema.Create(tx, "Items", 16);
+                var itemsTable = tx.OpenTable(tableSchema, "Items");
+                 long number = 1L;
+
+                 var rnd = Enumerable.Range(1, 32)
+                     .Select(i => RandomString(random, 1024))
+                     .ToList();
+
+                for (int i = 0; i < 16*1024; i++)
+                {
+                    using (itemsTable.Allocate(out TableValueBuilder builder))
+                    using (Slice.From(tx.Allocator, "val" + i, out var key))
+                    using (Slice.From(tx.Allocator, rnd[i%rnd.Count], out var val))
+                    {
+                        builder.Add(key);
+                        builder.Add(Bits.SwapBytes(++number));
+                        builder.Add(val);
+                        itemsTable.Insert(builder);
+                    }
+                }
+
+                for (int i = 512; i < 768; i++)
+                {
+                    using (Slice.From(tx.Allocator, "val" + i, out var key))
+                    {
+                        itemsTable.DeleteByKey(key);
+                    }
+                }
+
+                var str = Enumerable.Range(0, 10_000)
+                    .Aggregate(new StringBuilder(), (sb, i) => sb.Append((char)(i%26 + 'A')))
+                    .ToString();
+
+                for (int i = 0; i < 256; i++)
+                {
+                    using (itemsTable.Allocate(out TableValueBuilder builder))
+                    using (Slice.From(tx.Allocator, "val" + i, out var key))
+                    using (Slice.From(tx.Allocator, str, out var val))
+                    {
+                        builder.Add(key);
+                        builder.Add(Bits.SwapBytes(++number));
+                        builder.Add(val);
+                        itemsTable.Set(builder);
+                    }
+                }
+            }
+        }
+
+
     }
 }
