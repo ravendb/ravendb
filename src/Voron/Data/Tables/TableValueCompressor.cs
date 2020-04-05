@@ -43,8 +43,6 @@ namespace Voron.Data.Tables
 
 
         public bool Compressed;
-        public bool IsSetup;
-
 
         public bool TryCompression(ZstdLib.CompressionDictionary compressionDictionary)
         {
@@ -144,6 +142,7 @@ namespace Voron.Data.Tables
 
         public void DiscardCompressedData()
         {
+            Compressed = false;
             CompressedBuffer = default;
             CompressedScope.Dispose();
             _previousDictionary = null;
@@ -151,7 +150,6 @@ namespace Voron.Data.Tables
 
         public void Reset()
         {
-            IsSetup = false;
             Compressed = false;
             RawBuffer = default;
             RawScope.Dispose();
@@ -197,6 +195,11 @@ namespace Voron.Data.Tables
             _previousDictionary = null;
             Compressed = false;
 
+        }
+
+        public bool Redundant(ZstdLib.CompressionDictionary current)
+        {
+            return current == _previousDictionary;
         }
     }
 }

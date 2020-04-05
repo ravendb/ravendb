@@ -680,10 +680,10 @@ namespace Voron.Data.Tables
         {
             InactiveSections.Add(_activeDataSmallSection.PageNumber);
 
+            var previousActiveSection = ActiveDataSmallSection;
+
             if (TryFindMatchFromCandidateSections(compressor.Size, compressionDictionary?.Hash, out long id) == false)
             {
-                var previousActiveSection = ActiveDataSmallSection;
-
                 Slice newSectionDictionaryHash = default;
 
                 // need to switch, may have to re-compress at this point
@@ -1127,15 +1127,17 @@ namespace Voron.Data.Tables
             if(Sodium.crypto_generichash(hashBuffer, (UIntPtr)32, dictionaryBuffer.Ptr, (ulong)dictionaryBufferSpan.Length, Name.Content.Ptr, (UIntPtr)Name.Size) != 0)
                 throw new InvalidOperationException($"Unable to compute hash for buffer when creating dictionary hash");
 
-            var hashSliceScope = Slice.From(_tx.Allocator, hashBuffer, 32, out hash);
+            var hashSliceScope = Slice.From(_tx.Allocator, hashBuffer, 32, out var newHash);
             
-            using var compressionDictionary = new ZstdLib.CompressionDictionary(hash, dictionaryBuffer.Ptr, dictionaryBufferSpan.Length, 3);
+            using var compressionDictionary = new ZstdLib.CompressionDictionary(newHash, dictionaryBuffer.Ptr, dictionaryBufferSpan.Length, 3);
 
             if (compressor.ShouldReplaceDictionary(compressionDictionary) == false)
             {
                 hashSliceScope.Dispose();
                 return;
             }
+
+            hash = newHash;
 
             compressionDictionary.ExpectedCompressionRatio = compressor.CompressionRatio;
             

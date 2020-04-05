@@ -27,11 +27,7 @@ namespace Voron.Data.Tables
         {
             get
             {
-                if (Compression.IsValid)
-                {
-                    return Compression.SizeLarge;
-                }
-                return Size;
+                return Compression.IsValid ? Compression.SizeLarge : Size;
             }
         }
 
@@ -61,12 +57,11 @@ namespace Voron.Data.Tables
         {
             get
             {
-                if (Compression.IsValid)
-                    return Compression.Size;
-
-                return _size + ElementSize * _values.Count + JsonParserState.VariableSizeIntSize(_values.Count);
+                return Compression.IsValid ? Compression.Size : RawSize;
             }
         }
+
+        public int RawSize => _size + ElementSize * _values.Count + JsonParserState.VariableSizeIntSize(_values.Count);
 
         public int Count => _values.Count;
 
@@ -213,14 +208,12 @@ namespace Voron.Data.Tables
 
         public void TryCompression(ZstdLib.CompressionDictionary compressionDictionary)
         {
-            if (Compression.IsSetup)
+            if (Compression.Redundant(compressionDictionary))
                 return;
 
-            Compression.Prepare(Size);
+            Compression.Prepare(RawSize);
             CopyTo(Compression.RawBuffer.Ptr);
             Compression.TryCompression(compressionDictionary);
-
-            Compression.IsSetup = true;
         }
 
         public bool Compressed => Compression.Compressed;

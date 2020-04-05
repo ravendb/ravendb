@@ -145,7 +145,8 @@ namespace Voron.Data.Tables
             fixed (byte* srcPtr = src)
             fixed (byte* dstPtr = dst)
             {
-                var result = ZSTD_compress_usingCDict(_threadCompressContext.Compression, dstPtr, (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length, dictionary.Compression);
+                var result = ZSTD_compress_usingCDict(_threadCompressContext.Compression, dstPtr,
+                    (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length, dictionary.Compression);
                 AssertSuccess(result, dictionary);
                 return (int)result;
             }
