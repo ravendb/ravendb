@@ -18,7 +18,10 @@ namespace Tests.Infrastructure
         static CustomS3FactAttribute()
         {
             var strSettings = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
-            
+
+            if (string.IsNullOrEmpty(strSettings))
+                return;
+
             try
             {
                 S3Settings = JsonConvert.DeserializeObject<S3Settings>(strSettings);
