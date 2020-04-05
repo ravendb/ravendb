@@ -21,12 +21,10 @@ namespace SlowTests.Server.Documents.ETL
 
         protected AddEtlOperationResult AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
         {
-            Console.WriteLine($"Adding ETL. Src: {src.Database}. Test: {Context.UniqueTestName}");
             var putResult = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
             Assert.NotNull(putResult.RaftCommandIndex);
 
             var addResult = src.Maintenance.Send(new AddEtlOperation<T>(configuration));
-            Console.WriteLine($"Added ETL. Src: {src.Database}. Test: {Context.UniqueTestName}");
             return addResult;
         }
 
@@ -67,7 +65,6 @@ namespace SlowTests.Server.Documents.ETL
 
         protected ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
         {
-            Console.WriteLine($"WaitForEtl (1). Src: {store.Database}. Test: {Context.UniqueTestName}");
             var database = GetDatabase(store.Database).Result;
 
             var mre = new ManualResetEventSlim();
@@ -78,7 +75,6 @@ namespace SlowTests.Server.Documents.ETL
                     mre.Set();
             };
 
-            Console.WriteLine($"WaitForEtl (2). Src: {store.Database}. Test: {Context.UniqueTestName}");
 
             return mre;
         }
