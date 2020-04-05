@@ -61,6 +61,11 @@ namespace Voron.Data.Tables
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr ZSTD_getErrorName(UIntPtr code);
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        public static extern UIntPtr ZSTD_compressCCtx(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize, int compressionLevel);
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        public static extern UIntPtr ZSTD_decompressDCtx(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_compress_usingCDict(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize, void* cdict);
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
@@ -145,8 +150,19 @@ namespace Voron.Data.Tables
             fixed (byte* srcPtr = src)
             fixed (byte* dstPtr = dst)
             {
-                var result = ZSTD_compress_usingCDict(_threadCompressContext.Compression, dstPtr,
-                    (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length, dictionary.Compression);
+                UIntPtr result;
+
+                if (dictionary.Compression == null)
+                {
+                    result = ZSTD_compressCCtx(_threadCompressContext.Compression, dstPtr, (UIntPtr)dst.Length, 
+                        srcPtr, (UIntPtr)src.Length, 3);
+                }
+                else
+                {
+                    result = ZSTD_compress_usingCDict(_threadCompressContext.Compression, dstPtr,
+                        (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length, dictionary.Compression);
+                }
+
                 AssertSuccess(result, dictionary);
                 return (int)result;
             }
@@ -160,7 +176,15 @@ namespace Voron.Data.Tables
             fixed (byte* srcPtr = src)
             fixed (byte* dstPtr = dst)
             {
-                var result = ZSTD_decompress_usingDDict(_threadCompressContext.Decompression, dstPtr, (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length, dictionary.Decompression);
+                UIntPtr result;
+                if(dictionary.Compression == null)
+                {
+                    result = ZSTD_decompressDCtx(_threadCompressContext.Decompression, dstPtr, (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length);
+                }
+                else
+                {
+                    result = ZSTD_decompress_usingDDict(_threadCompressContext.Decompression, dstPtr, (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length, dictionary.Decompression);
+                }
                 AssertSuccess(result, dictionary);
                 return (int)result;
             }
