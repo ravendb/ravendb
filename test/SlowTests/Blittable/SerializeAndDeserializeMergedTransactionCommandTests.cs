@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using FastTests;
 using FastTests.Voron.Util;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json;
@@ -410,6 +411,7 @@ namespace SlowTests.Blittable
                 {
                     new BatchRequestParser.CommandData
                     {
+                        Type = CommandType.PUT,
                         Id = "Some Id",
                         ChangeVector = context.GetLazyString("Some Lazy String"),
                         Document = EntityToBlittable.ConvertCommandToBlittable(data, context),
