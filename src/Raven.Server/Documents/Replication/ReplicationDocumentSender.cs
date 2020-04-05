@@ -235,6 +235,11 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 lastTransactionMarker = item.TransactionMarker;
 
+                                if (_parent.SupportedFeatures.Replication.TimeSeries == false)
+                                {
+                                    AssertNotTimeSeriesForLegacyReplication(item);
+                                }
+
                                 if (_parent.SupportedFeatures.Replication.CountersBatch == false)
                                 {                                    
                                     AssertNotCounterForLegacyReplication(item);
@@ -379,6 +384,22 @@ namespace Raven.Server.Documents.Replication
                     _orderedReplicaItems.Clear();
                     _replicaAttachmentStreams.Clear();
                 }
+            }
+        }
+
+        private void AssertNotTimeSeriesForLegacyReplication(ReplicationBatchItem item)
+        {
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment || item.Type == ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange)
+            {
+                // the other side doesn't support TimeSeries, stopping replication
+                var message = $"{_parent.Node.FromString()} found an item of type 'TimeSeries' to replicate to {_parent.Destination.FromString()}, " +
+                              $"while we are in legacy mode (downgraded our replication version to match the destination). " +
+                              $"Can't send TimeSeries in legacy mode, destination {_parent.Destination.FromString()} does not support TimeSeries feature. Stopping replication. {item}";
+
+                if (_log.IsInfoEnabled)
+                    _log.Info(message);
+
+                throw new LegacyReplicationViolationException(message);
             }
         }
 
