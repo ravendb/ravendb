@@ -330,7 +330,12 @@ namespace Voron.Data.Tables
             return this;
         }
 
-        public bool Compressed => _compressed;
+
+        public bool Compressed
+        {
+            get => _compressed;
+            set => _compressed = value;
+        }
 
         public TableSchema DefineIndex(SchemaIndexDef index)
         {

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -55,6 +56,9 @@ namespace Raven.Server.Documents
                 var documentDatabase = await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(_database);
                 var configuration = _serverStore.DatabasesLandlord.CreateDatabaseConfiguration(_database);
 
+                DatabaseRecord databaseRecord = documentDatabase.ReadDatabaseRecord();
+
+
                 // save the key before unloading the database (it is zeroed when disposing DocumentDatabase). 
                 if (documentDatabase.MasterKey != null)
                     encryptionKey = documentDatabase.MasterKey.ToArray(); 
@@ -87,6 +91,10 @@ namespace Raven.Server.Documents
                         configuration.Storage.TempPath = new PathSetting(compactTempDirectory);
                     }
 
+                    var compressedCollectionsTableNames = databaseRecord.CompressedCollections
+                        .Select(name => new CollectionName(name).GetTableName(CollectionTableType.Documents))
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
                     using (var dst = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications(),
                         new CatastrophicFailureNotification((envId, path, exception, stacktrace) => throw new InvalidOperationException($"Failed to compact database {_database} ({path}). StackTrace='{stacktrace}'", exception))))
                     {
@@ -103,7 +111,10 @@ namespace Raven.Server.Documents
                             result.Progress.GlobalTotal = progressReport.GlobalTotal;
                             result.AddMessage(progressReport.Message);
                             onProgress?.Invoke(result.Progress);
-                        }, _token);
+                        }, (name, schema) =>
+                        {
+                            schema.Compressed = compressedCollectionsTableNames.Contains(name);
+                        },_token);
                     }
 
                     result.TreeName = null;

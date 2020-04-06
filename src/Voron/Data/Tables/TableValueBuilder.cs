@@ -212,7 +212,7 @@ namespace Voron.Data.Tables
                 return;
 
             Compression.Prepare(RawSize);
-            CopyTo(Compression.RawBuffer.Ptr);
+            CopyTo(Compression.AllocateRaw(RawSize));
             Compression.TryCompression(compressionDictionary);
         }
 
