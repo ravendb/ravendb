@@ -375,7 +375,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
             else if (_inProgressCommand == CommandType.TimeSeries)
             {
-                TimeSeriesBulkInsert.EndCommand(_currentWriter);
+                TimeSeriesBulkInsert.ThrowAlreadyRunningTimeSeries();
             }
         }
 
@@ -589,6 +589,9 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     await _operation.ExecuteBeforeStore().ConfigureAwait(false);
 
+                    if (_operation._inProgressCommand == CommandType.TimeSeries)
+                        TimeSeriesBulkInsert.ThrowAlreadyRunningTimeSeries();
+
                     try
                     {
                         var isFirst = _id == null;
@@ -679,7 +682,8 @@ namespace Raven.Client.Documents.BulkInsert
                 switch (operation._inProgressCommand)
                 {
                     case CommandType.TimeSeries:
-                        throw new InvalidOperationException("Please dispose the previous time series operation before starting a new one");
+                        ThrowAlreadyRunningTimeSeries();
+                        break;
                     case CommandType.Counters:
                         _operation._countersOperation.EndPreviousCommandIfNeeded();
                         break;
@@ -788,9 +792,9 @@ namespace Raven.Client.Documents.BulkInsert
                 _operation._currentWriter.Write("\",\"Appends\":[");
             }
 
-            internal static void EndCommand(StreamWriter currentWriter)
+            internal static void ThrowAlreadyRunningTimeSeries()
             {
-                currentWriter.Write("]}}");
+                throw new InvalidOperationException("There is an already running time series operation, did you forget to Dispose it?");
             }
 
             public void Dispose()
@@ -798,7 +802,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _operation._inProgressCommand = CommandType.None;
 
                 if (_first == false)
-                    EndCommand(_operation._currentWriter);
+                    _operation._currentWriter.Write("]}}");
             }
         }
     }
