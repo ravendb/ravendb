@@ -343,7 +343,6 @@ namespace Raven.Client.Documents.Session
                     {
                         new TimeSeriesRangeResult
                         {
-                            //Name = timeseries,
                             From = from,
                             To = to,
                             Entries = values
@@ -366,7 +365,6 @@ namespace Raven.Client.Documents.Session
                     ranges.RemoveRange(0, toRangeIndex);
                     ranges.Insert(0, new TimeSeriesRangeResult
                     {
-                        //Name = timeseries,
                         From = from,
                         To = to,
                         Entries = values
@@ -413,7 +411,6 @@ namespace Raven.Client.Documents.Session
                     {
                         From = from,
                         To = to,
-                        //Name = timeseries,
                         Entries = values
                     });
 
@@ -458,7 +455,6 @@ namespace Raven.Client.Documents.Session
                     ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
                     ranges.Insert(fromRangeIndex + 1, new TimeSeriesRangeResult
                     {
-                        //Name = timeseries,
                         From = from,
                         To = to,
                         Entries = values

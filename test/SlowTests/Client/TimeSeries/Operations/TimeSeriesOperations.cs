@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Query;
@@ -720,6 +721,278 @@ namespace SlowTests.Client.TimeSeries.Operations
                 Assert.Equal(121, range.Entries.Length);
                 Assert.Equal(baseline.AddMinutes(40), range.Entries[0].Timestamp);
                 Assert.Equal(baseline.AddMinutes(60), range.Entries[120].Timestamp);
+            }
+        }
+
+        [Fact]
+        public void CanGetMultipleTimeSeriesInSingleRequest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/ayende");
+                    session.SaveChanges();
+                }
+
+                // append
+
+                var baseline = DateTime.Today;
+
+                var timeSeriesOp = new TimeSeriesOperation
+                {
+                    DocumentId = "users/ayende",
+                    Name = "Heartrate",
+                    Appends = new List<TimeSeriesOperation.AppendOperation>()
+                };
+
+                for (int i = 0; i <= 10; i++)
+                {
+                    timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
+                    {
+                        Tag = "watches/fitbit",
+                        Timestamp = baseline.AddMinutes(i * 10),
+                        Values = new[] { 72d }
+                    });
+                }
+
+                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+
+                store.Operations.Send(timeSeriesBatch);
+
+                timeSeriesOp = new TimeSeriesOperation
+                {
+                    DocumentId = "users/ayende",
+                    Name = "BloodPressure",
+                    Appends = new List<TimeSeriesOperation.AppendOperation>()
+                };
+
+                for (int i = 0; i <= 10; i++)
+                {
+                    timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
+                    {
+                        Timestamp = baseline.AddMinutes(i * 10),
+                        Values = new[] { 80d }
+                    });
+                }
+
+                timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+
+                store.Operations.Send(timeSeriesBatch);
+
+                timeSeriesOp = new TimeSeriesOperation
+                {
+                    DocumentId = "users/ayende",
+                    Name = "Temperature",
+                    Appends = new List<TimeSeriesOperation.AppendOperation>()
+                };
+
+                for (int i = 0; i <= 10; i++)
+                {
+                    timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
+                    {
+                        Timestamp = baseline.AddMinutes(i * 10),
+                        Values = new[] { 37d + i * 0.15 }
+                    });
+                }
+
+                timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+
+                store.Operations.Send(timeSeriesBatch);
+
+                // get ranges from multiple time series in a single request
+
+                var timesSeriesDetails = store.Operations.Send(
+                    new GetTimeSeriesOperation("users/ayende", new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate",
+                            From = baseline,
+                            To = baseline.AddMinutes(15)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate",
+                            From = baseline.AddMinutes(30),
+                            To = baseline.AddMinutes(45)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "BloodPressure",
+                            From = baseline,
+                            To = baseline.AddMinutes(30)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "BloodPressure",
+                            From = baseline.AddMinutes(60),
+                            To = baseline.AddMinutes(90)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Temperature",
+                            From = baseline,
+                            To = baseline.AddDays(1)
+                        }
+                    }));
+
+                Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                Assert.Equal(3, timesSeriesDetails.Values.Count);
+
+                Assert.Equal(2, timesSeriesDetails.Values["Heartrate"].Count);
+
+                var range = timesSeriesDetails.Values["Heartrate"][0];
+
+                Assert.Equal(baseline, range.From);
+                Assert.Equal(baseline.AddMinutes(15), range.To);
+
+                Assert.Equal(2, range.Entries.Length);
+                Assert.Equal(baseline, range.Entries[0].Timestamp);
+                Assert.Equal(baseline.AddMinutes(10), range.Entries[1].Timestamp);
+
+                Assert.Null(range.TotalResults);
+
+                range = timesSeriesDetails.Values["Heartrate"][1];
+
+                Assert.Equal(baseline.AddMinutes(30), range.From);
+                Assert.Equal(baseline.AddMinutes(45), range.To);
+
+                Assert.Equal(2, range.Entries.Length);
+                Assert.Equal(baseline.AddMinutes(30), range.Entries[0].Timestamp);
+                Assert.Equal(baseline.AddMinutes(40), range.Entries[1].Timestamp);
+
+                Assert.Null(range.TotalResults);
+
+                Assert.Equal(2, timesSeriesDetails.Values["BloodPressure"].Count);
+
+                range = timesSeriesDetails.Values["BloodPressure"][0];
+
+                Assert.Equal(baseline, range.From);
+                Assert.Equal(baseline.AddMinutes(30), range.To);
+
+                Assert.Equal(4, range.Entries.Length);
+                Assert.Equal(baseline, range.Entries[0].Timestamp);
+                Assert.Equal(baseline.AddMinutes(30), range.Entries[3].Timestamp);
+
+                Assert.Null(range.TotalResults);
+
+                range = timesSeriesDetails.Values["BloodPressure"][1];
+
+                Assert.Equal(baseline.AddMinutes(60), range.From);
+                Assert.Equal(baseline.AddMinutes(90), range.To);
+
+                Assert.Equal(4, range.Entries.Length);
+                Assert.Equal(baseline.AddMinutes(60), range.Entries[0].Timestamp);
+                Assert.Equal(baseline.AddMinutes(90), range.Entries[3].Timestamp);
+
+                Assert.Null(range.TotalResults);
+
+                Assert.Equal(1, timesSeriesDetails.Values["Temperature"].Count);
+
+                range = timesSeriesDetails.Values["Temperature"][0];
+
+                Assert.Equal(baseline, range.From);
+                Assert.Equal(baseline.AddDays(1), range.To);
+
+                Assert.Equal(11, range.Entries.Length);
+                Assert.Equal(baseline, range.Entries[0].Timestamp);
+                Assert.Equal(baseline.AddMinutes(100), range.Entries[10].Timestamp);
+
+                Assert.Equal(11, range.TotalResults); // full range
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowOnNullRanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/ayende");
+                    session.SaveChanges();
+                }
+
+                // append
+
+                var baseline = DateTime.Today;
+
+                var timeSeriesOp = new TimeSeriesOperation
+                {
+                    DocumentId = "users/ayende",
+                    Name = "Heartrate",
+                    Appends = new List<TimeSeriesOperation.AppendOperation>()
+                };
+
+                for (int i = 0; i <= 10; i++)
+                {
+                    timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
+                    {
+                        Tag = "watches/fitbit",
+                        Timestamp = baseline.AddMinutes(i * 10),
+                        Values = new[] { 72d }
+                    });
+                }
+
+                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+
+                store.Operations.Send(timeSeriesBatch);
+
+                var ex = Assert.Throws<ArgumentNullException>(() => store.Operations.Send(
+                    new GetTimeSeriesOperation("users/ayende", null)));
+
+                Assert.Contains("Value cannot be null. (Parameter 'ranges')", ex.Message);
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowOnMissingName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/ayende");
+                    session.SaveChanges();
+                }
+
+                // append
+
+                var baseline = DateTime.Today;
+
+                var timeSeriesOp = new TimeSeriesOperation
+                {
+                    DocumentId = "users/ayende",
+                    Name = "Heartrate",
+                    Appends = new List<TimeSeriesOperation.AppendOperation>()
+                };
+
+                for (int i = 0; i <= 10; i++)
+                {
+                    timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
+                    {
+                        Tag = "watches/fitbit",
+                        Timestamp = baseline.AddMinutes(i * 10),
+                        Values = new[] { 72d }
+                    });
+                }
+
+                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+
+                store.Operations.Send(timeSeriesBatch);
+
+                var ex = Assert.Throws<RavenException>(() => store.Operations.Send(
+                    new GetTimeSeriesOperation("users/ayende", new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange
+                        {
+                            From = baseline,
+                            To = DateTime.MaxValue
+                        }
+                    })));
+
+                Assert.Contains("'Name' cannot be null or empty", ex.Message);
             }
         }
     }
