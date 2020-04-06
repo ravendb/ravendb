@@ -182,9 +182,9 @@ namespace Raven.Server
                 if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versions))
                 {
                     var version = versions.ToString();
-                    if (version.Length > 0 && version[0] != RavenVersionAttribute.Instance.MajorVersionAsChar)
+                    if (version.Length > 0 && version[0] == '3')
                         e = new ClientVersionMismatchException(
-                            $"RavenDB does not support interaction between Client API and Server when major version does not match. Client: {version}. Server: {RavenVersionAttribute.Instance.AssemblyVersion}",
+                            $"RavenDB does not support interaction between Client API major version 3 and Server version {RavenVersionAttribute.Instance.MajorVersion} when major version does not match. Client: {version}. Server: {RavenVersionAttribute.Instance.AssemblyVersion}",
                             e);
                 }
 
