@@ -350,9 +350,9 @@ namespace Raven.Client.Http
             _unmanagedBuffersPool.Dispose();
         }
 
-        public void LowMemory(LowMemSeverity lowMemSeverity)
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            if (lowMemSeverity != LowMemSeverity.ExtremelyLow)
+            if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
                 return;
             FreeSpace();
         }

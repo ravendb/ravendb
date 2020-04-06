@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                 var replacementIndex = db.IndexStore.GetIndex("ReplacementOf/Users_ByName");
 
                 // let's try to force calling storageEnvironment.Cleanup() inside ExecuteIndexing method
-                replacementIndex.LowMemory(LowMemSeverity.ExtremelyLow);
+                replacementIndex.LowMemory(LowMemorySeverity.ExtremelyLow);
                 var envOfReplacementIndex = replacementIndex._indexStorage.Environment();
                 envOfReplacementIndex.LogsApplied();
 
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 // let's try to force calling storageEnvironment.Cleanup() inside ExecuteIndexing method
-                replacementIndex.LowMemory(LowMemSeverity.ExtremelyLow);
+                replacementIndex.LowMemory(LowMemorySeverity.ExtremelyLow);
                 envOfReplacementIndex.LogsApplied();
 
                 using (var session = store.OpenAsyncSession())

@@ -1,9 +1,9 @@
 namespace Sparrow.LowMemory
 {
-    public enum LowMemSeverity
+    public enum LowMemorySeverity
     {
         None = 0,
-        LowMem,
+        Low,
         ExtremelyLow
     }
 }
