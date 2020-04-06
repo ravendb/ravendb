@@ -666,22 +666,25 @@ namespace SlowTests.Client.TimeSeries.Operations
                 store.Operations.Send(timeSeriesBatch);
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation(documentId, "Heartrate", new List<TimeSeriesRange>
+                    new GetTimeSeriesOperation(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
+                            Name = "Heartrate",
                             From = baseline.AddMinutes(5),
                             To = baseline.AddMinutes(10)
                         },
 
                         new TimeSeriesRange
                         {
+                            Name = "Heartrate",
                             From = baseline.AddMinutes(15),
                             To = baseline.AddMinutes(30)
                         },
 
                         new TimeSeriesRange
                         {
+                            Name = "Heartrate",
                             From = baseline.AddMinutes(40),
                             To = baseline.AddMinutes(60)
                         }
