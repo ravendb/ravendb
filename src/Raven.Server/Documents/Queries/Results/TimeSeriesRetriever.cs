@@ -12,7 +12,6 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage.Reader;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.TimeSeries;
 using Sparrow;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 

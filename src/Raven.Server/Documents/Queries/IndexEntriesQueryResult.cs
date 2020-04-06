@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesIncludes()
+        public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes()
         {
             throw new NotSupportedException();
         }

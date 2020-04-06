@@ -66,13 +66,17 @@ namespace Raven.Server.Documents
 
             if (includeTimeSeries != null)
             {
-                foreach (var tsIncludes in includeTimeSeries.Results)
+                foreach (var tsIncludesForDocument in includeTimeSeries.Results)
                 {
-                    HashNumber(state, tsIncludes.Value.Count);
-                    foreach (var rangeResult in tsIncludes.Value)
+                    foreach (var kvp in tsIncludesForDocument.Value)
                     {
-                        HashNumber(state, rangeResult.Entries.Length);
-                        HashChangeVector(state, rangeResult.Hash);
+                        HashNumber(state, tsIncludesForDocument.Value.Count);
+
+                        foreach (var rangeResult in kvp.Value)
+                        {
+                            HashNumber(state, rangeResult.Entries.Length);
+                            HashChangeVector(state, rangeResult.Hash);
+                        }
                     }
                 }
             }

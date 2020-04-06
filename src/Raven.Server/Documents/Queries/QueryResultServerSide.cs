@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Queries
 
         public abstract void AddTimeSeriesIncludes(IncludeTimeSeriesCommand command);
 
-        public abstract Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesIncludes();
+        public abstract Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes();
 
         public abstract void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command);
 

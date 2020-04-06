@@ -320,7 +320,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
-            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, List<TimeSeriesRangeResult>> timeseries, Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues, int numberOfResults)
+            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries, Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues, int numberOfResults)
         {
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
@@ -351,7 +351,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
-                    await writer.WriteTimeSeriesAsync(context, timeseries);
+                    await writer.WriteTimeSeriesAsync(timeseries);
                 }
 
                 if (compareExchangeValues?.Count > 0)

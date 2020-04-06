@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
-        public Task Read()
+        public async Task Read()
         {
             var documentId = GetStringQueryString("id");
             var names = GetStringValuesQueryString("name");
@@ -134,35 +134,33 @@ namespace Raven.Server.Documents.Handlers
             {
                 var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize);
 
-                Debug.Assert(ranges?.Count == names.Count, "The number of TimeSeriesRangeResult items should match the number of the series names that were requested");
-
-                var actualEtag = ranges.Count == 1
-                    ? ranges[0].Hash
-                    : CombineHashesFromMultipleRanges(ranges);
+                var actualEtag = CombineHashesFromMultipleRanges(ranges);
 
                 var etag = GetStringFromHeaders("If-None-Match");
                 if (etag == actualEtag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-                WriteResponse(context, documentId, ranges, names);
-
-                return Task.CompletedTask;
+                await WriteResponse(context, documentId, ranges);
             }
-
         }
 
-        private static List<TimeSeriesRangeResult> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
+        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
         {
-            var result = new List<TimeSeriesRangeResult>();
+            var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, DateTime> datesDictionary = null;
+
+
             DateTime from, to;
 
             for (int i = 0; i < fromList.Count; i++)
             {
+                var name = names[i];
+
                 if (fromList[i] == null)
                 {
                     Debug.Assert(toList[i] == null, $"Non matching from/to dates. got from = null, expected to have to = null as well, bot got to = '{toList[i]}'");
@@ -171,15 +169,31 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                 {
-                    from = ParseDate(fromList[i], names[i]);
-                    to = ParseDate(toList[i], names[i]);
+                    datesDictionary ??= new Dictionary<string, DateTime>();
+
+                    if (datesDictionary.TryGetValue(fromList[i], out from) == false)
+                    {
+                        datesDictionary[fromList[i]] = from = ParseDate(fromList[i], name);
+                    }
+
+                    if (datesDictionary.TryGetValue(toList[i], out to) == false)
+                    {
+                        datesDictionary[toList[i]] = to = ParseDate(toList[i], name);
+                    }
                 }
 
-                var rangeResult = GetTimeSeriesRange(context, documentId, names[i], from, to, ref start, ref pageSize);
-                result.Add(rangeResult);
+                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize);
+                if (rangeResultDictionary.TryGetValue(name, out var list) == false)
+                {
+                    rangeResultDictionary[name] = new List<TimeSeriesRangeResult> { rangeResult };
+                }
+                else
+                {
+                    list.Add(rangeResult);
+                }
             }
 
-            return result;
+            return rangeResultDictionary;
         }
 
         internal static TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to)
@@ -188,7 +202,7 @@ namespace Raven.Server.Documents.Handlers
             return GetTimeSeriesRange(context, docId, name, from, to, ref start, ref pageSize);
         }
 
-        internal static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
+        private static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
         {
             var values = new List<TimeSeriesEntry>();
             var reader = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetReader(context, docId, name, from, to);
@@ -245,7 +259,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static unsafe string CombineHashesFromMultipleRanges(List<TimeSeriesRangeResult> ranges)
+        private static unsafe string CombineHashesFromMultipleRanges(Dictionary<string, List<TimeSeriesRangeResult>> ranges)
         {
             // init hash 
             var size = Sodium.crypto_generichash_bytes();
@@ -255,15 +269,83 @@ namespace Raven.Server.Documents.Handlers
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ComputeHttpEtags.ThrowFailToInitHash();
 
-            foreach (var range in ranges)
+            foreach (var kvp in ranges)
             {
-                ComputeHttpEtags.HashChangeVector(state, range.Hash);
+                foreach (var range in kvp.Value)
+                {
+                    ComputeHttpEtags.HashChangeVector(state, range.Hash);
+                }
             }
 
             return ComputeHttpEtags.FinalizeHash(size, state);
         }
 
-        private void WriteRange(DocumentsOperationContext context, BlittableJsonTextWriter writer, string documentId, string name, TimeSeriesRangeResult rangeResult)
+        private async Task WriteResponse(DocumentsOperationContext context, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> ranges)
+        {
+            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            {
+                writer.WriteStartObject();
+                {
+                    writer.WritePropertyName(nameof(TimeSeriesDetails.Id));
+                    writer.WriteString(documentId);
+
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
+                    await WriteTimeSeriesRangeResults(context, writer, documentId, ranges);
+                }
+                writer.WriteEndObject();
+
+                await writer.OuterFlushAsync();
+            }
+        }
+
+        internal static async Task WriteTimeSeriesRangeResults(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
+        {
+            writer.WriteStartObject();
+            {
+                bool first = true;
+                foreach (var (name, ranges) in dictionary)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+
+                    first = false;
+
+                    writer.WritePropertyName(name);
+
+                    writer.WriteStartArray();
+                    {
+                        (long Count, DateTime Start, DateTime End) stats = default;
+                        if (documentId != null)
+                        {
+                            Debug.Assert(context != null);
+                            stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                        }
+
+                        for (var i = 0; i < ranges.Count; i++)
+                        {
+                            long? totalCount = null;
+
+                            if (i > 0)
+                                writer.WriteComma();
+
+                            if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
+                            {
+                                totalCount = stats.Count;
+                            }
+
+                            WriteRange(writer, ranges[i], totalCount);
+
+                            await writer.MaybeOuterFlushAsync();
+                        }
+                    }
+                    writer.WriteEndArray();
+                }
+            }
+            writer.WriteEndObject();
+        }
+
+        private static void WriteRange(AsyncBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount)
         {
             writer.WriteStartObject();
             {
@@ -278,19 +360,18 @@ namespace Raven.Server.Documents.Handlers
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.Entries));
                 WriteEntries(writer, rangeResult.Entries);
 
-                var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
-                if (rangeResult.From <= stats.Start && rangeResult.To >= stats.End)
+                if (totalCount.HasValue)
                 {
                     // add total entries count to the response 
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesRangeResult.TotalResults));
-                    writer.WriteInteger(stats.Count);
+                    writer.WriteInteger(totalCount.Value);
                 }
             }
             writer.WriteEndObject();
         }
 
-        private static void WriteEntries(BlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
+        private static void WriteEntries(AbstractBlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
         {
             writer.WriteStartArray();
 
@@ -314,42 +395,6 @@ namespace Raven.Server.Documents.Handlers
 
             writer.WriteEndArray();
         }
-
-        private void WriteResponse(DocumentsOperationContext context, string documentId, List<TimeSeriesRangeResult> ranges, StringValues names)
-        {
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                {
-                    writer.WritePropertyName(nameof(TimeSeriesDetails.Id));
-                    writer.WriteString(documentId);
-
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
-                    writer.WriteStartObject();
-                    {
-                        for (int i = 0; i < ranges.Count; i++)
-                        {
-                            var name = names[i];
-
-                            writer.WritePropertyName(name);
-                            writer.WriteStartArray();
-
-                            WriteRange(context, writer, documentId, name, ranges[i]);
-
-                            writer.WriteEndArray();
-                        }
-
-
-                    }
-                    writer.WriteEndObject();
-                }
-                writer.WriteEndObject();
-
-                writer.Flush();
-            }
-        }
-
 
         [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser)]
         public async Task Batch()
@@ -408,6 +453,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                 });
         }
+      
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
@@ -598,12 +644,10 @@ namespace Raven.Server.Documents.Handlers
                 itemsList.Add(item);
             }
 
-
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 throw new System.NotImplementedException();
             }
         }
-
     }
 }
