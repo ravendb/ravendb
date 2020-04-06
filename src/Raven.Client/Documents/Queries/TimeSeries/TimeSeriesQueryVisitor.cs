@@ -366,7 +366,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesGrouping.First):
                 case nameof(ITimeSeriesGrouping.Last):
                 case nameof(ITimeSeriesGrouping.Average):
-                case nameof(ITimeSeriesGrouping.Mean):
                     if (_selectFields.Length > 0)
                         _selectFields.Append(", ");
                     _selectFields.Append($"{name.ToLower()}()");

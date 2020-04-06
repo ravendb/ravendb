@@ -364,7 +364,6 @@ namespace Raven.Server.Documents.Queries.AST
                         break;
                     case AggregationType.Sum:
                     case AggregationType.Average:
-                    case AggregationType.Mean:
                         _values[i] = (double)_values[i] + val.Sum;
                         break;
                     case AggregationType.First:
@@ -414,7 +413,6 @@ namespace Raven.Server.Documents.Queries.AST
                         break;
                     case AggregationType.Sum:
                     case AggregationType.Average:
-                    case AggregationType.Mean:
                         _values[i] = (double)_values[i] + val;
                         break;
                     case AggregationType.First:
@@ -446,7 +444,6 @@ namespace Raven.Server.Documents.Queries.AST
                     break;
                 case AggregationType.Count:
                     return Count;
-                case AggregationType.Mean:
                 case AggregationType.Average:
                     for (int i = 0; i < _values.Count; i++)
                     {

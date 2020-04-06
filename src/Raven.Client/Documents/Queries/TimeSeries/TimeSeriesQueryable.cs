@@ -47,8 +47,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         double?[] Average();
 
-        double?[] Mean();
-
         double?[] First();
 
         double?[] Last();
