@@ -49,19 +49,21 @@
 .admin-logs {
     .columns-list-container {
         width: 600px;
+        
+        &#settingsContainer {
+            height: auto;
+        }
     }
 
     .full-width {
        width: 100%;
     }
-}
 
-#adminLogsSettings {    
-    p {
-        overflow: auto;
+    #adminLogsPath {
+        word-break: break-word;
     }
 
-    #selectedLogMode { 
+    #selectedLogMode {
         margin-top: 5px;
     }
 }
