@@ -119,8 +119,8 @@ namespace Voron.Data.Tables
         {
             if (CompressedBuffer.HasValue)
             {
-                _previousDictionary.Hash.CopyTo(ptr);
-                ptr += _previousDictionary.Hash.Size;
+                *(int*)ptr = _previousDictionary.Id;
+                ptr += sizeof(int);
             }
             CopyTo(ptr);
         }
@@ -156,7 +156,7 @@ namespace Voron.Data.Tables
             get
             {
                 if (Compressed)
-                    return CompressedBuffer.Length + _previousDictionary.Hash.Size;
+                    return CompressedBuffer.Length + sizeof(int);
 
                 return RawBuffer.Length;
             }

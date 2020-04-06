@@ -93,8 +93,7 @@ namespace Voron.Data.Tables
             string ptrToStringAnsi = Marshal.PtrToStringAnsi(ZSTD_getErrorName(v));
             if (dictionary != null)
             {
-                string hash = Convert.ToBase64String(dictionary.Hash.AsSpan());
-                throw new InvalidOperationException(ptrToStringAnsi + " on dictionary " + hash);
+                throw new InvalidOperationException(ptrToStringAnsi + " on " + dictionary);
             }
             throw new InvalidOperationException(ptrToStringAnsi);
         }
@@ -194,29 +193,42 @@ namespace Voron.Data.Tables
         {
             public void* Compression;
             public void* Decompression;
-            public Slice Hash;
-            public string HashBase64;
+            public int Id;
             public byte ExpectedCompressionRatio;
 
-            public CompressionDictionary(Slice hash, byte* buffer, int size, int compressionLevel)
+#if DEBUG
+            public string DictionaryHash;
+#endif
+
+            public CompressionDictionary(int id, byte* buffer, int size, int compressionLevel)
             {
-                Hash = hash;
-                HashBase64 = Convert.ToBase64String(hash.AsSpan());
-                if (buffer != null)
+                Id = id;
+                if (buffer == null) 
+                    return;
+
+#if DEBUG
+                var hash = stackalloc byte[32];
+                Sodium.crypto_generichash(hash, (UIntPtr)32, buffer, (ulong)size, null, UIntPtr.Zero);
+                DictionaryHash = Convert.ToBase64String(new ReadOnlySpan<byte>(hash, 32));
+#endif
+
+                Compression = ZSTD_createCDict(buffer, (UIntPtr)size, compressionLevel);
+                Decompression = ZSTD_createDDict(buffer, (UIntPtr)size);
+                if (Compression == null || Decompression == null)
                 {
-                    Compression = ZSTD_createCDict(buffer, (UIntPtr)size, compressionLevel);
-                    Decompression = ZSTD_createDDict(buffer, (UIntPtr)size);
-                    if (Compression == null || Decompression == null)
-                    {
-                        Dispose();
-                        throw new OutOfMemoryException("Unable to allocate memory fro dictionary");
-                    }
+                    Dispose();
+                    throw new OutOfMemoryException("Unable to allocate memory fro dictionary");
                 }
             }
 
             public override string ToString()
             {
-                return HashBase64;
+                return "Dic #" + Id 
+#if DEBUG
+					 + " - " + DictionaryHash
+#endif
+
+;
             }
 
             ~CompressionDictionary()
