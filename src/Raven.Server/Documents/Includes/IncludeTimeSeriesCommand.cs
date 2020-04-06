@@ -11,14 +11,14 @@ namespace Raven.Server.Documents.Includes
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, HashSet<TimeSeriesRange>> _timeSeriesRangesBySourcePath;
 
-        public Dictionary<string, List<TimeSeriesRangeResult>> Results { get; }
+        public Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results { get; }
 
         public IncludeTimeSeriesCommand(DocumentsOperationContext context, Dictionary<string, HashSet<TimeSeriesRange>> timeSeriesRangesBySourcePath)
         {
             _context = context;
             _timeSeriesRangesBySourcePath = timeSeriesRangesBySourcePath;
 
-            Results = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+            Results = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
         }
 
         public void Fill(Document document)
@@ -44,17 +44,24 @@ namespace Raven.Server.Documents.Includes
             }
         }
 
-        private List<TimeSeriesRangeResult> GetTimeSeriesForDocument(string docId, HashSet<TimeSeriesRange> timeSeriesToGet)
+        private Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesForDocument(string docId, HashSet<TimeSeriesRange> timeSeriesToGet)
         {
-            var rangeResults = new List<TimeSeriesRangeResult>();
+            var dictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var range in timeSeriesToGet)
             {
                 var timeSeriesRangeResult = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, range.Name, range.From, range.To);
-                rangeResults.Add(timeSeriesRangeResult);
+                if (dictionary.TryGetValue(range.Name, out var list) == false)
+                {
+                    dictionary[range.Name] = new List<TimeSeriesRangeResult>{ timeSeriesRangeResult };
+                }
+                else
+                {
+                    list.Add(timeSeriesRangeResult);
+                }
             }
 
-            return rangeResults;
+            return dictionary;
         }
     }
 }

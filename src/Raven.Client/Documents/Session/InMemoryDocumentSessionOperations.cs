@@ -1645,27 +1645,40 @@ more responsive application.
                     cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
                 }
 
-                if (!(propertyDetails.Value is BlittableJsonReaderArray timeseriesRanges))
+                if (!(propertyDetails.Value is BlittableJsonReaderObject timeseriesRangesByName))
                     throw new InvalidDataException($"Unable to read time series range results on document : '{id}'.");
 
-                foreach (BlittableJsonReaderObject blittableRange in timeseriesRanges)
+                var innerBlittablePropDetails = new BlittableJsonReaderObject.PropertyDetails();
+                for (int j = 0; j < timeseriesRangesByName.Count; j++)
                 {
-                    var newRange = ParseTimeSeriesRangeResult(blittableRange, id);
-                    AddToCache(cache, newRange);
+                    timeseriesRangesByName.GetPropertyByIndex(j, ref innerBlittablePropDetails);
+                    if (innerBlittablePropDetails.Value == null)
+                        continue;
+
+                    var name = innerBlittablePropDetails.Name;
+
+                    if (!(innerBlittablePropDetails.Value is BlittableJsonReaderArray timeseriesRanges))
+                        throw new InvalidDataException($"Unable to read time series range results on document : '{id}', time series : '{name}' .");
+
+                    foreach (BlittableJsonReaderObject blittableRange in timeseriesRanges)
+                    {
+                        var newRange = ParseTimeSeriesRangeResult(blittableRange, id, name);
+                        AddToCache(cache, newRange, name);
+                    }
                 }
 
                 TimeSeriesByDocId[id] = cache;
             }
         }
 
-        private static void AddToCache(Dictionary<string, List<TimeSeriesRangeResult>> cache, TimeSeriesRangeResult newRange)
+        private static void AddToCache(Dictionary<string, List<TimeSeriesRangeResult>> cache, TimeSeriesRangeResult newRange, string name)
         {
-            if (cache.TryGetValue(newRange.Name, out var localRanges) == false ||
+            if (cache.TryGetValue(name, out var localRanges) == false ||
                 localRanges.Count == 0)
             {
                 // no local ranges in cache for this series
 
-                cache[newRange.Name] = new List<TimeSeriesRangeResult>
+                cache[name] = new List<TimeSeriesRangeResult>
                 {
                     newRange
                 };
@@ -1710,14 +1723,11 @@ more responsive application.
             }
 
             var mergedValues = MergeRanges(fromRangeIndex, toRangeIndex, localRanges, newRange);
-            AsyncSessionDocumentTimeSeries.AddToCache(newRange.Name, newRange.From, newRange.To, fromRangeIndex, toRangeIndex, localRanges, cache, mergedValues);
+            AsyncSessionDocumentTimeSeries.AddToCache(name, newRange.From, newRange.To, fromRangeIndex, toRangeIndex, localRanges, cache, mergedValues);
         }
 
-        private static TimeSeriesRangeResult ParseTimeSeriesRangeResult(BlittableJsonReaderObject blittableRange, LazyStringValue id)
+        private static TimeSeriesRangeResult ParseTimeSeriesRangeResult(BlittableJsonReaderObject blittableRange, LazyStringValue id, string name)
         {
-            if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.Name), out string name) == false)
-                throw new InvalidDataException($"Unable to read time series range result on document : '{id}'. Missing '{nameof(TimeSeriesRangeResult.Name)}' property");
-
             if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.From), out DateTime from) == false ||
                 blittableRange.TryGet(nameof(TimeSeriesRangeResult.To), out DateTime to) == false)
                 throw new InvalidDataException($"Unable to read time series range result on document : '{id}', timeseries : '{name}'." +
@@ -1737,13 +1747,11 @@ more responsive application.
                     throw new InvalidDataException($"Unable to read time series value on document : '{id}', timeseries : '{name}'. " +
                                                    $"The time series value is missing '{nameof(TimeSeriesEntry.Timestamp)}' property");
 
-                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Tag), out string tag) == false)
-                    throw new InvalidDataException($"Unable to read time series value on document: '{id}', timeseries: '{name}'. " +
-                                                   $"The time series value is missing '{nameof(TimeSeriesEntry.Tag)}' property");
-
                 if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Values), out BlittableJsonReaderArray values) == false)
                     throw new InvalidDataException($"Unable to read time series value on document: '{id}', timeseries: '{name}'. " +
                                                    $"The time series value is missing '{nameof(TimeSeriesEntry.Values)}' property");
+
+                timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Tag), out string tag); // tag is optional
 
                 valuesArray[j] = new TimeSeriesEntry
                 {
@@ -1757,7 +1765,6 @@ more responsive application.
 
             return new TimeSeriesRangeResult
             {
-                Name = name,
                 From = from,
                 To = to,
                 Entries = valuesArray

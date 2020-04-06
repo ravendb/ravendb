@@ -11,10 +11,10 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Queries.Timings;
-using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
@@ -451,7 +451,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.TimeSeriesIncludes));
-                await writer.WriteTimeSeriesAsync(context, timeSeries);
+                await writer.WriteTimeSeriesAsync(timeSeries);
             }
 
             var compareExchangeValues = result.GetCompareExchangeValueIncludes();
@@ -1620,10 +1620,11 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task WriteTimeSeriesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, List<TimeSeriesRangeResult>> timeSeries)
+        public static async Task WriteTimeSeriesAsync(this AsyncBlittableJsonTextWriter writer,
+            Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries)
         {
             writer.WriteStartObject();
-
+            
             var first = true;
             foreach (var kvp in timeSeries)
             {
@@ -1634,69 +1635,10 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(kvp.Key);
 
-                await writer.WriteTimeSeriesForDocumentAsync(kvp.Value);
+                await TimeSeriesHandler.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
             }
 
             writer.WriteEndObject();
-        }
-
-        private static async Task WriteTimeSeriesForDocumentAsync(this AsyncBlittableJsonTextWriter writer, IEnumerable<TimeSeriesRangeResult> timeSeries)
-        {
-            writer.WriteStartArray();
-
-            var first = true;
-            foreach (var ts in timeSeries)
-            {
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Name));
-                writer.WriteString(ts.Name);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(TimeSeriesRangeResult.From));
-                writer.WriteDateTime(ts.From, true);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(TimeSeriesRangeResult.To));
-                writer.WriteDateTime(ts.To, true);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Entries));
-
-                writer.WriteStartArray();
-                {
-                    for (var i = 0; i < ts.Entries.Length; i++)
-                    {
-                        if (i > 0)
-                        {
-                            writer.WriteComma();
-                        }
-
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(TimeSeriesEntry.Timestamp));
-                        writer.WriteDateTime(ts.Entries[i].Timestamp, true);
-                        writer.WriteComma();
-                        writer.WritePropertyName(nameof(TimeSeriesEntry.Tag));
-                        writer.WriteString(ts.Entries[i].Tag);
-                        writer.WriteComma();
-                        writer.WriteArray(nameof(TimeSeriesEntry.Values), ts.Entries[i].Values);
-
-                        writer.WriteEndObject();
-                    }
-                }
-                writer.WriteEndArray();
-
-                writer.WriteEndObject();
-
-                await writer.MaybeOuterFlushAsync();
-            }
-
-            writer.WriteEndArray();
         }
 
         public static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,
