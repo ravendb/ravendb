@@ -487,26 +487,23 @@ namespace Raven.Server.Smuggler.Documents
             {
                 using (reader)
                 {
-                    if (reader.TryGet(nameof(TimeSeriesItem.DocId), out string docId) == false ||
-                        reader.TryGet(nameof(TimeSeriesItem.Name), out string name) == false ||
-                        reader.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
-                        reader.TryGet(nameof(TimeSeriesItem.Collection), out string collection) == false ||
-                        reader.TryGet(nameof(TimeSeriesItem.SegmentSize), out int size) == false ||
-                        reader.TryGet(nameof(TimeSeriesItem.Baseline), out DateTime baseline) == false)
+                    if(reader.TryGet(Constants.Documents.Blob.Size, out int size) == false)
+                        throw new InvalidOperationException($"Trying to read time series entry without size specified: doc: {reader}");
+                    
+                    if (reader.TryGet(Constants.Documents.Blob.Document, out BlittableJsonReaderObject blobMetadata) == false ||
+                        blobMetadata.TryGet(nameof(TimeSeriesItem.DocId), out string docId) == false ||
+                        blobMetadata.TryGet(nameof(TimeSeriesItem.Name), out string name) == false ||
+                        blobMetadata.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
+                        blobMetadata.TryGet(nameof(TimeSeriesItem.Collection), out string collection) == false ||
+                        blobMetadata.TryGet(nameof(TimeSeriesItem.Baseline), out DateTime baseline) == false)
                     {
                         _result.TimeSeries.ErroredCount++;
-                        _result.AddWarning("Could not read time series entry.");
-
+                        _result.AddWarning($"Could not read time series entry. {reader}");
+                        Skip(size);
                         continue;
                     }
 
-                    if (ReadSegment(size, out TimeSeriesValuesSegment segment) == false)
-                    {
-                        _result.TimeSeries.ErroredCount++;
-                        _result.AddWarning($"Failed to read time series values segment on document '{docId}', series '{name}'.");
-                        continue;
-                    }
-
+                    var segment = ReadSegment(size);
                     yield return new TimeSeriesItem
                     {
                         DocId = docId,
@@ -520,7 +517,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private unsafe bool ReadSegment(int segmentSize, out TimeSeriesValuesSegment segment)
+        private unsafe TimeSeriesValuesSegment ReadSegment(int segmentSize)
         {
             var mem = _context.GetMemory(segmentSize);
             var offset = 0;
@@ -543,8 +540,7 @@ namespace Raven.Server.Smuggler.Documents
                 size -= read.BytesRead;
             }
 
-            segment = new TimeSeriesValuesSegment(mem.Address, segmentSize);
-            return true;
+            return new TimeSeriesValuesSegment(mem.Address, segmentSize);;
         }
 
 
@@ -709,7 +705,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CounterGroups:
                     return SkipArray(onSkipped, null, token);
                 case DatabaseItemType.TimeSeries:
-                    return SkipTimeSeries(onSkipped, token);
+                    return SkipArray(onSkipped, SkipBolb, token);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
                 default:
@@ -880,7 +876,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     token.ThrowIfCancellationRequested();
                     additionalSkip?.Invoke(reader);
-
+                    
                     count++; //skipping
                     onSkipped?.Invoke(count);
                 }
@@ -889,35 +885,19 @@ namespace Raven.Server.Smuggler.Documents
             return count;
         }
 
-        private void MaySkipBlob(BlittableJsonReaderObject reader)
+        private void SkipBolb(BlittableJsonReaderObject reader)
+        {
+            if(reader.TryGet(Constants.Documents.Blob.Size, out int size) == false)
+                throw new InvalidOperationException($"Trying to skip BOLB without size specified: doc: {reader}");
+            Skip(size);
+        }
+        
+        private void MaySkipBolb(BlittableJsonReaderObject reader)
         {
             if(reader.TryGet(Constants.Documents.Blob.Size, out int size))
                 Skip(size);
         }
         
-        private long SkipTimeSeries(Action<long> onSkipped, CancellationToken token)
-        {
-            var count = 0L;
-            foreach (var tsItem in ReadArray())
-            {
-                using (tsItem)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    // skip segment blob
-                    tsItem.TryGet(nameof(TimeSeriesItem.SegmentSize), out int size);
-                    _parser.Skip(size);
-
-                    count++; //skipping
-                    onSkipped?.Invoke(count);
-
-
-                }
-            }
-
-            return count;
-        }
-
         private void SkipAttachmentStream(BlittableJsonReaderObject data)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue _) == false ||
