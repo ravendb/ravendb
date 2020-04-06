@@ -153,17 +153,18 @@ namespace Raven.Server.Documents.Handlers
         {
             var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, DateTime> datesDictionary = null;
-
-
             DateTime from, to;
 
             for (int i = 0; i < fromList.Count; i++)
             {
+                if (names.Count < i + 1 || string.IsNullOrEmpty(names[i]))
+                    throw new InvalidOperationException($"GetTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.Name)}' argument in 'TimeSeriesRange' on document '{documentId}'. " +
+                                                        $"'{nameof(TimeSeriesRange.Name)}' cannot be null or empty");
                 var name = names[i];
 
-                if (fromList[i] == null)
+                if (string.IsNullOrEmpty(fromList[i]))
                 {
-                    Debug.Assert(toList[i] == null, $"Non matching from/to dates. got from = null, expected to have to = null as well, bot got to = '{toList[i]}'");
+                    Debug.Assert(toList[i] == null, $"Non matching from/to dates. got 'from' = null, expected to have to = null as well, bot got 'to' = '{toList[i]}'");
                     from = DateTime.MinValue;
                     to = DateTime.MaxValue;
                 }
