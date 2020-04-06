@@ -33,9 +33,9 @@ namespace Sparrow.Json
             }
         }
 
-        public void LowMemory(LowMemSeverity lowMemSeverity)
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            if (lowMemSeverity != LowMemSeverity.ExtremelyLow)
+            if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
                 return;
 
             var size = FreeAllPooledMemory();

@@ -508,9 +508,9 @@ namespace Sparrow.Server
 
         private class LowMemoryHandler : ILowMemoryHandler
         {
-            public void LowMemory(LowMemSeverity lowMemSeverity)
+            public void LowMemory(LowMemorySeverity lowMemorySeverity)
             {
-                if (lowMemSeverity != LowMemSeverity.ExtremelyLow)
+                if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
                     return;
 
                 if (LowMemoryFlag.Raise())
