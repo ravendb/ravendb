@@ -1,12 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using FastTests.Client;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
+using Tests.Infrastructure;
+using Voron.Util;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,6 +38,142 @@ namespace FastTests.Server.Documents
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        [Fact]
+        public void Can_compact_from_no_compression_to_compressed()
+        {
+            var path = NewDataPath();
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
+            using var store = GetDocumentStore(new Options
+            {
+                Path = path,
+                RunInMemory = false,
+            });
+
+            store.Maintenance.Send(new CreateSampleDataOperation());
+
+            var executor = store.GetRequestExecutor();
+            using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                var cmd = new GetDocumentSize("orders/830-A");
+                executor.Execute(cmd, ctx);
+                Assert.True(cmd.Result.ActualSize <= cmd.Result.AllocatedSize);
+            }
+
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            record.CompressedCollections.Add("Orders");
+            store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
+
+            var op = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
+            {
+                DatabaseName = store.Database,
+                Documents = true,
+            }));
+
+            op.WaitForCompletion();
+
+            WaitForIndexing(store);
+
+            var operation = store.Maintenance.Send(new GetStatisticsOperation());
+
+            Assert.True(operation.Indexes.All(x => x.State == IndexState.Normal));
+
+            using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                var cmd = new GetDocumentSize("orders/830-A");
+                executor.Execute(cmd, ctx);
+               Assert.True(cmd.Result.ActualSize > cmd.Result.AllocatedSize);
+            }
+        }
+
+        [Fact]
+        public void Can_compact_from_compression_to_not_compressed()
+        {
+            var path = NewDataPath();
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
+            using var store = GetDocumentStore(new Options
+            {
+                Path = path,
+                RunInMemory = false,
+                ModifyDatabaseRecord = r => r.CompressedCollections.Add("Orders")
+            });
+
+            store.Maintenance.Send(new CreateSampleDataOperation());
+
+            var executor = store.GetRequestExecutor();
+            using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                var cmd = new GetDocumentSize("orders/830-A");
+                executor.Execute(cmd, ctx);
+                Assert.True(cmd.Result.ActualSize > cmd.Result.AllocatedSize);
+            }
+
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            record.CompressedCollections.Remove("Orders");
+            store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
+
+            var op = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
+            {
+                DatabaseName = store.Database,
+                Documents = true,
+            }));
+
+            op.WaitForCompletion();
+
+            WaitForIndexing(store);
+
+            var operation = store.Maintenance.Send(new GetStatisticsOperation());
+
+            Assert.True(operation.Indexes.All(x => x.State == IndexState.Normal));
+
+            using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                var cmd = new GetDocumentSize("orders/830-A");
+                executor.Execute(cmd, ctx);
+                Assert.True(cmd.Result.ActualSize <= cmd.Result.AllocatedSize);
+            }
+        }
+
+        [Fact]
+        public void Can_compact_db_with_compressed_collections()
+        {
+            var path = NewDataPath();
+            if(Directory.Exists(path))
+                Directory.Delete(path, true);
+            using var store = GetDocumentStore(new Options
+            {
+                Path = path,
+                RunInMemory = false,
+                ModifyDatabaseRecord = record => record.CompressedCollections.Add("Orders")
+            });
+
+            store.Maintenance.Send(new CreateSampleDataOperation());
+
+            var op = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings{
+                DatabaseName = store.Database,
+                Documents = true,
+            }));
+
+            op.WaitForCompletion();
+
+            var f = Path.GetTempFileName();
+
+            using var _ = new DisposableAction(() => File.Delete(f));
+
+            var operation = store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), f, CancellationToken.None)
+                .Result;
+
+            using (var s = store.OpenSession())
+            {
+                s.Query<Query.Order>().ToList();
+            }
+
+            // this verifies that all the data is fine
+
+            operation.WaitForCompletion();
         }
 
         [Fact]

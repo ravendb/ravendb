@@ -181,11 +181,16 @@ namespace Voron.Data.Tables
             }
         }
 
+        public byte* AllocateRaw(int size)
+        {
+            RawScope = _currentTransaction.Allocator.Allocate(size, out RawBuffer);
+            return RawBuffer.Ptr;
+        }
+
         public void Prepare(in int size)
         {
             int maxSpace = ZstdLib.GetMaxCompression(size);
             //TODO: Handle encrypted buffer here if encrypted
-            RawScope = _currentTransaction.Allocator.Allocate(size, out RawBuffer);
             CompressedScope = _currentTransaction.Allocator.Allocate(maxSpace, out CompressedBuffer);
             _previousDictionary = null;
             Compressed = false;

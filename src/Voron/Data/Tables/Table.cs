@@ -265,19 +265,21 @@ namespace Voron.Data.Tables
             if (_schema.Compressed)
             {
                 builder.TryCompression(GetAppropriateCompressionDictionaryToCompress(id));
-                _cachedDecompressedBuffersByStorageId?.Remove(id);
             }
 
             int size = builder.Size;
 
             // We must read before we call TryWriteDirect, because it will modify the size
             var oldData = DirectRead(id, out var oldDataSize);
+            if (_schema.Compressed)
+            {
+                _cachedDecompressedBuffersByStorageId?.Remove(id);
+            }
 
             // first, try to fit in place, either in small or large sections
             var prevIsSmall = id % Constants.Storage.PageSize != 0;
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
-             
                 AssertNoReferenceToOldData(builder, oldData, oldDataSize);
 
                 if (prevIsSmall && ActiveDataSmallSection.TryWriteDirect(id, size, builder.Compressed, out byte* pos))
@@ -910,6 +912,7 @@ namespace Voron.Data.Tables
                 using var _ = ActiveDataSmallSection.CurrentCompressionDictionaryHash(out var hash);
                 compressionDic = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, hash);
 
+                builder.Compression.Prepare(reader.Size);
                 if (builder.Compression.TryCompression(compressionDic))
                 {
                     dataPtr = builder.Compression.CompressedBuffer.Ptr;
@@ -921,17 +924,43 @@ namespace Voron.Data.Tables
             long id;
             if (dataSize + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
+                bool insertSmall = true;
                 if (ActiveDataSmallSection.TryAllocate(dataSize, out id) == false)
                 {
                     id = AllocateFromAnotherSection(dataSize, builder.Compression, compressionDic);
+                    if (_schema.Compressed)
+                    {
+                        dataSize = builder.Size;
+                        compressed = builder.Compressed;
+                        if (dataSize + sizeof(RawDataSection.RawDataEntrySizes) >= RawDataSection.MaxItemSize)
+                        {
+                            insertSmall = false;
+                            InsertLargeValue();
+                        }
+                    }
                 }
 
-                if (ActiveDataSmallSection.TryWriteDirect(id, dataSize, compressed, out var pos) == false)
-                    ThrowBadWriter(dataSize);
-                Memory.Copy(pos, dataPtr, dataSize);
+                if (insertSmall)
+                {
+                    if (ActiveDataSmallSection.TryWriteDirect(id, dataSize, compressed, out var pos) == false)
+                        ThrowBadWriter(dataSize);
 
+                    if (compressed)
+                    {
+                        builder.CopyTo(pos);
+                    }
+                    else
+                    {
+                        Memory.Copy(pos, reader.Pointer, dataSize);
+                    }
+                }
             }
             else
+            {
+               InsertLargeValue();
+            }
+
+            void InsertLargeValue()
             {
                 var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(dataSize);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
@@ -1152,7 +1181,7 @@ namespace Voron.Data.Tables
 
             var hashBuffer = stackalloc byte[32];
             if(Sodium.crypto_generichash(hashBuffer, (UIntPtr)32, dictionaryBuffer.Ptr, (ulong)dictionaryBufferSpan.Length, Name.Content.Ptr, (UIntPtr)Name.Size) != 0)
-                throw new InvalidOperationException($"Unable to compute hash for buffer when creating dictionary hash");
+                throw new InvalidOperationException("Unable to compute hash for buffer when creating dictionary hash");
 
             var hashSliceScope = Slice.From(_tx.Allocator, hashBuffer, 32, out var newHash);
             
