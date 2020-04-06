@@ -94,6 +94,37 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public void MarkSegmentForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, DateTime timestamp, 
+            string changeVector,
+            int numberOfEntries)
+        {
+            if (Configuration.Collections.TryGetValue(slicerHolder.Collection, out var config) == false)
+                return;
+
+            var currentIndex = config.GetPolicyIndexByTimeSeries(slicerHolder.Name);
+            if (currentIndex == -1) // policy not found
+                return;
+            
+            var nextPolicy = config.GetNextPolicy(currentIndex);
+            if (nextPolicy == null)
+                return;
+
+            if (ReferenceEquals(nextPolicy, TimeSeriesPolicy.AfterAllPolices))
+                return; // this is the last policy
+
+            if (numberOfEntries == 0)
+            {
+                var currentPolicy = config.GetPolicy(currentIndex);
+                var now = context.DocumentDatabase.Time.GetUtcNow();
+                var nextRollup = new DateTime(TimeSeriesRollups.NextRollup(timestamp, nextPolicy));
+                var startRollup = nextRollup.Add(-currentPolicy.RetentionTime);
+                if (now - startRollup > currentPolicy.RetentionTime)
+                    return; // ignore this segment since it is outside our retention frame
+            }
+            
+            _database.DocumentsStorage.TimeSeriesStorage.Rollups.MarkSegmentForPolicy(context, slicerHolder, nextPolicy, timestamp, changeVector);
+        }
+
         public void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, DateTime timestamp, ulong status)
         {
             if (Configuration.Collections.TryGetValue(slicerHolder.Collection, out var config) == false)
@@ -165,7 +196,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     foreach (var policy in policies)
                     {
-                        if (currentPolicies.Contains(policy.Policy.Name, StringComparer.InvariantCultureIgnoreCase))
+                        if (SkipExisting(policy.Policy.Name))
                             continue;
 
                         var prev = config.Value.GetPreviousPolicy(policy.Index);
@@ -176,6 +207,21 @@ namespace Raven.Server.Documents.TimeSeries
                             Logger.Info($"Adding new policy '{policy.Policy.Name}' for collection '{collection}'");
 
                         await AddNewPolicy(collectionName, prev, policy.Policy);
+                    }
+
+                    bool SkipExisting(string name)
+                    {
+                        for (int i = 0; i < currentPolicies.Count; i++)
+                        {
+                            var currentPolicy = currentPolicies[i];
+                            if (string.Equals(currentPolicy, name, StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                currentPolicies.RemoveAt(i);
+                                return true;
+                            }
+                        }
+
+                        return false;
                     }
                 }
             }
@@ -305,6 +351,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
 
             var to = now.Add(-policy.RetentionTime);
+            var list = new List<Slice>();
 
             while (true)
             {
@@ -312,10 +359,16 @@ namespace Raven.Server.Documents.TimeSeries
 
                 context.Reset();
                 context.Renew();
+                list.Clear();
 
                 using (context.OpenReadTransaction())
                 {
-                    var list = tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, policy.Name, to, TimeSeriesRollups.TimeSeriesRetentionCommand.BatchSize).ToList();
+                    foreach (var item in tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, policy.Name, to, TimeSeriesRollups.TimeSeriesRetentionCommand.BatchSize))
+                    {
+                        if (tss.Rollups.HasPendingRollupFrom(context, item, to) == false)
+                            list.Add(item);
+                    }
+
                     if (list.Count == 0)
                         return;
 

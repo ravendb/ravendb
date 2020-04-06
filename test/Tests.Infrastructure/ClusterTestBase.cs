@@ -158,7 +158,7 @@ namespace Tests.Infrastructure
 
             var etag2 = storage.DocumentsStorage.GenerateNextEtag();
 
-            Assert.Equal(etag1 + 1, etag2);
+            Assert.True(etag1 + 1 == etag2,"Replication loop found :(");
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>

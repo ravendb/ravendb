@@ -1028,8 +1028,8 @@ namespace Raven.Server.Documents.Replication
                                     From = deletedRange.From,
                                     To = deletedRange.To
                                 };
-
-                                tss.RemoveTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
+                                var removedChangeVector = tss.RemoveTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
+                                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
                                 break;
                             case TimeSeriesReplicationItem segment:
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
