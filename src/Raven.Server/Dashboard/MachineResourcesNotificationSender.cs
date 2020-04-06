@@ -82,7 +82,7 @@ namespace Raven.Server.Dashboard
             {
                 TotalMemory = memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
                 AvailableMemory = memInfo.AvailableMemory.GetValue(SizeUnit.Bytes),
-                AvailableWithoutTotalCleanMemory = memInfo.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes),
+                AvailableMemoryForProcessing = memInfo.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes),
                 SystemCommitLimit = memInfo.TotalCommittableMemory.GetValue(SizeUnit.Bytes),
                 CommittedMemory = memInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes),
                 ProcessMemoryUsage = memInfo.WorkingSet.GetValue(SizeUnit.Bytes),

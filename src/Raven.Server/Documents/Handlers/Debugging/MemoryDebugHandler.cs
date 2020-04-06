@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(DirtyMemoryState.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
                 ["DirtyMemory"] = Size.Humane(dirtyMemoryState.TotalDirtyInBytes),
                 [nameof(MemoryInfo.AvailableMemory)] = Size.Humane(memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)),
-                [nameof(MemoryInfo.AvailableWithoutTotalCleanMemory)] = Size.Humane(memInfo.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.AvailableMemoryForProcessing)] = Size.Humane(memInfo.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.LowMemLastOneMinute)] = Size.Humane(memoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.HighMemLastFiveMinute)] = Size.Humane(memoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
@@ -415,7 +415,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public long TotalMemoryMapped { get; set; }
             public long TotalScratchDirtyMemory { get; set; }
             public string PhysicalMem { get; set; }
-            public string AvailableWithoutTotalCleanMemory { get; set; }
+            public string AvailableMemoryForProcessing { get; set; }
             public string AvailableMemory { get; set; }
             public string HighMemLastOneMinute { get; set; }
             public string LowMemLastOneMinute { get; set; }

@@ -22,7 +22,7 @@
         public Size InstalledMemory;
         public Size WorkingSet;
         public Size AvailableMemory;
-        public Size AvailableWithoutTotalCleanMemory;
+        public Size AvailableMemoryForProcessing;
         public Size SharedCleanMemory;
         public Size TotalScratchDirtyMemory;
 
