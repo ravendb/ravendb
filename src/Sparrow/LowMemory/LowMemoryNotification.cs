@@ -302,7 +302,7 @@ namespace Sparrow.LowMemory
 
                 timeout = 500;
 
-                if (isLowMemory == LowMemorySeverity.Low &&
+                if (isLowMemory == LowMemorySeverity.LowMem &&
                     (PlatformDetails.RunningOnLinux == false || PlatformDetails.RunningOnMacOsx))
                 {
                     isLowMemory = LowMemorySeverity.ExtremelyLow; // On linux we want two severity steps
@@ -374,7 +374,7 @@ namespace Sparrow.LowMemory
                 return LowMemorySeverity.ExtremelyLow;
 
             if (memInfo.AvailableMemoryForProcessing < LowMemoryThreshold)
-                return LowMemorySeverity.Low;
+                return LowMemorySeverity.LowMem;
             
             return LowMemorySeverity.None;
         }
