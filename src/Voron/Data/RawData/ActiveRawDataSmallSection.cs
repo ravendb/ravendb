@@ -30,31 +30,18 @@ namespace Voron.Data.RawData
             _transaction = tx;
         }
 
-        public string CurrentCompressionDictionaryHashBase64
-        {
-            get
-            {
-                using var _ = CurrentCompressionDictionaryHash(out var hash);
-                return Convert.ToBase64String(hash.AsSpan());
-            }
-        }
-
-
-        public ByteStringContext.ExternalScope CurrentCompressionDictionaryHash(out Slice hash) => 
-            Slice.External(_llt.Allocator, (byte*)_sectionHeader + PageHeader.SizeOf, 32, out hash);
+        public int CurrentCompressionDictionaryId => *(int*)((byte*)_sectionHeader + PageHeader.SizeOf);
 
         public byte MinCompressionRatio => _sectionHeader->MinCompressionRatio;
 
-        public static ByteStringContext.ExternalScope CompressionDictionaryHashFor(LowLevelTransaction tx,long id,out Slice hash)
+        public static int CompressionDictionaryHashFor(LowLevelTransaction tx,long id)
         {
             long sectionPageNumber = GetSectionPageNumber(tx, id);
             var page = tx.GetPage(sectionPageNumber);
             if ((page.Flags & PageFlags.RawData) != PageFlags.RawData)
                 ThrowInvalidPage(sectionPageNumber);
 
-            byte* dataPointer = page.DataPointer;
-
-            return Slice.External(tx.Allocator, dataPointer, 32, out hash);
+            return *(int*)page.DataPointer;
         }
 
         /// <summary>
@@ -170,9 +157,7 @@ namespace Voron.Data.RawData
                 return pageHeader;
             }
 
-
-            TemporaryPage tmp;
-            using (_llt.Environment.GetTemporaryPage(_llt, out tmp))
+            using (_llt.Environment.GetTemporaryPage(_llt, out TemporaryPage tmp))
             {
                 var maxUsedPos = pageHeader->NextAllocation;
                 Memory.Copy(tmp.TempPagePointer, (byte*)pageHeader, Constants.Storage.PageSize);
@@ -183,8 +168,8 @@ namespace Voron.Data.RawData
 
                 pageHeader->NumberOfEntries = 0;
                 var pos = pageHeader->NextAllocation;
-                using var _ = CurrentCompressionDictionaryHash(out var compressionDicHash);
-                var compressionDictionary = _llt.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_transaction, compressionDicHash);
+                var compressionDictionary = _llt.Environment.CompressionDictionariesHolder
+                    .GetCompressionDictionaryFor(_transaction, CurrentCompressionDictionaryId);
 
                 while (pos < maxUsedPos)
                 {
@@ -238,7 +223,7 @@ namespace Voron.Data.RawData
             return Create(tx, ownerSlice, default, tableType, sizeInPages);
         }
 
-        public static ActiveRawDataSmallSection Create(Transaction transaction, Slice owner, Slice dictionaryHash, byte tableType, ushort? sizeInPages)
+        public static ActiveRawDataSmallSection Create(Transaction transaction, Slice owner, int dictionaryId, byte tableType, ushort? sizeInPages)
         {
             var llt = transaction.LowLevelTransaction;
             var dbPagesInSmallSection = GetNumberOfPagesInSmallSection(llt);
@@ -259,12 +244,8 @@ namespace Voron.Data.RawData
             sectionHeader->SectionOwnerHash = Hashing.XXHash64.Calculate(owner.Content.Ptr, (ulong)owner.Content.Length);
             sectionHeader->TableType = tableType;
 
-            if (dictionaryHash.HasValue)
-            {
-                Debug.Assert(dictionaryHash.Size  == 0 || dictionaryHash.Size == ReservedHeaderSpace - PageHeader.SizeOf);
-                dictionaryHash.CopyTo(sectionStart.DataPointer);
-            }
-            
+            *(int*)sectionStart.DataPointer = dictionaryId;
+
             var availableSpace = (ushort*)((byte*)sectionHeader + ReservedHeaderSpace);
 
             for (ushort i = 0; i < numberOfPagesInSmallSection; i++)

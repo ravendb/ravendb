@@ -481,7 +481,6 @@ namespace Voron
                     _scratchBufferPool,
                     _decompressionBuffers,
                     _options.OwnsPagers ? _options : null,
-                    CompressionDictionariesHolder,
                 }.Concat(_tempPagesPool))
                 {
                     try

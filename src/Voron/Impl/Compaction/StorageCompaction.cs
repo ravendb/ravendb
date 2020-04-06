@@ -113,7 +113,10 @@ namespace Voron.Impl.Compaction
                 if (rootIterator.Seek(Slices.BeforeAllKeys) == false)
                     return;
 
-                var globalTableIndexesToSkipCopying = new HashSet<string>();
+                var globalTableIndexesToSkipCopying = new HashSet<string>
+                {
+                    TableSchema.DictionariesSlice.ToString()
+                };
 
                 do
                 {

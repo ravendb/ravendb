@@ -91,6 +91,7 @@ namespace Raven.Server.Documents
                         configuration.Storage.TempPath = new PathSetting(compactTempDirectory);
                     }
 
+                    var revisionsPrefix = CollectionName.GetTablePrefix(CollectionTableType.Revisions);
                     var compressedCollectionsTableNames = databaseRecord.CompressedCollections
                         .Select(name => new CollectionName(name).GetTableName(CollectionTableType.Documents))
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -113,7 +114,9 @@ namespace Raven.Server.Documents
                             onProgress?.Invoke(result.Progress);
                         }, (name, schema) =>
                         {
-                            schema.Compressed = compressedCollectionsTableNames.Contains(name);
+                            schema.Compressed = 
+                                name.StartsWith(revisionsPrefix,StringComparison.OrdinalIgnoreCase) ||
+                                compressedCollectionsTableNames.Contains(name);
                         },_token);
                     }
 

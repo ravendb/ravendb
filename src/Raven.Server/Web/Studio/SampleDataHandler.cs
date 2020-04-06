@@ -23,6 +23,7 @@ namespace Raven.Server.Web.Studio
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
+                var skipIndexes = GetBoolValueQueryString("skipIndexes", false) ?? false;
                 using (context.OpenReadTransaction())
                 {
                     foreach (var collection in Database.DocumentsStorage.GetCollections(context))
@@ -56,11 +57,16 @@ namespace Raven.Server.Web.Studio
                     {
                         var destination = new DatabaseDestination(Database);
 
+                        var withIndexes = DatabaseItemType.Indexes;
+
+                        if(skipIndexes)
+                            withIndexes = DatabaseItemType.None;
+                        
                         var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time,
                             options: new DatabaseSmugglerOptionsServerSide
                             {
                                 OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Attachments |
-                                                 DatabaseItemType.Indexes,
+                                                 withIndexes,
                                 SkipRevisionCreation = true
                             });
 
