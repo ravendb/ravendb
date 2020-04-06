@@ -60,11 +60,19 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, 0, int.MaxValue);
+                    var tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate",
+                            From = DateTime.MinValue,
+                            To = DateTime.MaxValue
+                        }
+                    }, 0, int.MaxValue);
                     re.Execute(tsCommand, context);
                     var res = tsCommand.Result;
 
-                    Assert.Equal(361, res.TotalResults);
+                    Assert.Equal(361, res.Values["Heartrate"][0].TotalResults);
                     Assert.Equal(1, res.Values.Count);
                     Assert.Equal(1, res.Values["Heartrate"].Count);
                     Assert.Equal(361, res.Values["Heartrate"][0].Entries.Length);
@@ -110,11 +118,19 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 100, pageSize: 200);
+                    var tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate",
+                            From = DateTime.MinValue,
+                            To = DateTime.MaxValue
+                        }
+                    }, start: 100, pageSize: 200);
                     re.Execute(tsCommand, context);
                     var res = tsCommand.Result;
 
-                    Assert.Equal(361, res.TotalResults);
+                    Assert.Equal(361, res.Values["Heartrate"][0].TotalResults);
                     Assert.Equal(1, res.Values.Count);
                     Assert.Equal(1, res.Values["Heartrate"].Count);
                     Assert.Equal(200, res.Values["Heartrate"][0].Entries.Length);
@@ -166,12 +182,20 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     for (int i = 0; i < 3; i++)
                     {
-                        var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 0, pageSize: int.MaxValue);
+                        var tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                        {
+                            new TimeSeriesRange
+                            {
+                                Name = "Heartrate",
+                                From = DateTime.MinValue,
+                                To = DateTime.MaxValue
+                            }
+                        }, start: 0, pageSize: int.MaxValue);
 
                         re.Execute(tsCommand, context);
                         var res = tsCommand.Result;
 
-                        Assert.Equal(361, res.TotalResults);
+                        Assert.Equal(361, res.Values["Heartrate"][0].TotalResults);
                         Assert.Equal(1, res.Values.Count);
                         Assert.Equal(1, res.Values["Heartrate"].Count);
                         Assert.Equal(361, res.Values["Heartrate"][0].Entries.Length);
@@ -197,12 +221,20 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    var command = new GetTimeSeriesCommand(documentId, "Heartrate", null);
+                    var command = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate",
+                            From = DateTime.MinValue,
+                            To = DateTime.MaxValue
+                        }
+                    });
                     re.Execute(command, context);
 
                     Assert.Equal(HttpStatusCode.OK, command.StatusCode);
 
-                    Assert.Equal(362, command.Result.TotalResults);
+                    Assert.Equal(362, command.Result.Values["Heartrate"][0].TotalResults);
                     Assert.Equal(1, command.Result.Values.Count);
                     Assert.Equal(1, command.Result.Values["Heartrate"].Count);
                     Assert.Equal(362, command.Result.Values["Heartrate"][0].Entries.Length);
@@ -258,12 +290,20 @@ namespace SlowTests.Client.TimeSeries.Issues
                     GetTimeSeriesCommand tsCommand = default;
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 100, pageSize: 200);
+                        tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                        {
+                            new TimeSeriesRange
+                            {
+                                Name = "Heartrate",
+                                From = DateTime.MinValue,
+                                To = DateTime.MaxValue
+                            }
+                        }, start: 100, pageSize: 200);
 
                         re.Execute(tsCommand, context);
                         var res = tsCommand.Result;
 
-                        Assert.Equal(361, res.TotalResults);
+                        Assert.Equal(361, res.Values["Heartrate"][0].TotalResults);
                         Assert.Equal(1, res.Values.Count);
                         Assert.Equal(1, res.Values["Heartrate"].Count);
                         Assert.Equal(200, res.Values["Heartrate"][0].Entries.Length);
@@ -290,11 +330,19 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 100, pageSize: 200);
+                    tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate",
+                            From = DateTime.MinValue,
+                            To = DateTime.MaxValue
+                        }
+                    }, start: 100, pageSize: 200);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
-                    Assert.Equal(362, tsCommand.Result.TotalResults);
+                    Assert.Equal(362, tsCommand.Result.Values["Heartrate"][0].TotalResults);
 
                     var values = tsCommand.Result.Values;
                     Assert.Equal(1, values.Count);
@@ -310,11 +358,19 @@ namespace SlowTests.Client.TimeSeries.Issues
                     // request with a different 'start'
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 101, pageSize: 200);
+                    tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate",
+                            From = DateTime.MinValue,
+                            To = DateTime.MaxValue
+                        }
+                    }, start: 101, pageSize: 200);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
-                    Assert.Equal(362, tsCommand.Result.TotalResults);
+                    Assert.Equal(362, tsCommand.Result.Values["Heartrate"][0].TotalResults);
 
                     values = tsCommand.Result.Values;
                     Assert.Equal(1, values.Count);
@@ -365,12 +421,21 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     var ranges = new List<TimeSeriesRange>
                     {
-                        new TimeSeriesRange {From = baseline.AddMinutes(5), To = baseline.AddMinutes(10)},
-                        new TimeSeriesRange {From = baseline.AddMinutes(15), To = baseline.AddMinutes(30)},
-                        new TimeSeriesRange {From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)}
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(5), To = baseline.AddMinutes(10)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(15), To = baseline.AddMinutes(30)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)
+                        }
                     };
 
-                    var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges, 0, int.MaxValue);
+                    var tsCommand = new GetTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
                     re.Execute(tsCommand, context);
                     var timesSeriesDetails = tsCommand.Result;
 
@@ -378,7 +443,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     Assert.Equal(1, timesSeriesDetails.Values.Count);
                     Assert.Equal(3, timesSeriesDetails.Values["Heartrate"].Count);
 
-                    Assert.Equal(-1, timesSeriesDetails.TotalResults);
+                    Assert.Null(timesSeriesDetails.Values["Heartrate"][0].TotalResults);
 
                     var range = timesSeriesDetails.Values["Heartrate"][0];
 
@@ -450,12 +515,21 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     var ranges = new List<TimeSeriesRange>
                     {
-                        new TimeSeriesRange {From = baseline.AddMinutes(5), To = baseline.AddMinutes(10)},
-                        new TimeSeriesRange {From = baseline.AddMinutes(15), To = baseline.AddMinutes(30)},
-                        new TimeSeriesRange {From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)}
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(5), To = baseline.AddMinutes(10)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(15), To = baseline.AddMinutes(30)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)
+                        }
                     };
 
-                    var tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges, 10, 150);
+                    var tsCommand = new GetTimeSeriesCommand(documentId, ranges, 10, 150);
                     re.Execute(tsCommand, context);
                     var timesSeriesDetails = tsCommand.Result;
 
@@ -463,7 +537,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     Assert.Equal(1, timesSeriesDetails.Values.Count);
                     Assert.Equal(3, timesSeriesDetails.Values["Heartrate"].Count);
 
-                    Assert.Equal(-1, timesSeriesDetails.TotalResults);
+                    Assert.Null(timesSeriesDetails.Values["Heartrate"][0].TotalResults);
 
                     var range = timesSeriesDetails.Values["Heartrate"][0];
 
@@ -535,16 +609,25 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     var ranges = new List<TimeSeriesRange>
                     {
-                        new TimeSeriesRange {From = baseline.AddMinutes(5), To = baseline.AddMinutes(10)},
-                        new TimeSeriesRange {From = baseline.AddMinutes(15), To = baseline.AddMinutes(30)},
-                        new TimeSeriesRange {From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)}
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(5), To = baseline.AddMinutes(10)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(15), To = baseline.AddMinutes(30)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)
+                        }
                     };
 
                     GetTimeSeriesCommand tsCommand;
 
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges);
+                        tsCommand = new GetTimeSeriesCommand(documentId, ranges);
                         re.Execute(tsCommand, context);
                         var timesSeriesDetails = tsCommand.Result;
 
@@ -598,7 +681,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges);
+                    tsCommand = new GetTimeSeriesCommand(documentId, ranges);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -653,16 +736,25 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     var ranges = new List<TimeSeriesRange>
                     {
-                        new TimeSeriesRange {From = baseline.AddMinutes(5), To = baseline.AddMinutes(10)},
-                        new TimeSeriesRange {From = baseline.AddMinutes(15), To = baseline.AddMinutes(30)},
-                        new TimeSeriesRange {From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)}
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(5), To = baseline.AddMinutes(10)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(15), To = baseline.AddMinutes(30)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "Heartrate", From = baseline.AddMinutes(40), To = baseline.AddMinutes(60)
+                        }
                     };
 
                     GetTimeSeriesCommand tsCommand;
 
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges, 10, 150);
+                        tsCommand = new GetTimeSeriesCommand(documentId, ranges, 10, 150);
                         re.Execute(tsCommand, context);
                         var timesSeriesDetails = tsCommand.Result;
 
@@ -717,7 +809,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", ranges, 10, 150);
+                    tsCommand = new GetTimeSeriesCommand(documentId, ranges, 10, 150);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -730,7 +822,15 @@ namespace SlowTests.Client.TimeSeries.Issues
                     // request with a different 'start'
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, "Heartrate", null, start: 12, pageSize: 150);
+                    tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange()
+                        {
+                            Name = "Heartrate",
+                            From = DateTime.MinValue,
+                            To = DateTime.MaxValue
+                        }
+                    }, start: 12, pageSize: 150);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -749,11 +849,10 @@ namespace SlowTests.Client.TimeSeries.Issues
             private readonly int _start;
             private readonly int _pageSize;
 
-            public GetTimeSeriesCommand(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges, int start = 0, int pageSize = int.MaxValue)
+            public GetTimeSeriesCommand(string docId, IEnumerable<TimeSeriesRange> ranges, int start = 0, int pageSize = int.MaxValue)
             {
                 _docId = docId ?? throw new ArgumentNullException(nameof(docId));
-                _timeseries = timeseries ?? throw new ArgumentNullException(nameof(timeseries));
-                _ranges = ranges;
+                _ranges = ranges ?? throw new ArgumentNullException(nameof(ranges));
                 _start = start;
                 _pageSize = pageSize;
             }
@@ -763,12 +862,9 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var pathBuilder = new StringBuilder(node.Url);
                 pathBuilder.Append("/databases/")
                     .Append(node.Database)
-                    .Append("/timeseries");
-
-                pathBuilder.Append("?id=")
-                    .Append(Uri.EscapeDataString(_docId))
-                    .Append("&name=")
-                    .Append(Uri.EscapeDataString(_timeseries));
+                    .Append("/timeseries")
+                    .Append("?id=")
+                    .Append(Uri.EscapeDataString(_docId));
 
                 if (_start > 0)
                 {
@@ -782,17 +878,15 @@ namespace SlowTests.Client.TimeSeries.Issues
                         .Append(_pageSize);
                 }
 
-                if (_ranges != null)
+                foreach (var range in _ranges)
                 {
-                    foreach (var range in _ranges)
-                    {
-                        pathBuilder.Append("&from=")
-                            .Append(range.From.GetDefaultRavenFormat())
-                            .Append("&to=")
-                            .Append(range.To.GetDefaultRavenFormat());
-                    }
+                    pathBuilder.Append("&name=")
+                        .Append(range.Name)
+                        .Append("&from=")
+                        .Append(range.From.GetDefaultRavenFormat())
+                        .Append("&to=")
+                        .Append(range.To.GetDefaultRavenFormat());
                 }
-
 
                 var request = new HttpRequestMessage
                 {
