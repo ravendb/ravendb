@@ -235,7 +235,7 @@ namespace Sparrow.LowMemory
             if (_lowMemoryMonitor != null)
             {
                 var memInfoForLog = _lowMemoryMonitor.GetMemoryInfoOnce();
-                var availableMemForLog = memInfoForLog.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes);
+                var availableMemForLog = memInfoForLog.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes);
 
                 AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation,
                     availableMemForLog,
@@ -367,9 +367,10 @@ namespace Sparrow.LowMemory
 
         private LowMemSeverity IsAvailableMemoryBelowThreshold(MemoryInfoResult memInfo)
         {
-            if (memInfo.AvailableWithoutTotalCleanMemory < LowMemoryThreshold * 0.2)
+            if (memInfo.AvailableMemoryForProcessing < LowMemoryThreshold * 0.2)
                 return LowMemSeverity.ExtremelyLow;
-            return memInfo.AvailableWithoutTotalCleanMemory < LowMemoryThreshold ? LowMemSeverity.LowMem : LowMemSeverity.None;
+
+            return memInfo.AvailableMemoryForProcessing < LowMemoryThreshold ? LowMemSeverity.LowMem : LowMemSeverity.None;
         }
 
         private void AddLowMemEvent(LowMemReason reason, long availableMem, long totalUnmanaged, long totalScratchDirty, long physicalMem, long currentcommitCharge)

@@ -567,7 +567,7 @@ namespace Raven.Server.Utils.Cli
                        Environment.NewLine +
                        $" PID {currentProcess.Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" +
                        Environment.NewLine +
-                       $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory, {memoryInfo.AvailableWithoutTotalCleanMemory} Calculated Available Memory, {memoryInfo.TotalScratchDirtyMemory} Scratch Dirty Memory" +
+                       $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory, {memoryInfo.AvailableMemoryForProcessing} Calculated Available Memory, {memoryInfo.TotalScratchDirtyMemory} Scratch Dirty Memory" +
                        Environment.NewLine +
                        $" {RuntimeSettings.Describe()}" +
                        Environment.NewLine +
