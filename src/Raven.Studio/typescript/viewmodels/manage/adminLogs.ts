@@ -9,9 +9,9 @@ import fileDownloader = require("common/fileDownloader");
 import virtualListRow = require("widgets/listView/virtualListRow");
 import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
-import adminLogsSettingsDialog = require("viewmodels/manage/adminLogsSettingsDialog");
-import LogMode = Sparrow.Logging.LogMode;
-import getAdminLogsSettingsCommand = require("commands/maintenance/getAdminLogsSettingsCommand");
+import getAdminLogsConfigurationCommand = require("commands/maintenance/getAdminLogsConfigurationCommand");
+import saveAdminLogsConfigurationCommand = require("commands/maintenance/saveAdminLogsConfigurationCommand");
+import adminLogsOnDiskConfig = require("models/database/debug/adminLogsOnDiskConfig");
 
 class heightCalculator {
     
@@ -81,6 +81,7 @@ class adminLogs extends viewModelBase {
     private pendingMessages = [] as string[];
     private heightCalculator = new heightCalculator();
     
+    private onDiskConfiguration = ko.observable<adminLogsOnDiskConfig>(new adminLogsOnDiskConfig());
     private configuration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     
     editedConfiguration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
@@ -94,19 +95,25 @@ class adminLogs extends viewModelBase {
 
     validationGroup: KnockoutValidationGroup;
     enableApply: KnockoutComputed<boolean>;
-
-    logMode = ko.observable<LogMode>();
-    logModeText: KnockoutComputed<string>;
     
     constructor() {
         super();
         
         this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", 
-            "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider");
-        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));
-        this.onlyErrors.subscribe(() => this.filterLogEntries(true));
-        this.initValidation(); 
+            "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider", "setAdminLogMode");
         
+        this.initObservables();
+        this.initValidation();
+    }
+    
+    private initObservables() {
+        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));        
+        this.onlyErrors.subscribe(() => this.filterLogEntries(true));
+
+        this.enableApply = ko.pureComputed(() => {
+            return this.isValid(this.validationGroup);
+        });
+
         this.headerValuePlaceholder = ko.pureComputed(() => {
             switch (this.editedHeaderName()) {
                 case "Source":
@@ -120,18 +127,9 @@ class adminLogs extends viewModelBase {
             if (!pressed) {
                 const selected = generalUtils.getSelectedText();
                 if (selected) {
-                    copyToClipboard.copy(selected, "Selected logs has been copied to clipboard");    
+                    copyToClipboard.copy(selected, "Selected logs has been copied to clipboard");
                 }
             }
-        });
-        
-        this.logModeText = ko.pureComputed(() => {
-           switch (this.logMode() as LogMode) {
-               case "None": return "None";
-               case "Operations": return "Operations";
-               case "Information": return "Information";
-               default: return "Unknown"; 
-           }
         });
     }
     
@@ -144,16 +142,13 @@ class adminLogs extends viewModelBase {
         this.validationGroup = ko.validatedObservable({
             maxEntries: this.editedConfiguration().maxEntries
         });
-
-        this.enableApply = ko.pureComputed(() => {
-            return this.isValid(this.validationGroup);
-        });
     }
     
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('57BGF7');
-        this.getCurrentLogMode();
+        
+        this.getAdminLogsConfiguration();
     }
     
     deactivate() {
@@ -163,10 +158,33 @@ class adminLogs extends viewModelBase {
             this.liveClient().dispose();
         }
     }
+    
+    private getAdminLogsConfiguration(useServerModeForSelectedMode: boolean = true) {
+        return new getAdminLogsConfigurationCommand().execute()
+            .done(result => {
+                this.onDiskConfiguration().currentServerLogMode(result.CurrentMode);
 
-    getCurrentLogMode() {
-        return new getAdminLogsSettingsCommand().execute()
-            .done(result => this.logMode(result.CurrentMode));
+                if (useServerModeForSelectedMode) {
+                    this.onDiskConfiguration().selectedLogMode(result.CurrentMode);
+                }
+
+                this.onDiskConfiguration().fullPath(result.Path);
+                this.onDiskConfiguration().retentionTime(result.RetentionTime);
+                this.onDiskConfiguration().retentionSize(result.RetentionSize);
+                this.onDiskConfiguration().compress = result.Compress;
+            });
+    }
+
+    setAdminLogMode(newMode: Sparrow.Logging.LogMode) {
+        this.onDiskConfiguration().selectedLogMode(newMode);
+
+        // First must get updated with current server settings
+        this.getAdminLogsConfiguration(false).done(() => {
+            // Set the new mode only...
+            new saveAdminLogsConfigurationCommand(this.onDiskConfiguration()).execute()
+                .done(() => this.onDiskConfiguration().currentServerLogMode(newMode))
+                .fail(() => this.onDiskConfiguration().selectedLogMode(this.onDiskConfiguration().currentServerLogMode()));
+        });
     }
     
     filterLogEntries(fromFilterChange: boolean) {
@@ -305,11 +323,6 @@ class adminLogs extends viewModelBase {
             this.scrollDown();
         }
     }
-
-    openFilesSettings() {
-        app.showBootstrapDialog(new adminLogsSettingsDialog())
-            .done(() => this.getCurrentLogMode());
-    }
     
     clear() {
         eventsCollector.default.reportEvent("admin-logs", "clear");
@@ -384,6 +397,10 @@ class adminLogs extends viewModelBase {
 
     onOpenOptions() {
         this.editedConfiguration().maxEntries(this.configuration().maxEntries());
+    }
+
+    onOpenSettings() {
+        this.getAdminLogsConfiguration();
     }
     
     updateMouseStatus(pressed: boolean) {

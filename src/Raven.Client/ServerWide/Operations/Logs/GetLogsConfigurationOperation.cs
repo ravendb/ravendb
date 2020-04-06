@@ -60,7 +60,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
         public bool UseUtcTime { get; set; }
 
         /// <summary>
-        /// Logs retention time (null if RetentionTime is TimeSpan.MaxValue)
+        /// Logs retention time
         /// </summary>
         public TimeSpan RetentionTime { get; set; }
         

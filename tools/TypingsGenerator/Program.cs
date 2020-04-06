@@ -88,6 +88,7 @@ using TypeScripter.TypeScript;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using Voron.Data.BTrees;
 using Voron.Debugging;
+using Size = Sparrow.Size;
 
 namespace TypingsGenerator
 {
@@ -107,6 +108,7 @@ namespace TypingsGenerator
             scripter
                 .WithTypeMapping(TsPrimitive.String, typeof(Guid))
                 .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
+                .WithTypeMapping(TsPrimitive.Number, typeof(Size))
                 .WithTypeMapping(TsPrimitive.Number, typeof(UInt32))
                 .WithTypeMapping(TsPrimitive.Number, typeof(UInt64))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))

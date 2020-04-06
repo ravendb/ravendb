@@ -19,7 +19,7 @@
                     <div class="columns-list-container" data-bind="with: editedConfiguration">
                         <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries" class="margin-bottom">
                             <h4 class="pull-left">Max Log Entries</h4>
-                            <input class="form-control input-sm full-width" type="number" min=0 data-bind="numericInput: maxEntries" />                                   
+                            <input class="form-control input-sm full-width" type="number" min=0 data-bind="numericInput: maxEntries" />
                             <span class="help-block" data-bind="validationMessage: maxEntries"></span>
                         </div>
                         <h4>Log filters</h4>
@@ -72,14 +72,66 @@
                 <label for="onlyErrors"><small>Show errors only</small></label>
             </div>
         </div>
-        <div class="btn-group-label margin-left margin-left-lg" data-label="Log files on disk" role="group">
-            <button class="btn btn-info" data-bind="click: openFilesSettings" title="Click to set Log Level on disk">
-                <i class="icon-config"></i><span>Settings</span>
-            </button>
+        <div class="btn-group-label margin-left margin-left-lg" data-label="Logs on disk" role="group">
+            <div class="btn-group dropdown-menu-right">
+                <button class="btn btn-info dropdown-toggle" type="button" data-toggle="dropdown" data-bind="click: onOpenSettings">
+                    <i class="icon-config"></i><span>Settings</span>
+                    <span class="caret"></span>
+                </button>
+                <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
+                    <div class="columns-list-container" data-bind="with: onDiskConfiguration" id="settingsContainer">
+                        <form class="form-horizontal" role="form">
+                            <div class="row">
+                                <label class="col-md-3 control-label">Logs Path:</label>
+                                <div class="col-md-9">
+                                    <p class="form-control-static" id="adminLogsPath" data-bind="text: fullPath"></p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-3 control-label">Log Mode:</label>
+                                <div class="col-md-9">
+                                    <div class="dropdown">
+                                        <button type="button" class="btn btn-sm dropdown-toggle" data-toggle="dropdown" title="Set logs mode" id="selectedLogMode">
+                                            <span data-bind="text: selectedLogMode"></span>&nbsp;&nbsp;
+                                            <span class="caret"></span>
+                                            <span class="sr-only">Toggle Dropdown</span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <!-- ko foreach: possibleLogModes -->
+                                            <li class="flex-horizontal">
+                                                <a class="flex-grow" href="#" data-bind="text: $data, click: _.partial($root.setAdminLogMode, $data)"></a>
+                                            </li>
+                                            <!-- /ko -->
+                                            <li class="divider"></li>
+                                            <li><a data-bind="click: _.partial($root.setAdminLogMode, 'None')" href="#">None</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-3 control-label">Retention Time:</label>
+                                <div class="col-md-9">
+                                    <p class="form-control-static" data-bind="text: retentionTimeText"></p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-3 control-label">Retention Size:</label>
+                                <div class="col-md-9">
+                                    <p class="form-control-static" data-bind="text: retentionSizeText"></p>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="flex-horizontal">
+                            <div class="flex-separator"></div>
+                            <button class="btn btn-success btn-sm close-panel"><span>Close</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <small class="margin-left margin-left-sm">
                 <label>Log Level:</label>
-                <strong data-bind="text: logModeText"></strong>
-                <small class="text-warning bg-warning margin-left margin-left-sm padding padding-sm" data-bind="visible: logModeText() === 'None'">
+                <strong data-bind="text: onDiskConfiguration().selectedLogMode"></strong>
+                <small class="text-warning bg-warning margin-left margin-left-sm padding padding-sm" data-bind="visible: onDiskConfiguration().selectedLogMode() === 'None'">
                     <i class="icon-warning"></i>
                     <span>No log messages are being written to disk</span>
                 </small>

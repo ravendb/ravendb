@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class getAdminLogsSettingsCommand extends commandBase {
+class getAdminLogsConfigurationCommand extends commandBase {
     
     execute(): JQueryPromise<adminLogsConfiguration> {
         const url = endpoints.global.adminLogs.adminLogsConfiguration;
@@ -11,4 +11,4 @@ class getAdminLogsSettingsCommand extends commandBase {
     }
 }
 
-export = getAdminLogsSettingsCommand;
+export = getAdminLogsConfigurationCommand;

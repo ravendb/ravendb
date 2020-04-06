@@ -83,8 +83,8 @@ namespace SlowTests.Issues
                     var configuration1 = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
 
                     var newCompress = !configuration1.Compress;
-                    var newTime = configuration1.RetentionTime == null ? new TimeSpan(9, 9, 9) :
-                                                                         configuration1.RetentionTime.Add(TimeSpan.FromHours(1));
+                    var newTime = configuration1.RetentionTime == TimeSpan.MaxValue ? new TimeSpan(9, 9, 9) : TimeSpan.MaxValue;
+                    
                     try
                     {
                         var newParams = new SetLogsConfigurationOperation.Parameters(configuration1)
