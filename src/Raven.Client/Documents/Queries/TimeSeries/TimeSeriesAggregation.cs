@@ -29,11 +29,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     {
         Min,
         Max,
-        Mean,
         Average,
         First,
         Last,
         Sum,
-        Count,
+        Count
     }
 }

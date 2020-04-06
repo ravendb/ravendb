@@ -563,7 +563,6 @@ namespace Raven.Server.Documents.TimeSeries
                         break;
                     case AggregationType.Sum:
                     case AggregationType.Average:
-                    case AggregationType.Mean:
                         if (double.IsNaN(Values[i]))
                             Values[i] = 0;
                         Values[i] = Values[i] + val.Sum;
@@ -603,7 +602,6 @@ namespace Raven.Server.Documents.TimeSeries
                         break;
                     case AggregationType.Sum:
                     case AggregationType.Average:
-                    case AggregationType.Mean:
                         if (double.IsNaN(Values[i]))
                             Values[i] = 0;
                         Values[i] = Values[i] + val;
