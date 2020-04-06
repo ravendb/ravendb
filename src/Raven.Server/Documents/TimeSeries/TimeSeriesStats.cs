@@ -159,6 +159,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (TryHandleDeadSegment() == false)
                 {
                     table.DeleteByKey(slicer.StatsKey);
+                    TimeSeriesStorage.RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
                     return; // this ts was completely deleted
                 }
             }
@@ -186,7 +187,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     var reader = tss.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue);
                     var last = reader.Last();
-                    
+               
                     var lastValueInCurrentSegment = reader.ReadBaselineAsDateTime() == baseline;
                     end = lastValueInCurrentSegment ? lastTimestamp : last.Timestamp;
                 }
@@ -335,16 +336,16 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public void DeleteStats(DocumentsOperationContext context, CollectionName collection, Slice key)
+        public bool DeleteStats(DocumentsOperationContext context, CollectionName collection, Slice key)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
-            table.DeleteByKey(key);
+            return table.DeleteByKey(key);
         }
 
-        public void DeleteByPrimaryKeyPrefix(DocumentsOperationContext context, CollectionName collection, Slice key)
+        public bool DeleteByPrimaryKeyPrefix(DocumentsOperationContext context, CollectionName collection, Slice key)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
-            table.DeleteByPrimaryKeyPrefix(key);
+            return table.DeleteByPrimaryKeyPrefix(key);
         }
 
         private Slice GetPolicy(TimeSeriesSliceHolder slicer)

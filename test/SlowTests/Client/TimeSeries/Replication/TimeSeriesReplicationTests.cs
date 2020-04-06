@@ -416,6 +416,9 @@ namespace SlowTests.Client.TimeSeries.Replication
                         }
                     }
                 }
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
             }
         }
 

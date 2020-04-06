@@ -105,7 +105,7 @@ namespace SlowTests.Issues
                 Assert.Equal("users/1", timeSeriesChange.DocumentId);
                 Assert.Equal(TimeSeriesChangeTypes.Delete, timeSeriesChange.Type);
                 Assert.Equal("Likes", timeSeriesChange.Name);
-                Assert.Null(timeSeriesChange.ChangeVector); // we deleted entire segment
+                Assert.NotNull(timeSeriesChange.ChangeVector);
             }
         }
 

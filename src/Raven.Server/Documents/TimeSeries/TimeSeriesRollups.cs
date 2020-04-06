@@ -123,6 +123,58 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public unsafe void MarkSegmentForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, TimeSeriesPolicy nextPolicy, DateTime timestamp, string changeVector)
+        {
+            var nextRollup = NextRollup(timestamp, nextPolicy);
+
+            // mark for rollup
+            RollupSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollupTable, 16);
+            var table = context.Transaction.InnerTransaction.OpenTable(RollupSchema, TimeSeriesRollupTable);
+            using (table.Allocate(out var tvb))
+            using (Slice.From(context.Allocator, nextPolicy.Name, ByteStringType.Immutable, out var policyToApply))
+            {
+                if (table.ReadByKey(slicerHolder.StatsKey, out var tvr))
+                {
+                    // check if we need to update this
+                    var existingRollup = Bits.SwapBytes(*(long*)tvr.Read((int)RollupColumns.NextRollup, out _));
+                    if (existingRollup < nextRollup)
+                        return; // we have an earlier date to roll up from
+                }
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(
+                        $"Marking segment of {slicerHolder.Name} in document {slicerHolder.DocId} for policy {nextPolicy.Name} to rollup at {new DateTime(nextRollup)} (ticks:{nextRollup})");
+
+                var etag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
+                using (Slice.From(context.Allocator, changeVector, ByteStringType.Immutable, out var changeVectorSlice))
+                {
+                    tvb.Add(slicerHolder.StatsKey);
+                    tvb.Add(slicerHolder.CollectionSlice);
+                    tvb.Add(Bits.SwapBytes(nextRollup));
+                    tvb.Add(policyToApply);
+                    tvb.Add(etag);
+                    tvb.Add(changeVectorSlice);
+                }
+
+                table.Set(tvb);
+            }
+        }
+
+        public unsafe bool HasPendingRollupFrom(DocumentsOperationContext context, Slice key, DateTime time)
+        {
+            var t = TimeSeriesStorage.EnsureMillisecondsPrecision(time);
+
+            var table = context.Transaction.InnerTransaction.OpenTable(RollupSchema, TimeSeriesRollupTable);
+            if (table == null)
+                return false;
+
+            if (table.ReadByKey(key, out var tvr) == false)
+                return false;
+
+            var existingRollup = Bits.SwapBytes(*(long*)tvr.Read((int)RollupColumns.NextRollup, out _));
+            return existingRollup <= t.Ticks;
+        }
+
         internal void PrepareRollups(DocumentsOperationContext context, DateTime currentTime, long take, List<RollupState> states, out Stopwatch duration)
         {
             duration = Stopwatch.StartNew();
@@ -356,7 +408,10 @@ namespace Raven.Server.Documents.TimeSeries
                         
                     var policy = config.GetPolicyByName(item.RollupPolicy, out _);
                     if (policy == null)
+                    {
+                        table.DeleteByKey(item.Key);
                         continue;
+                    }
 
                     if (table.ReadByKey(item.Key, out var current) == false)
                     {
@@ -395,9 +450,10 @@ namespace Raven.Server.Documents.TimeSeries
                         var hasPriorValues = tss.GetReader(context, item.DocId, item.Name, DateTime.MinValue, rollupStart).AllValues().Any();
                         if (hasPriorValues == false) 
                         {
+                            table.DeleteByKey(item.Key);
                             // if the 'from' time-series doesn't have any values it is retained.
                             // so we need to aggregate only from the next time frame
-                            var first = tss.GetReader(context, item.DocId, item.Name, rollupStart, DateTime.MaxValue).AllValues().FirstOrDefault();
+                            var first = tss.GetReader(context, item.DocId, item.Name, item.NextRollup, DateTime.MaxValue).First();
                             if (first == default)
                                 continue; // nothing we can do here
 
