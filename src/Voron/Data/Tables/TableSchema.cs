@@ -378,8 +378,7 @@ namespace Voron.Data.Tables
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void Create(Transaction tx, string name, ushort? sizeInPages)
         {
-            Slice nameSlice;
-            Slice.From(tx.Allocator, name, ByteStringType.Immutable, out nameSlice);
+            Slice.From(tx.Allocator, name, ByteStringType.Immutable, out Slice nameSlice);
             Create(tx, nameSlice, sizeInPages);
         }
         
@@ -413,16 +412,10 @@ namespace Voron.Data.Tables
             if (tableTree.State.NumberOfEntries > 0)
                 return; // this was already created
 
-            var nullHash = stackalloc byte [32];
-
-            if (_compressed)
-            {
-                if(Sodium.crypto_generichash(nullHash, (UIntPtr)32, null, 0, null, UIntPtr.Zero) != 0)
-                    throw new InvalidOperationException($"Unable to compute hash for buffer when creating null hash");
-            }
-            
             // Create raw data. This is where we will actually store the documents
-            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx, name, 0, TableType, sizeInPages))
+            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx, name, 
+                dictionaryId: 0,
+                TableType, sizeInPages))
             {
                 long val = rawDataActiveSection.PageNumber;
                 using (
@@ -445,23 +438,6 @@ namespace Voron.Data.Tables
                 var globalPageAllocator = new NewPageAllocator(tx.LowLevelTransaction,
                     tx.LowLevelTransaction.RootObjects);
                 globalPageAllocator.Create();
-
-                if (_compressed)
-                {
-                    var dictionariesTree = tx.CreateTree(DictionariesSlice);
-                    // create default dictionary here for the global system
-                    if (dictionariesTree.State.NumberOfEntries == 0)
-                    {
-                        int rev = 0;
-                        using var ___ = Slice.External(tx.Allocator, (byte*)&rev, sizeof(int), out var slice);
-                        using var __ = dictionariesTree.DirectAdd(slice, sizeof(CompressionDictionaryInfo), out var dest);
-
-                        *(CompressionDictionaryInfo*)dest = new CompressionDictionaryInfo
-                        {
-                            ExpectedCompressionRatio = 0// force next section to train on us
-                        };
-                    }
-                }
                 
                 if (_primaryKey != null)
                 {
