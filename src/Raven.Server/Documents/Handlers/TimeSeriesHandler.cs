@@ -124,11 +124,6 @@ namespace Raven.Server.Documents.Handlers
             var start = GetStart();
             var pageSize = GetPageSize();
 
-            if (fromList.Count != toList.Count)
-            {
-                throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
-            }
-
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -151,16 +146,41 @@ namespace Raven.Server.Documents.Handlers
 
         private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
         {
+            if (fromList.Count != toList.Count)
+            {
+                throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
+            }
+
             var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+
+            if (fromList.Count == 0)
+            {
+                if (names.Count == 0)
+                    return rangeResultDictionary;
+
+                if (names.Count != 1)
+                    throw new InvalidOperationException($"GetTimeSeriesOperation : Argument count miss match on document '{documentId}'. " +
+                                                        $"Received {names.Count} 'name' arguments, but no 'from'/'to' arguments were provided.");
+
+                // support for the case where we get a single name and no from/to dates are provided
+
+                fromList = toList = new string[] { null };
+            }
+
+            else if (names.Count != fromList.Count)
+                throw new InvalidOperationException($"GetTimeSeriesOperation : Argument count miss match on document '{documentId}'. " +
+                                                    $"Received {names.Count} 'name' arguments, and {fromList.Count} 'from'/'to' arguments.");
+
             Dictionary<string, DateTime> datesDictionary = null;
             DateTime from, to;
 
             for (int i = 0; i < fromList.Count; i++)
             {
-                if (names.Count < i + 1 || string.IsNullOrEmpty(names[i]))
+                var name = names[i];
+
+                if (string.IsNullOrEmpty(name))
                     throw new InvalidOperationException($"GetTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.Name)}' argument in 'TimeSeriesRange' on document '{documentId}'. " +
                                                         $"'{nameof(TimeSeriesRange.Name)}' cannot be null or empty");
-                var name = names[i];
 
                 if (string.IsNullOrEmpty(fromList[i]))
                 {
