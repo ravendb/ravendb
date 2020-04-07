@@ -168,6 +168,8 @@ class genUtils {
         }));
     }
 
+    static readonly timeSpanMaxValue = "10675199.02:48:05.4775807";
+    
     static formatTimeSpan(input: string | number, longFormat = false) {
         return genUtils.formatDuration(moment.duration(input), longFormat);
     }

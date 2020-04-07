@@ -309,19 +309,18 @@ namespace Raven.Client.Documents.BulkInsert
                     WriteString(_currentWriter, id);
                     _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
 
+                    await FlushIfNeeded().ConfigureAwait(false);
+
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
                         using (var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context,
                             _defaultSerializer, new DocumentInfo { MetadataInstance = metadata }))
                         {
-                            _currentWriter.Flush();
                             json.WriteJsonTo(_currentWriter.BaseStream);
                         }
                     }
 
                     _currentWriter.Write("}");
-
-                    await FlushIfNeeded().ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {

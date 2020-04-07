@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
+using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -150,6 +154,107 @@ namespace FastTests.Client
                         .SelectMany(x => x.InnerExceptions)
                         .OfType<InvalidOperationException>().First().Message;
                     Assert.Contains("Bulk Insert store methods cannot be executed concurrently", msg);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseCustomSerializer()
+        {
+            JsonSerializer jsonSerializer = null;
+            RequestExecutor requestExecutor = null;
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = store => store.Conventions.BulkInsert.TrySerializeEntityToJsonStream = (entity, metadata, streamWriter) =>
+                {
+                    requestExecutor ??= store.GetRequestExecutor(store.Database);
+                    requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+                    using (var json = EntityToBlittable.ConvertEntityToBlittable(entity, store.Conventions, context,
+                        jsonSerializer ??= store.Conventions.CreateSerializer(), new DocumentInfo { MetadataInstance = metadata }))
+                    {
+                        json.WriteJsonTo(streamWriter.BaseStream);
+                    }
+
+                    return true;
+                }
+            }))
+            {
+                string userId1;
+                string userId2;
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    var user1 = new User { Name = "Grisha1" };
+                    bulkInsert.Store(user1);
+                    userId1 = user1.Id;
+
+                    var user2 = new User { Name = "Grisha2" };
+                    bulkInsert.Store(user2);
+                    userId2 = user2.Id;
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>(userId1);
+                    Assert.NotNull(user1);
+                    Assert.Equal("Grisha1", user1.Name);
+
+                    var user2 = session.Load<User>(userId2);
+                    Assert.NotNull(user2);
+                    Assert.Equal("Grisha2", user2.Name);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseNewtonsoftSerializer()
+        {
+            JsonSerializer jsonSerializer = null;
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = store => store.Conventions.BulkInsert.TrySerializeEntityToJsonStream = (entity, metadata, streamWriter) =>
+                {
+                    JObject jo = JObject.FromObject(entity);
+
+                    var metadataJObject = new JObject();
+                    foreach (var keyValue in metadata)
+                    {
+                        metadataJObject.Add(keyValue.Key, new JValue(keyValue.Value));
+                    }
+
+                    jo[Raven.Client.Constants.Documents.Metadata.Key] = metadataJObject;
+
+                    var jsonWriter = new JsonTextWriter(streamWriter);
+                    jsonSerializer ??= new JsonSerializer();
+                    jsonSerializer.Serialize(jsonWriter, jo);
+                    jsonWriter.Flush();
+
+                    return true;
+                }
+            }))
+            {
+                string userId1;
+                string userId2;
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    var user1 = new User { Name = "Grisha1" };
+                    bulkInsert.Store(user1);
+                    userId1 = user1.Id;
+
+                    var user2 = new User { Name = "Grisha2" };
+                    bulkInsert.Store(user2);
+                    userId2 = user2.Id;
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>(userId1);
+                    Assert.NotNull(user1);
+                    Assert.Equal("Grisha1", user1.Name);
+
+                    var user2 = session.Load<User>(userId2);
+                    Assert.NotNull(user2);
+                    Assert.Equal("Grisha2", user2.Name);
                 }
             }
         }

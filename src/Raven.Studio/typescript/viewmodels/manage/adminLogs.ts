@@ -1,3 +1,4 @@
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import adminLogsWebSocketClient = require("common/adminLogsWebSocketClient");
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
@@ -8,6 +9,9 @@ import fileDownloader = require("common/fileDownloader");
 import virtualListRow = require("widgets/listView/virtualListRow");
 import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
+import getAdminLogsConfigurationCommand = require("commands/maintenance/getAdminLogsConfigurationCommand");
+import saveAdminLogsConfigurationCommand = require("commands/maintenance/saveAdminLogsConfigurationCommand");
+import adminLogsOnDiskConfig = require("models/database/debug/adminLogsOnDiskConfig");
 
 class heightCalculator {
     
@@ -77,6 +81,7 @@ class adminLogs extends viewModelBase {
     private pendingMessages = [] as string[];
     private heightCalculator = new heightCalculator();
     
+    private onDiskConfiguration = ko.observable<adminLogsOnDiskConfig>();
     private configuration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     
     editedConfiguration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
@@ -95,11 +100,20 @@ class adminLogs extends viewModelBase {
         super();
         
         this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", 
-            "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider");
-        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));
-        this.onlyErrors.subscribe(() => this.filterLogEntries(true));
-        this.initValidation(); 
+            "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider", "setAdminLogMode");
         
+        this.initObservables();
+        this.initValidation();
+    }
+    
+    private initObservables() {
+        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));        
+        this.onlyErrors.subscribe(() => this.filterLogEntries(true));
+
+        this.enableApply = ko.pureComputed(() => {
+            return this.isValid(this.validationGroup);
+        });
+
         this.headerValuePlaceholder = ko.pureComputed(() => {
             switch (this.editedHeaderName()) {
                 case "Source":
@@ -108,11 +122,12 @@ class adminLogs extends viewModelBase {
                     return "Logger name (ex. Raven.Server.Documents.)"
             }
         });
+        
         this.mouseDown.subscribe(pressed => {
             if (!pressed) {
                 const selected = generalUtils.getSelectedText();
                 if (selected) {
-                    copyToClipboard.copy(selected, "Selected logs has been copied to clipboard");    
+                    copyToClipboard.copy(selected, "Selected logs has been copied to clipboard");
                 }
             }
         });
@@ -127,15 +142,13 @@ class adminLogs extends viewModelBase {
         this.validationGroup = ko.validatedObservable({
             maxEntries: this.editedConfiguration().maxEntries
         });
-
-        this.enableApply = ko.pureComputed(() => {
-            return this.isValid(this.validationGroup);
-        });
     }
     
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('57BGF7');
+        
+        return this.loadLogsConfig(); 
     }
     
     deactivate() {
@@ -145,7 +158,27 @@ class adminLogs extends viewModelBase {
             this.liveClient().dispose();
         }
     }
+    
+    private loadLogsConfig() {
+        return new getAdminLogsConfigurationCommand().execute()
+            .done(result => this.onDiskConfiguration(new adminLogsOnDiskConfig(result)));
+    }
 
+    setAdminLogMode(newMode: Sparrow.Logging.LogMode) {
+        this.onDiskConfiguration().selectedLogMode(newMode);
+
+        // First must get updated with current server settings
+        new getAdminLogsConfigurationCommand().execute()
+            .done((result) => {
+                const config = new adminLogsOnDiskConfig(result);
+                config.selectedLogMode(newMode);
+            
+                // Set the new mode
+                new saveAdminLogsConfigurationCommand(config).execute()
+                    .always(this.loadLogsConfig);
+        });
+    }
+    
     filterLogEntries(fromFilterChange: boolean) {
         const searchText = this.filter().toLocaleLowerCase();
         const errorsOnly = this.onlyErrors();
@@ -356,6 +389,10 @@ class adminLogs extends viewModelBase {
 
     onOpenOptions() {
         this.editedConfiguration().maxEntries(this.configuration().maxEntries());
+    }
+
+    onOpenSettings() {
+        this.loadLogsConfig();
     }
     
     updateMouseStatus(pressed: boolean) {
