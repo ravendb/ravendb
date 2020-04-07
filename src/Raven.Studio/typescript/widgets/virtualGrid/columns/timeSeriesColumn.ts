@@ -33,11 +33,31 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
     getName() {
         return this.valueAccessor as string;
     }
+    
+    private isInputDisabled(element: Element): boolean {
+        const closestButton = element.closest("button") as HTMLButtonElement;
+        if (closestButton && closestButton.disabled) {
+            // button is disabled 
+            return true;
+        }
+        
+        const closestLink = element.closest("a") as HTMLAnchorElement;
+        if (closestLink && closestLink.classList.contains("disabled")) {
+            return true;
+        }
+        
+        return false;
+    }
 
     handle(row: virtualRow, event: JQueryEventObject, actionId: string) {
+       if (this.isInputDisabled(event.target)) {
+           return;
+       }
+        
         const documentId = (row.data as T).getId();
         const name = this.getName();
         const value = this.getCellValue(row.data as T);
+        
         
         if (actionId === this.tsPlotActionUniqueId) {
             this.handler("plot", documentId, name, value, event);
@@ -78,16 +98,17 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
             const tsInfo = `<i title="Time Series" class="icon-timeseries margin-right"></i>` 
                 + `<div class="ts-group-property" data-label="Points">${model.getCount().toLocaleString()}</div>`
                 + (resultType === "grouped" ? `<div class="ts-group-property" data-label="Buckets">${model.getBucketCount().toLocaleString()}</div>` : "")
-                + `<div class="ts-group-property" data-label="Date Range">${dateRange}</div>`
+                + `<div class="ts-group-property date-range" data-label="Date Range">${dateRange}</div>`
             ;
             
             const plotButtonExtra = model.getCount() > 0 ? `` : ` disabled="disabled" `;
             const plotButton = this.handler 
                 ? `<button title="Plot time series graph" ${plotButtonExtra} class="btn btn-default btn-sm" ${customPlotAction}><i class="icon-graph"></i></button>`
                 : "";
-            
+
+            const previewButtonExtra = model.getCount() > 0 ? `` : ` disabled="disabled" `;
             const previewButton = this.handler 
-                ? `<button title="Show time series values" class="btn btn-default btn-sm" ${customPreviewAction}><i class="icon-table"></i></button>`
+                ? `<button title="Show time series values" ${previewButtonExtra} class="btn btn-default btn-sm" ${customPreviewAction}><i class="icon-table"></i></button>`
                 : "";
             
             const separator = `<div class="flex-separator"></div>`;
