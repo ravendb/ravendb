@@ -322,7 +322,7 @@ namespace Raven.Client
                 }
             }
             
-            public class Blob
+            internal class Blob
             {
                 public const string Document = "@raven-data";
                 

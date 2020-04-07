@@ -659,7 +659,7 @@ namespace Raven.Server.Smuggler.Documents
             if (_options.SkipRevisionCreation)
                 item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler;
 
-            if (buildType == BuildVersionType.V4)
+            if (buildType == BuildVersionType.V4 || buildType == BuildVersionType.GreaterThanCurrent)
             {
                 if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
                     item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);
