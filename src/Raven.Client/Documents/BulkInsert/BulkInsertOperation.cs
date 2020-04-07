@@ -372,6 +372,10 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 _countersOperation.EndPreviousCommandIfNeeded();
             }
+            else if (_inProgressCommand == CommandType.AttachmentPUT)
+            {
+                throw new InvalidOperationException("Please dispose the previous AttachmentPUT operation before starting a new one");
+            }
             else if (_inProgressCommand == CommandType.TimeSeries)
             {
                 TimeSeriesBulkInsert.ThrowAlreadyRunningTimeSeries();
@@ -521,6 +525,14 @@ namespace Raven.Client.Documents.BulkInsert
             id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
             _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
             return id;
+        }
+
+        public AttachmentsBulkInsert AttachmentsFor(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException("Document id cannot be null or empty", nameof(id));
+
+            return new AttachmentsBulkInsert(this, id);
         }
 
         public CountersBulkInsert CountersFor(string id)
@@ -802,6 +814,76 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_first == false)
                     _operation._currentWriter.Write("]}}");
+            }
+        }
+
+        public class AttachmentsBulkInsert : IDisposable
+        {
+            private readonly BulkInsertOperation _operation;
+            private readonly string _id;
+
+            public AttachmentsBulkInsert(BulkInsertOperation operation, string id)
+            {
+                switch (operation._inProgressCommand)
+                {
+                    case CommandType.AttachmentPUT:
+                        throw new InvalidOperationException("Please dispose the previous AttachmentPUT operation before starting a new one");
+                    case CommandType.Counters:
+                        _operation._countersOperation.EndPreviousCommandIfNeeded();
+                        break;
+                }
+
+                _operation = operation;
+                _id = id;
+                _operation._inProgressCommand = CommandType.AttachmentPUT;
+            }
+
+            public void Store(string name, Stream stream, string contentType = null)
+            {
+                AsyncHelpers.RunSync(() => StoreAsync(name, stream, contentType));
+            }
+
+            public async Task StoreAsync(string name, Stream stream, string contentType = null)
+            {
+                PutAttachmentCommandHelper.ValidateStream(stream);
+
+                using (_operation.ConcurrencyCheck())
+                {
+                    await _operation.ExecuteBeforeStore().ConfigureAwait(false);
+                    try
+                    {
+                        if (_operation._first == false)
+                            _operation._currentWriter.Write(",");
+
+                        _operation._currentWriter.Write("{\"Id\":\"");
+                        WriteString(_operation._currentWriter, _id);
+                        _operation._currentWriter.Write("\",\"Type\":\"AttachmentPUT\",\"Name\":\"");
+                        WriteString(_operation._currentWriter, name);
+                        if (contentType != null)
+                        {
+                            _operation._currentWriter.Write("\",\"ContentType\":\"");
+                            WriteString(_operation._currentWriter, contentType);
+                        }
+                        _operation._currentWriter.Write("\",\"RavenBlobSize\":");
+                        _operation._currentWriter.Write(stream.Length);
+                        _operation._currentWriter.Write("}");
+                        await _operation.FlushIfNeeded().ConfigureAwait(false);
+
+                        PutAttachmentCommandHelper.PrepareStream(stream);
+                        stream.CopyTo(_operation._currentWriter.BaseStream);
+
+                        await _operation.FlushIfNeeded().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        await _operation.HandleErrors(_id, e).ConfigureAwait(false);
+                    }
+                }
+            }
+
+            public void Dispose()
+            {
+                _operation._inProgressCommand = CommandType.None;
             }
         }
     }
