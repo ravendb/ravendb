@@ -40,6 +40,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Commercial;
 using Raven.Server.Dashboard;
@@ -81,12 +82,14 @@ using Raven.Server.Web.Studio;
 using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Server.Meters;
 using TypeScripter;
 using TypeScripter.TypeScript;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using Voron.Data.BTrees;
 using Voron.Debugging;
+using Size = Sparrow.Size;
 
 namespace TypingsGenerator
 {
@@ -106,6 +109,7 @@ namespace TypingsGenerator
             scripter
                 .WithTypeMapping(TsPrimitive.String, typeof(Guid))
                 .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
+                .WithTypeMapping(TsPrimitive.Number, typeof(Size))
                 .WithTypeMapping(TsPrimitive.Number, typeof(UInt32))
                 .WithTypeMapping(TsPrimitive.Number, typeof(UInt64))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
@@ -402,6 +406,10 @@ namespace TypingsGenerator
             
             // certificates
             scripter.AddType(typeof(CertificateDefinition));
+
+            // admin logs
+            scripter.AddType(typeof(LogMode));
+            scripter.AddType(typeof(SetLogsConfigurationOperation.Parameters));
 
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));

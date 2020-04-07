@@ -670,6 +670,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 case BuildVersionType.V4:
                 case BuildVersionType.V5:
+                case BuildVersionType.GreaterThanCurrent:
                 {
                     if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
                         item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);

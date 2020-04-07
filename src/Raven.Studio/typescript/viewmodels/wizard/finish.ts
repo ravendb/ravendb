@@ -4,10 +4,11 @@ import getNextOperationId = require("commands/database/studio/getNextOperationId
 import messagePublisher = require("common/messagePublisher");
 import endpoints = require("endpoints");
 import router = require("plugins/router");
+import app = require("durandal/app");
 import saveUnsecuredSetupCommand = require("commands/wizard/saveUnsecuredSetupCommand");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
-import checkIfServerIsOnlineCommand = require("commands/wizard/checkIfServerIsOnlineCommand");
 import continueClusterConfigurationCommand = require("commands/wizard/continueClusterConfigurationCommand");
+import letsEncryptInstructions = require("viewmodels/wizard/letsEncryptInstructions");
 
 type messageItem = {
     message: string;
@@ -146,7 +147,6 @@ class finish extends setupStep {
 
     private saveSecuredConfiguration(url: string, dto: Raven.Server.Commercial.SetupInfo) {
         const $form = $("#secureSetupForm");
-        const db = this.activeDatabase();
         const $downloadOptions = $("[name=Options]", $form);
 
         this.getNextOperationId()
@@ -190,48 +190,16 @@ class finish extends setupStep {
         }
     }
     
-    private finishConfiguration() {
+    private finishConfiguration(waitTimeBeforeRedirect: number) {
         new finishSetupCommand()
             .execute()
             .done(() => {
-                this.check();
+                setTimeout(() => {
+                    this.redirectToStudio();
+                }, waitTimeBeforeRedirect);
             });
     }
     
-    private getUrlForPolling() {
-        const serverUrl = this.model.getStudioUrl();
-
-        // poll using http 
-        const httpServerUrl = serverUrl.replace("https://", "http://");
-        
-        // if url has default port use 443 instead since we changed scheme from https -> http
-        const url = new URL(httpServerUrl);
-        if (!url.port) {
-            url.port = "443";
-            return url.origin;
-        }
-        
-        return httpServerUrl;
-    }
-    
-    private check() {
-        const httpServerUrl = this.getUrlForPolling();
-        setInterval(() => {
-            new checkIfServerIsOnlineCommand(httpServerUrl)
-                .execute()
-                .done(() => {
-                    this.redirectToStudio();
-                })
-                .fail((result: JQueryXHR) => {
-                    // bad request - we connected to https using http, but server respond
-                    // it means it is online
-                    if (result.status === 400) {
-                        this.redirectToStudio();
-                    }
-                })
-        }, 500);
-    }
-
     back() {
         switch (this.model.mode()) {
             case "Continue":
@@ -246,8 +214,22 @@ class finish extends setupStep {
     }
 
     restart() {
-        this.spinners.restart(true);
-        this.finishConfiguration();
+        const mode = this.model.mode();
+        
+        if (mode === "LetsEncrypt") {
+            // notify user that generated certificate needs to be installed
+            // before redirecting to studio
+            app.showBootstrapDialog(new letsEncryptInstructions())
+                .done((result) => {
+                    if (result) {
+                        this.spinners.restart(true);
+                        this.finishConfiguration(6000);
+                    }
+                })
+        } else {
+            this.spinners.restart(true);
+            this.finishConfiguration(2000);
+        }
     }
     
     private redirectToStudio() {

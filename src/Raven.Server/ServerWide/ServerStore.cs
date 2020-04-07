@@ -1760,7 +1760,7 @@ namespace Raven.Server.ServerWide
                         if (ValidateConnectionString(rawRecord, rvnEtl.ConnectionStringName, rvnEtl.EtlType) == false)
                             rvnEtlErr.Add($"Could not find connection string named '{rvnEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
-                        ThrowInvalidConfigurationIfNecessary(rvnEtlErr);
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, rvnEtlErr);
 
                         command = new AddRavenEtlCommand(rvnEtl, databaseName, raftRequestId);
                         break;
@@ -1770,7 +1770,7 @@ namespace Raven.Server.ServerWide
                         if (ValidateConnectionString(rawRecord, sqlEtl.ConnectionStringName, sqlEtl.EtlType) == false)
                             sqlEtlErr.Add($"Could not find connection string named '{sqlEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
-                        ThrowInvalidConfigurationIfNecessary(sqlEtlErr);
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, sqlEtlErr);
 
                         command = new AddSqlEtlCommand(sqlEtl, databaseName, raftRequestId);
                         break;
@@ -1780,57 +1780,77 @@ namespace Raven.Server.ServerWide
             }
 
             return await SendToLeaderAsync(command);
+        }
 
-            void ThrowInvalidConfigurationIfNecessary(IReadOnlyCollection<string> errors)
+        private void ThrowInvalidConfigurationIfNecessary(BlittableJsonReaderObject etlConfiguration, IReadOnlyCollection<string> errors)
+        {
+            if (errors.Count <= 0)
+                return;
+
+            var sb = new StringBuilder();
+            sb
+                .AppendLine("Invalid ETL configuration.")
+                .AppendLine("Errors:");
+
+            foreach (var err in errors)
             {
-                if (errors.Count <= 0)
-                    return;
-
-                var sb = new StringBuilder();
                 sb
-                    .AppendLine("Invalid ETL configuration.")
-                    .AppendLine("Errors:");
-
-                foreach (var err in errors)
-                {
-                    sb
-                        .Append("- ")
-                        .AppendLine(err);
-                }
-
-                sb.AppendLine("Configuration:");
-                sb.AppendLine(etlConfiguration.ToString());
-
-                throw new InvalidOperationException(sb.ToString());
+                    .Append("- ")
+                    .AppendLine(err);
             }
 
-            bool ValidateConnectionString(RawDatabaseRecord databaseRecord, string connectionStringName, EtlType etlType)
+            sb.AppendLine("Configuration:");
+            sb.AppendLine(etlConfiguration.ToString());
+
+            throw new InvalidOperationException(sb.ToString());
+        }
+
+        private bool ValidateConnectionString(RawDatabaseRecord databaseRecord, string connectionStringName, EtlType etlType)
+        {
+            if (etlType == EtlType.Raven)
             {
-                if (etlType == EtlType.Raven)
-                {
-                    var ravenConnectionStrings = databaseRecord.RavenConnectionStrings;
-                    return ravenConnectionStrings != null && ravenConnectionStrings.TryGetValue(connectionStringName, out _);
-                }
-
-                var sqlConnectionString = databaseRecord.SqlConnectionStrings;
-                return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
+                var ravenConnectionStrings = databaseRecord.RavenConnectionStrings;
+                return ravenConnectionStrings != null && ravenConnectionStrings.TryGetValue(connectionStringName, out _);
             }
+
+            var sqlConnectionString = databaseRecord.SqlConnectionStrings;
+            return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
         }
 
         public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
         {
             UpdateDatabaseCommand command;
-
-            switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, databaseName))
             {
-                case EtlType.Raven:
-                    command = new UpdateRavenEtlCommand(id, JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName, raftRequestId);
-                    break;
-                case EtlType.Sql:
-                    command = new UpdateSqlEtlCommand(id, JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName, raftRequestId);
-                    break;
-                default:
-                    throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
+                switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
+                {
+                    case EtlType.Raven:
+                        var rvnEtl = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
+
+                        rvnEtl.Validate(out var rvnEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, rvnEtl.ConnectionStringName, rvnEtl.EtlType) == false)
+                            rvnEtlErr.Add($"Could not find connection string named '{rvnEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, rvnEtlErr);
+
+                        command = new UpdateRavenEtlCommand(id, rvnEtl, databaseName, raftRequestId);
+                        break;
+                    case EtlType.Sql:
+
+                        var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
+                        sqlEtl.Validate(out var sqlEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, sqlEtl.ConnectionStringName, sqlEtl.EtlType) == false)
+                            sqlEtlErr.Add($"Could not find connection string named '{sqlEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, sqlEtlErr);
+
+                        command = new UpdateSqlEtlCommand(id, sqlEtl, databaseName, raftRequestId);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
+                }
             }
 
             return await SendToLeaderAsync(command);
