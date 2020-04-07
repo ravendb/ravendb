@@ -59,11 +59,11 @@ class machineResources {
 
             let tooltip = `<div>
                                 Machine Memory Usage: <strong>${this.sizeFormatter(this.usedMemory())}</strong><br />
-                                Available Memory: <strong>${this.sizeFormatter(availableMemory)}</strong><br />
-                                Available Memory for Processing: <strong>${ this.sizeFormatter(availableMemoryForProcessing) } </strong>`;
+                                Available: <strong>${this.sizeFormatter(availableMemory)}</strong><br />
+                                Available for Processing: <strong>${ this.sizeFormatter(availableMemoryForProcessing) } </strong>`;
 
             if (this.isWindows()) {
-                tooltip += `<br />Commited Memory: <strong>${this.sizeFormatter(this.commitedMemory())}</strong>`;
+                tooltip += `<br />Commited: <strong>${this.sizeFormatter(this.commitedMemory())}</strong>`;
             }
 
             return `${tooltip}</div>`;
