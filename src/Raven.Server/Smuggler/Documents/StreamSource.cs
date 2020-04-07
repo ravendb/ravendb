@@ -112,7 +112,7 @@ namespace Raven.Server.Smuggler.Documents
                     _log.Operations(msg);
                 _result.AddWarning(msg);
 
-                SkipArray(onSkipped: null, MaySkipBolb, CancellationToken.None);
+                SkipArray(onSkipped: null, MaySkipBlob, CancellationToken.None);
                 type = ReadType();
                 dbItemType = GetType(type);
             }
@@ -820,7 +820,7 @@ namespace Raven.Server.Smuggler.Documents
             return count;
         }
 
-        private void MaySkipBolb(BlittableJsonReaderObject reader)
+        private void MaySkipBlob(BlittableJsonReaderObject reader)
         {
             if(reader.TryGet(Constants.Documents.Blob.Size, out int size))
                 Skip(size);
