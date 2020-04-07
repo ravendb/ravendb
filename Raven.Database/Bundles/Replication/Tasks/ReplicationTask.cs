@@ -188,9 +188,9 @@ namespace Raven.Bundles.Replication.Tasks
                 RequestTimeoutInMs = replicationRequestTimeoutInMs
             };
 
-            var certificatePath = docDb.Configuration.Replication.ReplicationToV4CertificatePath;
+            var certificatePath = docDb.Configuration.Replication.CertificatePath;
             if (certificatePath != null)
-                httpRavenRequestFactory.Certificate = new X509Certificate2(certificatePath, docDb.Configuration.Replication.ReplicationToV4CertificatePassword);
+                httpRavenRequestFactory.Certificate = new X509Certificate2(certificatePath, docDb.Configuration.Replication.CertificatePassword);
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
             var disposableAction = new DisposableAction(task.Wait);

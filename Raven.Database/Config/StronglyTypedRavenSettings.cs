@@ -289,8 +289,8 @@ namespace Raven.Database.Config
             Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"], false);
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
             Replication.ReplicationPropagationDelayInSeconds = new IntegerSetting(settings[Constants.ReplicationPropagationDelayInSeconds],15);
-            Replication.ReplicationToV4CertificatePath = new StringSetting(settings["Raven/ReplicationToV4/CertificatePath"], (string)null);
-            Replication.ReplicationToV4CertificatePassword = new StringSetting(settings["Raven/ReplicationToV4/CertificatePassword"], (string)null);
+            Replication.CertificatePath = new StringSetting(settings["Raven/Replication/CertificatePath"], (string)null);
+            Replication.CertificatePassword = new StringSetting(settings["Raven/Replication/CertificatePassword"], (string)null);
 
             SqlReplication.CommandTimeoutInSec = new IntegerSetting(settings["Raven/SqlReplication/CommandTimeoutInSec"], -1);
 
@@ -631,9 +631,9 @@ namespace Raven.Database.Config
 
             public IntegerSetting ReplicationPropagationDelayInSeconds { get; set; }
 
-            public StringSetting ReplicationToV4CertificatePath { get; set; }
+            public StringSetting CertificatePath { get; set; }
 
-            public StringSetting ReplicationToV4CertificatePassword { get; set; }
+            public StringSetting CertificatePassword { get; set; }
 
         }
 

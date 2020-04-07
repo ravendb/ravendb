@@ -315,8 +315,8 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.MaxConcurrentRequestsForDatabaseDuringLoad.Value, actual => actual.MaxConcurrentRequestsForDatabaseDuringLoad);
             configurationComparer.Assert(expected => expected.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value, actual => actual.Replication.MaxNumberOfItemsToReceiveInSingleBatch);
             configurationComparer.Assert(expected => expected.Replication.ReplicationPropagationDelayInSeconds.Value, actual => actual.Replication.ReplicationPropagationDelayInSeconds);        
-            configurationComparer.Assert(expected => expected.Replication.ReplicationToV4CertificatePath.Value, actual => actual.Replication.ReplicationToV4CertificatePath);        
-            configurationComparer.Assert(expected => expected.Replication.ReplicationToV4CertificatePassword.Value, actual => actual.Replication.ReplicationToV4CertificatePassword);        
+            configurationComparer.Assert(expected => expected.Replication.CertificatePath.Value, actual => actual.Replication.CertificatePath);        
+            configurationComparer.Assert(expected => expected.Replication.CertificatePassword.Value, actual => actual.Replication.CertificatePassword);        
             configurationComparer.Assert(expected => expected.ImplicitFetchFieldsFromDocumentMode.Value, actual => actual.ImplicitFetchFieldsFromDocumentMode);
             configurationComparer.Assert(expected => expected.AllowScriptsToAdjustNumberOfSteps.Value, actual => actual.AllowScriptsToAdjustNumberOfSteps);
             configurationComparer.Assert(expected => expected.FileSystem.PreventSchemaUpdate.Value, actual => actual.Storage.PreventSchemaUpdate);
