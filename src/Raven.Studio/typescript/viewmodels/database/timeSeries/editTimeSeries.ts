@@ -119,11 +119,12 @@ class editTimeSeries extends viewModelBase {
                 .execute()
                 .done(result => {
                     const seriesValues = result.Values[timeSeriesName];
-                    const values = seriesValues && seriesValues.length > 0 ? seriesValues[0].Entries : [];
+                    const items = seriesValues && seriesValues.length > 0 ? seriesValues[0].Entries : [];
+                    const totalResultCount = seriesValues && seriesValues.length > 0 ? seriesValues[0].TotalResults : 0;
 
                     fetchTask.resolve({
-                        items: values,
-                        totalResultCount: values.length
+                        items,
+                        totalResultCount
                     })
                 });    
         } else {
