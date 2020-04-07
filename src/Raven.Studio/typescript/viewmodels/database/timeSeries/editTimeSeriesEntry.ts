@@ -55,7 +55,10 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (local)"
         });
         
-        this.isAggregation = ko.pureComputed(() => this.model().name().includes("@"));
+        this.isAggregation = ko.pureComputed(() => {
+            const name = this.model().name();
+            return name && name.includes("@");
+        });
     }
     
     save() {

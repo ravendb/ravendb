@@ -239,7 +239,7 @@ class editTimeSeries extends viewModelBase {
     }
 
     private initObservables() {
-        this.isAggregation = ko.pureComputed(() => this.timeSeriesName().includes("@"));
+        this.isAggregation = ko.pureComputed(() => this.timeSeriesName() && this.timeSeriesName().includes("@"));
         
         this.urlForDocument = ko.pureComputed(() => {
             return appUrl.forEditDoc(this.documentId(), this.activeDatabase());

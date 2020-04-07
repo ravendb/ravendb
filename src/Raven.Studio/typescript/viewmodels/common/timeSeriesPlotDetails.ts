@@ -223,6 +223,7 @@ class timeSeriesPlotDetails extends viewModelBase {
     
     private x: d3.time.Scale<number, number>;
     private y: d3.scale.Linear<number, number>;
+    private emptyGraph = ko.observable<boolean>(false);
     
     private xBrush: d3.time.Scale<number, number>;
     private yBrush: d3.scale.Linear<number, number>;
@@ -681,15 +682,16 @@ class timeSeriesPlotDetails extends viewModelBase {
                 const paddedExtents = timeSeriesPlotDetails.paddingExtents(extents, 0.02);
                 const { minX, maxX, minY, maxY } = paddedExtents;
 
-                if (resetXScale) {
+                if (resetXScale || this.emptyGraph()) {
                     this.x.domain([minX, maxX]);
                 }
                 this.y.domain([minY, maxY]);
+                this.emptyGraph(false);
             } else {
-                //TODO: show info that view is empty
                 const now = new Date();
                 this.x.domain([now, now]);
                 this.y.domain([0, 0]);
+                this.emptyGraph(true);
             }
 
             if (resetXScale) {
