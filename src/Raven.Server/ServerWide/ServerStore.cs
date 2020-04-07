@@ -1811,7 +1811,7 @@ namespace Raven.Server.ServerWide
                 return ravenConnectionStrings != null && ravenConnectionStrings.TryGetValue(connectionStringName, out _);
             }
 
-            var sqlConnectionString = databaseRecord.RavenConnectionStrings;
+            var sqlConnectionString = databaseRecord.SqlConnectionStrings;
             return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
         }
 
