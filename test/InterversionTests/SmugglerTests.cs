@@ -19,7 +19,7 @@ namespace InterversionTests
         }
 
         [Fact]
-        public async Task CanExportFrom42AndImportTo5()
+        public async Task CanExportFrom42AndImportToCurrent()
         {
             var file = GetTempFileName();
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -62,7 +62,7 @@ namespace InterversionTests
         }
 
         [Fact]
-        public async Task CanExportFrom5AndImportTo42()
+        public async Task CanExportFromCurrentAndImportTo42()
         {
             var file = GetTempFileName();
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -102,7 +102,7 @@ namespace InterversionTests
         }
 
         [Fact]
-        public async Task CanExportAndImportClient5Server42()
+        public async Task CanExportAndImportCurrentClientWithServer42()
         {
             var file = GetTempFileName();
             using var store42 = await GetDocumentStoreAsync(Server42Version);
