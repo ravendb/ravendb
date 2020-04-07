@@ -9,8 +9,9 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
@@ -19,7 +20,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
-using Raven.Client.Documents.Operations.TimeSeries;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -57,7 +57,6 @@ namespace Raven.Server.Documents.Handlers
             public string DestinationName;
             public string ContentType;
             public AttachmentType AttachmentType;
-
             #endregion
 
             #region Counter
@@ -71,6 +70,12 @@ namespace Raven.Server.Documents.Handlers
             public TimeSeriesOperation TimeSeries;
 
             #endregion
+
+            #region ravendata
+            public byte[] RavenData;
+            public long RavenBlobSize;
+            #endregion
+
         }
 
 
@@ -330,6 +335,46 @@ namespace Raven.Server.Documents.Handlers
 
                 return await ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, modifier, _token);
             }
+
+            public async Task<byte[]> GetRavenData(long dataSize)
+            {
+                long size = Math.Min(32 * 1024, dataSize);
+                var buffer = new byte[size];
+                var offset = 0;
+                var toRead = dataSize;
+
+                while (toRead > 0)
+                {
+                    if (offset != 0)
+                    {
+                        // expand the array
+                        var tmp = new byte[offset + size];
+                        Array.Copy(buffer, tmp, buffer.Length);
+                        buffer = tmp;
+                    }
+
+                    if (_parser.ReadByteArray(size, ref toRead, out var bytes, out var read) == false)
+                        await RefillParserBuffer(_stream, _buffer, _parser, _token);
+
+                    if (read == size)
+                    {
+                        Array.Copy(bytes, 0, buffer, offset, bytes.Length);
+                    }
+                    else if (read != 0)
+                    {
+                        // truncate the array
+                        var tmp = new byte[offset + read];
+                        Array.Copy(buffer, 0, tmp, 0, offset);
+                        Array.Copy(bytes, 0, tmp, offset, read);
+                        buffer = tmp;
+                    }
+                    offset += read;
+                }
+
+                Debug.Assert(offset == dataSize);
+                Debug.Assert(buffer.Length == dataSize);
+                return buffer;
+            }
         }
 
 
@@ -503,7 +548,7 @@ namespace Raven.Server.Documents.Handlers
                             await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType != JsonParserToken.Integer)
                         {
-                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                            ThrowUnexpectedToken(JsonParserToken.Integer, state);
                         }
                         commandData.Index = state.Long;
 
@@ -563,6 +608,15 @@ namespace Raven.Server.Documents.Handlers
 
                             commandData.AttachmentType = GetAttachmentType(state, ctx);
                         }
+                        break;
+                    case CommandPropertyName.RavenBlobSize:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        if (state.CurrentTokenType != JsonParserToken.Integer)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                        }
+                        commandData.RavenBlobSize = state.Long;
                         break;
                     case CommandPropertyName.NoSuchProperty:
                         // unknown command - ignore it
@@ -763,6 +817,12 @@ namespace Raven.Server.Documents.Handlers
 
             #endregion
 
+            #region RavenData
+
+            RavenBlobSize,
+
+            #endregion
+
             FromEtl
 
             // other properties are ignore (for legacy support)
@@ -842,8 +902,10 @@ namespace Raven.Server.Documents.Handlers
                         *(int*)(state.StringBuffer + sizeof(long)) == 1231974249 &&
                         state.StringBuffer[12] == (byte)'d')
                         return CommandPropertyName.DestinationId;
+                    if (*(long*)state.StringBuffer == 8028865277610844498 && *(int*)(state.StringBuffer + sizeof(long)) == 2053722978 && state.StringBuffer[12] == (byte)'e')
+                        return CommandPropertyName.RavenBlobSize;
                     return CommandPropertyName.NoSuchProperty;
-                
+
                 case 14:
                     if (*(int*)state.StringBuffer == 1668571472 &&
                         *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 &&
@@ -858,7 +920,7 @@ namespace Raven.Server.Documents.Handlers
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 25968)
                         return CommandPropertyName.AttachmentType;
                     return CommandPropertyName.NoSuchProperty;
-                
+
                 case 15:
                     if (*(long*)state.StringBuffer == 8386105380344915268 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1315860329 &&
@@ -866,7 +928,7 @@ namespace Raven.Server.Documents.Handlers
                         state.StringBuffer[14] == (byte)'e')
                         return CommandPropertyName.DestinationName;
                     return CommandPropertyName.NoSuchProperty;
-                
+
                 case 29:
                     if (*(long*)state.StringBuffer == 8531315664536891206 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 7309979286770381673 &&
@@ -875,7 +937,7 @@ namespace Raven.Server.Documents.Handlers
                         state.StringBuffer[28] == (byte)'y')
                         return CommandPropertyName.ForceRevisionCreationStrategy;
                     return CommandPropertyName.NoSuchProperty;
-                
+
                 default:
                     return CommandPropertyName.NoSuchProperty;
             }
