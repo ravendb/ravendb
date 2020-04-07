@@ -729,9 +729,10 @@ namespace SlowTests.Client.TimeSeries.Operations
         {
             using (var store = GetDocumentStore())
             {
+                var documentId = "users/ayende";
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
 
@@ -741,7 +742,6 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -756,13 +756,12 @@ namespace SlowTests.Client.TimeSeries.Operations
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "BloodPressure",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -776,13 +775,12 @@ namespace SlowTests.Client.TimeSeries.Operations
                     });
                 }
 
-                timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Temperature",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -796,14 +794,14 @@ namespace SlowTests.Client.TimeSeries.Operations
                     });
                 }
 
-                timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
                 // get ranges from multiple time series in a single request
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", new List<TimeSeriesRange>
+                    new GetTimeSeriesOperation(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -908,19 +906,17 @@ namespace SlowTests.Client.TimeSeries.Operations
         {
             using (var store = GetDocumentStore())
             {
+                var documentId = "users/ayende";
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
-
-                // append
 
                 var baseline = DateTime.Today;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -935,7 +931,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation("users/ayende", timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
@@ -951,19 +947,18 @@ namespace SlowTests.Client.TimeSeries.Operations
         {
             using (var store = GetDocumentStore())
             {
+                var documentId = "users/ayende";
+
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/ayende");
+                    session.Store(new User(), documentId);
                     session.SaveChanges();
                 }
-
-                // append
 
                 var baseline = DateTime.Today;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
-                    DocumentId = "users/ayende",
                     Name = "Heartrate",
                     Appends = new List<TimeSeriesOperation.AppendOperation>()
                 };
@@ -978,7 +973,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                     });
                 }
 
-                var timeSeriesBatch = new TimeSeriesBatchOperation(timeSeriesOp);
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
 
