@@ -1,4 +1,4 @@
-<div class="modal-dialog" role="document">
+<div class="modal-dialog modal-lg" role="document">
     <div class="modal-content query-stats" tabindex="-1">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
@@ -7,7 +7,6 @@
             <h4 class="modal-title">Query Stats</h4>
         </div>
         <div class="modal-body" data-bind="with: queryStats">
-
             <form class="form-horizontal" role="form">
                 <div class="form-group">
                     <label class="col-md-3 control-label">Total Results:</label>
@@ -27,11 +26,10 @@
                         <p class="form-control-static" data-bind="text: ((typeof (DurationInMs) !== 'undefined') ? DurationInMs.toLocaleString() : '? ') + ' ms'"></p>
                     </div>
                 </div>
-                
                 <div class="form-group" data-bind="visible: !$root.isGraphQuery">
                     <label class="col-md-3 control-label">Index:</label>
                     <div class="col-md-9">
-                        <p class="form-control-static">
+                        <p class="form-control-static force-text-wrap">
                             <a target="_blank" data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl}, visible: $root.canNavigateToIndex"></a>
                             <span data-bind="text: IndexName, visible: !$root.canNavigateToIndex"></span>
                         </p>
