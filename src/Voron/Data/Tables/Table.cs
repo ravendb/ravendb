@@ -180,7 +180,7 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        public byte* DirectRead(long id, out int size)
+        private byte* DirectReadRaw(long id, out int size, out bool compressed)
         {
             var posInPage = id % Constants.Storage.PageSize;
             if (posInPage == 0) // large
@@ -190,20 +190,23 @@ namespace Voron.Data.Tables
 
                 byte* ptr = page.Pointer + PageHeader.SizeOf;
 
-                if ((page.Flags & PageFlags.Compressed) == PageFlags.Compressed)
-                    return DirectReadDecompress(id, ptr, ref size);
-                
+                compressed = (page.Flags & PageFlags.Compressed) == PageFlags.Compressed;
                 return ptr;
             }
 
             // here we rely on the fact that RawDataSmallSection can
             // read any RawDataSmallSection piece of data, not just something that
             // it exists in its own section, but anything from other sections as well
-            byte* directRead = RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size, out bool compressed);
+            return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size, out compressed);
+        }
+
+        public byte* DirectRead(long id, out int size)
+        {
+            var result = DirectReadRaw(id, out size, out var compressed);
             if (compressed == false)
-                return directRead;
+                return result;
             
-            return DirectReadDecompress(id, directRead, ref size);
+            return DirectReadDecompress(id, result, ref size);
         }
 
         private byte* DirectReadDecompress(long id,  byte* directRead, ref int size)
@@ -218,15 +221,20 @@ namespace Voron.Data.Tables
 
             //TODO: For encrypted databases, we need to allocate on locked memory
 
-            var data = new ReadOnlySpan<byte>(directRead, size);
-            var dictionary = GetCompressionDictionaryFor(id, ref data);
-            var _ = // we explicitly do *not* dispose the buffer, it lives as long as the tx
-                Decompress(_tx, data, dictionary, out var buffer);
+            // we explicitly do *not* dispose the buffer, it lives as long as the tx
+            var _ = DecompressValue(id, directRead, size, out ByteString buffer);
 
             _cachedDecompressedBuffersByStorageId[id] = buffer;
 
             size = buffer.Length;
             return buffer.Ptr;
+        }
+
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope DecompressValue(long id, byte* ptr, int size, out ByteString buffer)
+        {
+            var data = new ReadOnlySpan<byte>(ptr, size);
+            var dictionary = GetCompressionDictionaryFor(id, ref data);
+            return Decompress(_tx, data, dictionary, out buffer);
         }
 
         internal static ByteStringContext<ByteStringMemoryCache>.InternalScope Decompress(
@@ -272,7 +280,18 @@ namespace Voron.Data.Tables
             int size = builder.Size;
 
             // We must read before we call TryWriteDirect, because it will modify the size
-            var oldData = DirectRead(id, out var oldDataSize);
+           
+            var oldData = DirectReadRaw(id, out var oldDataSize, out var oldCompressed);
+            ByteStringContext<ByteStringMemoryCache>.InternalScope oldDataDecompressedScope = default;
+            if (oldCompressed)
+            {
+                oldDataDecompressedScope = DecompressValue(id, oldData, oldDataSize, out var buffer);
+                oldData = buffer.Ptr;
+                oldDataSize = buffer.Length;
+            }
+
+            using var _ = oldDataDecompressedScope;
+
             if (_schema.Compressed)
             {
                 _cachedDecompressedBuffersByStorageId?.Remove(id);
@@ -710,9 +729,9 @@ namespace Voron.Data.Tables
                 int newSectionDictionaryId = default;
 
                 // need to switch, may have to re-compress at this point
-                if (compressionDictionary != null)
+                if (_schema.Compressed)
                 {
-                    newSectionDictionaryId = compressionDictionary.Id;
+                    newSectionDictionaryId = compressionDictionary?.Id ?? 0;
 
                     // We'll replace the dictionary if it is unable to provide us with good compression ratio
                     // we give it +10 ratio to allow some slippage between training. Even after violating the expected
@@ -720,7 +739,7 @@ namespace Voron.Data.Tables
                     // this is handled inside ShouldReplaceDictionary and ensure that new dictionaries are at least 10%
                     // better than the previous one. We prefer to use less dictionaries, even if compression
                     // rate can be slightly improved.
-                    if (previousActiveSection.MinCompressionRatio + 10 > compressionDictionary.ExpectedCompressionRatio)
+                    if (previousActiveSection.MinCompressionRatio + 10 > (compressionDictionary?.ExpectedCompressionRatio ?? 0))
                     {
                         // this will check if we can create a new dictionary that would do better for the current item
                         // than the previous dictionary, creating a new hash for it
@@ -758,6 +777,9 @@ namespace Voron.Data.Tables
 
             public ZstdLib.CompressionDictionary GetCompressionDictionaryFor(Transaction tx, int id)
             {
+                if (id == 0)
+                    return null;
+
                 if (_compressionDictionaries.TryGetValue(id, out var current)) 
                     return current;
 
@@ -784,10 +806,7 @@ namespace Voron.Data.Tables
                     // dictionary there
                     if (id == 0)
                     {
-                        return new ZstdLib.CompressionDictionary(id, null, 0, 0)
-                        {
-                            ExpectedCompressionRatio = 101
-                        };
+                        return null;
                     }
 
                     throw new InvalidOperationException("Trying to read dictionary: " + id + " but it was not found!");
@@ -1144,13 +1163,16 @@ namespace Voron.Data.Tables
                 }
             }
             
-            using var __ = _tx.Allocator.Allocate(4096, out var dictionaryBuffer);
+            using var __ = _tx.Allocator.Allocate(
+                // the dictionary 
+                Constants.Storage.PageSize - PageHeader.SizeOf - sizeof(CompressionDictionaryInfo)
+                , out var dictionaryBuffer);
             Span<byte> dictionaryBufferSpan = dictionaryBuffer.ToSpan();
             ZstdLib.Train(new ReadOnlySpan<byte>(buffer.Ptr, pos), new ReadOnlySpan<UIntPtr>(sizes, 0, last), ref dictionaryBufferSpan);
 
-            var dictionariesTree = _tx.ReadTree(TableSchema.DictionariesSlice);
+            var dictionariesTree = _tx.CreateTree(TableSchema.DictionariesSlice);
 
-            var newId = (int)(dictionariesTree.State.NumberOfEntries);
+            var newId = (int)(dictionariesTree.State.NumberOfEntries + 1);
 
             using var compressionDictionary = new ZstdLib.CompressionDictionary(newId, dictionaryBuffer.Ptr, dictionaryBufferSpan.Length, 3);
 

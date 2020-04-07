@@ -151,7 +151,7 @@ namespace Voron.Data.Tables
             {
                 UIntPtr result;
 
-                if (dictionary.Compression == null)
+                if (dictionary == null)
                 {
                     result = ZSTD_compressCCtx(_threadCompressContext.Compression, dstPtr, (UIntPtr)dst.Length, 
                         srcPtr, (UIntPtr)src.Length, 3);
@@ -176,7 +176,7 @@ namespace Voron.Data.Tables
             fixed (byte* dstPtr = dst)
             {
                 UIntPtr result;
-                if(dictionary.Compression == null)
+                if(dictionary == null)
                 {
                     result = ZSTD_decompressDCtx(_threadCompressContext.Decompression, dstPtr, (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length);
                 }
@@ -203,8 +203,6 @@ namespace Voron.Data.Tables
             public CompressionDictionary(int id, byte* buffer, int size, int compressionLevel)
             {
                 Id = id;
-                if (buffer == null) 
-                    return;
 
 #if DEBUG
                 var hash = stackalloc byte[32];
@@ -217,7 +215,7 @@ namespace Voron.Data.Tables
                 if (Compression == null || Decompression == null)
                 {
                     Dispose();
-                    throw new OutOfMemoryException("Unable to allocate memory fro dictionary");
+                    throw new OutOfMemoryException("Unable to allocate memory for dictionary");
                 }
             }
 

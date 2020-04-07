@@ -119,7 +119,7 @@ namespace Voron.Data.Tables
         {
             if (CompressedBuffer.HasValue)
             {
-                *(int*)ptr = _previousDictionary.Id;
+                *(int*)ptr = _previousDictionary?.Id ?? 0;
                 ptr += sizeof(int);
             }
             CopyTo(ptr);
@@ -199,6 +199,9 @@ namespace Voron.Data.Tables
 
         public bool Redundant(ZstdLib.CompressionDictionary current)
         {
+            if (_previousDictionary == null)
+                return false;
+
             return current == _previousDictionary; 
         }
 

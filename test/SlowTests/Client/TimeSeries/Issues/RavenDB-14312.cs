@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +26,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.Store(new { Name = "Oren" }, "users/ayende");
                     session.TimeSeriesFor("users/ayende", "Heartrate")
                         .Append(baseline, new[] { 59d });
-
+                    
                     session.SaveChanges();
                 }
 
