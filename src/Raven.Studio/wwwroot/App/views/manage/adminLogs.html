@@ -18,8 +18,10 @@
                 <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
                     <div class="columns-list-container" data-bind="with: editedConfiguration">
                         <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries" class="margin-bottom">
-                            <h4 class="pull-left">Max Log Entries</h4>
-                            <input class="form-control input-sm full-width" type="number" min=0 data-bind="numericInput: maxEntries" />
+                            <label class="control-label pull-left no-margin">
+                                <h4>Max Log Entries</h4>
+                            </label>
+                            <input class="form-control input-sm full-width" type="number" min="0" data-bind="numericInput: maxEntries" />
                             <span class="help-block" data-bind="validationMessage: maxEntries"></span>
                         </div>
                         <h4>Log filters</h4>

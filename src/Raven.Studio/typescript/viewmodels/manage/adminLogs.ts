@@ -81,7 +81,7 @@ class adminLogs extends viewModelBase {
     private pendingMessages = [] as string[];
     private heightCalculator = new heightCalculator();
     
-    private onDiskConfiguration = ko.observable<adminLogsOnDiskConfig>(new adminLogsOnDiskConfig());
+    private onDiskConfiguration = ko.observable<adminLogsOnDiskConfig>();
     private configuration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     
     editedConfiguration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
@@ -148,7 +148,7 @@ class adminLogs extends viewModelBase {
         super.activate(args);
         this.updateHelpLink('57BGF7');
         
-        this.getAdminLogsConfiguration();
+        return this.loadLogsConfig(); 
     }
     
     deactivate() {
@@ -159,31 +159,23 @@ class adminLogs extends viewModelBase {
         }
     }
     
-    private getAdminLogsConfiguration(useServerModeForSelectedMode: boolean = true) {
+    private loadLogsConfig() {
         return new getAdminLogsConfigurationCommand().execute()
-            .done(result => {
-                this.onDiskConfiguration().currentServerLogMode(result.CurrentMode);
-
-                if (useServerModeForSelectedMode) {
-                    this.onDiskConfiguration().selectedLogMode(result.CurrentMode);
-                }
-
-                this.onDiskConfiguration().fullPath(result.Path);
-                this.onDiskConfiguration().retentionTime(result.RetentionTime);
-                this.onDiskConfiguration().retentionSize(result.RetentionSize);
-                this.onDiskConfiguration().compress = result.Compress;
-            });
+            .done(result => this.onDiskConfiguration(new adminLogsOnDiskConfig(result)));
     }
 
     setAdminLogMode(newMode: Sparrow.Logging.LogMode) {
         this.onDiskConfiguration().selectedLogMode(newMode);
 
         // First must get updated with current server settings
-        this.getAdminLogsConfiguration(false).done(() => {
-            // Set the new mode only...
-            new saveAdminLogsConfigurationCommand(this.onDiskConfiguration()).execute()
-                .done(() => this.onDiskConfiguration().currentServerLogMode(newMode))
-                .fail(() => this.onDiskConfiguration().selectedLogMode(this.onDiskConfiguration().currentServerLogMode()));
+        new getAdminLogsConfigurationCommand().execute()
+            .done((result) => {
+                const config = new adminLogsOnDiskConfig(result);
+                config.selectedLogMode(newMode);
+            
+                // Set the new mode
+                new saveAdminLogsConfigurationCommand(config).execute()
+                    .always(this.loadLogsConfig);
         });
     }
     
@@ -400,7 +392,7 @@ class adminLogs extends viewModelBase {
     }
 
     onOpenSettings() {
-        this.getAdminLogsConfiguration();
+        this.loadLogsConfig();
     }
     
     updateMouseStatus(pressed: boolean) {
