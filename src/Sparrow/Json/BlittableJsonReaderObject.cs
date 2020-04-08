@@ -73,10 +73,12 @@ namespace Sparrow.Json
 
             NoCache = NoCache;
 
-            byte offset;
             var propOffsetStart = _size - 2;
-            var propsOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart, out offset);
+            var propsOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart, out byte offset);
             // init document level properties
+            if (propsOffset >= size)
+                ThrowInvalidPropertiesOffest();
+
             SetupPropertiesAccess(mem, propsOffset);
 
             // get pointer to property names array on document level
