@@ -117,7 +117,7 @@ namespace Raven.Server.Documents
                         typeof(HugeDocumentsDetails),
                         HugeDocumentsId,
                         detailsJson,
-                        DocumentConventions.Default);
+                        DocumentConventions.DefaultForServer);
                 }
 
                 string message = $"We have detected that some documents has surpassed the configured size threshold ({new Size(_maxWarnSize, SizeUnit.Bytes)}). It might have performance impact. You can alter warning limits by changing '{RavenConfiguration.GetKey(x => x.PerformanceHints.HugeDocumentSize)}' configuration value.";

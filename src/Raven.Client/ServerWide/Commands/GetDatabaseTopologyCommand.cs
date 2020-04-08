@@ -16,12 +16,12 @@ namespace Raven.Client.ServerWide.Commands
             CanCacheAggressively = false;
         }
 
-
         public GetDatabaseTopologyCommand(string debugTag, Guid? applicationIdentifier)
             : this(debugTag)
         {
             _applicationIdentifier = applicationIdentifier;
         }
+
         public GetDatabaseTopologyCommand(string debugTag)
         {
             _debugTag = debugTag;

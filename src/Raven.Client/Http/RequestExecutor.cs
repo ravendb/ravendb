@@ -40,7 +40,6 @@ namespace Raven.Client.Http
     {
         private static Guid GlobalApplicationIdentifier = Guid.NewGuid();
 
-
         private const int InitialTopologyEtag = -2;
 
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
@@ -478,7 +477,7 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetDatabaseTopologyCommand(parameters.DebugTag, parameters.ApplicationIdentifier);
+                    var command = new GetDatabaseTopologyCommand(parameters.DebugTag, Conventions.TrackApplication ? parameters.ApplicationIdentifier : null);
                     await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
@@ -675,6 +674,11 @@ namespace Raven.Client.Http
                         Logger.Info("Couldn't Update Topology from _updateTopologyTimer task", e);
                 }
             }));
+        }
+
+        protected Task FirstTopologyUpdate(string[] initialUrls)
+        {
+            return FirstTopologyUpdate(initialUrls, applicationIdentifier: null);
         }
 
         protected async Task FirstTopologyUpdate(string[] initialUrls, Guid? applicationIdentifier)

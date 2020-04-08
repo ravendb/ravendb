@@ -36,9 +36,15 @@ namespace Raven.Client.Documents.Conventions
         public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
 
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, bool forRange, out string strValue);
+
         public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
         internal static readonly DocumentConventions Default = new DocumentConventions();
+
+        internal static readonly DocumentConventions DefaultForServer = new DocumentConventions
+        {
+            TrackApplication = false
+        };
 
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
@@ -115,6 +121,7 @@ namespace Raven.Client.Documents.Conventions
         static DocumentConventions()
         {
             Default.Freeze();
+            DefaultForServer.Freeze();
         }
 
         /// <summary>
@@ -173,6 +180,8 @@ namespace Raven.Client.Documents.Conventions
 
             _firstBroadcastAttemptTimeout = TimeSpan.FromSeconds(5);
             _secondBroadcastAttemptTimeout = TimeSpan.FromSeconds(30);
+
+            _trackApplication = true;
         }
 
         private bool _frozen;
@@ -217,6 +226,17 @@ namespace Raven.Client.Documents.Conventions
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
         private Version _httpVersion;
+        private bool _trackApplication;
+
+        internal bool TrackApplication
+        {
+            get => _trackApplication;
+            set
+            {
+                AssertNotFrozen();
+                _trackApplication = value;
+            }
+        }
 
         public Version HttpVersion
         {
@@ -252,7 +272,7 @@ namespace Raven.Client.Documents.Conventions
         /// Set the timeout for the second broadcast attempt.
         /// Default: 30 Seconds.
         ///
-        /// Upon failure of the first attempt the request executor will resend the command to all nodes simultaneously. 
+        /// Upon failure of the first attempt the request executor will resend the command to all nodes simultaneously.
         /// </summary>
         public TimeSpan SecondBroadcastAttemptTimeout
         {
@@ -338,7 +358,6 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-
         /// <summary>
         ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" /> for deserializations.
         ///     When creating a JsonSerializer, the CustomizeJsonSerializer is always called before CustomizeJsonDeserializer
@@ -352,8 +371,6 @@ namespace Raven.Client.Documents.Conventions
                 _customizeJsonDeserializer = value;
             }
         }
-
-
 
         /// <summary>
         ///     By default, the field 'Id' field will be added to dynamic objects, this allows to disable this behavior.
@@ -492,7 +509,7 @@ namespace Raven.Client.Documents.Conventions
                 _findCollectionNameForDynamic = value;
             }
         }
-        
+
         /// <summary>
         ///     Gets or sets the function to find the collection name for dynamic type.
         /// </summary>
@@ -599,7 +616,7 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     Attempts to prettify the generated linq expressions for indexes 
+        ///     Attempts to prettify the generated linq expressions for indexes
         /// </summary>
         [Obsolete("This feature is currently not implemented and does not have any effect on the generated LINQ expressions")]
         public bool PrettifyGeneratedLinqExpressions
@@ -738,7 +755,7 @@ namespace Raven.Client.Documents.Conventions
                 return null;
 
             // we want to reject queries and other operations on abstract types, because you usually
-            // want to use them for polymorphic queries, and that require the conventions to be 
+            // want to use them for polymorphic queries, and that require the conventions to be
             // applied properly, so we reject the behavior and hint to the user explicitly
             if (t.GetTypeInfo().IsInterface)
                 throw new InvalidOperationException("Cannot find collection name for interface " + t.FullName +
@@ -856,7 +873,6 @@ namespace Raven.Client.Documents.Conventions
             return this;
         }
 
-
         private JsonSerializer CreateInitialSerializer()
         {
             return new JsonSerializer
@@ -935,10 +951,10 @@ namespace Raven.Client.Documents.Conventions
                     // isn't there
                 }
             }
-            
+
             return FindClrTypeName(entity.GetType());
         }
-        
+
         /// <summary>
         ///     Get the CLR type name to be stored in the entity metadata
         /// </summary>

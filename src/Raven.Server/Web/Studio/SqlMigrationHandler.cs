@@ -45,7 +45,7 @@ namespace Raven.Server.Web.Studio
                     MigrationRequest migrationRequest;
                     
                     // we can't use JsonDeserializationServer here as it doesn't support recursive processing
-                    var serializer = DocumentConventions.Default.CreateDeserializer();
+                    var serializer = DocumentConventions.DefaultForServer.CreateDeserializer();
                     using (var blittableJsonReader = new BlittableJsonReader())
                     {
                         blittableJsonReader.Init(sqlImportDoc);
@@ -108,7 +108,7 @@ namespace Raven.Server.Web.Studio
                     MigrationTestRequest testRequest;
                     
                     // we can't use JsonDeserializationServer here as it doesn't support recursive processing
-                    var serializer = DocumentConventions.Default.CreateDeserializer();
+                    var serializer = DocumentConventions.DefaultForServer.CreateDeserializer();
                     using (var blittableJsonReader = new BlittableJsonReader())
                     {
                         blittableJsonReader.Init(sqlImportTestDoc);
