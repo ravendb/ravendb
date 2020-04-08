@@ -129,8 +129,11 @@ namespace Raven.Server.Utils
             return pooled.SetWorkForThread(action, state, name);
         }
 
-        public void LowMemory()
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
+            if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
+                return;
+
             if (_lowMemoryFlag.Raise())
                 Clear();
         }

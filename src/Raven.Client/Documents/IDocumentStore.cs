@@ -22,7 +22,6 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents
 {
-
     /// <summary>
     /// Interface for managing access to RavenDB and open sessions.
     /// </summary>
@@ -49,6 +48,8 @@ namespace Raven.Client.Documents
         event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
         event EventHandler<FailedRequestEventArgs> OnFailedRequest;
+
+        event EventHandler<TopologyUpdatedEventArgs> OnTopologyUpdated;
 
         /// <summary>
         /// Subscribe to change notifications from the server
@@ -191,9 +192,9 @@ namespace Raven.Client.Documents
         MaintenanceOperationExecutor Maintenance { get; }
 
         OperationExecutor Operations { get; }
-        
+
         DatabaseSmuggler Smuggler { get; }
 
-        IDisposable SetRequestTimeout(TimeSpan timeout, string database = null);        
+        IDisposable SetRequestTimeout(TimeSpan timeout, string database = null);
     }
 }

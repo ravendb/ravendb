@@ -139,7 +139,7 @@ namespace Raven.Client.Http
                         }
                     }
 
-                    OnTopologyUpdated(newTopology);
+                    OnTopologyUpdatedInvoke(newTopology);
                 }
             }
             catch (Exception)

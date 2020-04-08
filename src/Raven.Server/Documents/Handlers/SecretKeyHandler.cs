@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
 
         private static async Task SendKeyToNodeAsync(string name, string base64, JsonOperationContext ctx, ServerStore server, string node, string url)
         {
-            using (var shortLived = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, server.Server.Certificate.Certificate, DocumentConventions.Default))
+            using (var shortLived = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, server.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
             {
                 var command = new PutSecretKeyCommand(name, base64);
                 try

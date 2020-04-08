@@ -593,7 +593,7 @@ namespace Voron.Impl.Scratch
             return DateTime.UtcNow.Ticks - _lastLowMemoryEventTicks <= _lowMemoryIntervalTicks;
         }
 
-        public void LowMemory()
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
             _lastLowMemoryEventTicks = DateTime.UtcNow.Ticks;
             _lowMemoryFlag.Raise();

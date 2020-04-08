@@ -170,9 +170,11 @@ namespace Raven.Server.Web.System
                         AlertRaised.Create(
                             name,
                             "Too many clients creations",
-                            $"There has been a lot of topology updates (more than 20) for the same client id in less than a minute. " +
+                            "There has been a lot of topology updates (more than 20) for the same client id in less than a minute. " +
+                            $"Last one from ({HttpContext.Connection.RemoteIpAddress} as " +
+                            $"{HttpContext.Connection.ClientCertificate?.FriendlyName ?? HttpContext.Connection.ClientCertificate?.Thumbprint ?? "<unsecured>"})" +
                             "This is usually an indication that you are creating a large number of DocumentStore instance. " +
-                            "Are you creating a Document Store per request, instead of using DocumentStore as a singleton?",
+                            "Are you creating a Document Store per request, instead of using DocumentStore as a singleton? ",
                             AlertType.HighClientCreationRate,
                             NotificationSeverity.Warning
                         ));

@@ -278,7 +278,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexingSpeed));
             scripter.AddType(typeof(MachineResources));
             scripter.AddType(typeof(DrivesUsage));
-            
+
             // expiration 
             scripter.AddType(typeof(ExpirationConfiguration));
             

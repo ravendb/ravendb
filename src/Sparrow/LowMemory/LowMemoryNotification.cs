@@ -44,7 +44,7 @@ namespace Sparrow.LowMemory
         private int _clearInactiveHandlersCounter;
         private bool _wasLowMemory;
 
-        private void RunLowMemoryHandlers(bool isLowMemory)
+        private void RunLowMemoryHandlers(bool isLowMemory, LowMemorySeverity lowMemorySeverity = LowMemorySeverity.ExtremelyLow)
         {
             try
             {
@@ -55,7 +55,7 @@ namespace Sparrow.LowMemory
                         try
                         {
                             if (isLowMemory)
-                                handler.LowMemory();
+                                handler.LowMemory(lowMemorySeverity);
                             else if (_wasLowMemory)
                                 handler.LowMemoryOver();
                         }
@@ -122,6 +122,8 @@ namespace Sparrow.LowMemory
 
         public Size LowMemoryThreshold { get; private set; }
 
+        public Size ExtremelyLowMemoryThreshold { get; private set; }
+
         public bool UseTotalDirtyMemInsteadOfMemUsage { get; private set; }
 
         public float TemporaryDirtyMemoryAllowedPercentage { get; private set; }
@@ -144,6 +146,7 @@ namespace Sparrow.LowMemory
 
                 _initialized = true;
                 LowMemoryThreshold = lowMemoryThreshold;
+                ExtremelyLowMemoryThreshold = lowMemoryThreshold * 0.2;
                 UseTotalDirtyMemInsteadOfMemUsage = useTotalDirtyMemInsteadOfMemUsage;
                 TemporaryDirtyMemoryAllowedPercentage = temporaryDirtyMemoryAllowedPercentage;
                 _enableHighTemporaryDirtyMemoryUse = enableHighTemporaryDirtyMemoryUse;
@@ -235,7 +238,7 @@ namespace Sparrow.LowMemory
             if (_lowMemoryMonitor != null)
             {
                 var memInfoForLog = _lowMemoryMonitor.GetMemoryInfoOnce();
-                var availableMemForLog = memInfoForLog.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes);
+                var availableMemForLog = memInfoForLog.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes);
 
                 AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation,
                     availableMemForLog,
@@ -248,13 +251,13 @@ namespace Sparrow.LowMemory
             if (_logger.IsInfoEnabled)
                 _logger.Info("Simulating : " + (LowMemoryState ? "Low memory event" : "Back to normal memory usage"));
 
-            RunLowMemoryHandlers(LowMemoryState);
+            RunLowMemoryHandlers(LowMemoryState, LowMemorySeverity.ExtremelyLow);
         }
 
         internal int CheckMemoryStatus(AbstractLowMemoryMonitor monitor)
         {
             int timeout;
-            bool isLowMemory;
+            LowMemorySeverity isLowMemory;
             long totalUnmanagedAllocations;
             (Size AvailableMemory, Size TotalScratchDirtyMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) stats;
             try
@@ -267,11 +270,11 @@ namespace Sparrow.LowMemory
             }
             catch (OutOfMemoryException)
             {
-                isLowMemory = true;
+                isLowMemory = LowMemorySeverity.ExtremelyLow;
                 stats = (new Size(), new Size(), new Size(),  new Size());
                 totalUnmanagedAllocations = -1;
             }
-            if (isLowMemory)
+            if (isLowMemory != LowMemorySeverity.None)
             {
                 if (LowMemoryState == false)
                 {
@@ -296,9 +299,16 @@ namespace Sparrow.LowMemory
                     }
                 }
                 LowMemoryState = true;
-                _clearInactiveHandlersCounter = 0;
-                RunLowMemoryHandlers(true);
+
                 timeout = 500;
+
+                if (isLowMemory == LowMemorySeverity.Low &&
+                    (PlatformDetails.RunningOnLinux == false || PlatformDetails.RunningOnMacOsx))
+                {
+                    isLowMemory = LowMemorySeverity.ExtremelyLow; // On linux we want two severity steps
+                }
+                _clearInactiveHandlersCounter = 0;
+                RunLowMemoryHandlers(true, isLowMemory);
             }
             else
             {
@@ -321,7 +331,7 @@ namespace Sparrow.LowMemory
             return timeout;
         }
 
-        private bool GetLowMemory(out (Size AvailableMemory, Size TotalScratchDirtyMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) memStats, AbstractLowMemoryMonitor monitor)
+        private LowMemorySeverity GetLowMemory(out (Size AvailableMemory, Size TotalScratchDirtyMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) memStats, AbstractLowMemoryMonitor monitor)
         {
             if (++_clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
             {
@@ -337,14 +347,14 @@ namespace Sparrow.LowMemory
             return isLowMemory;
         }
 
-        internal bool IsLowMemory(MemoryInfoResult memInfo, AbstractLowMemoryMonitor monitor, out Size commitChargeThreshold)
+        internal LowMemorySeverity IsLowMemory(MemoryInfoResult memInfo, AbstractLowMemoryMonitor monitor, out Size commitChargeThreshold)
         {
             // We consider low memory only if we don't have enough free physical memory or
             // the commited memory size if larger than our physical memory.
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
             // we don't want to stay in low memory due to retained memory.
             var isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
-            if (isLowMemory && memInfo.IsExtended == false && PlatformDetails.RunningOnMacOsx == false)
+            if (isLowMemory != LowMemorySeverity.None && memInfo.IsExtended == false && PlatformDetails.RunningOnMacOsx == false)
             {
                 // getting extendedInfo (for windows: Process.GetCurrentProcess) or using the smaps might be expensive
                 // we'll do it if we suspect low memory
@@ -353,13 +363,20 @@ namespace Sparrow.LowMemory
             }
 
             IsEarlyOutOfMemory = monitor.IsEarlyOutOfMemory(memInfo, out commitChargeThreshold);
-            isLowMemory |= IsEarlyOutOfMemory;
+            if (IsEarlyOutOfMemory)
+                isLowMemory = LowMemorySeverity.ExtremelyLow;
             return isLowMemory;
         }
 
-        private bool IsAvailableMemoryBelowThreshold(MemoryInfoResult memInfo)
+        private LowMemorySeverity IsAvailableMemoryBelowThreshold(MemoryInfoResult memInfo)
         {
-            return memInfo.AvailableWithoutTotalCleanMemory < LowMemoryThreshold;
+            if (memInfo.AvailableMemoryForProcessing < ExtremelyLowMemoryThreshold)
+                return LowMemorySeverity.ExtremelyLow;
+
+            if (memInfo.AvailableMemoryForProcessing < LowMemoryThreshold)
+                return LowMemorySeverity.Low;
+            
+            return LowMemorySeverity.None;
         }
 
         private void AddLowMemEvent(LowMemReason reason, long availableMem, long totalUnmanaged, long totalScratchDirty, long physicalMem, long currentcommitCharge)
@@ -392,4 +409,3 @@ namespace Sparrow.LowMemory
         }
     }
 }
-
