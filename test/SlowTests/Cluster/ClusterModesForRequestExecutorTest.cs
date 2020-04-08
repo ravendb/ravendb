@@ -163,14 +163,14 @@ namespace SlowTests.Cluster
                 var follower2Proxy = ReplacePort(followers[1].WebUrl, serversToProxies[followers[1]].Port);
 
                 Assert.Equal(follower2Proxy, fastest.Url);
-
             }
         }
 
         private void ApplyProxiesOnRequestExecutor(Dictionary<RavenServer, ProxyServer> serversToProxies, RequestExecutor requestExecutor)
         {
-            void ApplyProxies(Topology topology)
+            void ApplyProxies(object sender, TopologyUpdatedEventArgs args)
             {
+                var topology = args.Topology;
                 if (topology == null)
                     return;
                 for (var i = 0; i < topology.Nodes.Count; i++)
@@ -187,10 +187,10 @@ namespace SlowTests.Cluster
 
             if (requestExecutor.Topology != null)
             {
-                ApplyProxies(requestExecutor.Topology);
+                ApplyProxies(requestExecutor, new TopologyUpdatedEventArgs(requestExecutor.Topology));
             }
 
-            requestExecutor.TopologyUpdated += ApplyProxies;
+            requestExecutor.OnTopologyUpdated += ApplyProxies;
         }
 
         [Fact]
@@ -361,7 +361,6 @@ namespace SlowTests.Cluster
                         await Task.Delay(100);
                     } while (requestExecutor.TopologyNodes == null);
 
-
                     DisposeServerAndWaitForFinishOfDisposal(leader);
 
                     var failedRequests = new HashSet<(string, Exception)>();
@@ -385,8 +384,8 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task RavenDB_7992()
         {
-            //here we test that when choosing Fastest-Node as the ReadBalanceBehavior, 
-            //we can execute commands that use a context, without it leading to a race condition 
+            //here we test that when choosing Fastest-Node as the ReadBalanceBehavior,
+            //we can execute commands that use a context, without it leading to a race condition
 
             var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(3);

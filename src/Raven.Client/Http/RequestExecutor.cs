@@ -238,11 +238,39 @@ namespace Raven.Client.Http
             }
         }
 
-        public event Action<Topology> TopologyUpdated;
-
         private void OnFailedRequestInvoke(string url, Exception e)
         {
             _onFailedRequest?.Invoke(this, new FailedRequestEventArgs(_databaseName, url, e));
+        }
+
+        private event EventHandler<TopologyUpdatedEventArgs> _onTopologyUpdated;
+
+        public event EventHandler<TopologyUpdatedEventArgs> OnTopologyUpdated
+        {
+            add
+            {
+                lock (_locker)
+                {
+                    _onTopologyUpdated += value;
+                }
+            }
+
+            remove
+            {
+                lock (_locker)
+                {
+                    _onTopologyUpdated -= value;
+                }
+            }
+        }
+
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product. Use OnTopologyUpdated instead.")]
+        public event Action<Topology> TopologyUpdated;
+
+        internal void OnTopologyUpdatedInvoke(Topology newTopology)
+        {
+            TopologyUpdated?.Invoke(newTopology);
+            _onTopologyUpdated?.Invoke(this, new TopologyUpdatedEventArgs(newTopology));
         }
 
         private HttpClient GetHttpClient()
@@ -509,7 +537,7 @@ namespace Raven.Client.Http
                     var urls = _nodeSelector.Topology.Nodes.Select(x => x.Url);
                     UpdateConnectionLimit(urls);
 
-                    OnTopologyUpdated(topology);
+                    OnTopologyUpdatedInvoke(topology);
                 }
             }
             // we want to throw here only if we are not disposed yet
@@ -2096,11 +2124,6 @@ namespace Raven.Client.Http
                     Etag = TopologyEtag
                 });
             }
-        }
-
-        protected void OnTopologyUpdated(Topology newTopology)
-        {
-            TopologyUpdated?.Invoke(newTopology);
         }
 
         private static void ThrowIfClientException(Exception e)
