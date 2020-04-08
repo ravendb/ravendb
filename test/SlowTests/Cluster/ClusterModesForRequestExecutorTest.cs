@@ -365,9 +365,7 @@ namespace SlowTests.Cluster
 
                     var failedRequests = new HashSet<(string, Exception)>();
 
-#pragma warning disable CS0618 // Type or member is obsolete
-                    requestExecutor.FailedRequest += (url, e) => failedRequests.Add((url, e));
-#pragma warning restore CS0618 // Type or member is obsolete
+                    requestExecutor.OnFailedRequest += (sender, args) => failedRequests.Add((args.Url, args.Exception));
 
                     using (var tmpContext = JsonOperationContext.ShortTermSingleUse())
                     {

@@ -171,54 +171,6 @@ namespace Raven.Client.Http
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
-        private class FailedRequestTranslator
-        {
-            public Action<string, Exception> FailedRequest;
-
-            public void Translate(object sender, FailedRequestEventArgs args)
-            {
-                FailedRequest(args.Url, args.Exception);
-            }
-        }
-
-        [Obsolete("Use OnFailedRequest instead")]
-        public event Action<string, Exception> FailedRequest
-        {
-            add
-            {
-                lock (_locker)
-                {
-                    var failedRequestTranslator = new FailedRequestTranslator
-                    {
-                        FailedRequest = value
-                    };
-
-                    OnFailedRequest += failedRequestTranslator.Translate;
-                }
-            }
-
-            remove
-            {
-                lock (_locker)
-                {
-                    if (_onFailedRequest == null)
-                        return;
-
-                    var invocationList = _onFailedRequest.GetInvocationList();
-                    if (invocationList == null || invocationList.Length == 0)
-                        return;
-
-                    foreach (var invocation in invocationList)
-                    {
-                        if (invocation.Target is FailedRequestTranslator frt && frt.FailedRequest == value)
-                        {
-                            _onFailedRequest -= frt.Translate;
-                        }
-                    }
-                }
-            }
-        }
-
         private event EventHandler<FailedRequestEventArgs> _onFailedRequest;
 
         public event EventHandler<FailedRequestEventArgs> OnFailedRequest
@@ -266,12 +218,8 @@ namespace Raven.Client.Http
             }
         }
 
-        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product. Use OnTopologyUpdated instead.")]
-        public event Action<Topology> TopologyUpdated;
-
         internal void OnTopologyUpdatedInvoke(Topology newTopology)
         {
-            TopologyUpdated?.Invoke(newTopology);
             _onTopologyUpdated?.Invoke(this, new TopologyUpdatedEventArgs(newTopology));
         }
 
@@ -692,12 +640,7 @@ namespace Raven.Client.Http
             }));
         }
 
-        protected Task FirstTopologyUpdate(string[] initialUrls)
-        {
-            return FirstTopologyUpdate(initialUrls, applicationIdentifier: null);
-        }
-
-        protected async Task FirstTopologyUpdate(string[] initialUrls, Guid? applicationIdentifier)
+        protected async Task FirstTopologyUpdate(string[] initialUrls, Guid? applicationIdentifier = null)
         {
             initialUrls = ValidateUrls(initialUrls, Certificate);
 

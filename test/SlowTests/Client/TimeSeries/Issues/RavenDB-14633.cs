@@ -844,7 +844,6 @@ namespace SlowTests.Client.TimeSeries.Issues
         private class GetTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
         {
             private readonly string _docId;
-            private readonly string _timeseries;
             private readonly IEnumerable<TimeSeriesRange> _ranges;
             private readonly int _start;
             private readonly int _pageSize;
