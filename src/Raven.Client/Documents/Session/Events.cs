@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Http;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -171,6 +172,16 @@ namespace Raven.Client.Documents.Session
             Database = database;
             Url = url;
             Exception = exception;
+        }
+    }
+
+    public class TopologyUpdatedEventArgs : EventArgs
+    {
+        public Topology Topology { get; }
+
+        internal TopologyUpdatedEventArgs(Topology topology)
+        {
+            Topology = topology;
         }
     }
 }

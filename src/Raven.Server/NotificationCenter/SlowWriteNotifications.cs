@@ -127,7 +127,7 @@ namespace Raven.Server.NotificationCenter
                         typeof(SlowWritesDetails),
                         null,
                         detailsJson,
-                        DocumentConventions.Default);
+                        DocumentConventions.DefaultForServer);
                 }
 
                 return PerformanceHint.Create(

@@ -92,7 +92,7 @@ namespace Raven.Server.NotificationCenter
                         typeof(RequestLatencyDetail),
                         QueryRequestLatenciesId,
                         detailsJson,
-                        DocumentConventions.Default);
+                        DocumentConventions.DefaultForServer);
                 }
 
                 return PerformanceHint.Create(

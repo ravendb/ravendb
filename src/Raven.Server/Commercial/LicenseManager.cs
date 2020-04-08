@@ -32,6 +32,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -321,7 +322,7 @@ namespace Raven.Server.Commercial
                     if (nodeTag == _serverStore.NodeTag)
                     {
                         numberOfCores = ProcessorInfo.ProcessorCount;
-                        var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
+                        var memoryInfo = GetMemoryInfoInGb();
                         installedMemoryInGb = memoryInfo.InstalledMemory;
                         usableMemoryInGb = memoryInfo.UsableMemory;
                         buildInfo = BuildInfo;
@@ -838,7 +839,7 @@ namespace Raven.Server.Commercial
                     if (nodeTag == _serverStore.NodeTag)
                     {
                         numberOfCores = ProcessorInfo.ProcessorCount;
-                        var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
+                        var memoryInfo = GetMemoryInfoInGb();
                         installedMemoryInGb = memoryInfo.InstalledMemory;
                         usableMemoryInGb = memoryInfo.UsableMemory;
                         buildInfo = BuildInfo;
@@ -1701,6 +1702,14 @@ namespace Raven.Server.Commercial
 
                 return GetDefaultLicenseSupportInfo();
             }
+        }
+
+        private static (double InstalledMemory, double UsableMemory) GetMemoryInfoInGb()
+        {
+            var memoryInformation = MemoryInformation.GetMemoryInfo();
+            var installedMemoryInGb = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes);
+            var usableMemoryInGb = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes);
+            return (installedMemoryInGb, usableMemoryInGb);
         }
 
         private LicenseSupportInfo GetDefaultLicenseSupportInfo()
