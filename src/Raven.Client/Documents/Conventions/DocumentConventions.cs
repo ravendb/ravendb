@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Conventions
 
         internal static readonly DocumentConventions DefaultForServer = new DocumentConventions
         {
-            TrackApplication = false
+            SendApplicationIdentifier = false
         };
 
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
@@ -181,7 +181,7 @@ namespace Raven.Client.Documents.Conventions
             _firstBroadcastAttemptTimeout = TimeSpan.FromSeconds(5);
             _secondBroadcastAttemptTimeout = TimeSpan.FromSeconds(30);
 
-            _trackApplication = true;
+            _sendApplicationIdentifier = true;
         }
 
         private bool _frozen;
@@ -226,15 +226,19 @@ namespace Raven.Client.Documents.Conventions
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
         private Version _httpVersion;
-        private bool _trackApplication;
+        private bool _sendApplicationIdentifier;
 
-        internal bool TrackApplication
+        /// <summary>
+        /// Enables sending a unique application identifier to the RavenDB Server that is used for Client API usage tracking.
+        /// It allows RavenDB Server to issue performance hint notifications e.g. during robust topology update requests which could indicate Client API misuse impacting the overall performance
+        /// </summary>
+        public bool SendApplicationIdentifier
         {
-            get => _trackApplication;
+            get => _sendApplicationIdentifier;
             set
             {
                 AssertNotFrozen();
-                _trackApplication = value;
+                _sendApplicationIdentifier = value;
             }
         }
 
