@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     else
                         facetsEtag = facetsEtag.Value ^ documentJson.Etag;
 
-                    var document = (FacetSetup)EntityToBlittable.ConvertToEntity(typeof(FacetSetup), facetField.FacetSetupDocumentId, documentJson.Data, DocumentConventions.Default);
+                    var document = (FacetSetup)EntityToBlittable.ConvertToEntity(typeof(FacetSetup), facetField.FacetSetupDocumentId, documentJson.Data, DocumentConventions.DefaultForServer);
 
                     facets[facetField.FacetSetupDocumentId] = document;
                 }
