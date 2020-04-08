@@ -3,8 +3,10 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Config.Attributes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -16,8 +18,18 @@ namespace Raven.Server.Documents.Handlers.Admin
     public class AdminConfigurationHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/configuration/settings", "GET", AuthorizationStatus.DatabaseAdmin)]
-        public Task GetConfiguration()
+        public Task GetSettings()
         {
+            ConfigurationEntryScope? scope = null;
+            var scopeAsString = GetStringQueryString("scope", required: false);
+            if (scopeAsString != null)
+            {
+                if (Enum.TryParse<ConfigurationEntryScope>(scopeAsString, ignoreCase: true, out var value) == false)
+                    throw new BadRequestException($"Could not parse '{scopeAsString}' to a valid configuration entry scope.");
+
+                scope = value;
+            }
+
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var status = feature?.Status ?? RavenServer.AuthenticationStatus.ClusterAdmin;
 
@@ -25,6 +37,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             foreach (var configurationEntryMetadata in RavenConfiguration.AllConfigurationEntries.Value)
             {
+                if (scope.HasValue && scope != configurationEntryMetadata.Scope)
+                    continue;
+
                 var configurationEntryValue = new ConfigurationEntryDatabaseValue(Database.Configuration, configurationEntryMetadata, status);
 
                 values.Add(configurationEntryValue.ToJson());
