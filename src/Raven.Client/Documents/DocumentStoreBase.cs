@@ -216,6 +216,21 @@ namespace Raven.Client.Documents
             }
         }
 
+        private event EventHandler<TopologyUpdatedEventArgs> _onTopologyUpdated;
+        public event EventHandler<TopologyUpdatedEventArgs> OnTopologyUpdated
+        {
+            add
+            {
+                AssertNotInitialized(nameof(OnTopologyUpdated));
+                _onTopologyUpdated += value;
+            }
+            remove
+            {
+                AssertNotInitialized(nameof(OnTopologyUpdated));
+                _onTopologyUpdated -= value;
+            }
+        }
+
         /// <summary>
         /// The default database name
         /// </summary>
@@ -274,6 +289,7 @@ namespace Raven.Client.Documents
         protected internal void RegisterEvents(RequestExecutor requestExecutor)
         {
             requestExecutor.OnFailedRequest += _onFailedRequest;
+            requestExecutor.OnTopologyUpdated += _onTopologyUpdated;
         }
 
         protected void AfterSessionCreated(InMemoryDocumentSessionOperations session)
