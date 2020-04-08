@@ -247,6 +247,11 @@ namespace Voron
             return Slice.From(context, _val, _len, out str);
         }
 
+        public Span<byte> AsSpan()
+        {
+            return new Span<byte>(_val, _len);
+        }
+
         public ByteStringContext.InternalScope AsPartialSlice(ByteStringContext context, int removeFromEnd, out Slice str)
         {
             if (_len >= ushort.MaxValue)

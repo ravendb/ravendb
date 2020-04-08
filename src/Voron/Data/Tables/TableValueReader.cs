@@ -35,8 +35,7 @@ namespace Voron.Data.Tables
             else
                 _elementSize = 1;
 
-            byte offset;
-            Count = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            Count = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out byte offset);
             _dataPtr = Pointer + offset;
             _dataSize = Size - offset;
         }

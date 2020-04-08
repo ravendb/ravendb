@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
 using Sparrow;
 using Sparrow.Binary;
@@ -15,6 +16,7 @@ using Voron.Data.RawData;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Util.Settings;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Tables
@@ -205,11 +207,11 @@ namespace Voron.Data.Tables
             var result = DirectReadRaw(id, out size, out var compressed);
             if (compressed == false)
                 return result;
-            
+
             return DirectReadDecompress(id, result, ref size);
         }
 
-        private byte* DirectReadDecompress(long id,  byte* directRead, ref int size)
+        private byte* DirectReadDecompress(long id, byte* directRead, ref int size)
         {
             _cachedDecompressedBuffersByStorageId ??= new Dictionary<long, ByteString>();
 
@@ -280,7 +282,7 @@ namespace Voron.Data.Tables
             int size = builder.Size;
 
             // We must read before we call TryWriteDirect, because it will modify the size
-           
+
             var oldData = DirectReadRaw(id, out var oldDataSize, out var oldCompressed);
             ByteStringContext<ByteStringMemoryCache>.InternalScope oldDataDecompressedScope = default;
             if (oldCompressed)
@@ -317,7 +319,7 @@ namespace Voron.Data.Tables
                     {
                         ActiveDataSmallSection.SetCompressionRate(id, builder.Compression.CompressionRatio);
                     }
-                    
+
                     return id;
                 }
             }
@@ -379,7 +381,7 @@ namespace Voron.Data.Tables
                 }
                 else
                 {
-                    var dicId = ActiveRawDataSmallSection.CompressionDictionaryHashFor(_tx.LowLevelTransaction ,id);
+                    var dicId = ActiveRawDataSmallSection.CompressionDictionaryHashFor(_tx.LowLevelTransaction, id);
                     return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, dicId);
                 }
             }
@@ -443,10 +445,10 @@ namespace Voron.Data.Tables
         public void Delete(long id)
         {
             AssertWritableTable();
-            
+
             var ptr = DirectRead(id, out int size);
 
-            if (_schema.Compressed) 
+            if (_schema.Compressed)
                 _cachedDecompressedBuffersByStorageId?.Remove(id);
 
             var tvr = new TableValueReader(ptr, size);
@@ -482,7 +484,7 @@ namespace Voron.Data.Tables
             if (ActiveDataSmallSection.Contains(id) || density > 0.5)
                 return;
 
-            var sectionPageNumber = RawDataSection.GetSectionPageNumber(_tx.LowLevelTransaction,id);
+            var sectionPageNumber = RawDataSection.GetSectionPageNumber(_tx.LowLevelTransaction, id);
             if (density > 0.15)
             {
                 ActiveCandidateSection.Add(sectionPageNumber);
@@ -522,7 +524,7 @@ namespace Voron.Data.Tables
                     if (compressionDictionary != currentCompressionDictionary)
                     {
                         // different dictionaries need to compress again
-                        tmpBuilder.Compression.CompressedScope = _tx.Allocator.Allocate(ZstdLib.GetMaxCompression(actualSize), 
+                        tmpBuilder.Compression.CompressedScope = _tx.Allocator.Allocate(ZstdLib.GetMaxCompression(actualSize),
                             out tmpBuilder.Compression.CompressedBuffer);
                         int newlyCompressedSize = ZstdLib.Compress(tmpBuilder.Compression.RawBuffer.ToReadOnlySpan(),
                             tmpBuilder.Compression.CompressedBuffer.ToSpan(), currentCompressionDictionary);
@@ -648,7 +650,7 @@ namespace Voron.Data.Tables
             var compressionDictionary = default(ZstdLib.CompressionDictionary);
             if (_schema.Compressed)
             {
-                compressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, 
+                compressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx,
                     ActiveDataSmallSection.CurrentCompressionDictionaryId);
                 builder.TryCompression(compressionDictionary);
             }
@@ -664,7 +666,7 @@ namespace Voron.Data.Tables
                 }
                 AssertNoReferenceToThisPage(builder, id);
 
-                if (ActiveDataSmallSection.TryWriteDirect(id, builder.Size, builder.Compressed, out pos) == false) 
+                if (ActiveDataSmallSection.TryWriteDirect(id, builder.Size, builder.Compressed, out pos) == false)
                     ThrowBadWriter(builder.Size);
 
                 // Memory Copy into final position.
@@ -773,6 +775,8 @@ namespace Voron.Data.Tables
 
         public class CompressionDictionariesHolder
         {
+            public long LastWritten;
+
             private readonly ConcurrentDictionary<int, ZstdLib.CompressionDictionary> _compressionDictionaries = new ConcurrentDictionary<int, ZstdLib.CompressionDictionary>();
 
             public ZstdLib.CompressionDictionary GetCompressionDictionaryFor(Transaction tx, int id)
@@ -780,7 +784,7 @@ namespace Voron.Data.Tables
                 if (id == 0)
                     return null;
 
-                if (_compressionDictionaries.TryGetValue(id, out var current)) 
+                if (_compressionDictionaries.TryGetValue(id, out var current))
                     return current;
 
                 if (_compressionDictionaries.TryGetValue(id, out current))
@@ -793,7 +797,7 @@ namespace Voron.Data.Tables
                     current.Dispose();
                 return result;
             }
-            
+
             private ZstdLib.CompressionDictionary CreateCompressionDictionary(Transaction tx, int id)
             {
                 var dictionariesTree = tx.ReadTree(TableSchema.DictionariesSlice);
@@ -909,7 +913,7 @@ namespace Voron.Data.Tables
                     compressed = true;
                 }
             }
-            
+
             long id;
             if (dataSize + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
@@ -946,7 +950,7 @@ namespace Voron.Data.Tables
             }
             else
             {
-               InsertLargeValue();
+                InsertLargeValue();
             }
 
             void InsertLargeValue()
@@ -1124,7 +1128,7 @@ namespace Voron.Data.Tables
             return false;
         }
 
-        private void MaybeTrainCompressionDictionary(ActiveRawDataSmallSection previousSection, ZstdLib.CompressionDictionary existingDictionary, 
+        private void MaybeTrainCompressionDictionary(ActiveRawDataSmallSection previousSection, ZstdLib.CompressionDictionary existingDictionary,
             TableValueCompressor compressor, ref int id)
         {
             // here we'll build a buffer for the current data we have the section
@@ -1162,7 +1166,7 @@ namespace Voron.Data.Tables
                         existingDictionary);
                 }
             }
-            
+
             using var __ = _tx.Allocator.Allocate(
                 // the dictionary 
                 Constants.Storage.PageSize - PageHeader.SizeOf - sizeof(CompressionDictionaryInfo)
@@ -1184,15 +1188,90 @@ namespace Voron.Data.Tables
             id = newId;
 
             compressionDictionary.ExpectedCompressionRatio = compressor.CompressionRatio;
-            
+
             var rev = Bits.SwapBytes(id);
             using var _____ = Slice.External(_tx.Allocator, (byte*)&rev, sizeof(int), out var slice);
-            using var ____ = dictionariesTree.DirectAdd(slice, sizeof(CompressionDictionaryInfo) +dictionaryBufferSpan.Length, out var dest);
+            using var ____ = dictionariesTree.DirectAdd(slice, sizeof(CompressionDictionaryInfo) + dictionaryBufferSpan.Length, out var dest);
             *((CompressionDictionaryInfo*)dest) = new CompressionDictionaryInfo
             {
                 ExpectedCompressionRatio = compressionDictionary.ExpectedCompressionRatio
             };
             Memory.Copy(dest + sizeof(CompressionDictionaryInfo), dictionaryBuffer.Ptr, dictionaryBufferSpan.Length);
+
+            _tx.LowLevelTransaction.OnDispose += RecreateRecoveryDictionaries;
+        }
+
+        private static void RecreateRecoveryDictionaries(IPagerLevelTransactionState obj)
+        {
+            if (!(obj is LowLevelTransaction llt) || llt.Committed == false)
+                return; // we can't write on non committed transactions
+
+            if (obj.Environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)
+                return; // no need for in mem mode
+
+            lock (obj.Environment.CompressionDictionariesHolder)
+            {
+                using var tx = obj.Environment.ReadTransaction();
+
+                var dictionaries = tx.ReadTree(TableSchema.DictionariesSlice);
+
+                if (dictionaries == null)
+                    return; // should never happen
+
+                if (dictionaries.State.NumberOfEntries <= obj.Environment.CompressionDictionariesHolder.LastWritten)
+                    return;// another tx probably got here first
+
+                var newPath = obj.Environment.Options.BasePath
+                    .Combine($"Dictionaries-{(int)dictionaries.State.NumberOfEntries:D4}.Recovery")
+                    .FullPath;
+
+                // We write all the dictionaries because we assume that the total number is going
+                // to be low. Experimentation shows that on millions of documents, the total number
+                // of dictionaries is < 25, and the rate of change is likely to be very slow, so it
+                // isn't likely to be an issue. Having a single file for dictionaries make things 
+                // much easier for us during recovery.
+                using (var file = File.Create(newPath, 8192))
+                {
+                    using (var gz = new GZipStream(file, CompressionMode.Compress, leaveOpen: true))
+                    using (var bw = new BinaryWriter(gz))
+                    {
+                        using var it = dictionaries.Iterate(true);
+                        if (it.Seek(Slices.BeforeAllKeys) == false)
+                            return;
+                        do
+                        {
+                            var dicId = it.CurrentKey.CreateReader().ReadBigEndianInt32();
+                            bw.Write(dicId);
+                            var reader = it.CreateReaderForCurrent();
+                            bw.Write(reader.Length);
+                            gz.Write(reader.AsSpan());
+
+                        } while (it.MoveNext());
+
+                    }
+                    file.Flush(true);
+                }
+
+                obj.Environment.CompressionDictionariesHolder.LastWritten = dictionaries.State.NumberOfEntries;
+
+                var olderPath = obj.Environment.Options.BasePath
+                    .Combine($"Dictionaries-{(int)dictionaries.State.NumberOfEntries - 2:D4}.Recovery")
+                    .FullPath;
+
+                if (File.Exists(olderPath))
+                {
+                    try
+                    {
+                        File.Delete(olderPath);
+                    }
+                    catch
+                    {
+                        // we don't really care about this failing
+                    }
+                }
+
+            }
+
         }
 
         internal Tree GetTree(Slice name, bool isIndexTree)
@@ -1733,7 +1812,7 @@ namespace Voron.Data.Tables
         public IEnumerable<TableValueHolder> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, long skip)
         {
             var fst = GetFixedSizeTree(index);
-            
+
             using (var it = fst.Iterate())
             {
                 if (it.Seek(key) == false)
@@ -1864,7 +1943,7 @@ namespace Voron.Data.Tables
             Insert(builder);
             return true;
         }
-        
+
         public long DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
         {
             AssertWritableTable();
