@@ -32,7 +32,7 @@ namespace FastTests.Server
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
                     var getCommand = new GetDatabaseDocumentTestCommand();
-                    using (var requestExecutor = RequestExecutor.Create(store.Urls, store.Database, null, DocumentConventions.Default, null))
+                    using (var requestExecutor = RequestExecutor.Create(store.Urls, store.Database, null, DocumentConventions.Default))
                     {
                         requestExecutor.Execute(getCommand, context);
                         using (var putCommand = new PutDatabaseDocumentTestCommand(getCommand.Result))
@@ -53,7 +53,7 @@ namespace FastTests.Server
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
                     var command = new GetDatabaseDocumentTestCommand();
-                    using (var requestExecutor = RequestExecutor.Create(store.Urls, store.Database, null, DocumentConventions.Default, null))
+                    using (var requestExecutor = RequestExecutor.Create(store.Urls, store.Database, null, DocumentConventions.Default))
                     {
                         requestExecutor.Execute(command, context);
                     }

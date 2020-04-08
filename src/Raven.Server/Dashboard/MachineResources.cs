@@ -1,5 +1,6 @@
 ﻿using System;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Dashboard
 {
@@ -15,7 +16,7 @@ namespace Raven.Server.Dashboard
 
         public long AvailableMemory { get; set; } // in bytes
 
-        public long AvailableWithoutTotalCleanMemory { get; set; } // in bytes
+        public long AvailableMemoryForProcessing { get; set; } // in bytes
 
         public long SystemCommitLimit { get; set; } // in bytes
 
@@ -25,7 +26,7 @@ namespace Raven.Server.Dashboard
 
         public bool IsWindows { get; set; }
 
-        public bool IsLowMemory { get; set; }
+        public LowMemorySeverity LowMemorySeverity { get; set; }
 
         public long LowMemoryThreshold { get; set; } // in bytes
 
@@ -39,12 +40,12 @@ namespace Raven.Server.Dashboard
             json[nameof(ProcessCpuUsage)] = ProcessCpuUsage;
             json[nameof(TotalMemory)] = TotalMemory;
             json[nameof(AvailableMemory)] = AvailableMemory;
-            json[nameof(AvailableWithoutTotalCleanMemory)] = AvailableWithoutTotalCleanMemory;
+            json[nameof(AvailableMemoryForProcessing)] = AvailableMemoryForProcessing;
             json[nameof(SystemCommitLimit)] = SystemCommitLimit;
             json[nameof(CommittedMemory)] = CommittedMemory;
             json[nameof(ProcessMemoryUsage)] = ProcessMemoryUsage;
+            json[nameof(LowMemorySeverity)] = LowMemorySeverity;
             json[nameof(IsWindows)] = IsWindows;
-            json[nameof(IsLowMemory)] = IsLowMemory;
             json[nameof(LowMemoryThreshold)] = LowMemoryThreshold;
             json[nameof(CommitChargeThreshold)] = CommitChargeThreshold;
 

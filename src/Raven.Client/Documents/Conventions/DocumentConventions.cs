@@ -36,9 +36,15 @@ namespace Raven.Client.Documents.Conventions
         public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
 
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, bool forRange, out string strValue);
+
         public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
         internal static readonly DocumentConventions Default = new DocumentConventions();
+
+        internal static readonly DocumentConventions DefaultForServer = new DocumentConventions
+        {
+            SendApplicationIdentifier = false
+        };
 
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
@@ -115,6 +121,7 @@ namespace Raven.Client.Documents.Conventions
         static DocumentConventions()
         {
             Default.Freeze();
+            DefaultForServer.Freeze();
         }
 
         /// <summary>
@@ -169,6 +176,8 @@ namespace Raven.Client.Documents.Conventions
 
             _firstBroadcastAttemptTimeout = TimeSpan.FromSeconds(5);
             _secondBroadcastAttemptTimeout = TimeSpan.FromSeconds(30);
+
+            _sendApplicationIdentifier = true;
         }
 
         private bool _frozen;
@@ -212,6 +221,21 @@ namespace Raven.Client.Documents.Conventions
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
         private Version _httpVersion;
+        private bool _sendApplicationIdentifier;
+
+        /// <summary>
+        /// Enables sending a unique application identifier to the RavenDB Server that is used for Client API usage tracking.
+        /// It allows RavenDB Server to issue performance hint notifications e.g. during robust topology update requests which could indicate Client API misuse impacting the overall performance
+        /// </summary>
+        public bool SendApplicationIdentifier
+        {
+            get => _sendApplicationIdentifier;
+            set
+            {
+                AssertNotFrozen();
+                _sendApplicationIdentifier = value;
+            }
+        }
 
         public Version HttpVersion
         {
@@ -333,7 +357,6 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-
         /// <summary>
         ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" /> for deserializations.
         ///     When creating a JsonSerializer, the CustomizeJsonSerializer is always called before CustomizeJsonDeserializer
@@ -347,8 +370,6 @@ namespace Raven.Client.Documents.Conventions
                 _customizeJsonDeserializer = value;
             }
         }
-
-
 
         /// <summary>
         ///     By default, the field 'Id' field will be added to dynamic objects, this allows to disable this behavior.
@@ -840,7 +861,6 @@ namespace Raven.Client.Documents.Conventions
 
             return this;
         }
-
 
         private JsonSerializer CreateInitialSerializer()
         {

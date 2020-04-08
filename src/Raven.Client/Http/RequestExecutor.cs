@@ -38,6 +38,8 @@ namespace Raven.Client.Http
 {
     public class RequestExecutor : IDisposable
     {
+        private static Guid GlobalApplicationIdentifier = Guid.NewGuid();
+
         private const int InitialTopologyEtag = -2;
 
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
@@ -169,54 +171,6 @@ namespace Raven.Client.Http
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
-        private class FailedRequestTranslator
-        {
-            public Action<string, Exception> FailedRequest;
-
-            public void Translate(object sender, FailedRequestEventArgs args)
-            {
-                FailedRequest(args.Url, args.Exception);
-            }
-        }
-
-        [Obsolete("Use OnFailedRequest instead")]
-        public event Action<string, Exception> FailedRequest
-        {
-            add
-            {
-                lock (_locker)
-                {
-                    var failedRequestTranslator = new FailedRequestTranslator
-                    {
-                        FailedRequest = value
-                    };
-
-                    OnFailedRequest += failedRequestTranslator.Translate;
-                }
-            }
-
-            remove
-            {
-                lock (_locker)
-                {
-                    if (_onFailedRequest == null)
-                        return;
-
-                    var invocationList = _onFailedRequest.GetInvocationList();
-                    if (invocationList == null || invocationList.Length == 0)
-                        return;
-
-                    foreach (var invocation in invocationList)
-                    {
-                        if (invocation.Target is FailedRequestTranslator frt && frt.FailedRequest == value)
-                        {
-                            _onFailedRequest -= frt.Translate;
-                        }
-                    }
-                }
-            }
-        }
-
         private event EventHandler<FailedRequestEventArgs> _onFailedRequest;
 
         public event EventHandler<FailedRequestEventArgs> OnFailedRequest
@@ -238,11 +192,35 @@ namespace Raven.Client.Http
             }
         }
 
-        public event Action<Topology> TopologyUpdated;
-
         private void OnFailedRequestInvoke(string url, Exception e)
         {
             _onFailedRequest?.Invoke(this, new FailedRequestEventArgs(_databaseName, url, e));
+        }
+
+        private event EventHandler<TopologyUpdatedEventArgs> _onTopologyUpdated;
+
+        public event EventHandler<TopologyUpdatedEventArgs> OnTopologyUpdated
+        {
+            add
+            {
+                lock (_locker)
+                {
+                    _onTopologyUpdated += value;
+                }
+            }
+
+            remove
+            {
+                lock (_locker)
+                {
+                    _onTopologyUpdated -= value;
+                }
+            }
+        }
+
+        internal void OnTopologyUpdatedInvoke(Topology newTopology)
+        {
+            _onTopologyUpdated?.Invoke(this, new TopologyUpdatedEventArgs(newTopology));
         }
 
         private HttpClient GetHttpClient()
@@ -341,13 +319,8 @@ namespace Raven.Client.Http
 
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            return Create(initialUrls, databaseName, certificate, conventions, applicationIdentifier: null);
-        }
-
-        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, Guid? applicationIdentifier)
-        {
             var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, applicationIdentifier);
+            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, GlobalApplicationIdentifier);
             return executor;
         }
 
@@ -468,7 +441,7 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetDatabaseTopologyCommand(parameters.DebugTag, parameters.ApplicationIdentifier);
+                    var command = new GetDatabaseTopologyCommand(parameters.DebugTag, Conventions.SendApplicationIdentifier ? parameters.ApplicationIdentifier : null);
                     await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
@@ -497,7 +470,7 @@ namespace Raven.Client.Http
                     var urls = _nodeSelector.Topology.Nodes.Select(x => x.Url);
                     UpdateConnectionLimit(urls);
 
-                    OnTopologyUpdated(topology);
+                    OnTopologyUpdatedInvoke(topology);
                 }
             }
             // we want to throw here only if we are not disposed yet
@@ -667,12 +640,7 @@ namespace Raven.Client.Http
             }));
         }
 
-        protected Task FirstTopologyUpdate(string[] initialUrls)
-        {
-            return FirstTopologyUpdate(initialUrls, applicationIdentifier: null);
-        }
-
-        protected async Task FirstTopologyUpdate(string[] initialUrls, Guid? applicationIdentifier)
+        protected async Task FirstTopologyUpdate(string[] initialUrls, Guid? applicationIdentifier = null)
         {
             initialUrls = ValidateUrls(initialUrls, Certificate);
 
@@ -2046,11 +2014,6 @@ namespace Raven.Client.Http
                     Etag = TopologyEtag
                 });
             }
-        }
-
-        protected void OnTopologyUpdated(Topology newTopology)
-        {
-            TopologyUpdated?.Invoke(newTopology);
         }
 
         private static void ThrowIfClientException(Exception e)

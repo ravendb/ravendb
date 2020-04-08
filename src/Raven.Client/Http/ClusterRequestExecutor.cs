@@ -26,12 +26,6 @@ namespace Raven.Client.Http
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, Guid? applicationIdentifier)
-        {
-            throw new NotSupportedException();
-        }
-
-        [Obsolete("Not supported", error: true)]
         public new static ClusterRequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             throw new NotSupportedException();
@@ -139,7 +133,7 @@ namespace Raven.Client.Http
                         }
                     }
 
-                    OnTopologyUpdated(newTopology);
+                    OnTopologyUpdatedInvoke(newTopology);
                 }
             }
             catch (Exception)

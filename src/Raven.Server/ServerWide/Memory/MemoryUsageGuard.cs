@@ -24,7 +24,7 @@ namespace Raven.Server.ServerWide.Memory
             var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
             currentUsage = GetProcessMemoryUsage(memoryInfo);
 
-            var memoryAssumedFreeOrCheapToFree = memoryInfo.AvailableWithoutTotalCleanMemory;
+            var memoryAssumedFreeOrCheapToFree = memoryInfo.AvailableMemoryForProcessing;
 
             // there isn't enough available memory to try, we want to leave some out for other things
             if (memoryAssumedFreeOrCheapToFree <
@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Memory
                 {
                     logger.Info(
                         $"{threadStats.Name} which is already using {currentlyInUse}/{currentMaximumAllowedMemory} and the system has " +
-                        $"{memoryInfo.AvailableWithoutTotalCleanMemory}/{memoryInfo.TotalPhysicalMemory} free RAM. Also have ~{memoryInfo.SharedCleanMemory} in mmap " +
+                        $"{memoryInfo.AvailableMemoryForProcessing}/{memoryInfo.TotalPhysicalMemory} free RAM. Also have ~{memoryInfo.SharedCleanMemory} in mmap " +
                         "files that can be cleanly released, not enough to proceed in batch.");
                 }
 
@@ -50,7 +50,7 @@ namespace Raven.Server.ServerWide.Memory
                 {
                     logger.Info(
                         $"{threadStats} which is already using {currentlyInUse}/{currentMaximumAllowedMemory} and the system has" +
-                        $"{memoryInfo.AvailableWithoutTotalCleanMemory}/{memoryInfo.TotalPhysicalMemory} free RAM. Also have ~{memoryInfo.SharedCleanMemory} in mmap " +
+                        $"{memoryInfo.AvailableMemoryForProcessing}/{memoryInfo.TotalPhysicalMemory} free RAM. Also have ~{memoryInfo.SharedCleanMemory} in mmap " +
                         "files that can be cleanly released, not enough to proceed in batch.");
                 }
 
@@ -90,7 +90,7 @@ namespace Raven.Server.ServerWide.Memory
         public static bool CanIncreaseMemoryUsageForThread()
         {
             var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
-            var memoryAssumedFreeOrCheapToFree = memoryInfo.AvailableWithoutTotalCleanMemory;
+            var memoryAssumedFreeOrCheapToFree = memoryInfo.AvailableMemoryForProcessing;
             var allocatedForProcessing = GetTotalCurrentlyAllocatedForProcessing();
             return memoryAssumedFreeOrCheapToFree >= allocatedForProcessing;
         }

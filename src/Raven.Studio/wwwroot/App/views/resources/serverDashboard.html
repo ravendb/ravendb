@@ -70,7 +70,7 @@
                                 <div data-bind="with: resources">
                                     <div><i class="icon-memory"></i><span>MEM</span>
                                         <span data-bind="visible: isLowMemory">
-                                        <i class="icon-warning text-warning" data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': lowMemoryTooltip }" data-animation="true"></i>
+                                        <i class="icon-warning" data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': lowMemoryTooltip }, css: { 'text-danger': isExtremelyLowMemory(), 'text-warning': !isExtremelyLowMemory() }" data-animation="true"></i>
                                     </span>
                                     </div>
                                     <div>

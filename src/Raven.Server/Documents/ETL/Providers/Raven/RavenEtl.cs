@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 certificate = null;
             }
 
-            return RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, certificate, DocumentConventions.Default, null);
+            return RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, certificate, DocumentConventions.DefaultForServer);
         }
 
         protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 };
             }
 
-            var batchCommand = new SingleNodeBatchCommand(DocumentConventions.Default, context, commands, options);
+            var batchCommand = new SingleNodeBatchCommand(DocumentConventions.DefaultForServer, context, commands, options);
 
             var duration = Stopwatch.StartNew();
 

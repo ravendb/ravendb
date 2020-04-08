@@ -9,10 +9,13 @@ class machineResources {
 
     totalMemory = ko.observable<number>(0);
     usedMemory = ko.observable<number>(0);
+    availableMemory = ko.observable<number>(0);
+    availableMemoryForProcessing = ko.observable<number>(0);
     processMemoryUsage = ko.observable<number>(0);
     systemCommitLimit = ko.observable<number>(0);
     commitedMemory = ko.observable<number>(0);
     isWindows = ko.observable<boolean>();
+    isExtremelyLowMemory = ko.observable<boolean>();
     isLowMemory = ko.observable<boolean>();
     lowMemoryThreshold = ko.observable<number>(0);
     commitChargeThreshold = ko.observable<number>(0);
@@ -51,25 +54,28 @@ class machineResources {
         });
 
         this.machineMemoryUsageTooltip = ko.pureComputed(() => {
-            const availableMemory = this.totalMemory() - this.usedMemory();
+            const availableMemory = this.availableMemory();
+            const availableMemoryForProcessing = this.availableMemoryForProcessing();
+
             let tooltip = `<div>
                                 Machine Memory Usage: <strong>${this.sizeFormatter(this.usedMemory())}</strong><br />
-                                Available Memory: <strong>${this.sizeFormatter(availableMemory)}</strong>`;
+                                Available: <strong>${this.sizeFormatter(availableMemory)}</strong><br />
+                                Available for Processing: <strong>${ this.sizeFormatter(availableMemoryForProcessing) } </strong>`;
 
             if (this.isWindows()) {
-                tooltip += `<br />Commited Memory: <strong>${this.sizeFormatter(this.commitedMemory())}</strong>`;
+                tooltip += `<br />Commited: <strong>${this.sizeFormatter(this.commitedMemory())}</strong>`;
             }
 
             return `${tooltip}</div>`;
         });
 
         this.lowMemoryTooltip = ko.pureComputed(() => {
-            let tooltip = `<div><span class="text-warning">Running in Low Memory Mode</span>`;
+            let tooltip = `<div><span class="text-warning">Running in ${(this.isExtremelyLowMemory() ? "Extremely " : "")}Low Memory Mode</span>`;
 
-            const availableMemory = this.totalMemory() - this.usedMemory();
+            const availableMemory = this.availableMemory();
             const lowMemoryThreshold = this.lowMemoryThreshold();
             if (availableMemory < lowMemoryThreshold) {
-                tooltip += `<br />Available Memory: <strong>${ this.sizeFormatter(availableMemory) } </strong>
+                tooltip += `<br />Available Memory: <strong>${this.sizeFormatter(availableMemory) } </strong>
                             <br />Low Memory Threshold: <strong>${this.sizeFormatter(this.lowMemoryThreshold())}</strong>`;
             }
 
@@ -91,11 +97,14 @@ class machineResources {
         this.processCpuUsage(dto.ProcessCpuUsage);
         this.totalMemory(dto.TotalMemory);
         this.usedMemory(dto.TotalMemory - dto.AvailableMemory);
+        this.availableMemory(dto.AvailableMemory);
+        this.availableMemoryForProcessing(dto.AvailableMemoryForProcessing);
         this.processMemoryUsage(dto.ProcessMemoryUsage);
         this.systemCommitLimit(dto.SystemCommitLimit);
         this.commitedMemory(dto.CommittedMemory);
         this.isWindows(dto.IsWindows);
-        this.isLowMemory(dto.IsLowMemory);
+        this.isExtremelyLowMemory(dto.LowMemorySeverity === "ExtremelyLow");
+        this.isLowMemory(dto.LowMemorySeverity === "Low" || this.isExtremelyLowMemory());
         this.lowMemoryThreshold(dto.LowMemoryThreshold);
         this.commitChargeThreshold(dto.CommitChargeThreshold);
     }
