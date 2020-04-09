@@ -251,18 +251,12 @@ namespace Raven.Client.Http
         {
             add
             {
-                lock (_locker)
-                {
-                    _onTopologyUpdated += value;
-                }
+                _onTopologyUpdated += value;
             }
 
             remove
             {
-                lock (_locker)
-                {
-                    _onTopologyUpdated -= value;
-                }
+                _onTopologyUpdated -= value;
             }
         }
 
