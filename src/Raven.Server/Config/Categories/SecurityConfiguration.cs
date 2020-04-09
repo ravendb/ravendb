@@ -105,12 +105,12 @@ namespace Raven.Server.Config.Categories
 
         [Description("The E-mail address associated with the Let's Encrypt certificate. Used for renewal requests.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.LetsEncrypt.Email", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
+        [ConfigurationEntry("Security.Certificate.LetsEncrypt.Email", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateLetsEncryptEmail { get; set; }
 
         [Description("The path of the (256-bit) Master Key. If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.MasterKey.Path", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
+        [ConfigurationEntry("Security.MasterKey.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyPath { get; set; }
 
         [Description("A command or executable to run which will provide a (256-bit) Master Key, If specified, RavenDB will use this key to protect secrets.")]
@@ -136,12 +136,12 @@ namespace Raven.Server.Config.Categories
 
         [Description("Well known certificate thumbprints that will be trusted by the server as cluster admins.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
+        [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOnly)]
         public string[] WellKnownAdminCertificates { get; set; }
 
         [Description("Well known issuer 'Public Key Pinning Hashes' that will be used to validate a new client certificate when the issuer's certificate has changed.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.WellKnownIssuerHashes.Admin", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
+        [ConfigurationEntry("Security.WellKnownIssuerHashes.Admin", ConfigurationEntryScope.ServerWideOnly)]
         public string[] WellKnownIssuerHashes { get; set; }
 
         [Description("EXPERT: A command or executable to validate a server authentication request. " +
