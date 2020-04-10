@@ -50,7 +50,6 @@ namespace SlowTests.Server.Documents.Indexing
                 Map = usersCollection => from user in usersCollection
                                          select new { user.Name };
                 Index(x => x.Name, FieldIndexing.Search);
-
             }
         }
 
@@ -60,7 +59,6 @@ namespace SlowTests.Server.Documents.Indexing
             {
                 Map = users => from u in users
                                select new { u.Age };
-
             }
         }
 
@@ -70,7 +68,6 @@ namespace SlowTests.Server.Documents.Indexing
             {
                 Map = users => from user in users
                                select new { user.Email };
-
             }
         }
 
@@ -146,8 +143,6 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
 
-
-
         [Fact]
         public void IndexMergeWithField()
         {
@@ -177,11 +172,10 @@ namespace SlowTests.Server.Documents.Indexing
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
                 Assert.Equal(FieldIndexing.Search, index.Fields["Name"].Indexing);
-                Assert.Equal(@"docs.Users.Select(doc=>new{Age=doc.Age
+                RavenTestHelper.AssertEqualRespectingNewLines(@"docs.Users.Select(doc=>new{Age=doc.Age
 ,Email=doc.Email
 ,Name=doc.Name
 })", index.Maps.First());
-
             }
         }
 
@@ -298,12 +292,11 @@ namespace SlowTests.Server.Documents.Indexing
                 var index = suggestion.MergedIndex;
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
-                Assert.Equal(@"fromdocindocs.Users
+                RavenTestHelper.AssertEqualRespectingNewLines(@"fromdocindocs.Users
 selectnew{Age=doc.Age
 ,Email=doc.Email
 ,Name=doc.Name
 }", index.Maps.First());
-
             }
         }
 
@@ -339,7 +332,6 @@ selectnew{Age=doc.Age
                 Assert.Equal(1, results.Suggestions.Count);
                 Assert.Equal(1, results.Suggestions[0].CanDelete.Count);
             }
-
         }
     }
 }

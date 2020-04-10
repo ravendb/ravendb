@@ -58,16 +58,16 @@ namespace FastTests.Server.Documents.Indexing
         }
     }
 }")]
-        [InlineData(@"docs.SelectMany(barn => barn.Households, 
+        [InlineData(@"docs.SelectMany(barn => barn.Households,
                                       (barn, household) => new { barn = barn, household = household })
                           .SelectMany(this0 => this0.household.Members,
-                                      (this0, member) => new 
+                                      (this0, member) => new
                                                          {
                                                               InternalId = this0.barn.InternalId,
                                                               Name = this0.barn.Name,
                                                               HouseholdId = this0.household.InternalId,
                                                               MemberId = member.InternalId,
-                                                              MembersName = member.Name 
+                                                              MembersName = member.Name
                                                           })"
 , @"foreach (var barn in docs)
 {
@@ -147,10 +147,10 @@ namespace FastTests.Server.Documents.Indexing
 }")]
         [InlineData(@"
             from u2 in (
-                from u1 in ( 
-                    from u0 in docs.Users 
-                    select new { u0.Name } 
-                ) 
+                from u1 in (
+                    from u0 in docs.Users
+                    select new { u0.Name }
+                )
                 select new {u1.Name}
             )
             select new { u2.Name }"
@@ -175,7 +175,6 @@ namespace FastTests.Server.Documents.Indexing
 
     ;
 }")]
-
         [InlineData(@"
             from u in docs.Users
             from tag in u.Tags
@@ -389,7 +388,7 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
                         Id = q.Id,
                         CreatedAt = q.CreatedAt
                     } into first
-                    select new 
+                    select new
                     {
                         first.CreatedAt
                     } into second
@@ -421,7 +420,7 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
             var result = OptimizeExpression(code);
             Assert.IsType<ForEachStatementSyntax>(result);
 
-            Assert.Equal(optimized, result.ToFullString());
+            RavenTestHelper.AssertEqualRespectingNewLines(optimized, result.ToFullString());
         }
 
         private static SyntaxNode OptimizeExpression(string str)
@@ -438,6 +437,5 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
             expr = expr.ReplaceTrivia(expr.DescendantTrivia(), (t1, t2) => new SyntaxTrivia());
             return expr.NormalizeWhitespace();
         }
-
     }
 }
