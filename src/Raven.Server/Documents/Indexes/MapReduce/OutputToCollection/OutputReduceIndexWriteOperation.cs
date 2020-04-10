@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -14,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class OutputReduceIndexWriteOperation : IndexWriteOperation
     {
-        private readonly OutputReduceToCollectionCommand _outputReduceToCollectionCommand;
+        private readonly OutputReduceToCollectionCommandBatcher _outputReduceToCollectionCommandBatcher;
         private readonly TransactionHolder _txHolder;
 
         public OutputReduceIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction,
@@ -23,12 +25,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             Debug.Assert(index.OutputReduceToCollection != null);
             _txHolder = new TransactionHolder(writeTransaction);
-            _outputReduceToCollectionCommand = index.OutputReduceToCollection.CreateCommand(indexContext, _txHolder);
+            _outputReduceToCollectionCommandBatcher = index.OutputReduceToCollection.CreateCommandBatcher(indexContext, _txHolder);
         }
 
         public override void Commit(IndexingStatsScope stats)
         {
-            var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
+            var enqueued = new List<Task>();
+            foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
+                enqueued.Add(DocumentDatabase.TxMerger.Enqueue(command));
 
             using (_txHolder.AcquireTransaction(out _))
             {
@@ -38,9 +42,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             try
             {
                 using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
-                {
-                    enqueue.GetAwaiter().GetResult();
-                }
+                    Task.WaitAll(enqueued.ToArray());
             }
             catch (Exception e)
             {
@@ -52,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             base.IndexDocument(key, document, stats, indexContext);
 
-            _outputReduceToCollectionCommand.AddReduce(key, document, stats);
+            _outputReduceToCollectionCommandBatcher.AddReduce(key, document, stats);
         }
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
@@ -64,14 +66,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             base.DeleteReduceResult(reduceKeyHash, stats);
 
-            _outputReduceToCollectionCommand.DeleteReduce(reduceKeyHash);
+            _outputReduceToCollectionCommandBatcher.DeleteReduce(reduceKeyHash);
         }
 
         public override void Dispose()
         {
             base.Dispose();
 
-            _outputReduceToCollectionCommand.Dispose();
+            _outputReduceToCollectionCommandBatcher.Dispose();
         }
     }
 }
