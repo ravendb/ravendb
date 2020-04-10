@@ -1356,18 +1356,24 @@ namespace Raven.Server.Documents.Queries
                 if (argument is BinaryExpression be)
                 {
                     if (name == null)
-                        name = new QueryFieldName(ExtractFieldNameFromBinaryExpression(), false);
+                        name = new QueryFieldName(ExtractFieldNameFromBinaryExpression(be), false);
 
                     result.Ranges.Add(be);
                     continue;
 
-                    string ExtractFieldNameFromBinaryExpression()
+                    string ExtractFieldNameFromBinaryExpression(BinaryExpression binaryExpression)
                     {
-                        if (be.Left is FieldExpression lfe)
+                        if (binaryExpression.Left is FieldExpression lfe)
                             return lfe.GetText(null);
 
-                        if (be.Left is ValueExpression lve)
+                        if (binaryExpression.Left is ValueExpression lve)
                             return lve.Token.Value;
+
+                        if (binaryExpression.Left is BinaryExpression lbe)
+                            return ExtractFieldNameFromBinaryExpression(lbe);
+
+                        if (binaryExpression.Right is BinaryExpression rbe)
+                            return ExtractFieldNameFromBinaryExpression(rbe);
 
                         ThrowInvalidArgumentExpressionInFacetQuery(argument, parameters);
                         return null;
