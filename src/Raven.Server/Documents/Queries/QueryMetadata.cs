@@ -1346,14 +1346,32 @@ namespace Raven.Server.Documents.Queries
 
                 if (argument is BetweenExpression bee)
                 {
+                    if (name == null)
+                        name = new QueryFieldName(((FieldExpression)bee.Source).GetText(null), false);
+
                     result.Ranges.Add(bee);
                     continue;
                 }
 
                 if (argument is BinaryExpression be)
                 {
+                    if (name == null)
+                        name = new QueryFieldName(ExtractFieldNameFromBinaryExpression(), false);
+
                     result.Ranges.Add(be);
                     continue;
+
+                    string ExtractFieldNameFromBinaryExpression()
+                    {
+                        if (be.Left is FieldExpression lfe)
+                            return lfe.GetText(null);
+
+                        if (be.Left is ValueExpression lve)
+                            return lve.Token.Value;
+
+                        ThrowInvalidArgumentExpressionInFacetQuery(argument, parameters);
+                        return null;
+                    }
                 }
 
                 ThrowInvalidArgumentExpressionInFacetQuery(argument, parameters);
