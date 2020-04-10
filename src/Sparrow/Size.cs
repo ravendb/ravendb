@@ -159,6 +159,16 @@ namespace Sparrow
             return new Size(x._valueInBytes - y._valueInBytes, SizeUnit.Bytes);
         }
 
+        public static bool operator ==(Size x, Size y)
+        {
+            return x._valueInBytes == y._valueInBytes;
+        }
+
+        public static bool operator !=(Size x, Size y)
+        {
+            return x._valueInBytes != y._valueInBytes;
+        }
+
         public static Size operator *(Size x, long y)
         {
             return new Size(x._valueInBytes * y, SizeUnit.Bytes);
@@ -205,6 +215,17 @@ namespace Sparrow
             if (Math.Abs(_valueInBytes) > OneKb)
                 return $"{Math.Round(_valueInBytes / (double)OneKb, 2):#,#.##} KBytes";
             return $"{_valueInBytes:#,#0} Bytes";
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Size size &&
+                   _valueInBytes == size._valueInBytes;
+        }
+
+        public override int GetHashCode()
+        {
+            return _valueInBytes.GetHashCode();
         }
     }
 

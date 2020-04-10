@@ -903,6 +903,7 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(ParametersConverter.Instance);
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
+            jsonSerializer.Converters.Add(SizeConverter.Instance);
         }
 
         /// <summary>
