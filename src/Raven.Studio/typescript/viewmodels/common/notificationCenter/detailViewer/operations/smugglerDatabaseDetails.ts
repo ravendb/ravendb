@@ -36,12 +36,17 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     private sizeFormatter = generalUtils.formatBytesToSize;
 
     static extractingDataStageName = "Extracting data";
+    static ProcessingText = 'Processing';
     
     detailsVisible = ko.observable<boolean>(false);
     tail = ko.observable<boolean>(true);
+    
     lastDocsCount = 0;
-    lastProcessingSpeedText = "Processing";
-
+    lastRevisionsCount = 0;
+    lastCountersCount = 0;   
+    
+    lastProcessingSpeedText = smugglerDatabaseDetails.ProcessingText;
+    
     exportItems: KnockoutComputed<Array<smugglerListItem>>;
     uploadItems: KnockoutComputed<Array<uploadListItem>>;
     messages: KnockoutComputed<Array<string>>;
@@ -300,19 +305,42 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
         }
 
+        let processingSpeedText = smugglerDatabaseDetails.ProcessingText;
         const isDocuments = name === "Documents";
-        let processingSpeedText = "Processing";
+
         const skippedCount = isDocuments ? (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount : 0;
-        if (isDocuments) {
-            const docsCount = item.ReadCount + skippedCount + item.ErroredCount;
-            if (docsCount === this.lastDocsCount) {
-                processingSpeedText = this.lastProcessingSpeedText;
-            } else {
-                this.lastDocsCount = docsCount;
-                const processingSpeed = this.calculateProcessingSpeed(item.ReadCount + skippedCount + item.ErroredCount);
-                if (processingSpeed > 0) {
-                    processingSpeedText = this.lastProcessingSpeedText = processingSpeed.toLocaleString() + " docs / sec";
-                }
+        
+        if (item.StartTime) {
+            const itemsCount = item.ReadCount + skippedCount + item.ErroredCount;
+            
+            switch (name) {
+                case "Documents":
+                    if (itemsCount === this.lastDocsCount) {
+                        processingSpeedText = this.lastProcessingSpeedText;
+                    } else {
+                        this.op.setStartTimeForDocuments(item.StartTime);
+                        this.lastDocsCount = itemsCount;
+                        processingSpeedText = this.lastProcessingSpeedText = this.calcSpeedText(name, itemsCount);
+                    }
+                    break;
+                case "Revisions":
+                    if (itemsCount === this.lastRevisionsCount) {
+                        processingSpeedText = this.lastProcessingSpeedText;
+                    } else {
+                        this.op.setStartTimeForRevisions(item.StartTime);
+                        this.lastRevisionsCount = itemsCount;
+                        processingSpeedText = this.lastProcessingSpeedText = this.calcSpeedText(name, itemsCount);
+                    }
+                    break;
+                case "Counters":
+                    if (itemsCount === this.lastCountersCount) {
+                        processingSpeedText = this.lastProcessingSpeedText;
+                    } else {
+                        this.op.setStartTimeForCounters(item.StartTime);
+                        this.lastCountersCount = itemsCount;
+                        processingSpeedText = this.lastProcessingSpeedText = this.calcSpeedText(name, itemsCount);
+                    }
+                    break;
             }
         }
 
@@ -331,6 +359,11 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         } as smugglerListItem;
     }
 
+    private calcSpeedText(name: string, count: number) {
+        const processingSpeed = this.calculateProcessingSpeed(count, name);
+        return processingSpeed ? `${processingSpeed.toLocaleString()} ${name}/Sec` : smugglerDatabaseDetails.ProcessingText;
+    }
+    
     static supportsDetailsFor(notification: abstractNotification) {
         return (notification instanceof operation) &&
         (notification.taskType() === "DatabaseExport" ||
