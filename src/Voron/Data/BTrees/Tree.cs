@@ -170,18 +170,28 @@ namespace Voron.Data.BTrees
         /// <summary>
         /// This is using little endian
         /// </summary>
-        public long? ReadLong(Slice key)
+        public long? ReadInt64(Slice key)
         {
-            long? currentValue = null;
             var read = Read(key);
-            if (read != null)
-            {
-                Debug.Assert(read.Reader.Length == sizeof(long));
-                currentValue = *(long*)read.Reader.Base;
-            }
-
-            return currentValue;
+            if (read == null)
+                return null;
+            Debug.Assert(read.Reader.Length == sizeof(long));
+            return *(long*)read.Reader.Base;
         }
+
+        /// <summary>
+        /// This is using little endian
+        /// </summary>
+        public int? ReadInt32(Slice key)
+        {
+            var read = Read(key);
+            if (read == null) 
+                return null;
+            Debug.Assert(read.Reader.Length == sizeof(int));
+            return *(int*)read.Reader.Base;
+
+        }
+
 
         /// <summary>
         /// This is using little endian

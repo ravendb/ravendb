@@ -30,10 +30,6 @@ namespace Voron.Data.RawData
             _transaction = tx;
         }
 
-        public int CurrentCompressionDictionaryId => *(int*)((byte*)_sectionHeader + PageHeader.SizeOf);
-
-        public byte MinCompressionRatio => _sectionHeader->MinCompressionRatio;
-
         public static int CompressionDictionaryHashFor(LowLevelTransaction tx,long id)
         {
             long sectionPageNumber = GetSectionPageNumber(tx, id);
@@ -168,8 +164,6 @@ namespace Voron.Data.RawData
 
                 pageHeader->NumberOfEntries = 0;
                 var pos = pageHeader->NextAllocation;
-                var compressionDictionary = _llt.Environment.CompressionDictionariesHolder
-                    .GetCompressionDictionaryFor(_transaction, CurrentCompressionDictionaryId);
 
                 while (pos < maxUsedPos)
                 {
@@ -191,8 +185,7 @@ namespace Voron.Data.RawData
                         var size = oldSize->UsedSize;
                         if (oldSize->IsCompressed)
                         {
-                            var span = new ReadOnlySpan<byte>(entryPos, size);
-                            using var __ = Table.Decompress(_transaction, span, compressionDictionary, out var buffer);
+                            using var __ = Table.DecompressValue(_transaction, entryPos, size, out var buffer);
                             OnDataMoved(prevId, newId, buffer.Ptr, buffer.Length);
                         }
                         else
@@ -220,10 +213,10 @@ namespace Voron.Data.RawData
         public static ActiveRawDataSmallSection Create(Transaction tx, string owner, byte tableType, ushort? sizeInPages = null)
         {
             Slice.From(tx.Allocator, owner, ByteStringType.Immutable, out Slice ownerSlice);
-            return Create(tx, ownerSlice, default, tableType, sizeInPages);
+            return Create(tx, ownerSlice, tableType, sizeInPages);
         }
 
-        public static ActiveRawDataSmallSection Create(Transaction transaction, Slice owner, int dictionaryId, byte tableType, ushort? sizeInPages)
+        public static ActiveRawDataSmallSection Create(Transaction transaction, Slice owner, byte tableType, ushort? sizeInPages)
         {
             var llt = transaction.LowLevelTransaction;
             var dbPagesInSmallSection = GetNumberOfPagesInSmallSection(llt);
@@ -243,8 +236,6 @@ namespace Voron.Data.RawData
             sectionHeader->LastUsedPage = 0;
             sectionHeader->SectionOwnerHash = Hashing.XXHash64.Calculate(owner.Content.Ptr, (ulong)owner.Content.Length);
             sectionHeader->TableType = tableType;
-
-            *(int*)sectionStart.DataPointer = dictionaryId;
 
             var availableSpace = (ushort*)((byte*)sectionHeader + ReservedHeaderSpace);
 
@@ -313,36 +304,6 @@ namespace Voron.Data.RawData
             var idSectionHeader = (RawDataSmallSectionPageHeader*)_llt.GetPage(sectionPageNumber).Pointer;
 
             return idSectionHeader->SectionOwnerHash == _sectionHeader->SectionOwnerHash;
-        }
-
-        public void SetCompressionRate(byte compressionRatio)
-        {
-            if (_sectionHeader->MinCompressionRatio >= compressionRatio)
-                return;
-            
-            Page modifyPage = _llt.ModifyPage(_sectionHeader->PageNumber);
-            _sectionHeader = (RawDataSmallSectionPageHeader*)modifyPage.Pointer;
-            _sectionHeader->MinCompressionRatio =  compressionRatio;
-        }
-        
-        public void SetCompressionRate(long id, byte compressionRatio)
-        {
-            if (IsOwned(id))
-            {
-                SetCompressionRate(compressionRatio);
-                return;
-            }
-
-            var sectionPageNumber = GetSectionPageNumber(_llt, id);
-            var sectionHeader = (RawDataSmallSectionPageHeader*)PageHeaderFor(_llt, sectionPageNumber);
-            
-            
-            if (sectionHeader->MinCompressionRatio >= compressionRatio)
-                return;
-            
-            Page modifyPage = _llt.ModifyPage(sectionHeader->PageNumber);
-            sectionHeader = (RawDataSmallSectionPageHeader*)modifyPage.Pointer;
-            sectionHeader->MinCompressionRatio =  compressionRatio;
         }
     }
 }

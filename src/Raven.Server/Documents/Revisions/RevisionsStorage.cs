@@ -130,7 +130,6 @@ namespace Raven.Server.Documents.Revisions
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                RevisionsSchema.CompressValues();
 
                 Slice.From(ctx, "RevisionsChangeVector", ByteStringType.Immutable, out var changeVectorSlice);
                 Slice.From(ctx, "RevisionsIdAndEtag", ByteStringType.Immutable, out IdAndEtagSlice);
@@ -181,6 +180,8 @@ namespace Raven.Server.Documents.Revisions
                     Name = ResolvedFlagByEtagSlice,
                     IsGlobal = true
                 });
+
+                RevisionsSchema.CompressValues(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: true);
             }
         }
 

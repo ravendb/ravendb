@@ -151,7 +151,7 @@ namespace Voron.Data.Tables
             {
                 UIntPtr result;
 
-                if (dictionary == null)
+                if (dictionary == null || dictionary.Compression == null)
                 {
                     result = ZSTD_compressCCtx(_threadCompressContext.Compression, dstPtr, (UIntPtr)dst.Length, 
                         srcPtr, (UIntPtr)src.Length, 3);
@@ -176,7 +176,7 @@ namespace Voron.Data.Tables
             fixed (byte* dstPtr = dst)
             {
                 UIntPtr result;
-                if(dictionary == null)
+                if(dictionary == null || dictionary.Compression == null)
                 {
                     result = ZSTD_decompressDCtx(_threadCompressContext.Decompression, dstPtr, (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length);
                 }
@@ -203,6 +203,13 @@ namespace Voron.Data.Tables
             public CompressionDictionary(int id, byte* buffer, int size, int compressionLevel)
             {
                 Id = id;
+                if (buffer == null)
+                {
+#if DEBUG
+                    DictionaryHash = "<null>";
+#endif
+                    return;
+                }
 
 #if DEBUG
                 var hash = stackalloc byte[32];
@@ -258,7 +265,13 @@ namespace Voron.Data.Tables
             fixed(UIntPtr* sizesPtr = sizes )
             {
                 var len = ZDICT_trainFromBuffer(outputPtr, (UIntPtr)output.Length, textPtr, sizesPtr, (uint)sizes.Length);
-                AssertSuccess(len, null);
+                if (ZSTD_isError(len) != 0)
+                {
+                    string ptrToStringAnsi = Marshal.PtrToStringAnsi(ZSTD_getErrorName(len));
+                    throw new InvalidOperationException(
+                        $"Unable to train dictionary with {sizes.Length} [{string.Join(", ", sizes.ToArray())}] results: {ptrToStringAnsi}");
+                }
+
                 output = output.Slice(0, (int)len);
             }
         }

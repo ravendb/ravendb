@@ -131,7 +131,8 @@ namespace Raven.Server.Documents
 
             DefineIndexesForDocsSchema(DocsSchema);
             DefineIndexesForDocsSchema(CompressedDocsSchema);
-            CompressedDocsSchema.CompressValues();
+            DocsSchema.CompressValues(CompressedDocsSchema.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
+            CompressedDocsSchema.CompressValues(CompressedDocsSchema.FixedSizeIndexes[CollectionEtagsSlice], compress: true);
 
             TombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
             {

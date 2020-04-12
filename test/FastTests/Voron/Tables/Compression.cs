@@ -30,7 +30,7 @@ namespace FastTests.Voron.Tables
                 };
 
                 var tableSchema = new TableSchema()
-                    .CompressValues()
+                    .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
                     .DefineKey(new TableSchema.SchemaIndexDef
                     {
@@ -96,7 +96,7 @@ namespace FastTests.Voron.Tables
                 };
 
                 var tableSchema = new TableSchema()
-                    .CompressValues()
+                    .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
                     .DefineKey(new TableSchema.SchemaIndexDef
                     {
@@ -154,7 +154,7 @@ namespace FastTests.Voron.Tables
                 };
 
                 var tableSchema = new TableSchema()
-                    .CompressValues()
+                    .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
                     .DefineKey(new TableSchema.SchemaIndexDef
                     {
@@ -211,7 +211,7 @@ namespace FastTests.Voron.Tables
                 };
 
                 var tableSchema = new TableSchema()
-                    .CompressValues()
+                    .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
                     .DefineKey(new TableSchema.SchemaIndexDef
                     {
@@ -280,7 +280,7 @@ namespace FastTests.Voron.Tables
                 };
 
                 var tableSchema = new TableSchema()
-                    .CompressValues()
+                    .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
                     .DefineKey(new TableSchema.SchemaIndexDef
                     {

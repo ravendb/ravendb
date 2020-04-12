@@ -3,20 +3,16 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-using System.Reflection;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Threading;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Util.Settings;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Tables
@@ -38,6 +34,7 @@ namespace Voron.Data.Tables
 
         public readonly Slice Name;
         private readonly byte _tableType;
+        private int? _currentCompressionDictionaryId;
 
         public long NumberOfEntries { get; private set; }
 
@@ -48,6 +45,20 @@ namespace Voron.Data.Tables
         public FixedSizeTree InactiveSections => _inactiveSections ??= GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0, isGlobal: false, isIndexTree: true);
 
         public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ??= GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0, isGlobal: false, isIndexTree: true);
+
+        internal int CurrentCompressionDictionaryId
+        {
+            get
+            {
+                return _currentCompressionDictionaryId ??= 
+                    _tableTree.ReadInt32(TableSchema.CompressionDictionaryIdSlice) ?? 0;
+            }
+            set
+            {
+                _currentCompressionDictionaryId = value;
+                _tableTree.Add(TableSchema.CompressionDictionaryIdSlice, value);
+            }
+        }
 
         public ActiveRawDataSmallSection ActiveDataSmallSection
         {
@@ -224,7 +235,7 @@ namespace Voron.Data.Tables
             //TODO: For encrypted databases, we need to allocate on locked memory
 
             // we explicitly do *not* dispose the buffer, it lives as long as the tx
-            var _ = DecompressValue(id, directRead, size, out ByteString buffer);
+            var _ = DecompressValue(_tx, directRead, size, out ByteString buffer);
 
             _cachedDecompressedBuffersByStorageId[id] = buffer;
 
@@ -232,14 +243,18 @@ namespace Voron.Data.Tables
             return buffer.Ptr;
         }
 
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope DecompressValue(long id, byte* ptr, int size, out ByteString buffer)
+        internal static ByteStringContext<ByteStringMemoryCache>.InternalScope DecompressValue(
+            Transaction tx, 
+            byte* ptr, int size, out ByteString buffer)
         {
-            var data = new ReadOnlySpan<byte>(ptr, size);
-            var dictionary = GetCompressionDictionaryFor(id, ref data);
-            return Decompress(_tx, data, dictionary, out buffer);
+            var dicId = BlittableJsonReaderBase.ReadVariableSizeIntInReverse(ptr, size-1, out var offset);
+            var data = new ReadOnlySpan<byte>(ptr, size - offset);
+            var dictionary = tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
+                .GetCompressionDictionaryFor(tx, dicId);
+            return Decompress(tx, data, dictionary, out buffer);
         }
 
-        internal static ByteStringContext<ByteStringMemoryCache>.InternalScope Decompress(
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope Decompress(
             Transaction tx,
             ReadOnlySpan<byte> data, ZstdLib.CompressionDictionary dictionary,
             out ByteString buffer)
@@ -275,24 +290,22 @@ namespace Voron.Data.Tables
             AssertWritableTable();
 
             if (_schema.Compressed)
-            {
-                builder.TryCompression(GetAppropriateCompressionDictionaryToCompress(id));
-            }
+                builder.TryCompression(this, _schema);
 
             int size = builder.Size;
 
             // We must read before we call TryWriteDirect, because it will modify the size
 
             var oldData = DirectReadRaw(id, out var oldDataSize, out var oldCompressed);
+            AssertNoReferenceToOldData(builder, oldData, oldDataSize);
+
             ByteStringContext<ByteStringMemoryCache>.InternalScope oldDataDecompressedScope = default;
             if (oldCompressed)
             {
-                oldDataDecompressedScope = DecompressValue(id, oldData, oldDataSize, out var buffer);
+                oldDataDecompressedScope = DecompressValue(_tx, oldData, oldDataSize, out var buffer);
                 oldData = buffer.Ptr;
                 oldDataSize = buffer.Length;
             }
-
-            using var _ = oldDataDecompressedScope;
 
             if (_schema.Compressed)
             {
@@ -303,8 +316,6 @@ namespace Voron.Data.Tables
             var prevIsSmall = id % Constants.Storage.PageSize != 0;
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
-                AssertNoReferenceToOldData(builder, oldData, oldDataSize);
-
                 if (prevIsSmall && ActiveDataSmallSection.TryWriteDirect(id, size, builder.Compressed, out byte* pos))
                 {
                     var tvr = new TableValueReader(oldData, oldDataSize);
@@ -312,24 +323,19 @@ namespace Voron.Data.Tables
                         ref tvr,
                         builder,
                         forceUpdate);
+                    oldDataDecompressedScope.Dispose();
 
                     builder.CopyTo(pos);
-
-                    if (builder.Compressed)
-                    {
-                        ActiveDataSmallSection.SetCompressionRate(id, builder.Compression.CompressionRatio);
-                    }
 
                     return id;
                 }
             }
             else if (prevIsSmall == false)
             {
-                size = builder.SizeLarge;
                 var pageNumber = id / Constants.Storage.PageSize;
                 var page = _tx.LowLevelTransaction.GetPage(pageNumber);
                 var existingNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
-                var newNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
+                var newNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(builder.Size);
 
                 if (existingNumberOfPages == newNumberOfPages)
                 {
@@ -337,54 +343,25 @@ namespace Voron.Data.Tables
 
                     var pos = page.Pointer + PageHeader.SizeOf;
 
-                    AssertNoReferenceToOldData(builder, pos, size);
+                    AssertNoReferenceToOldData(builder, pos, builder.Size);
 
                     var tvr = new TableValueReader(oldData, oldDataSize);
                     UpdateValuesFromIndex(id, ref tvr, builder, forceUpdate);
+                    oldDataDecompressedScope.Dispose();
 
                     // MemoryCopy into final position.
-                    page.OverflowSize = size;
+                    page.OverflowSize = builder.Size;
 
-                    builder.CopyToLarge(pos);
+                    builder.CopyTo(pos);
 
                     return id;
                 }
             }
+            oldDataDecompressedScope.Dispose();
 
             // can't fit in place, will just delete & insert instead
             Delete(id);
             return Insert(builder);
-        }
-
-
-
-        private ZstdLib.CompressionDictionary GetAppropriateCompressionDictionaryToCompress(long id)
-        {
-            var dicId =
-                id % Constants.Storage.PageSize == 0
-                    ? ActiveDataSmallSection.CurrentCompressionDictionaryId
-                    : ActiveRawDataSmallSection.CompressionDictionaryHashFor(_tx.LowLevelTransaction, id);
-            return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, dicId);
-
-        }
-
-
-        private ZstdLib.CompressionDictionary GetCompressionDictionaryFor(long id, ref ReadOnlySpan<byte> data)
-        {
-            fixed (byte* dataPtr = data)
-            {
-                if (id % Constants.Storage.PageSize == 0)
-                {
-                    int dicId = *(int*)dataPtr;
-                    data = data.Slice(sizeof(int), data.Length - sizeof(int));
-                    return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, dicId);
-                }
-                else
-                {
-                    var dicId = ActiveRawDataSmallSection.CompressionDictionaryHashFor(_tx.LowLevelTransaction, id);
-                    return _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx, dicId);
-                }
-            }
         }
 
         [Conditional("DEBUG")]
@@ -446,13 +423,24 @@ namespace Voron.Data.Tables
         {
             AssertWritableTable();
 
-            var ptr = DirectRead(id, out int size);
+            var ptr = DirectReadRaw(id, out int size, out bool compressed);
 
             if (_schema.Compressed)
                 _cachedDecompressedBuffersByStorageId?.Remove(id);
 
+            ByteStringContext<ByteStringMemoryCache>.InternalScope decompressValue = default;
+
+            if (compressed)
+            {
+                decompressValue = DecompressValue(_tx, ptr, size, out var buffer);
+                ptr = buffer.Ptr;
+                size = buffer.Length;
+            }
+
             var tvr = new TableValueReader(ptr, size);
             DeleteValueFromIndex(id, ref tvr);
+
+            decompressValue.Dispose();
 
             var largeValue = (id % Constants.Storage.PageSize) == 0;
             if (largeValue)
@@ -491,6 +479,11 @@ namespace Voron.Data.Tables
                 return;
             }
 
+            ReleaseNearlyEmptySection(id, sectionPageNumber);
+        }
+
+        private void ReleaseNearlyEmptySection(long id, long sectionPageNumber)
+        {
             // move all the data to the current active section (maybe creating a new one
             // if this is busy)
 
@@ -500,90 +493,36 @@ namespace Voron.Data.Tables
             // need to remove it from the inactive tracking because it is going to be freed in a bit
             InactiveSections.Delete(sectionPageNumber);
 
-            var currentCompressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
-                .GetCompressionDictionaryFor(_tx, ActiveDataSmallSection.CurrentCompressionDictionaryId);
-
             var idsInSection = ActiveDataSmallSection.GetAllIdsInSectionContaining(id);
-            var tmpBuilder = new TableValueBuilder();
-            tmpBuilder.Compression.SetCurrentTransaction(_tx);
             foreach (var idToMove in idsInSection)
             {
                 var pos = ActiveDataSmallSection.DirectRead(idToMove, out int itemSize, out bool compressed);
 
-                var actualPos = pos;
-                var actualSize = itemSize;
+                var dataPtr = pos;
+                var dataSize = itemSize;
+                ByteStringContext<ByteStringMemoryCache>.InternalScope decompressedScope = default;
                 if (compressed)
                 {
-                    var data = new ReadOnlySpan<byte>(pos, itemSize);
-                    var compressionDictionary = GetCompressionDictionaryFor(idToMove, ref data);
-                    tmpBuilder.Compression.RawScope = Decompress(_tx, data, compressionDictionary, out tmpBuilder.Compression.RawBuffer);
-
-                    actualSize = tmpBuilder.Compression.RawBuffer.Length;
-                    actualPos = tmpBuilder.Compression.RawBuffer.Ptr;
-
-                    if (compressionDictionary != currentCompressionDictionary)
-                    {
-                        // different dictionaries need to compress again
-                        tmpBuilder.Compression.CompressedScope = _tx.Allocator.Allocate(ZstdLib.GetMaxCompression(actualSize),
-                            out tmpBuilder.Compression.CompressedBuffer);
-                        int newlyCompressedSize = ZstdLib.Compress(tmpBuilder.Compression.RawBuffer.ToReadOnlySpan(),
-                            tmpBuilder.Compression.CompressedBuffer.ToSpan(), currentCompressionDictionary);
-                        if (newlyCompressedSize > actualSize)
-                        {
-                            // couldn't compress well enough, use raw data
-                            compressed = false;
-                            tmpBuilder.Compression.DiscardCompressedData();
-                            pos = actualPos;
-                            itemSize = actualSize;
-                        }
-                        else
-                        {
-                            tmpBuilder.Compression.SetDictionary(currentCompressionDictionary);
-                            pos = tmpBuilder.Compression.CompressedBuffer.Ptr;
-                            itemSize = newlyCompressedSize;
-                        }
-                    }
+                    decompressedScope = DecompressValue(_tx, dataPtr, dataSize, out var buffer);
+                    dataSize = buffer.Length;
+                    dataPtr = buffer.Ptr;
                 }
 
-                long newId;
-                if (itemSize + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
+                Debug.Assert(itemSize + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize);
+                if (ActiveDataSmallSection.TryAllocate(itemSize, out long newId) == false)
                 {
-                    if (ActiveDataSmallSection.TryAllocate(itemSize, out newId) == false)
-                    {
-                        newId = AllocateFromAnotherSection(itemSize, tmpBuilder.Compression, currentCompressionDictionary);
-                        if (compressed && tmpBuilder.Compressed)
-                        {
-                            pos = tmpBuilder.Compression.CompressedBuffer.Ptr;
-                            itemSize = tmpBuilder.Compression.CompressedBuffer.Length;
-                        }
-
-                        currentCompressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
-                            .GetCompressionDictionaryFor(_tx, ActiveDataSmallSection.CurrentCompressionDictionaryId);
-                    }
-
-                    if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, compressed, out byte* writePos) == false)
-                        throw new VoronErrorException($"Cannot write to newly allocated size in {Name} during delete");
-
-                    Memory.Copy(writePos, pos, itemSize);
-                }
-                else // after re-compression, we *can't* fit it into a small data section :-(
-                {
-                    Debug.Assert(compressed, "We should never hit this code path unless we re-compressed");
-                    // so we'll put it a big section, instead
-                    var page = AllocatePageForLargeValue(tmpBuilder.SizeLarge, tmpBuilder.Compressed);
-
-                    newId = page.PageNumber * Constants.Storage.PageSize;
-
-                    tmpBuilder.CopyToLarge(page.DataPointer);
-
+                    newId = AllocateFromAnotherSection(itemSize);
                 }
 
-                OnDataMoved(idToMove, newId, actualPos, actualSize);
+                if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, compressed, out byte* writePos) == false)
+                    throw new VoronErrorException($"Cannot write to newly allocated size in {Name} during delete");
 
-                tmpBuilder.Compression.CompressedScope.Dispose();
-                tmpBuilder.Compression.RawScope.Dispose();
+                Memory.Copy(writePos, pos, itemSize);
+
+                OnDataMoved(idToMove, newId, dataPtr, dataSize);
+
+                decompressedScope.Dispose();
             }
-            tmpBuilder.Reset();
 
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
         }
@@ -647,13 +586,11 @@ namespace Voron.Data.Tables
         public long Insert(TableValueBuilder builder)
         {
             AssertWritableTable();
-            var compressionDictionary = default(ZstdLib.CompressionDictionary);
-            if (_schema.Compressed)
-            {
-                compressionDictionary = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder.GetCompressionDictionaryFor(_tx,
-                    ActiveDataSmallSection.CurrentCompressionDictionaryId);
-                builder.TryCompression(compressionDictionary);
-            }
+            
+            if (_schema.Compressed
+                // we may have tried compressing in the update, so no need to repeat it
+                && builder.CompressionTried == false)
+                builder.TryCompression(this, _schema);
 
             byte* pos;
             long id;
@@ -662,7 +599,7 @@ namespace Voron.Data.Tables
             {
                 if (ActiveDataSmallSection.TryAllocate(builder.Size, out id) == false)
                 {
-                    id = AllocateFromAnotherSection(builder.Size, builder.Compression, compressionDictionary);
+                    id = AllocateFromAnotherSection(builder.Size);
                 }
                 AssertNoReferenceToThisPage(builder, id);
 
@@ -671,18 +608,14 @@ namespace Voron.Data.Tables
 
                 // Memory Copy into final position.
                 builder.CopyTo(pos);
-                if (builder.Compressed)
-                {
-                    ActiveDataSmallSection.SetCompressionRate(builder.Compression.CompressionRatio);
-                }
             }
             else
             {
-                var page = AllocatePageForLargeValue(builder.SizeLarge, builder.Compressed);
+                var page = AllocatePageForLargeValue(builder.Size, builder.Compressed);
 
                 pos = page.DataPointer;
 
-                builder.CopyToLarge(pos);
+                builder.CopyTo(pos);
 
                 id = page.PageNumber * Constants.Storage.PageSize;
             }
@@ -720,43 +653,17 @@ namespace Voron.Data.Tables
             return page;
         }
 
-        private long AllocateFromAnotherSection(int itemSize, TableValueCompressor compressor, ZstdLib.CompressionDictionary compressionDictionary)
+        private long AllocateFromAnotherSection(int itemSize)
         {
             InactiveSections.Add(_activeDataSmallSection.PageNumber);
 
-            var previousActiveSection = ActiveDataSmallSection;
+            if (TryFindMatchFromCandidateSections(itemSize, out long id)) 
+                return id;
 
-            if (TryFindMatchFromCandidateSections(itemSize, compressionDictionary?.Id, out long id) == false)
-            {
-                int newSectionDictionaryId = default;
+            CreateNewActiveSection();
 
-                // need to switch, may have to re-compress at this point
-                if (_schema.Compressed)
-                {
-                    newSectionDictionaryId = compressionDictionary?.Id ?? 0;
-
-                    // We'll replace the dictionary if it is unable to provide us with good compression ratio
-                    // we give it +10 ratio to allow some slippage between training. Even after violating the expected
-                    // compression ration, we have to check for compression outliers (a single input that doesn't compress well)
-                    // this is handled inside ShouldReplaceDictionary and ensure that new dictionaries are at least 10%
-                    // better than the previous one. We prefer to use less dictionaries, even if compression
-                    // rate can be slightly improved.
-                    if (previousActiveSection.MinCompressionRatio + 10 > (compressionDictionary?.ExpectedCompressionRatio ?? 0))
-                    {
-                        // this will check if we can create a new dictionary that would do better for the current item
-                        // than the previous dictionary, creating a new hash for it
-                        MaybeTrainCompressionDictionary(previousActiveSection, compressionDictionary, compressor, ref newSectionDictionaryId);
-                        itemSize = compressor.Size;
-                    }
-                }
-
-                CreateNewActiveSection(newSectionDictionaryId);
-
-                if (ActiveDataSmallSection.TryAllocate(itemSize, out id) == false)
-                {
-                    ThrowBadAllocation(compressor.Size);
-                }
-            }
+            if (ActiveDataSmallSection.TryAllocate(itemSize, out id) == false)
+                ThrowBadAllocation(itemSize);
 
             return id;
         }
@@ -781,9 +688,6 @@ namespace Voron.Data.Tables
 
             public ZstdLib.CompressionDictionary GetCompressionDictionaryFor(Transaction tx, int id)
             {
-                if (id == 0)
-                    return null;
-
                 if (_compressionDictionaries.TryGetValue(id, out var current))
                     return current;
 
@@ -810,7 +714,7 @@ namespace Voron.Data.Tables
                     // dictionary there
                     if (id == 0)
                     {
-                        return null;
+                        return new ZstdLib.CompressionDictionary(0, null, 0, 3);
                     }
 
                     throw new InvalidOperationException("Trying to read dictionary: " + id + " but it was not found!");
@@ -895,65 +799,26 @@ namespace Voron.Data.Tables
             byte* dataPtr = reader.Pointer;
             int dataSize = reader.Size;
             bool compressed = false;
-            ZstdLib.CompressionDictionary compressionDic = null;
 
             if (_schema.Compressed)
             {
-                rawCompressBufferScore = _tx.Allocator.FromPtr(reader.Pointer, reader.Size,
-                    ByteStringType.Immutable, out builder.Compression.RawBuffer);
-
-                compressionDic = _tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
-                    .GetCompressionDictionaryFor(_tx, ActiveDataSmallSection.CurrentCompressionDictionaryId);
-
-                builder.Compression.Prepare(reader.Size);
-                if (builder.Compression.TryCompression(compressionDic))
-                {
-                    dataPtr = builder.Compression.CompressedBuffer.Ptr;
-                    dataSize = builder.Compression.CompressedBuffer.Length;
-                    compressed = true;
-                }
+                compressed = builder.TryCompression(this, _schema, ref dataPtr, ref dataSize);
             }
 
             long id;
             if (dataSize + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
-                bool insertSmall = true;
                 if (ActiveDataSmallSection.TryAllocate(dataSize, out id) == false)
                 {
-                    id = AllocateFromAnotherSection(dataSize, builder.Compression, compressionDic);
-                    if (_schema.Compressed)
-                    {
-                        dataSize = builder.Size;
-                        compressed = builder.Compressed;
-                        if (dataSize + sizeof(RawDataSection.RawDataEntrySizes) >= RawDataSection.MaxItemSize)
-                        {
-                            insertSmall = false;
-                            InsertLargeValue();
-                        }
-                    }
+                    id = AllocateFromAnotherSection(dataSize);
                 }
 
-                if (insertSmall)
-                {
-                    if (ActiveDataSmallSection.TryWriteDirect(id, dataSize, compressed, out var pos) == false)
-                        ThrowBadWriter(dataSize);
+                if (ActiveDataSmallSection.TryWriteDirect(id, dataSize, compressed, out var pos) == false)
+                    ThrowBadWriter(dataSize);
 
-                    if (compressed)
-                    {
-                        builder.CopyTo(pos);
-                    }
-                    else
-                    {
-                        Memory.Copy(pos, reader.Pointer, dataSize);
-                    }
-                }
+                Memory.Copy(pos, dataPtr, dataSize);
             }
             else
-            {
-                InsertLargeValue();
-            }
-
-            void InsertLargeValue()
             {
                 var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(dataSize);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
@@ -968,14 +833,9 @@ namespace Voron.Data.Tables
                 if (compressed)
                 {
                     page.Flags |= PageFlags.Compressed;
-                    page.OverflowSize = builder.Compression.SizeLarge;
-                    builder.Compression.CopyToLarge(page.DataPointer);
                 }
-                else
-                {
-                    Memory.Copy(page.DataPointer, dataPtr, dataSize);
 
-                }
+                Memory.Copy(page.DataPointer, dataPtr, dataSize);
 
                 id = page.PageNumber * Constants.Storage.PageSize;
             }
@@ -1069,7 +929,7 @@ namespace Voron.Data.Tables
             return tree;
         }
 
-        private void CreateNewActiveSection(int dictionaryId)
+        private void CreateNewActiveSection()
         {
             ushort maxSectionSizeInPages =
                 _tx.LowLevelTransaction.Environment.Options.RunningOn32Bits
@@ -1079,7 +939,7 @@ namespace Voron.Data.Tables
             var newNumberOfPages = Math.Min(maxSectionSizeInPages,
                 (ushort)(ActiveDataSmallSection.NumberOfPages * 2));
 
-            _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx, Name, dictionaryId, _tableType, newNumberOfPages);
+            _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx, Name, _tableType, newNumberOfPages);
             _activeDataSmallSection.DataMoved += OnDataMoved;
             var val = _activeDataSmallSection.PageNumber;
             using (Slice.External(_tx.Allocator, (byte*)&val, sizeof(long), out Slice pageNumber))
@@ -1088,7 +948,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        private bool TryFindMatchFromCandidateSections(int size, int? compressionDictionaryId, out long id)
+        private bool TryFindMatchFromCandidateSections(int size, out long id)
         {
             using (var it = ActiveCandidateSection.Iterate())
             {
@@ -1099,13 +959,6 @@ namespace Voron.Data.Tables
                         var sectionPageNumber = it.CurrentKey;
 
                         _activeDataSmallSection = new ActiveRawDataSmallSection(_tx, sectionPageNumber);
-
-                        if (compressionDictionaryId != null)
-                        {
-                            // to be accepted at this point, we need to use the same dictionary
-                            if (compressionDictionaryId.Value != _activeDataSmallSection.CurrentCompressionDictionaryId)
-                                continue;
-                        }
 
                         _activeDataSmallSection.DataMoved += OnDataMoved;
                         if (_activeDataSmallSection.TryAllocate(size, out id))
@@ -1126,178 +979,6 @@ namespace Voron.Data.Tables
             }
             id = 0;
             return false;
-        }
-
-        private void MaybeTrainCompressionDictionary(ActiveRawDataSmallSection previousSection, ZstdLib.CompressionDictionary existingDictionary,
-            TableValueCompressor compressor, ref int id)
-        {
-            // here we'll build a buffer for the current data we have the section
-            // the idea is that we'll get better results by including the most recently modified documents
-            // which would reside in the active section that we are about to replace
-            var dataIds = previousSection.GetAllIdsInSection();
-            var sizes = new UIntPtr[dataIds.Count];
-            var totalRequiredSize = 0;
-            int last = 0;
-            for (; last < dataIds.Count; last++)
-            {
-                var data = RawDataSection.DirectRead(_tx.LowLevelTransaction, dataIds[last], out int rawSize, out bool compressed);
-                int size = compressed == false ? rawSize : ZstdLib.GetDecompressedSize(new ReadOnlySpan<byte>(data, rawSize));
-                sizes[last] = (UIntPtr)size;
-                totalRequiredSize += size;
-                if (totalRequiredSize > 512 * 1024)
-                    break;
-            }
-
-            using var _ = _tx.Allocator.Allocate(totalRequiredSize, out var buffer);
-
-            var pos = 0;
-            for (int i = 0; i < last; i++)
-            {
-                var data = RawDataSection.DirectRead(_tx.LowLevelTransaction, dataIds[i], out int rawSize, out bool compressed);
-                if (compressed == false)
-                {
-                    Memory.Copy(buffer.Ptr + pos, data, rawSize);
-                    pos += rawSize;
-                }
-                else
-                {
-                    int decompressedSize = ZstdLib.GetDecompressedSize(new ReadOnlySpan<byte>(data, rawSize));
-                    pos += ZstdLib.Decompress(new ReadOnlySpan<byte>(data, rawSize), new Span<byte>(buffer.Ptr + pos, decompressedSize),
-                        existingDictionary);
-                }
-            }
-
-            using var __ = _tx.Allocator.Allocate(
-                // the dictionary 
-                Constants.Storage.PageSize - PageHeader.SizeOf - sizeof(CompressionDictionaryInfo)
-                , out var dictionaryBuffer);
-            Span<byte> dictionaryBufferSpan = dictionaryBuffer.ToSpan();
-            ZstdLib.Train(new ReadOnlySpan<byte>(buffer.Ptr, pos), new ReadOnlySpan<UIntPtr>(sizes, 0, last), ref dictionaryBufferSpan);
-
-            var dictionariesTree = _tx.CreateTree(TableSchema.DictionariesSlice);
-
-            var newId = (int)(dictionariesTree.State.NumberOfEntries + 1);
-
-            using var compressionDictionary = new ZstdLib.CompressionDictionary(newId, dictionaryBuffer.Ptr, dictionaryBufferSpan.Length, 3);
-
-            if (compressor.ShouldReplaceDictionary(compressionDictionary) == false)
-            {
-                return;
-            }
-
-            id = newId;
-
-            compressionDictionary.ExpectedCompressionRatio = compressor.CompressionRatio;
-
-            var rev = Bits.SwapBytes(id);
-            using var _____ = Slice.External(_tx.Allocator, (byte*)&rev, sizeof(int), out var slice);
-            using var ____ = dictionariesTree.DirectAdd(slice, sizeof(CompressionDictionaryInfo) + dictionaryBufferSpan.Length, out var dest);
-            *((CompressionDictionaryInfo*)dest) = new CompressionDictionaryInfo
-            {
-                ExpectedCompressionRatio = compressionDictionary.ExpectedCompressionRatio
-            };
-            Memory.Copy(dest + sizeof(CompressionDictionaryInfo), dictionaryBuffer.Ptr, dictionaryBufferSpan.Length);
-
-            _tx.LowLevelTransaction.OnDispose += RecreateRecoveryDictionaries;
-        }
-
-        private static void RecreateRecoveryDictionaries(IPagerLevelTransactionState obj)
-        {
-            if (!(obj is LowLevelTransaction llt) || llt.Committed == false)
-                return; // we can't write on non committed transactions
-
-            if (obj.Environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)
-                return; // no need for in mem mode
-
-            lock (obj.Environment.CompressionDictionariesHolder)
-            {
-                // we use a loop to handle the case where we write more than
-                // 16 dictionaries before we get to build the recovery
-                while (true) 
-                {
-                    using var tx = obj.Environment.ReadTransaction();
-
-                    var dictionaries = tx.ReadTree(TableSchema.DictionariesSlice);
-
-                    if (dictionaries == null)
-                        return; // should never happen
-
-                    long dicCount = dictionaries.State.NumberOfEntries;
-                    var lastWritten = obj.Environment.CompressionDictionariesHolder.LastWritten;
-
-                    if (dicCount <= lastWritten)
-                        return;// another tx probably got here first
-
-                    // We balance between the total number of dictionaries files for recovery
-                    // and the time it takes to write them out. We assume that the number of 
-                    // dictionaries is small, but we don't want to take too much time generating
-                    // the file. We want some redundancy still, for recovery, so we copy the data
-                    // multiple times.
-                    var fileIndex = lastWritten % 16;
-                    var fileId = lastWritten - fileIndex;
-
-                    var newPath = obj.Environment.Options.BasePath
-                        .Combine($"CompressionDictionaries-{fileId:D3}-{fileIndex:D2}.Recovery")
-                        .FullPath;
-
-                    // We write all the dictionaries because we assume that the total number is going
-                    // to be low. Experimentation shows that on millions of documents, the total number
-                    // of dictionaries is < 25, and the rate of change is likely to be very slow, so it
-                    // isn't likely to be an issue. Having a single file for dictionaries make things 
-                    // much easier for us during recovery.
-
-                    int rev = Bits.SwapBytes((int)fileId);
-                    using var _ = Slice.External(tx.Allocator, (byte*)&rev, sizeof(int), out var key);
-                    using var it = dictionaries.Iterate(true);
-                    if (it.Seek(key) == false)
-                        return;
-
-                    int writtenDics = 0;
-                    using (var file = File.Create(newPath, 8192))
-                    {
-                        using (var gz = new GZipStream(file, CompressionMode.Compress, leaveOpen: true))
-                        using (var bw = new BinaryWriter(gz))
-                        {
-                          
-                            do
-                            {
-                                var dicId = it.CurrentKey.CreateReader().ReadBigEndianInt32();
-                                bw.Write(dicId);
-                                var reader = it.CreateReaderForCurrent();
-                                bw.Write(reader.Length);
-                                gz.Write(reader.AsSpan());
-                                writtenDics++;
-                            } while (it.MoveNext() && writtenDics <= 16);
-
-                        }
-                        file.Flush(true);
-                    }
-
-                    obj.Environment.CompressionDictionariesHolder.LastWritten += writtenDics;
-
-                    // we will try to delete the previous ones
-                    fileIndex = (lastWritten - 2) % 16;
-                    fileId = (lastWritten - 2) - fileIndex;
-
-                    var olderPath = obj.Environment.Options.BasePath
-                        .Combine($"CompressionDictionaries-{fileId:D3}-{fileIndex:D2}.Recovery")
-                        .FullPath;
-
-                    if (File.Exists(olderPath))
-                    {
-                        try
-                        {
-                            File.Delete(olderPath);
-                        }
-                        catch
-                        {
-                            // we don't really care about this failing
-                        }
-                    }
-                }
-
-            }
-
         }
 
         internal Tree GetTree(Slice name, bool isIndexTree)
@@ -2415,7 +2096,6 @@ namespace Voron.Data.Tables
                     throw new InvalidOperationException("Cannot use a cached table value builder when it is already in use");
 #endif
                 Builder = environmentWriteTransactionPool.TableValueBuilder;
-                Builder.Compression.SetCurrentTransaction(tx);
             }
 
             public TableValueBuilder Builder { get; }

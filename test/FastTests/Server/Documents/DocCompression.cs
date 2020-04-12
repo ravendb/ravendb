@@ -84,7 +84,7 @@ namespace FastTests.Server.Documents
             {
                 var cmd = new GetDocumentSize("orders/830-A");
                 executor.Execute(cmd, ctx);
-               Assert.True(cmd.Result.ActualSize > cmd.Result.AllocatedSize);
+                Assert.True(cmd.Result.ActualSize > cmd.Result.AllocatedSize);
             }
         }
 
