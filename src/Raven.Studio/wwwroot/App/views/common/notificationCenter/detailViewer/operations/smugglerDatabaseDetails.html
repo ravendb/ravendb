@@ -6,7 +6,7 @@
                     <h3 class="modal-title" id="myModalLabel" data-bind="text: op.title, attr:{ class: 'modal-title ' + op.headerClass() }"></h3>
                 </div>
                 <div class="flex-grow text-right">
-                    <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
+                    <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.durationForOperation"></span>
                 </div>
                 <div>
                     <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">

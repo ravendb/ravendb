@@ -341,6 +341,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result)
         {
+            result.Identities.Start();
+            
             using (var actions = _destination.Identities())
             {
                 foreach (var identity in _source.GetIdentities())
@@ -372,6 +374,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessIndexes(SmugglerResult result)
         {
+            result.Indexes.Start();
+            
             using (var actions = _destination.Indexes())
             {
                 foreach (var index in _source.GetIndexes())
@@ -516,6 +520,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.DatabaseRecordProgress ProcessDatabaseRecord(SmugglerResult result)
         {
+            result.DatabaseRecord.Start();
+            
             using (var actions = _destination.DatabaseRecord())
             {
                 var databaseRecord = _source.GetDatabaseRecord();
@@ -546,6 +552,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessRevisionDocuments(SmugglerResult result)
         {
+            result.RevisionDocuments.Start();
+            
             using (var actions = _destination.RevisionDocuments())
             {
                 foreach (var item in _source.GetRevisionDocuments(_options.Collections, actions))
@@ -554,7 +562,7 @@ namespace Raven.Server.Smuggler.Documents
                     result.RevisionDocuments.ReadCount++;
 
                     if (result.RevisionDocuments.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.RevisionDocuments.ReadCount:#,#;;0} documents.");
+                        AddInfoToSmugglerResult(result, $"Read {result.RevisionDocuments.ReadCount:#,#;;0} revision documents.");
 
                     if (item.Document == null)
                     {
@@ -577,6 +585,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessDocuments(SmugglerResult result, BuildVersionType buildType)
         {
+            result.Documents.Start();
+            
             using (var actions = _destination.Documents())
             {
                 foreach (DocumentItem item in _source.GetDocuments(_options.Collections, actions))
@@ -701,6 +711,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessCompareExchange(SmugglerResult result)
         {
+            result.CompareExchange.Start();
+            
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var actions = _destination.CompareExchange(context))
             {
@@ -733,6 +745,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessCounters(SmugglerResult result)
         {
+            result.Counters.Start();
+            
             using (var actions = _destination.Counters(result))
             {
                 foreach (var counterGroup in _source.GetCounterValues(_options.Collections, actions))
@@ -856,6 +870,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessTombstones(SmugglerResult result)
         {
+            result.Tombstones.Start();
+            
             using (var actions = _destination.Tombstones())
             {
                 foreach (var tombstone in _source.GetTombstones(_options.Collections, actions))
@@ -887,6 +903,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessCompareExchangeTombstones(SmugglerResult result)
         {
+            result.CompareExchangeTombstones.Start();
+            
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var actions = _destination.CompareExchangeTombstones(context))
             {
@@ -918,6 +936,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessConflicts(SmugglerResult result)
         {
+            result.Conflicts.Start();
+            
             using (var actions = _destination.Conflicts())
             {
                 foreach (var conflict in _source.GetConflicts(_options.Collections, actions))
@@ -948,6 +968,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessSubscriptions(SmugglerResult result)
         {
+            result.Subscriptions.Start();
+            
             using (var actions = _destination.Subscriptions())
             {
                 foreach (var subscription in _source.GetSubscriptions())
@@ -968,6 +990,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessTimeSeries(SmugglerResult result)
         {
+            result.TimeSeries.Start();
+            
             using (var actions = _destination.TimeSeries())
             {
                 foreach (var ts in _source.GetTimeSeries(_options.Collections))

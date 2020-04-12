@@ -15,11 +15,19 @@ class operation extends abstractNotification {
     taskType = ko.observable<Raven.Server.Documents.Operations.Operations.OperationType>();
     detailedDescription = ko.observable<Raven.Client.Documents.Operations.IOperationDetailedDescription>();
     
-    startTime = ko.observable<moment.Moment>();
     endTime = ko.observable<moment.Moment>();
-    duration: KnockoutComputed<string>;
-    durationInSeconds: KnockoutComputed<number>;
 
+    startTimeForOperation = ko.observable<moment.Moment>();
+    startTimeForDocuments = ko.observable<moment.Moment>();
+    startTimeForRevisions = ko.observable<moment.Moment>();
+    startTimeForCounters = ko.observable<moment.Moment>();
+    
+    durationForOperation: KnockoutComputed<string>;
+    durationInSecondsForOperation: KnockoutComputed<number>;
+    durationInSecondsDocuments: KnockoutComputed<number>;
+    durationInSecondsRevisions: KnockoutComputed<number>;
+    durationInSecondsCounters: KnockoutComputed<number>;
+    
     isCompleted: KnockoutComputed<boolean>;
     isCanceled: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
@@ -50,8 +58,8 @@ class operation extends abstractNotification {
         this.taskType(incomingChanges.TaskType);
         this.detailedDescription(incomingChanges.DetailedDescription);
                 
-        this.startTime(incomingChanges.StartTime ? moment.utc(incomingChanges.StartTime) : null);  
-        this.endTime(incomingChanges.EndTime ? moment.utc(incomingChanges.EndTime) : null);
+        this.startTimeForOperation(incomingChanges.StartTime ? serverTime.default.getAdjustedTime(moment.utc(incomingChanges.StartTime)) : null);
+        this.endTime(incomingChanges.EndTime ?serverTime.default.getAdjustedTime(moment.utc(incomingChanges.EndTime)) : null);
     }
 
     percentageProgress(): number {
@@ -92,30 +100,55 @@ class operation extends abstractNotification {
 
         // override event date - for operations we use end date (if available), or start start
         this.displayDate = ko.pureComputed(() => {
-            const start = this.startTime();
+            const start = this.startTimeForOperation();
             const end = this.endTime();
             const created = this.createdAt();
             const dateToUse = end || start || created;
             return moment(dateToUse).local();
         });
 
-        this.duration = ko.pureComputed(() => {
-            return generalUtils.formatAsTimeSpan(this.getDuration());
+        this.durationForOperation = ko.pureComputed(() => {
+            return generalUtils.formatAsTimeSpan(this.getDuration(this.startTimeForOperation()));
         });
 
-        this.durationInSeconds = ko.pureComputed(() => {
-            return this.getDuration() / 1000;
+        this.durationInSecondsForOperation = ko.pureComputed(() => {
+            return this.getDuration(this.startTimeForOperation()) / 1000;
+        });
+        
+        this.durationInSecondsDocuments = ko.pureComputed(() => {
+            return this.getDuration(this.startTimeForDocuments()) / 1000;
+        });
+        this.durationInSecondsRevisions = ko.pureComputed(() => {
+            return this.getDuration(this.startTimeForRevisions()) / 1000;
+        });
+        this.durationInSecondsCounters = ko.pureComputed(() => {
+            return this.getDuration(this.startTimeForCounters()) / 1000;
         });
     }
 
-    private getDuration() {
-        const start = this.startTime();
+    getDuration(start: moment.Moment) {
         const end = this.endTime();
-
-        // Adjust studio-server time difference if we are 'in progress' 
         const endTime = end || serverTime.default.getAdjustedTime(timeHelpers.utcNowWithSecondPrecision());
 
         return Math.max(endTime.diff(start), 0);
+    }
+    
+    public setStartTimeForDocuments(startTime: string) {
+        if (!this.startTimeForDocuments()) {  
+            this.startTimeForDocuments(serverTime.default.getAdjustedTime(moment.utc(startTime)));
+        }
+    }
+    
+    public setStartTimeForRevisions(startTime: string) {
+        if (!this.startTimeForRevisions()) {
+            this.startTimeForRevisions(serverTime.default.getAdjustedTime(moment.utc(startTime)));
+        }
+    }
+    
+    public setStartTimeForCounters(startTime: string) {
+        if (!this.startTimeForCounters()) {
+            this.startTimeForCounters(serverTime.default.getAdjustedTime(moment.utc(startTime)));
+        }
     }
 }
 

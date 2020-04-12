@@ -183,6 +183,7 @@ namespace Raven.Client.Documents.Smuggler
         public CountsWithLastEtag CompareExchange { get; set; }
 
         public Counts Subscriptions { get; set; }
+        
         public CountsWithLastEtag Counters { get; set; }
 
         public CountsWithLastEtag TimeSeries { get; set; }
@@ -348,21 +349,20 @@ namespace Raven.Client.Documents.Smuggler
 
         public class Counts
         {
-            public bool Skipped { get; set; }
-
+            public DateTime? StartTime { get; set; }
             public bool Processed { get; set; }
-
             public long ReadCount { get; set; }
-
+            public bool Skipped { get; set; }
             public long ErroredCount { get; set; }
 
             public virtual DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
                 {
+                    [nameof(StartTime)] = StartTime,
                     [nameof(Processed)] = Processed,
-                    [nameof(Skipped)] = Skipped,
                     [nameof(ReadCount)] = ReadCount,
+                    [nameof(Skipped)] = Skipped,
                     [nameof(ErroredCount)] = ErroredCount
                 };
             }
@@ -372,12 +372,16 @@ namespace Raven.Client.Documents.Smuggler
                 return $"Read: {ReadCount:#,#;;0}. " +
                        $"Errored: {ErroredCount:#,#;;0}.";
             }
+
+            internal void Start()
+            {
+                StartTime = SystemTime.UtcNow;
+            }
         }
 
         public class CountsWithLastEtag : Counts
         {
             public long LastEtag { get; set; }
-
             public Counts Attachments { get; set; } = new Counts();
 
             public override DynamicJsonValue ToJson()
@@ -393,18 +397,18 @@ namespace Raven.Client.Documents.Smuggler
                 return $"{base.ToString()} Attachments: {Attachments}";
             }
         }
-
+        
         public class CountsWithSkippedCountAndLastEtag : CountsWithLastEtag
         {
             public long SkippedCount { get; set; }
-
+        
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
                 json[nameof(SkippedCount)] = SkippedCount;
                 return json;
             }
-
+        
             public override string ToString()
             {
                 return $"Skipped: {SkippedCount}. {base.ToString()}";
