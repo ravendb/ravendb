@@ -223,13 +223,25 @@ namespace Raven.Server.Documents
 
         public void InitializeFromDatabaseRecord(DatabaseRecord record)
         {
-            if (record.CompressedCollections.SetEquals(_compressedCollections))
+            if (_compression.Equals(record.Compression))
                 return;
 
-            _compressedCollections = new HashSet<string>(record.CompressedCollections, StringComparer.OrdinalIgnoreCase);
+            if (record.Compression == null) // legacy configurations
+            {
+                _compressedCollections.Clear();
+                _compression = new CompressionConfiguration(false);
+                return;
+            }
+
+            _compression = record.Compression;
+            _compressedCollections = new HashSet<string>(record.Compression.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
+        public CompressionConfiguration Compression => _compression;
+
+        private CompressionConfiguration _compression = new CompressionConfiguration(false, Array.Empty<string>());
         private HashSet<string> _compressedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         public TableSchema GetDocsSchemaForCollection(CollectionName collection)
         {
             if(_compressedCollections.Contains(collection.Name))

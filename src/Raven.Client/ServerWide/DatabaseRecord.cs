@@ -54,7 +54,7 @@ namespace Raven.Client.ServerWide
 
         public ConflictSolver ConflictSolverConfig;
 
-        public HashSet<string> CompressedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        public CompressionConfiguration Compression = new CompressionConfiguration(compressRevisions: true);
 
         public Dictionary<string, SorterDefinition> Sorters = new Dictionary<string, SorterDefinition>();
 
@@ -308,5 +308,49 @@ namespace Raven.Client.ServerWide
         No,
         SoftDelete,
         HardDelete
+    }
+
+    public class CompressionConfiguration
+    {
+        public string[] Collections;
+        public bool CompressRevisions;
+
+        public CompressionConfiguration()
+        {
+            
+        }
+
+        public CompressionConfiguration(bool compressRevisions, params string[] collections)
+        {
+            Collections = collections ?? throw new ArgumentNullException(nameof(collections));
+            CompressRevisions = compressRevisions;
+        }
+
+        protected bool Equals(CompressionConfiguration other)
+        {
+            return CompressRevisions == other.CompressRevisions && 
+                   Collections.SequenceEqual(other.Collections);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((CompressionConfiguration)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            int hash = Collections.Length;
+
+            foreach (string collection in Collections)
+            {
+                hash = 31 * hash + collection.GetHashCode();
+            }
+
+            hash = 31 * hash + CompressRevisions.GetHashCode();
+            return hash;
+        }
     }
 }

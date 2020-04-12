@@ -2192,8 +2192,7 @@ namespace Raven.Server.Documents
 
                 context.Transaction.AddToCache(collectionName, name);
 
-                var docsSchema = DocumentPut.GetDocsSchemaForCollection(name);
-                docsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
+                DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
                 TombstonesSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Tombstones), 16);
 
                 // Add to cache ONLY if the transaction was committed.

@@ -105,6 +105,11 @@ namespace Raven.Server.Commercial
 
         public bool HasEncryption => GetValue<bool>("encryption");
 
+        public bool HasCompression =>
+            // TODO: we don't have compression in any license yet
+            GetValue<bool?>("compression") ??
+            GetValue<bool>("encryption");
+
         public bool HasExternalReplication => GetValue<bool>("externalReplication");
 
         public bool HasDelayedExternalReplication => GetValue<bool>("delayedExternalReplication");

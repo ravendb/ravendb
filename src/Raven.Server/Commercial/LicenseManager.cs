@@ -1191,6 +1191,7 @@ namespace Raven.Server.Commercial
             var externalReplicationCount = 0;
             var delayedExternalReplicationCount = 0;
             var pullReplicationAsHubCount = 0;
+            var documentCompressionCount = 0;
             var pullReplicationAsSinkCount = 0;
             var ravenEtlCount = 0;
             var sqlEtlCount = 0;
@@ -1221,6 +1222,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.HubPullReplications != null &&
                         databaseRecord.HubPullReplications.Count > 0)
                         pullReplicationAsHubCount++;
+
+                    if (databaseRecord.Compression?.CompressRevisions == true ||
+                        databaseRecord.Compression?.Collections?.Length > 0)
+                        documentCompressionCount++;
 
                     if (databaseRecord.SinkPullReplications != null &&
                         databaseRecord.SinkPullReplications.Count > 0)
@@ -1320,6 +1325,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(dynamicNodesDistributionCount, "dynamic database distribution");
                 throw GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message);
+            }
+
+            if(!newLicenseStatus.HasCompression && documentCompressionCount > 0)
+            {
+                var message = GenerateDetails(documentCompressionCount, "document compression");
+                throw GenerateLicenseLimit(LimitType.DocumentCompression, message);
             }
         }
 
@@ -1439,6 +1450,19 @@ namespace Raven.Server.Commercial
 
             var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
             throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
+        }
+
+
+        public void AssertCanUseDocumentCompression()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (_licenseStatus.HasCompression)
+                return;
+
+            var details = $"Your current license ({_licenseStatus.Type}) does not allow document compression";
+            throw GenerateLicenseLimit(LimitType.DocumentCompression, details);
         }
 
         public void AssertCanDelayReplication()

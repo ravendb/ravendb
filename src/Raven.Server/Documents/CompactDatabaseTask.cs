@@ -92,7 +92,7 @@ namespace Raven.Server.Documents
                     }
 
                     var revisionsPrefix = CollectionName.GetTablePrefix(CollectionTableType.Revisions);
-                    var compressedCollectionsTableNames = databaseRecord.CompressedCollections
+                    var compressedCollectionsTableNames = databaseRecord.Compression.Collections
                         .Select(name => new CollectionName(name).GetTableName(CollectionTableType.Documents))
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
