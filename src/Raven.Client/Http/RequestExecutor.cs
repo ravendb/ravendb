@@ -1538,6 +1538,7 @@ namespace Raven.Client.Http
             if (broadcastCommand == null)
                 throw new InvalidOperationException("You can broadcast only commands that implement 'IBroadcast'.");
 
+            var failedNodes = command.FailedNodes;
             command.FailedNodes = new Dictionary<ServerNode, Exception>(); // clear the current failures
 
             using (var broadcastCts = CancellationTokenSource.CreateLinkedTokenSource(token))
@@ -1555,7 +1556,21 @@ namespace Raven.Client.Http
                     foreach (var broadcastState in broadcastTasks)
                     {
                         // we can't dispose it right away, we need for the task to be completed in order not to have a concurrent usage of the context.
-                        broadcastState.Key?.ContinueWith(_ => broadcastState.Value.ReturnContext.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                        broadcastState.Key?.ContinueWith(_ =>
+                        {
+                            if (broadcastState.Key.IsFaulted || broadcastState.Key.IsCanceled)
+                            {
+                                var index = broadcastState.Value.Index;
+                                var node = _nodeSelector.Topology.Nodes[index];
+                                if (failedNodes.ContainsKey(node))
+                                {
+                                    // if other node succeed in broadcast we need to send health checks to the original failed node
+                                    SpawnHealthChecks(node, index);
+                                }
+                            }
+
+                            broadcastState.Value.ReturnContext.Dispose();
+                        }, TaskContinuationOptions.ExecuteSynchronously);
                     }
                 }
             }
@@ -1574,6 +1589,7 @@ namespace Raven.Client.Http
                     command.FailedNodes[node] = completed.Exception?.ExtractSingleInnerException() ?? new UnsuccessfulRequestException(failed.Node.Url);
 
                     _nodeSelector.OnFailedRequest(failed.Index);
+                    SpawnHealthChecks(node, failed.Index);
 
                     tasks.Remove(completed);
                     continue;
