@@ -200,7 +200,7 @@ namespace Raven.Server.ServerWide.Commands
 
             using (GetPrefix(context, DatabaseName, out var databaseSlice))
             {
-                var count = commandsCountPerDatabase.ReadLong(databaseSlice) ?? 0;
+                var count = commandsCountPerDatabase.ReadInt64(databaseSlice) ?? 0;
                 using (GetPrefix(context, DatabaseName, out var prefixSlice, count))
                 using (items.Allocate(out TableValueBuilder tvb))
                 {

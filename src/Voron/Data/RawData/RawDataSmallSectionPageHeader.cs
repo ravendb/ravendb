@@ -31,8 +31,5 @@ namespace Voron.Data.RawData
 
         [FieldOffset(30)]
         public byte TableType;
-
-        [FieldOffset(31)]
-        public byte MinCompressionRatio;
     }
 }

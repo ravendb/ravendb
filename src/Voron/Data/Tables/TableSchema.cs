@@ -28,9 +28,12 @@ namespace Voron.Data.Tables
         public static readonly Slice SchemasSlice;
         public static readonly Slice PkSlice;
         public static readonly Slice DictionariesSlice;
+        public static readonly Slice CompressionDictionaryIdSlice;
 
         private SchemaIndexDef _primaryKey;
         private bool _compressed;
+
+        public FixedSizeSchemaIndexDef CompressedEtagSourceIndex;
 
         private readonly Dictionary<Slice, SchemaIndexDef> _indexes =
             new Dictionary<Slice, SchemaIndexDef>(SliceComparer.Instance);
@@ -54,6 +57,7 @@ namespace Voron.Data.Tables
                 Slice.From(ctx, "Schemas", ByteStringType.Immutable, out SchemasSlice);
                 Slice.From(ctx, "PK", ByteStringType.Immutable, out PkSlice);
                 Slice.From(ctx, "CompressionDictionaries", ByteStringType.Immutable, out DictionariesSlice);
+                Slice.From(ctx, "CurrentCompressionDictionaryId", ByteStringType.Immutable, out CompressionDictionaryIdSlice);
             }
         }
 
@@ -324,9 +328,10 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableSchema CompressValues()
+        public TableSchema CompressValues(FixedSizeSchemaIndexDef etagSource, bool compress)
         {
-            _compressed = true;
+            _compressed = compress;
+            CompressedEtagSourceIndex = etagSource ?? throw new ArgumentNullException(nameof(etagSource));
             return this;
         }
 
@@ -412,9 +417,10 @@ namespace Voron.Data.Tables
             if (tableTree.State.NumberOfEntries > 0)
                 return; // this was already created
 
+            tableTree.Add(CompressionDictionaryIdSlice, 0);
+
             // Create raw data. This is where we will actually store the documents
             using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx, name, 
-                dictionaryId: 0,
                 TableType, sizeInPages))
             {
                 long val = rawDataActiveSection.PageNumber;
@@ -534,6 +540,9 @@ namespace Voron.Data.Tables
 
             structure.Add(BitConverter.GetBytes(_fixedSizeIndexes.Count));
             structure.AddRange(_fixedSizeIndexes.Values.Select(index => index.Serialize()));
+            structure.Add(BitConverter.GetBytes(CompressedEtagSourceIndex == null ? 0 : 1));
+            if (CompressedEtagSourceIndex != null)
+                structure.Add(CompressedEtagSourceIndex.Serialize());
 
             var totalSize = structure.Select((bytes, i) => bytes.Length).Sum();
             var packed = new byte[totalSize];
@@ -606,6 +615,16 @@ namespace Voron.Data.Tables
                 schema.DefineFixedSizeIndex(fixedIndexSchemaDef);
 
                 indexCount--;
+            }
+
+            if (currentIndex < input.Count)
+            {
+                currentPtr = input.Read(currentIndex++, out currentSize);
+                if (*(int*)currentPtr != 0)
+                {
+                    currentPtr = input.Read(currentIndex++, out currentSize);
+                   schema.CompressedEtagSourceIndex = FixedSizeSchemaIndexDef.ReadFrom(context, currentPtr, currentSize);
+                }
             }
 
             return schema;

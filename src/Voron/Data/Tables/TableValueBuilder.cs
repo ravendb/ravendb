@@ -5,6 +5,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Voron.Impl;
 using Voron.Util;
 
 namespace Voron.Data.Tables
@@ -16,20 +17,13 @@ namespace Voron.Data.Tables
         private bool _isDirty;
         private int _size;
 
-        public TableValueCompressor Compression;
+        private readonly TableValueCompressor Compression;
 
         public TableValueBuilder()
         {
             Compression = new TableValueCompressor(this);
         }
 
-        public int SizeLarge
-        {
-            get
-            {
-                return Compression.IsValid ? Compression.SizeLarge : Size;
-            }
-        }
 
         public int ElementSize
         {
@@ -206,27 +200,33 @@ namespace Voron.Data.Tables
             }
         }
 
-        public void TryCompression(ZstdLib.CompressionDictionary compressionDictionary)
+        public bool TryCompression(Table table, TableSchema schema)
         {
-            if (Compression.Redundant(compressionDictionary))
-                return;
+            var tx = table._tx;
 
-            Compression.Prepare(RawSize);
-            CopyTo(Compression.AllocateRaw(RawSize));
-            Compression.TryCompression(compressionDictionary);
+            Compression.RawScope = tx.Allocator.Allocate(RawSize, out Compression.RawBuffer);
+            CopyTo(Compression.RawBuffer.Ptr);
+
+            return Compression.TryCompression(table, schema);
+        }
+
+
+        public bool TryCompression(Table table, TableSchema schema, ref byte* ptr, ref int size)
+        {
+            using var _ = table._tx.Allocator.FromPtr(ptr, size, ByteStringType.Immutable, out Compression.RawBuffer);
+            var result = Compression.TryCompression(table, schema);
+
+            if (result)
+            {
+                ptr = Compression.CompressedBuffer.Ptr;
+                size = Compression.CompressedBuffer.Length;
+            }
+            return result;
         }
 
         public bool Compressed => Compression.Compressed;
 
-        public void CopyToLarge(byte* pos)
-        {
-            if (Compression.IsValid)
-            {
-                Compression.CopyToLarge(pos);
-                return;
-            }
-            CopyTo(pos);
-        }
+        public bool CompressionTried => Compression.CompressionTried;
 
         public TableValueReader CreateReader(byte* pos)
         {
@@ -234,5 +234,6 @@ namespace Voron.Data.Tables
                 return Compression.CreateReader(pos);
             return new TableValueReader(pos, Size);
         }
+
     }
 }
