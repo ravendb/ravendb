@@ -68,20 +68,13 @@ namespace Voron.Data.Tables
                 size += WriteVariableSizeIntInReverse(CompressedBuffer.Ptr + size, compressionDictionary.Id);
                 CompressedBuffer.Truncate(size);
                 var compressionRatio = GetCompressionRatio(size, RawBuffer.Length);
-                if (compressionRatio > compressionDictionary.ExpectedCompressionRatio + 5)
+                if (compressionRatio > compressionDictionary.ExpectedCompressionRatio + 10)
                 {
                     // training dictionaries is expensive, only do that if we see that the current compressed
                     // value is significantly worse than the previous one
                     var etagTree = table.GetFixedSizeTree(schema.CompressedEtagSourceIndex);
-                    using (var it = etagTree.Iterate())
-                    {
-                        if (it.SeekToLast())
-                        {
-                            // we 
-                            if(it.CurrentKey % 256 == 0)
-                                MaybeTrainCompressionDictionary(table, etagTree);
-                        }
-                    }
+                    if(ShouldRetrain(etagTree))
+                        MaybeTrainCompressionDictionary(table, etagTree);
                 }
 
                 if (CompressedBuffer.Length >= RawBuffer.Length)
@@ -103,6 +96,28 @@ namespace Voron.Data.Tables
                 CompressedScope.Dispose();
                 RawScope.Dispose();
                 throw;
+            }
+        }
+
+        private bool ShouldRetrain(FixedSizeTree etagTree)
+        {
+            using (var it = etagTree.Iterate())
+            {
+                if (it.SeekToLast() == false)
+                    return false;
+
+                long lastEtag = it.CurrentKey;
+                long total  = etagTree.NumberOfEntries;
+
+                if(total < 16*1024)
+                    return (lastEtag & 1024) == 0;
+                if(total < 64 * 1024)
+                    return (lastEtag & 2048) == 0;
+                if(total < 256*1024)
+                    return (lastEtag & 8192) == 0;
+                if (total < 512 * 1024)
+                    return (lastEtag & 16 * 1024) == 0;
+                return (lastEtag & 32 * 1024) == 0;
             }
         }
 
