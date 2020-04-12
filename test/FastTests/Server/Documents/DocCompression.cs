@@ -63,7 +63,7 @@ namespace FastTests.Server.Documents
             }
 
             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
-            record.CompressedCollections.Add("Orders");
+            record.Compression = new CompressionConfiguration(true, "Orders");
             store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
 
             var op = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
@@ -98,8 +98,8 @@ namespace FastTests.Server.Documents
             {
                 Path = path,
                 RunInMemory = false,
-                ModifyDatabaseRecord = r => r.CompressedCollections.Add("Orders")
-            });
+                ModifyDatabaseRecord = r => r.Compression = new CompressionConfiguration(true, "Orders")
+        });
 
             store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -112,7 +112,7 @@ namespace FastTests.Server.Documents
             }
 
             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
-            record.CompressedCollections.Remove("Orders");
+            record.Compression = new CompressionConfiguration(true);
             store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
 
             var op = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
@@ -147,8 +147,8 @@ namespace FastTests.Server.Documents
             {
                 Path = path,
                 RunInMemory = false,
-                ModifyDatabaseRecord = record => record.CompressedCollections.Add("Orders")
-            });
+                ModifyDatabaseRecord = record => record.Compression = new CompressionConfiguration(true, "Orders")
+        });
 
             store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -182,8 +182,8 @@ namespace FastTests.Server.Documents
             var random = new Random(654);
             using var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.CompressedCollections.Add("Users")
-            });
+                ModifyDatabaseRecord = record => record.Compression = new CompressionConfiguration(true, "Users")
+        });
 
             var rnd = Enumerable.Range(1, 10)
                 .Select(i => RandomString(random, 16))
@@ -226,7 +226,7 @@ namespace FastTests.Server.Documents
             }
 
             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
-            record.CompressedCollections.Add("Users");
+            record.Compression = new CompressionConfiguration(true, "Users");
             store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
 
             using (var s = store.OpenSession())
@@ -293,8 +293,8 @@ namespace FastTests.Server.Documents
             var random = new Random(654);
             using var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.CompressedCollections.Add("Users")
-            });
+                ModifyDatabaseRecord = record => record.Compression = new CompressionConfiguration(true, "Users")
+        });
 
             var rnd = Enumerable.Range(1, 10)
                 .Select(i => RandomString(random, 16))
@@ -337,8 +337,8 @@ namespace FastTests.Server.Documents
             var random = new Random(654);
             using var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.CompressedCollections.Add("Users")
-            });
+                ModifyDatabaseRecord = record => record.Compression = new CompressionConfiguration(true, "Users")
+        });
 
             var rnd = Enumerable.Range(1, 10)
                 .Select(i => RandomString(random, 16))

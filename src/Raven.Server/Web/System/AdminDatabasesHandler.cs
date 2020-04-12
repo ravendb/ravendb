@@ -132,6 +132,12 @@ namespace Raven.Server.Web.System
                 if (databaseRecord.Encrypted)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
 
+                if (databaseRecord.Compression?.CompressRevisions == true ||
+                    databaseRecord.Compression?.Collections?.Length > 0)
+                {
+                    Server.ServerStore.LicenseManager.AssertCanUseDocumentCompression();
+                }
+
                 // the case where an explicit node was requested 
                 if (string.IsNullOrEmpty(node) == false)
                 {
@@ -241,9 +247,20 @@ namespace Raven.Server.Web.System
                     auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
                 
+                if(ServerStore.LicenseManager.GetLicenseStatus().HasCompression &&
+                   databaseRecord.Compression == null)
+                {
+                    databaseRecord.Compression = new CompressionConfiguration(true);
+                }
+
                 if (databaseRecord.Encrypted)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
-                
+
+                if (databaseRecord.Compression?.CompressRevisions == true ||
+                    databaseRecord.Compression?.Collections?.Length > 0)
+                    ServerStore.LicenseManager.AssertCanUseDocumentCompression();
+
+
                 // Validate Directory
                 var dataDirectoryThatWillBeUsed = databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir) == false ? 
                                                   ServerStore.Configuration.Core.DataDirectory.FullPath :
@@ -270,6 +287,12 @@ namespace Raven.Server.Web.System
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
                 if (ResourceNameValidator.IsValidResourceName(databaseRecord.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                     throw new BadRequestException(errorMessage);
+
+                if (databaseRecord.Compression?.CompressRevisions == true ||
+                    databaseRecord.Compression?.Collections?.Length > 0)
+                {
+                    Server.ServerStore.LicenseManager.AssertCanUseDocumentCompression();
+                }
 
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
                     Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)

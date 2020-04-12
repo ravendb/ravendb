@@ -46,6 +46,11 @@ namespace Raven.Server.Documents.Revisions
             TableType = (byte)TableType.Revisions,
         };
 
+        public static readonly TableSchema CompressedRevisionsSchema = new TableSchema()
+        {
+            TableType = (byte)TableType.Revisions,
+        };
+
         public RevisionsConfiguration ConflictConfiguration;
 
         private readonly DocumentDatabase _database;
@@ -123,14 +128,18 @@ namespace Raven.Server.Documents.Revisions
                      };
                  };
             }
-            return tx.OpenTable(RevisionsSchema, tableName);
+
+            var revisionsSchema = _documentsStorage.DocumentPut.Compression.CompressRevisions ? 
+                CompressedRevisionsSchema : 
+                RevisionsSchema;
+
+            return tx.OpenTable(revisionsSchema, tableName);
         }
 
         static RevisionsStorage()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-
                 Slice.From(ctx, "RevisionsChangeVector", ByteStringType.Immutable, out var changeVectorSlice);
                 Slice.From(ctx, "RevisionsIdAndEtag", ByteStringType.Immutable, out IdAndEtagSlice);
                 Slice.From(ctx, "DeleteRevisionEtag", ByteStringType.Immutable, out DeleteRevisionEtagSlice);
@@ -141,48 +150,57 @@ namespace Raven.Server.Documents.Revisions
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Revisions), ByteStringType.Immutable, out RevisionsPrefix);
                 
-                RevisionsSchema.DefineKey(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)RevisionsTable.ChangeVector,
-                    Count = 1,
-                    Name = changeVectorSlice,
-                    IsGlobal = true
-                });
-                RevisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)RevisionsTable.LowerId,
-                    Count = 3,
-                    Name = IdAndEtagSlice,
-                    IsGlobal = true
-                });
-                RevisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-                {
-                    StartIndex = (int)RevisionsTable.Etag,
-                    Name = AllRevisionsEtagsSlice,
-                    IsGlobal = true
-                });
-                RevisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-                {
-                    StartIndex = (int)RevisionsTable.Etag,
-                    Name = CollectionRevisionsEtagsSlice
-                });
-                RevisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)RevisionsTable.DeletedEtag,
-                    Count = 1,
-                    Name = DeleteRevisionEtagSlice,
-                    IsGlobal = true
-                });
-                RevisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)RevisionsTable.Resolved,
-                    Count = 2,
-                    Name = ResolvedFlagByEtagSlice,
-                    IsGlobal = true
-                });
+                AddRevisionIndexes(RevisionsSchema, changeVectorSlice);
+                AddRevisionIndexes(CompressedRevisionsSchema, changeVectorSlice);
 
-                RevisionsSchema.CompressValues(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: true);
+                RevisionsSchema.CompressValues(
+                    RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: false);
+                CompressedRevisionsSchema.CompressValues(
+                    RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: true);
             }
+        }
+
+        private static void AddRevisionIndexes(TableSchema revisionsSchema, Slice changeVectorSlice)
+        {
+            revisionsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)RevisionsTable.ChangeVector, 
+                Count = 1,
+                Name = changeVectorSlice, 
+                IsGlobal = true
+            });
+            revisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)RevisionsTable.LowerId, 
+                Count = 3,
+                Name = IdAndEtagSlice, 
+                IsGlobal = true
+            });
+            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = (int)RevisionsTable.Etag,
+                Name = AllRevisionsEtagsSlice, 
+                IsGlobal = true
+            });
+            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = (int)RevisionsTable.Etag, 
+                Name = CollectionRevisionsEtagsSlice
+            });
+            revisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)RevisionsTable.DeletedEtag,
+                Count = 1,
+                Name = DeleteRevisionEtagSlice, 
+                IsGlobal = true
+            });
+            revisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)RevisionsTable.Resolved,
+                Count = 2, 
+                Name = ResolvedFlagByEtagSlice, 
+                IsGlobal = true
+            });
         }
 
         public void InitializeFromDatabaseRecord(DatabaseRecord dbRecord)
@@ -230,12 +248,6 @@ namespace Raven.Server.Documents.Revisions
         {
             tx.CreateTree(RevisionsCountSlice);
             TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
-        }
-
-        public void AssertFixedSizeTrees(Transaction tx)
-        {
-            tx.OpenTable(RevisionsSchema, RevisionsCountSlice).AssertValidFixedSizeTrees();
-            tx.OpenTable(TombstonesSchema, RevisionsTombstonesSlice).AssertValidFixedSizeTrees();
         }
 
         public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None)
