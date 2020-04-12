@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertCommandToBlittable(_configuration, ctx);
+                        var config = ctx.ReadObject(_configuration.ToJson(),"convert time-series configuration");
                         ctx.Write(stream, config);
                     })
                 };

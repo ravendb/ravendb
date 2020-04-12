@@ -36,6 +36,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (hashSet.Add(policy.Name) == false)
                     throw new InvalidOperationException($"Policy names must be unique, policy with the name '{policy.Name}' has duplicates.");
 
+                if (policy.AggregationTime <= TimeValue.Zero)
+                    throw new InvalidOperationException($" aggregation time of '{policy.Name}' must be greater than zero");
+
+                if (policy.RetentionTime <= TimeValue.Zero)
+                    throw new InvalidOperationException($" retention time of '{policy.Name}' must be greater than zero");
+
                 var prev = GetPreviousPolicy(index + 1);
                 if (prev.AggregationTime == policy.AggregationTime)
                     throw new InvalidOperationException(
@@ -146,12 +152,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public RawTimeSeriesPolicy()
         {
             Name = PolicyString;
-            RetentionTime = TimeSpan.MaxValue;
+            RetentionTime = TimeValue.MaxValue;
         }
 
-        public RawTimeSeriesPolicy(TimeSpan retentionTime)
+        public RawTimeSeriesPolicy(TimeValue retentionTime)
         {
-            if (retentionTime <= TimeSpan.Zero)
+            if (retentionTime <= TimeValue.Zero)
                 throw new ArgumentException("Must be greater than zero", nameof(retentionTime));
 
             Name = PolicyString;
@@ -169,12 +175,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// <summary>
         /// How long the data of this policy will be retained
         /// </summary>
-        public TimeSpan RetentionTime { get; protected set; }
+        public TimeValue RetentionTime { get; protected set; }
 
         /// <summary>
         /// Define the aggregation of this policy
         /// </summary>
-        public TimeSpan AggregationTime { get; private set; }
+        public TimeValue AggregationTime { get; private set; }
 
 
         internal static TimeSeriesPolicy AfterAllPolices = new TimeSeriesPolicy();
@@ -189,19 +195,19 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return $"{rawName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{Name}";
         }
 
-        public TimeSeriesPolicy(string name, TimeSpan aggregationTime) : this(name, aggregationTime, TimeSpan.MaxValue)
+        public TimeSeriesPolicy(string name, TimeValue aggregationTime) : this(name, aggregationTime, TimeValue.MaxValue)
         {
         }
         
-        public TimeSeriesPolicy(string name, TimeSpan aggregationTime, TimeSpan retentionTime)
+        public TimeSeriesPolicy(string name, TimeValue aggregationTime, TimeValue retentionTime)
         {
             if(string.IsNullOrEmpty(name))
                 throw new ArgumentNullException(name);
 
-            if (aggregationTime <= TimeSpan.Zero)
+            if (aggregationTime <= TimeValue.Zero)
                 throw new ArgumentException("Must be greater than zero", nameof(aggregationTime));
 
-            if (retentionTime <= TimeSpan.Zero)
+            if (retentionTime <= TimeValue.Zero)
                 throw new ArgumentException("Must be greater than zero", nameof(retentionTime));
 
             RetentionTime = retentionTime;
@@ -262,13 +268,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             if (y == null)
                 return -1;
 
-            var diff = x.AggregationTime.Ticks - y.AggregationTime.Ticks; // we can't cast to int, since it might overflow
-
-            if (diff > 0)
-                return 1;
-            if (diff < 0)
-                return -1;
-            return 0;
+            return x.AggregationTime.Compare(y.AggregationTime);
         }
     }
 }
