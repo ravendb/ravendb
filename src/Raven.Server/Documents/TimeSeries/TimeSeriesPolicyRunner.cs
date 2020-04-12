@@ -8,6 +8,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Logging;
 using Voron;
 
@@ -117,7 +118,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var currentPolicy = config.GetPolicy(currentIndex);
                 var now = context.DocumentDatabase.Time.GetUtcNow();
                 var startRollup = new DateTime(TimeSeriesRollups.NextRollup(timestamp, nextPolicy)).Add(-currentPolicy.RetentionTime);
-                if (now - startRollup > currentPolicy.RetentionTime)
+                if ((now - startRollup).Ticks > currentPolicy.RetentionTime.Ticks)
                     return; // ignore this value since it is outside our retention frame
             }
 
@@ -300,7 +301,7 @@ namespace Raven.Server.Documents.TimeSeries
         private async Task ApplyRetention(DocumentsOperationContext context, CollectionName collectionName, TimeSeriesPolicy policy, DateTime now)
         {
             var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
-            if (policy.RetentionTime == TimeSpan.MaxValue)
+            if (policy.RetentionTime == TimeValue.MaxValue)
                 return;
 
             var to = now.Add(-policy.RetentionTime);

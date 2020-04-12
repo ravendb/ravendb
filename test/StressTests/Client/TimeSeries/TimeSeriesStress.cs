@@ -8,6 +8,7 @@ using Raven.Client.Documents.Session;
 using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +31,7 @@ namespace StressTests.Client.TimeSeries
                 ReplicationFactor = 3
             }))
             {
-                var retention = TimeSpan.FromSeconds(120);
+                var retention = TimeValue.FromSeconds(120);
                 var raw = new RawTimeSeriesPolicy(retention);
                 var config = new TimeSeriesConfiguration
                 {
@@ -68,7 +69,7 @@ namespace StressTests.Client.TimeSeries
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 var sp = Stopwatch.StartNew();
-                await Task.Delay(retention / 2);
+                await Task.Delay((TimeSpan)retention / 2);
 
                 var check = true;
                 while (check)
@@ -96,7 +97,7 @@ namespace StressTests.Client.TimeSeries
                     }
                 }
 
-                Assert.True(sp.Elapsed < retention.Add(retention / 10));
+                Assert.True(sp.Elapsed < retention + ((TimeSpan)retention / 10));
             }
         }
     }

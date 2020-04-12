@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -679,7 +680,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public static List<TimeSeriesStorage.Reader.SingleResult> GetAggregatedValues(TimeSeriesStorage.Reader reader, TimeSpan rangeGroup, AggregationMode mode)
+        public static List<TimeSeriesStorage.Reader.SingleResult> GetAggregatedValues(TimeSeriesStorage.Reader reader, TimeValue rangeGroup, AggregationMode mode)
         {
             var aggStates = new TimeSeriesAggregation(mode); // we always will aggregate here by Min, Max, First, Last, Sum, Count, Mean
             var results = new List<TimeSeriesStorage.Reader.SingleResult>();
