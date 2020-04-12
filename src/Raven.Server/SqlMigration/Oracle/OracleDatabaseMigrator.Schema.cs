@@ -71,7 +71,7 @@ namespace Raven.Server.SqlMigration.Oracle
 
                         if (tableSchema == null)
                         {
-                            tableSchema = new TableSchema(schemaAndTableName.Schema, schemaAndTableName.TableName,
+                            tableSchema = new SqlTableSchema(schemaAndTableName.Schema, schemaAndTableName.TableName,
                                 GetSelectAllQueryForTable(schemaAndTableName.Schema, schemaAndTableName.TableName));
                             dbSchema.Tables.Add(tableSchema);
                         }

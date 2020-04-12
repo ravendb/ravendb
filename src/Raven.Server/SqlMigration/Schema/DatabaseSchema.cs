@@ -7,7 +7,7 @@ namespace Raven.Server.SqlMigration.Schema
     public class DatabaseSchema : IDynamicJson
     {
         public string CatalogName { get; set; }
-        public List<TableSchema> Tables { get; set; } = new List<TableSchema>();
+        public List<SqlTableSchema> Tables { get; set; } = new List<SqlTableSchema>();
 
         public DynamicJsonValue ToJson()
         {
@@ -18,7 +18,7 @@ namespace Raven.Server.SqlMigration.Schema
             };
         }
 
-        public TableSchema GetTable(string schema, string tableName)
+        public SqlTableSchema GetTable(string schema, string tableName)
         {
             return Tables.FirstOrDefault(x => x.Schema == schema && x.TableName == tableName);
         }

@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.SqlMigration.Schema
 {
-    public class TableSchema : IDynamicJson
+    public class SqlTableSchema : IDynamicJson
     {
         public string Schema { get; set; }
         
@@ -21,7 +21,7 @@ namespace Raven.Server.SqlMigration.Schema
         
         public List<TableReference> References { get; set; } = new List<TableReference>();
 
-        public TableSchema(string schema, string tableName, string defaultQuery)
+        public SqlTableSchema(string schema, string tableName, string defaultQuery)
         {
             Schema = schema;
             TableName = tableName;
