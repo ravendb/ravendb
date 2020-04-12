@@ -103,7 +103,7 @@ namespace Raven.Server.SqlMigration.Oracle
             return $"select * from \"{tableName}\"";
         }
 
-        protected override string GetQueryByPrimaryKey(RootCollection collection, TableSchema tableSchema, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
+        protected override string GetQueryByPrimaryKey(RootCollection collection, SqlTableSchema tableSchema, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
         {
             var primaryKeyColumns = tableSchema.PrimaryKeyColumns;
             if (primaryKeyColumns.Count != primaryKeyValues.Length)

@@ -472,7 +472,7 @@ namespace Raven.Server.SqlMigration
             return connection;
         }
 
-        protected virtual string GetQueryByPrimaryKey(RootCollection collection, TableSchema tableSchema, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
+        protected virtual string GetQueryByPrimaryKey(RootCollection collection, SqlTableSchema tableSchema, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
         {
             var primaryKeyColumns = tableSchema.PrimaryKeyColumns;
             if (primaryKeyColumns.Count != primaryKeyValues.Length)
@@ -495,7 +495,7 @@ namespace Raven.Server.SqlMigration
             return $"select * from {QuoteTable(collection.SourceTableSchema, collection.SourceTableName)} where {queryParametersAsString}";
         }
 
-        public object ValueAsObject(TableSchema tableSchema, string column, string[] primaryKeyValue, int index)
+        public object ValueAsObject(SqlTableSchema tableSchema, string column, string[] primaryKeyValue, int index)
         {
             var type = tableSchema.Columns.Find(x => x.Name == column).Type;
             var value = type == ColumnType.Number ? (object)int.Parse(primaryKeyValue[index].ToString()) : primaryKeyValue[index];
