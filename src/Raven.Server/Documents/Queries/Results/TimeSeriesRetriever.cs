@@ -12,6 +12,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage.Reader;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var timeSeriesFunction = declaredFunction.TimeSeries;
-            var source = GetSourceAndId();
+            var source = GetSourcesAndId();
 
             var min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
             var max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             long count = 0;
             var array = new DynamicJsonArray();
-            var reader = tss.GetReader(_context, documentId, source, min, max, timeSeriesFunction.Offset);
+            var multiReader = new MultiReader(tss, _context, documentId, source, min, max, timeSeriesFunction.Offset);
 
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
@@ -120,7 +121,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             BlittableJsonReaderObject GetRawValues()
             {
-                foreach (var singleResult in reader.AllValues())
+                foreach (var singleResult in multiReader.AllValues())
                 {
                     if (ShouldFilter(singleResult, timeSeriesFunction.Where))
                         continue;
@@ -153,7 +154,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             BlittableJsonReaderObject GetAggregatedValues()
             {
-                foreach (var it in reader.SegmentsOrValues())
+                foreach (var it in multiReader.SegmentsOrValues())
                 {
                     if (it.IndividualValues != null)
                     {
@@ -641,49 +642,59 @@ namespace Raven.Server.Documents.Queries.Results
                                                     $"Unsupported expression type : '{expression.Type}'");
             }
 
-            string GetSourceAndId()
+            List<string> GetSourcesAndId()
             {
-                var compound = ((FieldExpression)timeSeriesFunction.Between.Source).Compound;
+                var sources = new  List<string>();
 
-                if (compound.Count == 1)
+                for (var i = 0; i < timeSeriesFunction.Between.FromList.Count; i++)
                 {
-                    var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
-                    if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) //not found
-                        return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValue;
-                    if (!(args[paramIndex] is string s))
-                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
-                                                        $"Expected argument '{compound[0]}' to be a string, but got '{args[paramIndex].GetType()}'");
-                    return s;
-                }
+                    var compound = timeSeriesFunction.Between.FromList[i].Compound;
 
-                if (args == null)
-                    throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                    if (compound.Count == 1)
+                    {
+                        var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
+                        if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) //not found
+                            sources.Add(((FieldExpression)timeSeriesFunction.Between.Source).FieldValue);
+                        if (!(args[paramIndex] is string s))
+                            throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                                                            $"Expected argument '{compound[0]}' to be a string, but got '{args[paramIndex].GetType()}'");
+                        sources.Add(s);
+                    }
+
+                    if (args == null)
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                         $"'{compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
-                
-                if (args.Length < declaredFunction.Parameters.Count)
-                    throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'." +
+
+                    if (args.Length < declaredFunction.Parameters.Count)
+                        throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'." +
                                                         $"Expected '{declaredFunction.Parameters.Count}' arguments, but got '{args.Length}'");
-                
-                var index = GetParameterIndex(declaredFunction, compound[0]);
-                if (index == 0)
-                {
-                    if (args[0] is Document document)
-                        documentId = document.Id;
-                }
-                else
-                {
-                    if (index == -1 || index == declaredFunction.Parameters.Count) // not found
-                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+
+                    sources.Add(((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias);
+
+                    if (i > 0)
+                        continue;
+
+                    var index = GetParameterIndex(declaredFunction, compound[0]);
+                    if (index == 0)
+                    {
+                        if (args[0] is Document document)
+                            documentId = document.Id;
+                    }
+                    else
+                    {
+                        if (index == -1 || index == declaredFunction.Parameters.Count) // not found
+                            throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"'{compound[0]}' is unknown, and no matching argument was provided to time series function '{declaredFunction.Name}'.");
-                    
-                    if (!(args[index] is Document document))
-                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+
+                        if (!(args[index] is Document document))
+                            throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[index].GetType()}'");
 
-                    documentId = document.Id;
+                        documentId = document.Id;
+                    }
                 }
 
-                return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
+                return sources;
             }
         }
 
@@ -865,6 +876,86 @@ namespace Raven.Server.Documents.Queries.Results
                 throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + valueAsStr);
 
             return date.ToUniversalTime();
+        }
+
+        private class MultiReader
+        {
+            private TimeSeriesStorage.Reader _reader;
+            private readonly string _id;
+            private readonly DocumentsOperationContext _context;
+            private DateTime _min;
+            private readonly DateTime _max;
+            private readonly TimeSpan? _offset;
+            private readonly List<string> _names;
+            private readonly TimeSeriesStorage _tss;
+            private int _current;
+
+            public MultiReader(TimeSeriesStorage timeSeriesStorage, DocumentsOperationContext context, string documentId, List<string> names, DateTime min, DateTime max, TimeSpan? offset)
+            {
+                _tss = timeSeriesStorage;
+                _context = context;
+                _id = documentId ?? throw new ArgumentNullException(nameof(documentId));
+                _names = names ?? throw new ArgumentNullException(nameof(names));
+                _min = min;
+                _max = max;
+                _offset = offset;
+                _current = 0;
+
+                _reader = _tss.GetReader(_context, _id, _names[_current], _min, _max, _offset);
+            }
+
+            public IEnumerable<(IEnumerable<SingleResult> IndividualValues, SegmentResult Segment)> SegmentsOrValues()
+            {
+                while (true)
+                {
+                    DateTime last = DateTime.MaxValue;
+                    foreach (var sov in _reader.SegmentsOrValues())
+                    {
+                        last = sov.Segment?.End ?? DateTime.MaxValue;
+                        yield return sov;
+                    }
+
+                    if (GetNext(last) == false)
+                        yield break;
+                }
+            }
+
+            public IEnumerable<SingleResult> AllValues()
+            {
+                while (true)
+                {
+                    DateTime last = DateTime.MaxValue;
+                    foreach (var singleResult in _reader.AllValues())
+                    {
+                        last = singleResult.Timestamp;
+                        yield return singleResult;
+                    }
+
+                    if (GetNext(last) == false)
+                        yield break;
+                }
+            }
+
+            private bool GetNext(DateTime last)
+            {
+                if (last >= _max)
+                    return false;
+
+                var name = GetNextName();
+                if (name == null)
+                    return false;
+
+                _min = last.AddTicks(1);
+                _reader = _tss.GetReader(_context, _id, name, _min, _max, _offset);
+                return true;
+            }
+
+            private string GetNextName()
+            {
+                if (++_current > _names.Count - 1)
+                    return null;
+                return _names[_current];
+            }
         }
     }
 }
