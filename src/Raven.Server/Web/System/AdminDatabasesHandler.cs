@@ -250,7 +250,9 @@ namespace Raven.Server.Web.System
                 if(ServerStore.LicenseManager.GetLicenseStatus().HasCompression &&
                    databaseRecord.Compression == null)
                 {
-                    databaseRecord.Compression = new CompressionConfiguration(true);
+                    databaseRecord.Compression = new CompressionConfiguration(
+                        Server.Configuration.Databases.DefaultRevisionsCompression
+                        );
                 }
 
                 if (databaseRecord.Encrypted)
