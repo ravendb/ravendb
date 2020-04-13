@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
+                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
                         yield break;
                 }
             }
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (size.GetValue(SizeUnit.Bytes) + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
+                    if (size.GetValue(SizeUnit.Bytes) + docsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
                         yield break;
                 }
             }

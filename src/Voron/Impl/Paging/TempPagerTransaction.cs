@@ -31,7 +31,7 @@ namespace Voron.Impl.Paging
             get; set;
         }
 
-        public Size TotalEncryptionBufferSize
+        public Size AdditionalMemoryUsageSize
         {
             get
             {

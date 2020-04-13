@@ -562,7 +562,7 @@ namespace Voron.Recovery
                 return mem;
 
             //We must make sure we can close the transaction since it may hold buffers for memory we still need e.g. attachments chunks.
-            if (maybePulseTransaction && tx?.TotalEncryptionBufferSize > _maxTransactionSize)
+            if (maybePulseTransaction && tx?.AdditionalMemoryUsageSize > _maxTransactionSize)
             {
                 tx.Dispose();
                 tx = new TempPagerTransaction();

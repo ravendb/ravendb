@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.IsLazyTransaction)] = lowLevelTransaction.IsLazyTransaction,
                 [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,
                 [nameof(TxInfoResult.Committed)] = lowLevelTransaction.Committed,
-                [nameof(TxInfoResult.TotalEncryptionBufferSize)] = lowLevelTransaction.TotalEncryptionBufferSize.ToString(),
+                [nameof(TxInfoResult.TotalEncryptionBufferSize)] = lowLevelTransaction.AdditionalMemoryUsageSize.ToString(),
             };
         }
     }

@@ -898,7 +898,7 @@ namespace Raven.Server.Documents
 
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
 
-                modifiedSize += llt.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
+                modifiedSize += llt.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
                 if (canCloseCurrentTx || _parent.Is32Bits)

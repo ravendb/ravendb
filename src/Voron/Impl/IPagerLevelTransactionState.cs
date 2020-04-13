@@ -9,7 +9,7 @@ namespace Voron.Impl
     {
         Dictionary<AbstractPager, TransactionState> PagerTransactionState32Bits { get; set; }
         Dictionary<AbstractPager, CryptoTransactionState> CryptoPagerTransactionState { get; set; }
-        Size TotalEncryptionBufferSize { get; }
+        Size AdditionalMemoryUsageSize { get; }
 
         event Action<IPagerLevelTransactionState> OnDispose;
         event Action<IPagerLevelTransactionState> BeforeCommitFinalization;

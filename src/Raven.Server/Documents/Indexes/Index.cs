@@ -3638,7 +3638,7 @@ namespace Raven.Server.Documents.Indexes
             var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
             //We need to take the read transaction encryption size into account as we might read alot of document and produce very little indexing output.
-            txAllocationsInBytes += queryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
+            txAllocationsInBytes += queryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
             if (_indexDisabled)
             {
@@ -3799,7 +3799,7 @@ namespace Raven.Server.Documents.Indexes
             var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
                                 * Voron.Global.Constants.Storage.PageSize;
 
-            txAllocations += indexingContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
+            txAllocations += indexingContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
             long indexWriterAllocations = 0;
             long luceneFilesAllocations = 0;

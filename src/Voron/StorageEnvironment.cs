@@ -1039,7 +1039,7 @@ namespace Voron
             var sum = Size.Zero;
             foreach (var transaction in ActiveTransactions.AllTransactionsInstances)
             {
-                sum += transaction.TotalEncryptionBufferSize;
+                sum += transaction.AdditionalMemoryUsageSize;
             }
 
             return sum;

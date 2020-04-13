@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Replication
 
                                 // We want to limit batch sizes to reasonable limits.
                                 var totalSize =
-                                    size + documentsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
+                                    size + documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
                                 if (maxSizeToSend.HasValue && totalSize > maxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
                                     batchSize.HasValue && numberOfItemsSent > batchSize.Value)
@@ -322,7 +322,7 @@ namespace Raven.Server.Documents.Replication
                                   $"and {_replicaAttachmentStreams.Count} attachment's streams " +
                                   $"to replicate to {_parent.Node.FromString()}, ";
                                  
-                        var encryptionSize = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
+                        var encryptionSize = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
                         if (encryptionSize > 0)
                         {
                             msg += $"encryption buffer overhead size is {new Size(encryptionSize, SizeUnit.Bytes)}, ";
