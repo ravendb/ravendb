@@ -682,8 +682,6 @@ namespace Voron.Data.Tables
 
         public class CompressionDictionariesHolder
         {
-            public long LastWritten;
-
             private readonly ConcurrentDictionary<int, ZstdLib.CompressionDictionary> _compressionDictionaries = new ConcurrentDictionary<int, ZstdLib.CompressionDictionary>();
 
             public ZstdLib.CompressionDictionary GetCompressionDictionaryFor(Transaction tx, int id)

@@ -5,7 +5,7 @@ namespace Raven.Server.Utils
 {
     public static class DebuggerAttachedTimeout
     {
-        public static bool DisableLongTimespan;
+        public static bool DisableLongTimespan = true;
 
         private static bool IsDisabled => DisableLongTimespan ||
                                           Debugger.IsAttached == false;

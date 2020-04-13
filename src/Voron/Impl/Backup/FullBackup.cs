@@ -36,7 +36,7 @@ namespace Voron.Impl.Backup
             CompressionLevel compression = CompressionLevel.Optimal,
             Action<(string Message, int FilesCount)> infoNotify = null)
         {
-            infoNotify = infoNotify ?? (_ => { });
+            infoNotify ??= _ => { };
 
             infoNotify(("Voron backup db started", 0));
 
@@ -96,11 +96,11 @@ namespace Voron.Impl.Backup
             try
             {
                 long allocatedPages;
-                var writePesistentContext = new TransactionPersistentContext(true);
-                var readPesistentContext = new TransactionPersistentContext(true);
-                using (var txw = env.NewLowLevelTransaction(writePesistentContext, TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
+                var writePersistentContext = new TransactionPersistentContext(true);
+                var readPersistentContext = new TransactionPersistentContext(true);
+                using (var txw = env.NewLowLevelTransaction(writePersistentContext, TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
                 {
-                    txr = env.NewLowLevelTransaction(readPesistentContext, TransactionFlags.Read);// now have snapshot view
+                    txr = env.NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read);// now have snapshot view
                     allocatedPages = dataPager.NumberOfAllocatedPages;
 
                     Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
@@ -167,6 +167,32 @@ namespace Voron.Impl.Backup
 
                 try
                 {
+                    if (env.Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                    {
+                        foreach (var recoveryFile in Directory.GetFiles(env.Options.BasePath.FullPath, "*.Recovery"))
+                        {
+                            FileStream src;
+                            try
+                            {
+                                src = File.Open(recoveryFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                            }
+                            catch
+                            {
+                                // we can ignore a failure to read these, they are useful, but 
+                                // not critical for the snapshot backup
+                                continue;
+                            }
+
+                            using (src)
+                            {
+                                var recoveryPart = package.CreateEntry(Path.Combine(basePath, src.Name), compressionLevel);
+                                using var dst = recoveryPart.Open();
+                                src.CopyTo(dst);
+                            }
+
+                        }
+                    }
+
                     long lastBackedupJournal = 0;
                     foreach (var journalFile in usedJournals)
                     {

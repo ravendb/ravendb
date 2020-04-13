@@ -8,7 +8,7 @@ namespace Sparrow.Server
     public static class DynamicNativeLibraryResolver
     {
         private static Dictionary<string, Func<string, string>> _registered = new Dictionary<string, Func<string, string>>();
-        private static readonly HashSet<Assembly> _registredAsemblies = new HashSet<Assembly>();
+        private static readonly HashSet<Assembly> _registeredAssemblies = new HashSet<Assembly>();
         public static void Register(Assembly asm, string lib, Func<string, string> mutator = null)
         {
             lock (typeof(DynamicNativeLibraryResolver))
@@ -18,7 +18,7 @@ namespace Sparrow.Server
                     [lib] = mutator
                 };
                 _registered = copy;
-                if (_registredAsemblies.Add(asm) == false)
+                if (_registeredAssemblies.Add(asm) == false)
                     return;
                 NativeLibrary.SetDllImportResolver(asm, Resolver);
             }
