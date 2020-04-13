@@ -29,12 +29,14 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -260,7 +262,11 @@ namespace Raven.Server.Web.System
 
                 if (databaseRecord.Compression?.CompressRevisions == true ||
                     databaseRecord.Compression?.Collections?.Length > 0)
+                {
                     ServerStore.LicenseManager.AssertCanUseDocumentCompression();
+                    if (Server.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
+                        FeaturesAvailabilityException.Throw("Compression");
+                }
 
 
                 // Validate Directory
