@@ -232,6 +232,8 @@ namespace Voron.Data.Tables
             tx.LowLevelTransaction.OnDispose += RecreateRecoveryDictionaries;
         }
 
+        public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Compress");
+
         private static void RecreateRecoveryDictionaries(IPagerLevelTransactionState obj)
         {
             if (!(obj is LowLevelTransaction llt) || llt.Committed == false)
@@ -249,6 +251,13 @@ namespace Voron.Data.Tables
                 if (dictionaries == null)
                     return; // should never happen
 
+                int nonceSize = (int)Sodium.crypto_stream_xchacha20_noncebytes();
+                var subKeyLen = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
+                int macSize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                var nonceBuffer = stackalloc byte[nonceSize];
+                var macBuffer = stackalloc byte[macSize];
+                var subKey = stackalloc byte[subKeyLen];
+
                 // for reliability's sake, we keep two copies of the compression
                 // dictionaries
                 for (int i = 0; i < 2; i++)
@@ -263,7 +272,7 @@ namespace Voron.Data.Tables
                     if (zip.Entries.Count > 0)
                     {
                         // we try, if not successful, we'll start from scratch
-                        int.TryParse(zip.Entries[^1].Name, out lastWritten);
+                        int.TryParse(Path.GetFileNameWithoutExtension(zip.Entries[^1].Name), out lastWritten);
                     }
 
                     if (lastWritten == dictionaries.State.NumberOfEntries)
@@ -278,9 +287,47 @@ namespace Voron.Data.Tables
                     do
                     {
                         var dicId = it.CurrentKey.CreateReader().ReadBigEndianInt32();
-                        var entry = zip.CreateEntry(dicId.ToString("D8"));
+                        var entry = zip.CreateEntry(dicId.ToString("D8")+ ".dic",
+                            obj.Environment.Options.EncryptionEnabled ? CompressionLevel.NoCompression : CompressionLevel.Optimal
+                            );
                         using var stream = entry.Open();
-                        stream.Write(it.CreateReaderForCurrent().AsSpan());
+                        Span<byte> data = it.CreateReaderForCurrent().AsSpan();
+                        if (obj.Environment.Options.EncryptionEnabled)
+                        {
+                            Sodium.randombytes_buf(nonceBuffer, Sodium.crypto_stream_xchacha20_noncebytes());
+                            var nonceEntry = zip.CreateEntry(dicId.ToString("D8")+ ".nonce", CompressionLevel.NoCompression);
+                            using var nonceStream = nonceEntry.Open();
+                            nonceStream.Write(new ReadOnlySpan<byte>(nonceBuffer, nonceSize));
+
+                            fixed (byte* pKey = obj.Environment.Options.MasterKey)
+                            fixed (byte* d = data)
+                            fixed (byte* ctx = EncryptionContext)
+                            {
+                                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)subKeyLen, (ulong)dicId, ctx, pKey) != 0)
+                                    throw new InvalidOperationException("Unable to generate derived key");
+
+                                ulong macLen = 0;
+                                var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+                                    d,
+                                    macBuffer,
+                                    &macLen,
+                                    d,
+                                    (ulong)data.Length,
+                                    null,
+                                    0,
+                                    null,
+                                    nonceBuffer,
+                                    subKey);
+                                if (rc != 0)
+                                    throw new InvalidOperationException("Failed to encrypt dictionary");
+
+                                var macEntry = zip.CreateEntry(dicId.ToString("D8")+ ".mac", CompressionLevel.NoCompression);
+                                using var macStream = macEntry.Open();
+                                macStream.Write(new ReadOnlySpan<byte>(macBuffer, (int)macLen));
+                            }
+                        }
+
+                        stream.Write(data);
                     } while (it.MoveNext());
 
                 }
