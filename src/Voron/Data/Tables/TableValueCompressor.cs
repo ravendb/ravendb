@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -241,89 +242,47 @@ namespace Voron.Data.Tables
 
             lock (obj.Environment.CompressionDictionariesHolder)
             {
-                // we use a loop to handle the case where we write more than
-                // 16 dictionaries before we get to build the recovery
-                while (true)
+                using var tx = obj.Environment.ReadTransaction();
+
+                var dictionaries = tx.ReadTree(TableSchema.DictionariesSlice);
+
+                if (dictionaries == null)
+                    return; // should never happen
+
+                // for reliability's sake, we keep two copies of the compression
+                // dictionaries
+                for (int i = 0; i < 2; i++)
                 {
-                    using var tx = obj.Environment.ReadTransaction();
-
-                    var dictionaries = tx.ReadTree(TableSchema.DictionariesSlice);
-
-                    if (dictionaries == null)
-                        return; // should never happen
-
-                    long dicCount = dictionaries.State.NumberOfEntries;
-                    var lastWritten = obj.Environment.CompressionDictionariesHolder.LastWritten;
-
-                    if (dicCount <= lastWritten)
-                        return;// another tx probably got here first
-
-                    // We balance between the total number of dictionaries files for recovery
-                    // and the time it takes to write them out. We assume that the number of 
-                    // dictionaries is small, but we don't want to take too much time generating
-                    // the file. We want some redundancy still, for recovery, so we copy the data
-                    // multiple times.
-                    var fileIndex = lastWritten % 16;
-                    var fileId = lastWritten - fileIndex;
-
                     var newPath = obj.Environment.Options.BasePath
-                        .Combine($"CompressionDictionaries-{fileId:D3}-{fileIndex:D2}.Recovery")
+                        .Combine(path: $"Compression{(i == 0 ? "A" : "B")}.Recovery")
                         .FullPath;
 
-                    // We write all the dictionaries because we assume that the total number is going
-                    // to be low. Experimentation shows that on millions of documents, the total number
-                    // of dictionaries is < 25, and the rate of change is likely to be very slow, so it
-                    // isn't likely to be an issue. Having a single file for dictionaries make things 
-                    // much easier for us during recovery.
+                    using var fs = File.Open(newPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+                    using var zip = new ZipArchive(fs,ZipArchiveMode.Update);
+                    int lastWritten = 0;
+                    if (zip.Entries.Count > 0)
+                    {
+                        // we try, if not successful, we'll start from scratch
+                        int.TryParse(zip.Entries[^1].Name, out lastWritten);
+                    }
 
-                    int rev = Bits.SwapBytes((int)fileId);
+                    if (lastWritten == dictionaries.State.NumberOfEntries)
+                        continue;
+
+                    int rev = Bits.SwapBytes(lastWritten);
                     using var _ = Slice.External(tx.Allocator, (byte*)&rev, sizeof(int), out var key);
                     using var it = dictionaries.Iterate(true);
                     if (it.Seek(key) == false)
-                        return;
+                        continue;
 
-                    int writtenDics = 0;
-                    using (var file = File.Create(newPath, 8192))
+                    do
                     {
-                        using (var gz = new GZipStream(file, CompressionMode.Compress, leaveOpen: true))
-                        using (var bw = new BinaryWriter(gz))
-                        {
+                        var dicId = it.CurrentKey.CreateReader().ReadBigEndianInt32();
+                        var entry = zip.CreateEntry(dicId.ToString("D8"));
+                        using var stream = entry.Open();
+                        stream.Write(it.CreateReaderForCurrent().AsSpan());
+                    } while (it.MoveNext());
 
-                            do
-                            {
-                                var dicId = it.CurrentKey.CreateReader().ReadBigEndianInt32();
-                                bw.Write(dicId);
-                                var reader = it.CreateReaderForCurrent();
-                                bw.Write(reader.Length);
-                                gz.Write(reader.AsSpan());
-                                writtenDics++;
-                            } while (it.MoveNext() && writtenDics <= 16);
-
-                        }
-                        file.Flush(true);
-                    }
-
-                    obj.Environment.CompressionDictionariesHolder.LastWritten += writtenDics;
-
-                    // we will try to delete the previous ones
-                    fileIndex = (lastWritten - 2) % 16;
-                    fileId = (lastWritten - 2) - fileIndex;
-
-                    var olderPath = obj.Environment.Options.BasePath
-                        .Combine($"CompressionDictionaries-{fileId:D3}-{fileIndex:D2}.Recovery")
-                        .FullPath;
-
-                    if (File.Exists(olderPath))
-                    {
-                        try
-                        {
-                            File.Delete(olderPath);
-                        }
-                        catch
-                        {
-                            // we don't really care about this failing
-                        }
-                    }
                 }
 
             }

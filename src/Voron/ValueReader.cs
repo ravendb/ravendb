@@ -79,9 +79,6 @@ namespace Voron
 
             _pos += sizeof (int);
 
-            if (!BitConverter.IsLittleEndian)
-                return SwapBitShift(val);
-
             return val;
         }
 
@@ -93,9 +90,6 @@ namespace Voron
             var val = *(long*) (_val + _pos);
 
             _pos += sizeof (long);
-
-            if (!BitConverter.IsLittleEndian)
-                return SwapBitShift(val);
 
             return val;
         }
@@ -109,10 +103,7 @@ namespace Voron
 
             _pos += sizeof (int);
 
-            if (BitConverter.IsLittleEndian)
-                return SwapBitShift(val);
-
-            return val;
+            return Bits.SwapBytes(val);
         }
 
         public byte ReadByte()
@@ -127,41 +118,6 @@ namespace Voron
             return val;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static long SwapBitShift(long value)
-        {
-            ulong uvalue = (ulong)value;
-            ulong swapped = (0x00000000000000FF) & (uvalue >> 56) |
-                            (0x000000000000FF00) & (uvalue >> 40) |
-                            (0x0000000000FF0000) & (uvalue >> 24) |
-                            (0x00000000FF000000) & (uvalue >> 8) |
-                            (0x000000FF00000000) & (uvalue << 8) |
-                            (0x0000FF0000000000) & (uvalue << 24) |
-                            (0x00FF000000000000) & (uvalue << 40) |
-                            (0xFF00000000000000) & (uvalue << 56);
-            return (long)swapped;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int SwapBitShift(int value)
-        {
-            uint uvalue = (uint)value;
-            uint swapped = (0x000000FF) & (uvalue << 24) |
-                           (0x0000FF00) & (uvalue << 8) |
-                           (0x00FF0000) & (uvalue >> 8) |
-                           (0xFF000000) & (uvalue >> 24);
-            return (int)swapped;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static short SwapBitShift(short value)
-        {
-            uint uvalue = (uint)value;
-            uint swapped = (0x000000FF) & (uvalue << 8) |
-                           (0x0000FF00) & (uvalue >> 8);
-            return (short)swapped;
-        }
-
         public long ReadBigEndianInt64()
         {
             if (_len - _pos < sizeof (long))
@@ -169,10 +125,7 @@ namespace Voron
             
             var val = *(long*) (_val + _pos);
 
-            if (BitConverter.IsLittleEndian)
-                return SwapBitShift(val);
-
-            return val;
+            return Bits.SwapBytes(val);
         }
 
 
