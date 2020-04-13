@@ -57,26 +57,8 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
             });
     }
     
-    protected calculateProcessingSpeed(processed: number, name?: string): number {
-        let durationInSeconds;
-        
-        switch (name) {
-            case 'Documents': {
-                durationInSeconds = this.op.durationInSecondsDocuments();
-            }
-            break;
-            case 'Revisions': {
-                durationInSeconds = this.op.durationInSecondsRevisions();
-            } 
-            break;
-            case 'Counters': {
-                durationInSeconds = this.op.durationInSecondsCounters();
-            }
-            break;
-            default:
-                durationInSeconds = this.op.durationInSecondsForOperation();
-        }
-
+    protected calculateProcessingSpeed(processed: number): number {
+        const durationInSeconds = this.op.durationInSeconds();
         return abstractOperationDetails.calculateProcessingSpeed(durationInSeconds, processed);
     }
 

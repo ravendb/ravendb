@@ -15,18 +15,11 @@ class operation extends abstractNotification {
     taskType = ko.observable<Raven.Server.Documents.Operations.Operations.OperationType>();
     detailedDescription = ko.observable<Raven.Client.Documents.Operations.IOperationDetailedDescription>();
     
+    startTime = ko.observable<moment.Moment>();
     endTime = ko.observable<moment.Moment>();
-
-    startTimeForOperation = ko.observable<moment.Moment>();
-    startTimeForDocuments = ko.observable<moment.Moment>();
-    startTimeForRevisions = ko.observable<moment.Moment>();
-    startTimeForCounters = ko.observable<moment.Moment>();
     
-    durationForOperation: KnockoutComputed<string>;
-    durationInSecondsForOperation: KnockoutComputed<number>;
-    durationInSecondsDocuments: KnockoutComputed<number>;
-    durationInSecondsRevisions: KnockoutComputed<number>;
-    durationInSecondsCounters: KnockoutComputed<number>;
+    duration: KnockoutComputed<string>;
+    durationInSeconds: KnockoutComputed<number>;
     
     isCompleted: KnockoutComputed<boolean>;
     isCanceled: KnockoutComputed<boolean>;
@@ -58,8 +51,8 @@ class operation extends abstractNotification {
         this.taskType(incomingChanges.TaskType);
         this.detailedDescription(incomingChanges.DetailedDescription);
                 
-        this.startTimeForOperation(incomingChanges.StartTime ? serverTime.default.getAdjustedTime(moment.utc(incomingChanges.StartTime)) : null);
-        this.endTime(incomingChanges.EndTime ?serverTime.default.getAdjustedTime(moment.utc(incomingChanges.EndTime)) : null);
+        this.startTime(incomingChanges.StartTime ? serverTime.default.getAdjustedTime(moment.utc(incomingChanges.StartTime)) : null);
+        this.endTime(incomingChanges.EndTime ? serverTime.default.getAdjustedTime(moment.utc(incomingChanges.EndTime)) : null);
     }
 
     percentageProgress(): number {
@@ -100,29 +93,19 @@ class operation extends abstractNotification {
 
         // override event date - for operations we use end date (if available), or start start
         this.displayDate = ko.pureComputed(() => {
-            const start = this.startTimeForOperation();
+            const start = this.startTime();
             const end = this.endTime();
             const created = this.createdAt();
             const dateToUse = end || start || created;
             return moment(dateToUse).local();
         });
 
-        this.durationForOperation = ko.pureComputed(() => {
-            return generalUtils.formatAsTimeSpan(this.getDuration(this.startTimeForOperation()));
+        this.duration = ko.pureComputed(() => {
+            return generalUtils.formatAsTimeSpan(this.getDuration(this.startTime()));
         });
 
-        this.durationInSecondsForOperation = ko.pureComputed(() => {
-            return this.getDuration(this.startTimeForOperation()) / 1000;
-        });
-        
-        this.durationInSecondsDocuments = ko.pureComputed(() => {
-            return this.getDuration(this.startTimeForDocuments()) / 1000;
-        });
-        this.durationInSecondsRevisions = ko.pureComputed(() => {
-            return this.getDuration(this.startTimeForRevisions()) / 1000;
-        });
-        this.durationInSecondsCounters = ko.pureComputed(() => {
-            return this.getDuration(this.startTimeForCounters()) / 1000;
+        this.durationInSeconds = ko.pureComputed(() => {
+            return this.getDuration(this.startTime()) / 1000;
         });
     }
 
@@ -133,22 +116,9 @@ class operation extends abstractNotification {
         return Math.max(endTime.diff(start), 0);
     }
     
-    public setStartTimeForDocuments(startTime: string) {
-        if (!this.startTimeForDocuments()) {  
-            this.startTimeForDocuments(serverTime.default.getAdjustedTime(moment.utc(startTime)));
-        }
-    }
-    
-    public setStartTimeForRevisions(startTime: string) {
-        if (!this.startTimeForRevisions()) {
-            this.startTimeForRevisions(serverTime.default.getAdjustedTime(moment.utc(startTime)));
-        }
-    }
-    
-    public setStartTimeForCounters(startTime: string) {
-        if (!this.startTimeForCounters()) {
-            this.startTimeForCounters(serverTime.default.getAdjustedTime(moment.utc(startTime)));
-        }
+    public getElapsedSeconds(startTime: string) {
+        const adjustedStartTime = serverTime.default.getAdjustedTime(moment.utc(startTime));
+        return this.getDuration(adjustedStartTime) / 1000;
     }
 }
 
