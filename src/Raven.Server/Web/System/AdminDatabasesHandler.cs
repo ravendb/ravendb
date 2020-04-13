@@ -250,6 +250,7 @@ namespace Raven.Server.Web.System
                 }
                 
                 if(ServerStore.LicenseManager.GetLicenseStatus().HasCompression &&
+                   Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental &&
                    databaseRecord.Compression == null)
                 {
                     databaseRecord.Compression = new CompressionConfiguration(
