@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var currentPolicy = config.GetPolicy(currentIndex);
                 var now = context.DocumentDatabase.Time.GetUtcNow();
                 var startRollup = new DateTime(TimeSeriesRollups.NextRollup(timestamp, nextPolicy)).Add(-currentPolicy.RetentionTime);
-                if ((now - startRollup).Ticks > currentPolicy.RetentionTime.Ticks)
+                if (startRollup.Add(currentPolicy.RetentionTime) < now)
                     return; // ignore this value since it is outside our retention frame
             }
 

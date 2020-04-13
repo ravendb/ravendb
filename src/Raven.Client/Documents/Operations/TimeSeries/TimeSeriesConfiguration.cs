@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             foreach (var config in Collections.Values)
             {
-                config?.Initialize();
+                config?.ValidateAndInitialize();
             }
         }
 
