@@ -76,7 +76,7 @@ namespace Raven.Server.Documents
 
                 if (_maxTransactionSizeInPages != null &&
                     context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages +
-                    context.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) / Constants.Storage.PageSize > _maxTransactionSizeInPages)
+                    context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) / Constants.Storage.PageSize > _maxTransactionSizeInPages)
                     break;
             }
 

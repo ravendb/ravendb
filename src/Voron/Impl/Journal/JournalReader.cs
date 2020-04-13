@@ -633,7 +633,7 @@ namespace Voron.Impl.Journal
 
         Dictionary<AbstractPager, CryptoTransactionState> IPagerLevelTransactionState.CryptoPagerTransactionState { get; set; }
 
-        public Size TotalEncryptionBufferSize
+        public Size AdditionalMemoryUsageSize
         {
             get
             {

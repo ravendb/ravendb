@@ -236,6 +236,7 @@ namespace Voron.Data.Tables
 
             // we explicitly do *not* dispose the buffer, it lives as long as the tx
             var _ = DecompressValue(_tx, directRead, size, out ByteString buffer);
+            _tx.LowLevelTransaction.DecompressedBufferBytes += buffer.Length;
 
             _cachedDecompressedBuffersByStorageId[id] = buffer;
 
@@ -251,14 +252,7 @@ namespace Voron.Data.Tables
             var data = new ReadOnlySpan<byte>(ptr, size - offset);
             var dictionary = tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
                 .GetCompressionDictionaryFor(tx, dicId);
-            return Decompress(tx, data, dictionary, out buffer);
-        }
-
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope Decompress(
-            Transaction tx,
-            ReadOnlySpan<byte> data, ZstdLib.CompressionDictionary dictionary,
-            out ByteString buffer)
-        {
+    
             int decompressedSize = ZstdLib.GetDecompressedSize(data);
             var internalScope = tx.Allocator.Allocate(decompressedSize, out buffer);
             var actualSize = ZstdLib.Decompress(data, buffer.ToSpan(), dictionary);

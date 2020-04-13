@@ -32,6 +32,7 @@ namespace Voron.Impl
         private readonly ByteStringContext _allocator;
         private readonly PageLocator _pageLocator;
         private bool _disposeAllocator;
+        internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
 
         public object ImmutableExternalState;
@@ -92,20 +93,20 @@ namespace Voron.Impl
 
         public event Action<LowLevelTransaction> LastChanceToReadFromWriteTransactionBeforeCommit;
 
-        public Size TotalEncryptionBufferSize
+        public Size AdditionalMemoryUsageSize
         {
             get
             {
                 var cryptoTransactionStates = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState;
-                if (cryptoTransactionStates == null)
-                {
-                    return new Size(0, SizeUnit.Bytes);
-                }
+                
+                var total = DecompressedBufferBytes;
 
-                var total = 0L;
-                foreach (var state in cryptoTransactionStates.Values)
+                if (cryptoTransactionStates != null)
                 {
-                    total += state.TotalCryptoBufferSize;
+                    foreach (var state in cryptoTransactionStates.Values)
+                    {
+                        total += state.TotalCryptoBufferSize;
+                    }
                 }
 
                 return new Size(total, SizeUnit.Bytes);
