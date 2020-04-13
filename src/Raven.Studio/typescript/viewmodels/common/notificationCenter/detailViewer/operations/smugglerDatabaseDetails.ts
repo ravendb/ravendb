@@ -41,10 +41,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     detailsVisible = ko.observable<boolean>(false);
     tail = ko.observable<boolean>(true);
     
-    lastDocsCount = 0;
-    lastRevisionsCount = 0;
-    lastCountersCount = 0;   
-    
+    itemsLastCount: dictionary<number> = {};
     lastProcessingSpeedText = smugglerDatabaseDetails.ProcessingText;
     
     exportItems: KnockoutComputed<Array<smugglerListItem>>;
@@ -113,10 +110,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
                 
                 if (this.op.taskType() === "DatabaseImport") {
-                result.push(this.mapToExportListItem("Tombstones", status.Tombstones));
-                result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones));
-                result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries));
-            }
+                    result.push(this.mapToExportListItem("Tombstones", status.Tombstones));
+                    result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones));
+                    result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries));
+                }
             }
 
             const currentlyProcessingItems = smugglerDatabaseDetails.findCurrentlyProcessingItems(result);
@@ -310,37 +307,14 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
         const skippedCount = isDocuments ? (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount : 0;
         
-        if (item.StartTime) {
+        if (this.showSpeed(name) && item.StartTime) {
             const itemsCount = item.ReadCount + skippedCount + item.ErroredCount;
             
-            switch (name) {
-                case "Documents":
-                    if (itemsCount === this.lastDocsCount) {
-                        processingSpeedText = this.lastProcessingSpeedText;
-                    } else {
-                        this.op.setStartTimeForDocuments(item.StartTime);
-                        this.lastDocsCount = itemsCount;
-                        processingSpeedText = this.lastProcessingSpeedText = this.calcSpeedText(name, itemsCount);
-                    }
-                    break;
-                case "Revisions":
-                    if (itemsCount === this.lastRevisionsCount) {
-                        processingSpeedText = this.lastProcessingSpeedText;
-                    } else {
-                        this.op.setStartTimeForRevisions(item.StartTime);
-                        this.lastRevisionsCount = itemsCount;
-                        processingSpeedText = this.lastProcessingSpeedText = this.calcSpeedText(name, itemsCount);
-                    }
-                    break;
-                case "Counters":
-                    if (itemsCount === this.lastCountersCount) {
-                        processingSpeedText = this.lastProcessingSpeedText;
-                    } else {
-                        this.op.setStartTimeForCounters(item.StartTime);
-                        this.lastCountersCount = itemsCount;
-                        processingSpeedText = this.lastProcessingSpeedText = this.calcSpeedText(name, itemsCount);
-                    }
-                    break;
+            if (itemsCount === this.itemsLastCount[name]) {
+                processingSpeedText = this.lastProcessingSpeedText;
+            } else {
+                this.itemsLastCount[name] = itemsCount;
+                processingSpeedText = this.lastProcessingSpeedText = this.calcSpeedText(itemsCount, item.StartTime);
             }
         }
 
@@ -359,9 +333,14 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         } as smugglerListItem;
     }
 
-    private calcSpeedText(name: string, count: number) {
-        const processingSpeed = this.calculateProcessingSpeed(count, name);
-        return processingSpeed ? `${processingSpeed.toLocaleString()} ${name}/Sec` : smugglerDatabaseDetails.ProcessingText;
+    private showSpeed(name: string) {
+        return name === "Documents" || name === "Revisions" || name === "Counters";
+    }
+    
+    private calcSpeedText(count: number, startTime: string) {
+        const durationInSeconds = this.op.getElapsedSeconds(startTime);
+        const processingSpeed = abstractOperationDetails.calculateProcessingSpeed(durationInSeconds, count);
+        return processingSpeed ? `${processingSpeed.toLocaleString()} items/sec` : smugglerDatabaseDetails.ProcessingText;
     }
     
     static supportsDetailsFor(notification: abstractNotification) {
