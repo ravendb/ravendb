@@ -45,6 +45,16 @@ namespace Raven.Server.Config.Categories
         public TimeSetting CollectionOperationTimeout { get; set; }
 
         /// <summary>
+        /// Whatever revisions compression should be on by default or not. This is useful to turn off if you are expected
+        /// to run on very low end hardware.
+        /// This does not prevent you from enabling this after the fact, only sets the default
+        /// </summary>
+        [Description("Whatever revisions compression should be on by default or not on new databases")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Databases.DefaultRevisionsCompression", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DefaultRevisionsCompression { get; set; }
+
+        /// <summary>
         /// This much time has to wait for the database to become available when too much
         /// different databases get loaded at the same time
         /// </summary>
