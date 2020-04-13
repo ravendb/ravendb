@@ -763,6 +763,14 @@ namespace Sparrow.Server
         public int Generation;
 #endif
 
+        public void Wipe()
+        {
+            foreach (var segment in _wholeSegments)
+            {
+                Sodium.sodium_memzero(segment.Start, (UIntPtr)segment.Size);
+            }
+        }
+
         public void Reset()
         {
             if (_disposed)
