@@ -648,17 +648,23 @@ namespace Raven.Server.Documents.Queries.Results
 
                 for (var i = 0; i < timeSeriesFunction.Between.FromList.Count; i++)
                 {
-                    var compound = timeSeriesFunction.Between.FromList[i].Compound;
+                    var field = timeSeriesFunction.Between.FromList[i];
+                    var compound = field.Compound;
 
                     if (compound.Count == 1)
                     {
                         var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
                         if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) //not found
-                            sources.Add(((FieldExpression)timeSeriesFunction.Between.Source).FieldValue);
+                        {
+                            sources.Add(field.FieldValue);
+                            continue;
+                        }
+
                         if (!(args[paramIndex] is string s))
                             throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"Expected argument '{compound[0]}' to be a string, but got '{args[paramIndex].GetType()}'");
                         sources.Add(s);
+                        continue;
                     }
 
                     if (args == null)
@@ -669,7 +675,7 @@ namespace Raven.Server.Documents.Queries.Results
                         throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'." +
                                                         $"Expected '{declaredFunction.Parameters.Count}' arguments, but got '{args.Length}'");
 
-                    sources.Add(((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias);
+                    sources.Add(field.FieldValueWithoutAlias);
 
                     if (i > 0)
                         continue;
@@ -945,7 +951,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (name == null)
                     return false;
 
-                _min = last.AddTicks(1);
+                _min = last.AddMilliseconds(1); // avoid duplicate timestamps
                 _reader = _tss.GetReader(_context, _id, name, _min, _max, _offset);
                 return true;
             }
