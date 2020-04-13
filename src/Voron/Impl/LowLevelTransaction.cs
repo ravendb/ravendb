@@ -817,17 +817,14 @@ namespace Voron.Impl
                 _freeSpaceTree?.Dispose();
 
                 _allocator.AllocationFailed -= MarkTransactionAsFailed;
-                if (_env.Options.EncryptionEnabled)
-                {
-                    _allocator.Wipe();
-                }
+              
                 if (_disposeAllocator)
                 {
+                    if (_env.Options.EncryptionEnabled)
+                    {
+                        _allocator.Wipe();
+                    }
                     _allocator.Dispose();
-                }
-                else
-                {
-                    _allocator.Reset();
                 }
 
                 OnDispose?.Invoke(this);
