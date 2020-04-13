@@ -374,7 +374,6 @@ namespace Raven.Server.Documents
                     break;
 
                 case 9: // @counters
-                    SeenCounters = true;
                     // always remove the @counters metadata
                     // not doing so might cause us to have counter on the document but not in the storage.
                     // the counters will be updated when we import the counters themselves
@@ -385,6 +384,7 @@ namespace Raven.Server.Documents
                         return true;
                     }
 
+                    SeenCounters = true;
                     if (reader.Read() == false)
                     {
                         _verifyStartArray = true;
