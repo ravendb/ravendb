@@ -1636,29 +1636,33 @@ namespace Raven.Server.Documents.Queries.Parser
             if (query?.TryAddTimeSeriesFunction(func) == false)
                 ThrowParseException($"time series function '{func.Name}' was declared multiple times");
 
-            var compound = ((FieldExpression)func.TimeSeries.Between.Source).Compound;
-            var args = new List<QueryExpression>();
+            var args = new HashSet<QueryExpression>();
 
-            if (compound.Count > 1)
+            foreach (var source in func.TimeSeries.Between.FromList)
             {
-                if (query?.From.Alias != null)
+                var compound = source.Compound;
+                if (compound.Count > 1)
                 {
-                    args.Add(new FieldExpression(new List<StringSegment> {query.From.Alias.Value}));
+                    if (query?.From.Alias != null)
+                    {
+                        args.Add(new FieldExpression(new List<StringSegment> {query.From.Alias.Value}));
 
-                    if (query.From.Alias.Value != compound[0])
+                        if (query.From.Alias.Value != compound[0])
+                        {
+                            args.Add(new FieldExpression(new List<StringSegment> {compound[0]}));
+                        }
+                    }
+                    else
                     {
                         args.Add(new FieldExpression(new List<StringSegment> {compound[0]}));
                     }
-                }
-                else
-                {
-                    args.Add(new FieldExpression(new List<StringSegment> {compound[0]}));
-                }
 
-                func.Parameters = args;
+                }
             }
 
-            return new MethodExpression(func.Name, args);
+            func.Parameters = args.ToList();
+
+            return new MethodExpression(func.Name, func.Parameters);
         }
 
         private bool TryParseFromClause(out FromClause fromClause, out string message)
