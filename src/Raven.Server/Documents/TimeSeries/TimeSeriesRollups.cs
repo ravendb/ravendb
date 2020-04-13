@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         tvb.Add(key);
                         tvb.Add(collectionSlice);
-                        tvb.Add(Bits.SwapBytes(_to.AggregationTime.Ticks));
+                        tvb.Add(Bits.SwapBytes(NextRollup(DateTime.MinValue, _to)));
                         tvb.Add(policyToApply);
                         tvb.Add(0);
                         tvb.Add(changeVectorSlice);
@@ -687,7 +687,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             var rangeSpec = new TimeSeriesFunction.RangeGroup
             {
-                Ticks = rangeGroup.Ticks
+                Ticks = TimeSpan.FromSeconds(rangeGroup.Seconds).Ticks,
+                Months = rangeGroup.Months
             };
             DateTime next = default;
 
@@ -767,9 +768,25 @@ namespace Raven.Server.Documents.TimeSeries
         }
         public static long NextRollup(DateTime time, TimeSeriesPolicy nextPolicy)
         {
-            var integerPart = time.Ticks / nextPolicy.AggregationTime.Ticks;
-            var nextRollup = nextPolicy.AggregationTime.Ticks * (integerPart + 1);
-            return nextRollup;
+            if (time == DateTime.MinValue)
+                return time.Add(nextPolicy.AggregationTime).Ticks;
+
+            if (nextPolicy.AggregationTime.Seconds != 0)
+            {
+                // align by seconds
+                var timespan = TimeSpan.FromSeconds(nextPolicy.AggregationTime.Seconds);
+                var integerPart = time.Ticks / timespan.Ticks;
+                var nextRollup = timespan.Ticks * (integerPart + 1);
+                return nextRollup;
+            }
+
+            // align by months
+            var totalMonths = time.Year * 12 + time.Month - 1;
+            var integerAggPart = totalMonths / nextPolicy.AggregationTime.Months;
+            var nextInMonths = nextPolicy.AggregationTime.Months * (integerAggPart + 1);
+            var years = nextInMonths / 12;
+            var months = nextInMonths % 12;
+            return new DateTime(years, months + 1, 1).Ticks;
         }
     }
 }

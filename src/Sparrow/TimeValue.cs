@@ -67,88 +67,6 @@ namespace Sparrow
             return new TimeValue(years * 12, 0);
         }
 
-        public long Ticks
-        {
-            get
-            {
-                AssertMonthOrSeconds();
-
-                if (this == MaxValue)
-                    return DateTime.MaxValue.Ticks;
-
-                if (this == MinValue)
-                    return DateTime.MinValue.Ticks;
-
-                if (Seconds != 0)
-                    return TimeSpan.FromSeconds(Seconds).Ticks;
-
-                if (Months != 0)
-                    return new DateTime(0, Months, 0).Ticks;
-
-                return 0;
-            }
-        }
-
-        public long TotalMilliseconds
-        {
-            get
-            {
-                if (this == MaxValue)
-                    return (long)TimeSpan.MaxValue.TotalMilliseconds;
-
-                if (this == MinValue)
-                    return (long)TimeSpan.MinValue.TotalMilliseconds;
-
-                AssertMonthIsZero();
-                return Seconds * 1_000;
-            }
-        }
-
-        public long TotalSeconds
-        {
-            get
-            {
-                if (this == MaxValue)
-                    return (long)TimeSpan.MaxValue.TotalSeconds;
-
-                if (this == MinValue)
-                    return (long)TimeSpan.MinValue.TotalSeconds;
-
-                AssertMonthIsZero();
-                return Seconds;
-            }
-        }
-
-        public long TotalMinutes
-        {
-            get
-            {
-                if (this == MaxValue)
-                    return (long)TimeSpan.MaxValue.TotalMinutes;
-
-                if (this == MinValue)
-                    return (long)TimeSpan.MinValue.TotalMinutes;
-
-                AssertMonthIsZero();
-                return Seconds / 60;
-            }
-        }
-
-        public long TotalHours
-        {
-            get
-            {
-                if (this == MaxValue)
-                    return (long)TimeSpan.MaxValue.TotalHours;
-
-                if (this == MinValue)
-                    return (long)TimeSpan.MinValue.TotalMinutes;
-
-                AssertMonthIsZero();
-                return Seconds / 3_600;
-            }
-        }
-
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -156,6 +74,24 @@ namespace Sparrow
                 [nameof(Seconds)] = Seconds,
                 [nameof(Months)] = Months
             };
+        }
+
+        private void Append(StringBuilder builder, int value, string singular)
+        {
+            if (value <= 0)
+                return;
+
+            builder.Append(value);
+            builder.Append(' ');
+            builder.Append(singular);
+
+            if (value == 1)
+            {
+                builder.Append(' ');
+                return;
+            }
+
+            builder.Append("s "); // lucky me, no special rules here
         }
 
         public override string ToString()
@@ -168,38 +104,36 @@ namespace Sparrow
                 return "Zero";
 
             var str = new StringBuilder();
-            if (Months > 12)
-                str.Append($"{Months / 12} years ");
-            if (Months > 0)
-                str.Append($"{Months % 12} months ");
+            if (Months >= 12)
+                Append(str, Months / 12, "year");
+            if (Months % 12 > 0)
+                Append(str, Months % 12, "month");
 
             var remainingSeconds = Seconds;
 
             if (remainingSeconds > SecondsPerDay)
             {
                 var days = Seconds / SecondsPerDay;
-                str.Append($"{days} days ");
+                Append(str, days, "day");
                 remainingSeconds -= days * SecondsPerDay;
             }
 
             if (remainingSeconds > 3_600)
             {
                 var hours = remainingSeconds / 3_600;
-                str.Append($"{hours} hours ");
+                Append(str, hours, "hour");
                 remainingSeconds -= hours * 3_600;
             }
 
             if (remainingSeconds > 60)
             {
                 var minutes = remainingSeconds / 60;
-                str.Append($"{minutes} minutes ");
+                Append(str, minutes, "minute");
                 remainingSeconds -= minutes * 60;
             }
 
             if (remainingSeconds > 0)
-            {
-                str.Append($"{remainingSeconds} seconds");
-            }
+                Append(str, remainingSeconds, "second");
 
             return str.ToString();
         }
@@ -210,7 +144,7 @@ namespace Sparrow
                 throw new ArgumentException("Must be zero", nameof(Months));
         }
 
-        private void AssertMonthOrSeconds()
+        internal void AssertMonthOrSeconds()
         {
             if (Months == 0 || Seconds == 0) 
                 return;
@@ -221,18 +155,81 @@ namespace Sparrow
             throw new NotSupportedException($"Either {nameof(Months)} or {nameof(Seconds)} can be set.");
         }
 
+        private const int SecondsIn28Days = 28 * SecondsPerDay; // lower-bound of seconds in month
+        private const int SecondsIn31Days = 31 * SecondsPerDay; // upper-bound of seconds in month
+
         public int Compare(TimeValue other)
         {
-            long monthsDiff = Months - other.Months;
-            long secondsDiff = Seconds - other.Seconds;
+            if (IsSpecialCompare(ref this, ref other, out var result))
+                return result;
 
-            if (monthsDiff != 0 && secondsDiff != 0)
+            if (Seconds == other.Seconds)
+                return TrimCompareResult(Months - other.Months);
+
+            if (Months == other.Months) 
+                return TrimCompareResult(Seconds - other.Seconds);
+
+            var myBounds = GetBounds(this);
+            var otherBounds = GetBounds(other);
+
+            if (otherBounds.UpperBound < myBounds.LowerBound)
+                return 1;
+
+            if (otherBounds.LowerBound > myBounds.UpperBound)
+                return -1;
+            
+            throw new InvalidOperationException("We can't compare ");
+        }
+
+        private static (int UpperBound, int LowerBound) GetBounds(TimeValue time)
+        {
+            var myUpperBound = time.Months * SecondsIn31Days + time.Seconds;
+            var myLowerBound = time.Months * SecondsIn28Days + time.Seconds;
+            return (myUpperBound, myLowerBound);
+        }
+
+        private static bool IsSpecialCompare(ref TimeValue current, ref TimeValue other, out int result)
+        {
+            result = 0;
+            if (IsMax(ref current))
             {
-                if ((monthsDiff ^ secondsDiff) < 0) // check for the same sign 
-                    throw new InvalidOperationException();
+                result = IsMax(ref other) ? 0 : 1;
+                return true;
             }
 
-            var result = monthsDiff + secondsDiff;
+            if (IsMax(ref other))
+            {
+                result = IsMax(ref current) ? 0 : -1;
+                return true;
+            }
+
+            if (IsMin(ref current))
+            {
+                result = IsMin(ref other) ? 0 : -1;
+                return true;
+            }
+
+            if (IsMin(ref other))
+            {
+                result = IsMin(ref current) ? 0 : 1;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsMax(ref TimeValue time)
+        {
+            return time.Seconds == int.MaxValue && time.Months == int.MaxValue;
+        }
+
+        private static bool IsMin(ref TimeValue time)
+        {
+            return time.Seconds == int.MinValue && time.Months == int.MinValue;
+        }
+
+        private static int TrimCompareResult(long result)
+        {
             if (result > int.MaxValue)
                 return int.MaxValue;
 
@@ -292,7 +289,7 @@ namespace Sparrow
             return !(a == b);
         }
 
-        public static implicit operator TimeSpan(TimeValue a)
+        public static explicit operator TimeSpan(TimeValue a)
         {
             a.AssertMonthIsZero();
             return new TimeSpan(0, 0, a.Seconds);

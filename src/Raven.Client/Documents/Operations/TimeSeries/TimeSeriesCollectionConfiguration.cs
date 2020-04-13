@@ -22,12 +22,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// </summary>
         public RawTimeSeriesPolicy RawPolicy { get; set; } = RawTimeSeriesPolicy.Default;
 
-        internal void Initialize()
+        internal void ValidateAndInitialize()
         {
             if (Policies.Count == 0)
                 return;
 
             Policies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
+
+            RawPolicy.RetentionTime.AssertMonthOrSeconds();
 
             var hashSet = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
             for (var index = 0; index < Policies.Count; index++)
@@ -35,6 +37,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 var policy = Policies[index];
                 if (hashSet.Add(policy.Name) == false)
                     throw new InvalidOperationException($"Policy names must be unique, policy with the name '{policy.Name}' has duplicates.");
+
+                policy.AggregationTime.AssertMonthOrSeconds();
+                policy.RetentionTime.AssertMonthOrSeconds();
 
                 if (policy.AggregationTime <= TimeValue.Zero)
                     throw new InvalidOperationException($" aggregation time of '{policy.Name}' must be greater than zero");

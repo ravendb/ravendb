@@ -47,7 +47,7 @@ namespace StressTests.Client.TimeSeries
 
                 var now = DateTime.UtcNow;
                 var baseline = now.Add(-retention * 3);
-                var total = (int)retention.TotalMilliseconds * 3;
+                var total = (int)((TimeSpan)retention).TotalMilliseconds * 3;
 
                 using (var session = store.OpenSession())
                 {
@@ -97,7 +97,7 @@ namespace StressTests.Client.TimeSeries
                     }
                 }
 
-                Assert.True(sp.Elapsed < retention + ((TimeSpan)retention / 10));
+                Assert.True(sp.Elapsed < (TimeSpan)retention + (TimeSpan)retention / 10);
             }
         }
     }
