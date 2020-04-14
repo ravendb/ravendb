@@ -29,11 +29,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public override void Commit(IndexingStatsScope stats)
         {
-            var enqueue = Task.Factory.StartNew(async () =>
-            {
-                foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
-                    await DocumentDatabase.TxMerger.Enqueue(command);
-            });
+            var enqueue = CommitOutputReduceToCollection();
 
             using (_txHolder.AcquireTransaction(out _))
             {
@@ -51,6 +47,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 throw new IndexWriteException("Failed to save output reduce documents to disk", e);
             }
+        }
+
+        private async Task CommitOutputReduceToCollection()
+        {
+            foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
+                await DocumentDatabase.TxMerger.Enqueue(command);
         }
 
         public override void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
