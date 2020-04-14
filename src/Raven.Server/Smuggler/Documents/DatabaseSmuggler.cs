@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -6,7 +7,6 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -589,6 +589,8 @@ namespace Raven.Server.Smuggler.Documents
             
             using (var actions = _destination.Documents())
             {
+                List<LazyStringValue> legacyIdsToDelete = null;
+
                 foreach (DocumentItem item in _source.GetDocuments(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
@@ -645,21 +647,33 @@ namespace Raven.Server.Smuggler.Documents
 
                     SetDocumentFlags(item, buildType);
 
-                    if (SkipDocument(item, buildType))
-                    {
-                        result.Documents.SkippedCount++;
-                        if (result.Documents.SkippedCount % 1000 == 0)
-                            AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
+                    if (SkipDocument(item, buildType, actions, result, ref legacyIdsToDelete))
                         continue;
-                    }
 
                     actions.WriteDocument(item, result.Documents);
 
                     result.Documents.LastEtag = item.Document.Etag;
                 }
+
+                TryHandleLegacyDocumentTombstones(legacyIdsToDelete, actions, result);
             }
 
             return result.Documents;
+        }
+
+        private void TryHandleLegacyDocumentTombstones(List<LazyStringValue> legacyIdsToDelete, IDocumentActions actions, SmugglerResult result)
+        {
+            if (legacyIdsToDelete == null)
+                return;
+
+            foreach (var idToDelete in legacyIdsToDelete)
+            {
+                actions.DeleteDocument(idToDelete);
+
+                result.Tombstones.ReadCount++;
+                if (result.Tombstones.ReadCount % 1000 == 0)
+                    AddInfoToSmugglerResult(result, $"Read {result.Tombstones.ReadCount:#,#;;0} tombstones.");
+            }
         }
 
         private void AddInfoToSmugglerResult(SmugglerResult result, string message)
@@ -698,12 +712,29 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private bool SkipDocument(DocumentItem item, BuildVersionType buildType)
+        private bool SkipDocument(DocumentItem item, BuildVersionType buildType, IDocumentActions actions, SmugglerResult result, ref List<LazyStringValue> legacyIdsToDelete)
         {
-            if (buildType == BuildVersionType.V3 && _options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
+            if (buildType == BuildVersionType.V3 == false)
+                return false;
+
+            if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false &&
+                IsPreV4Revision(buildType, item.Document.Id, item.Document))
             {
-                if (IsPreV4Revision(buildType, item.Document.Id, item.Document))
-                    return true;
+                result.Documents.SkippedCount++;
+                if (result.Documents.SkippedCount % 1000 == 0)
+                    AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
+
+                return true;
+            }
+
+            if ((item.Document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyDeleteMarker) == NonPersistentDocumentFlags.LegacyDeleteMarker)
+            {
+                if (legacyIdsToDelete == null)
+                    legacyIdsToDelete = new List<LazyStringValue>();
+
+                legacyIdsToDelete.Add(item.Document.Id);
+
+                return true;
             }
 
             return false;
