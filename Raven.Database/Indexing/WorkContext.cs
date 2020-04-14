@@ -150,7 +150,11 @@ namespace Raven.Database.Indexing
 
             var errors = storedIndexingErrors.Where(x => x != null)
                 .Select(x => x.Data.JsonDeserialization<IndexingError>())
-                .OrderBy(x => x.Timestamp);
+                .OrderBy(x => x.Timestamp)
+                .ToList();
+
+            if (errors.Count == 0)
+                return;
 
             var errorsForNonExistingIndexes = new List<IndexingError>();
             var indexNames = IndexStorage.IndexNames.ToList();
