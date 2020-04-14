@@ -47,7 +47,9 @@ namespace Raven.Server.Documents.Handlers
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     ReadLegacyEtag = true,
+#pragma warning restore CS0618 // Type or member is obsolete
                     OperateOnTypes = DatabaseItemType.Documents
                 };
 
@@ -77,7 +79,9 @@ namespace Raven.Server.Documents.Handlers
 
             using (var documentActions = destination.Documents())
             using (var buffered = new BufferedStream(RequestBodyStream()))
+#pragma warning disable CS0618 // Type or member is obsolete
             using (var reader = new BsonReader(buffered))
+#pragma warning restore CS0618 // Type or member is obsolete
             {
                 var result = LegacyAttachmentUtils.GetObject(reader);
 
