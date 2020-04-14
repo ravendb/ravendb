@@ -16,7 +16,6 @@ namespace Raven.Client.Http
 
         protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls) : base(null, certificate, conventions, initialUrls)
         {
-
         }
 
         [Obsolete("Not supported", error: true)]

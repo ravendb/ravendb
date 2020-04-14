@@ -7,6 +7,7 @@ LimitCORE=infinity
 LimitNOFILE=65535
 LimitRSS=infinity
 LimitAS=infinity
+LimitMEMLOCK=infinity
 User=RAVENDB_USERNAME
 StartLimitBurst=0
 Restart=on-failure

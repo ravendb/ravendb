@@ -197,6 +197,60 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
+        public async Task PreferredNodeShouldBeRestoredAfterBroadcast()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "15";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "15";
+
+            var database = GetDatabaseName();
+            var numberOfNodes = 3;
+            var cluster = await CreateRaftCluster(numberOfNodes);
+            var createResult = await CreateDatabaseInClusterInner(new DatabaseRecord(database), numberOfNodes, cluster.Leader.WebUrl, null);
+
+            using (var store = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Leader.WebUrl }
+            }.Initialize())
+            {
+                var re = store.GetRequestExecutor(database);
+                var preferred = await re.GetPreferredNode();
+                var tag = preferred.Item2.ClusterTag;
+
+                var result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|"));
+                Assert.Equal(1, result);
+
+                preferred = await re.GetPreferredNode();
+                Assert.Equal(tag, preferred.Item2.ClusterTag);
+
+                var server = createResult.Servers.Single(s => s.ServerStore.NodeTag == tag);
+                server.ServerStore.InitializationCompleted.Reset(true);
+                server.ServerStore.Initialized = false;
+                server.ServerStore.Engine.CurrentLeader?.StepDown();
+                var sp = Stopwatch.StartNew();
+                result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|"));
+                sp.Stop();
+                Assert.True(sp.Elapsed < TimeSpan.FromSeconds(10));
+
+                var newPreferred = await re.GetPreferredNode();
+                Assert.NotEqual(tag, newPreferred.Item2.ClusterTag);
+                Assert.Equal(2, result);
+
+                server.ServerStore.Initialized = true;
+
+                var current = WaitForValue(() =>
+                {
+                    var p = re.GetPreferredNode().Result;
+
+                    return p.Item2.ClusterTag;
+                }, tag);
+
+                Assert.Equal(tag, current);
+            }
+        }
+
+        [Fact]
         public async Task ChangesApiFailOver()
         {
             var db = "Test";

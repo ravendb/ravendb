@@ -106,7 +106,7 @@ namespace Sparrow.Json
         private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
         {
             var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
-            
+
             if (type == typeof(string) ||
                 type == typeof(char) ||
                 type == typeof(bool) ||
@@ -141,6 +141,16 @@ namespace Sparrow.Json
                 var value = GetParameter(propertyType, vars);
                 var methodToCall = typeof(JsonDeserializationBase)
                     .GetMethod(propertyType == typeof(TimeSpan) ? nameof(TryGetTimeSpan) : nameof(TryGetNullableTimeSpan), BindingFlags.NonPublic | BindingFlags.Static);
+
+                var tryGet = Expression.Call(methodToCall, json, Expression.Constant(propertyName), value);
+                return Expression.Condition(tryGet, value, Expression.Default(propertyType));
+            }
+
+            if (type == typeof(Size))
+            {
+                var value = GetParameter(propertyType, vars);
+                var methodToCall = typeof(JsonDeserializationBase)
+                    .GetMethod(propertyType == typeof(Size) ? nameof(TryGetSize) : nameof(TryGetNullableSize), BindingFlags.NonPublic | BindingFlags.Static);
 
                 var tryGet = Expression.Call(methodToCall, json, Expression.Constant(propertyName), value);
                 return Expression.Condition(tryGet, value, Expression.Default(propertyType));
@@ -409,6 +419,7 @@ namespace Sparrow.Json
             }
             return dic;
         }
+
         private static Dictionary<TEnum, string> ToDictionaryOfEnumKeys<TEnum>(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<TEnum, string>();
@@ -428,6 +439,7 @@ namespace Sparrow.Json
             }
             return dic;
         }
+
         private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -552,9 +564,7 @@ namespace Sparrow.Json
                             prop[innerPropName] = array;
                         }
                     }
-
                 }
-
             }
             return dic;
         }
@@ -717,6 +727,42 @@ namespace Sparrow.Json
             throw new FormatException($"Could not convert {value.GetType().Name} ('{value}') to {typeof(TimeSpan).Name}");
         }
 
+        private static bool TryGetSize(BlittableJsonReaderObject json, string propertyName, out Size size)
+        {
+            if (TryGetNullableSize(json, propertyName, out var nullableSize) == false)
+            {
+                size = default;
+                return false;
+            }
 
+            if (nullableSize.HasValue == false)
+                throw new FormatException($"Could not convert 'null' to {typeof(Size).Name}");
+
+            size = nullableSize.Value;
+            return true;
+        }
+
+        private static bool TryGetNullableSize(BlittableJsonReaderObject json, string propertyName, out Size? size)
+        {
+            if (json.TryGetMember(propertyName, out var value) == false || value == null)
+            {
+                size = null;
+                return false;
+            }
+
+            if (value is long l)
+            {
+                size = new Size(l, SizeUnit.Bytes);
+                return true;
+            }
+
+            if (value is LazyNumberValue lnv)
+            {
+                size = new Size(lnv, SizeUnit.Bytes);
+                return true;
+            }
+
+            throw new FormatException($"Could not convert {value.GetType().Name} ('{value}') to {typeof(Size).Name}");
+        }
     }
 }
