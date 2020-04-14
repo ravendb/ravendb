@@ -143,6 +143,7 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _first = true;
         private CommandType _inProgressCommand;
         private readonly CountersBulkInsertOperation _countersOperation;
+        private readonly AttachmentsBulkInsertOperation _attachmentsOperation;
         private long _operationId = -1;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
@@ -213,6 +214,7 @@ namespace Raven.Client.Documents.BulkInsert
             _backgroundWriter = new StreamWriter(new MemoryStream());
             _streamExposerContent = new StreamExposerContent();
             _countersOperation = new CountersBulkInsertOperation(this);
+            _attachmentsOperation = new AttachmentsBulkInsertOperation(this);
 
             _defaultSerializer = _requestExecutor.Conventions.CreateSerializer();
             _customEntitySerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeEntityToJsonStream;
@@ -371,10 +373,6 @@ namespace Raven.Client.Documents.BulkInsert
             if (_inProgressCommand == CommandType.Counters)
             {
                 _countersOperation.EndPreviousCommandIfNeeded();
-            }
-            else if (_inProgressCommand == CommandType.AttachmentPUT)
-            {
-                throw new InvalidOperationException("Please dispose the previous AttachmentPUT operation before starting a new one");
             }
             else if (_inProgressCommand == CommandType.TimeSeries)
             {
@@ -817,46 +815,71 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        public class AttachmentsBulkInsert : IDisposable
+        public struct AttachmentsBulkInsert
         {
             private readonly BulkInsertOperation _operation;
             private readonly string _id;
 
             public AttachmentsBulkInsert(BulkInsertOperation operation, string id)
             {
-                switch (operation._inProgressCommand)
-                {
-                    case CommandType.AttachmentPUT:
-                        throw new InvalidOperationException("Please dispose the previous AttachmentPUT operation before starting a new one");
-                    case CommandType.Counters:
-                        _operation._countersOperation.EndPreviousCommandIfNeeded();
-                        break;
-                }
-
                 _operation = operation;
                 _id = id;
-                _operation._inProgressCommand = CommandType.AttachmentPUT;
             }
 
             public void Store(string name, Stream stream, string contentType = null)
             {
-                AsyncHelpers.RunSync(() => StoreAsync(name, stream, contentType));
+                _operation._attachmentsOperation.Store(_id, name, stream, contentType);
             }
 
-            public async Task StoreAsync(string name, Stream stream, string contentType = null)
+            public Task StoreAsync(string name, Stream stream, string contentType = null, CancellationToken token = default)
+            {
+                return _operation._attachmentsOperation.StoreAsync(_id, name, stream, contentType, token);
+            }
+        }
+
+        public class AttachmentsBulkInsertOperation
+        {
+            private readonly BulkInsertOperation _operation;
+            private readonly CancellationToken _token;
+
+            public AttachmentsBulkInsertOperation(BulkInsertOperation operation)
+            {
+                _operation = operation;
+                _token = _operation._token;
+            }
+
+            public void Store(string id, string name, Stream stream, string contentType = null)
+            {
+                AsyncHelpers.RunSync(() => StoreAsync(id, name, stream, contentType, token: default));
+            }
+
+            public async Task StoreAsync(string id, string name, Stream stream, string contentType = null, CancellationToken token = default)
             {
                 PutAttachmentCommandHelper.ValidateStream(stream);
 
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _token);
                 using (_operation.ConcurrencyCheck())
                 {
+
+                    switch (_operation._inProgressCommand)
+                    {
+                        case CommandType.Counters:
+                            _operation._countersOperation.EndPreviousCommandIfNeeded();
+                            break;
+                        case CommandType.TimeSeries:
+                            TimeSeriesBulkInsert.ThrowAlreadyRunningTimeSeries();
+                            break;
+                    }
+
                     await _operation.ExecuteBeforeStore().ConfigureAwait(false);
+
                     try
                     {
                         if (_operation._first == false)
                             _operation._currentWriter.Write(",");
 
                         _operation._currentWriter.Write("{\"Id\":\"");
-                        WriteString(_operation._currentWriter, _id);
+                        WriteString(_operation._currentWriter, id);
                         _operation._currentWriter.Write("\",\"Type\":\"AttachmentPUT\",\"Name\":\"");
                         WriteString(_operation._currentWriter, name);
                         if (contentType != null)
@@ -870,20 +893,16 @@ namespace Raven.Client.Documents.BulkInsert
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
 
                         PutAttachmentCommandHelper.PrepareStream(stream);
-                        stream.CopyTo(_operation._currentWriter.BaseStream);
+                        // pass the default value for bufferSize to make it compile on netstandard2.0
+                        await stream.CopyToAsync(_operation._currentWriter.BaseStream, bufferSize: 81920, cancellationToken: linkedCts.Token).ConfigureAwait(false);
 
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
-                        await _operation.HandleErrors(_id, e).ConfigureAwait(false);
+                        await _operation.HandleErrors(id, e).ConfigureAwait(false);
                     }
                 }
-            }
-
-            public void Dispose()
-            {
-                _operation._inProgressCommand = CommandType.None;
             }
         }
     }

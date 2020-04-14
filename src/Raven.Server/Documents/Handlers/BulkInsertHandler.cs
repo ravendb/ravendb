@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -59,7 +60,6 @@ namespace Raven.Server.Documents.Handlers
                             var array = new BatchRequestParser.CommandData[8];
                             var numberOfCommands = 0;
                             long totalSize = 0;
-                            bool hasAttachments = false;
                             while (true)
                             {
                                 using (var modifier = new BlittableMetadataModifier(docsCtx))
@@ -83,10 +83,12 @@ namespace Raven.Server.Documents.Handlers
                                                 NumberOfCommands = numberOfCommands,
                                                 Database = Database,
                                                 Logger = logger,
-                                                TotalSize = totalSize,
-                                                AttachmentStreamsTempFile = hasAttachments ? Database.DocumentsStorage.AttachmentsStorage.GetTempFile("bulk") : null
+                                                TotalSize = totalSize
                                             });
                                         }
+
+                                        if (_streamsTempFiles.Count >= 10)
+                                            ClearStreamsTempFiles(reset: true);
 
                                         progress.BatchCount++;
                                         progress.Processed += numberOfCommands;
@@ -107,8 +109,7 @@ namespace Raven.Server.Documents.Handlers
                                         break;
                                     if (commandData.Type == CommandType.AttachmentPUT)
                                     {
-                                        hasAttachments = true;
-                                        commandData.RavenData = await parser.GetRavenData(commandData.RavenBlobSize);
+                                        commandData.AttachmentStream = WriteAttachment(commandData.RavenBlobSize, parser.GetRavenData(commandData.RavenBlobSize));
                                     }
 
                                     totalSize += GetSize(commandData);
@@ -126,8 +127,7 @@ namespace Raven.Server.Documents.Handlers
                                     NumberOfCommands = numberOfCommands,
                                     Database = Database,
                                     Logger = logger,
-                                    TotalSize = totalSize,
-                                    AttachmentStreamsTempFile = hasAttachments ? Database.DocumentsStorage.AttachmentsStorage.GetTempFile("bulk") : null
+                                    TotalSize = totalSize
                                 });
 
                                 progress.BatchCount++;
@@ -143,6 +143,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     currentCtxReset?.Dispose();
                     previousCtxReset?.Dispose();
+                    ClearStreamsTempFiles();
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -157,6 +158,44 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.Headers["Connection"] = "close";
                 throw new InvalidOperationException("Failed to process bulk insert. " + progress, e);
             }
+        }
+
+        private void ClearStreamsTempFiles(bool reset = false)
+        {
+            foreach (var file in _streamsTempFiles)
+            {
+                file.Dispose();
+            }
+
+            if (reset)
+                _streamsTempFiles = new List<StreamsTempFile>();
+        }
+
+        private List<StreamsTempFile> _streamsTempFiles = new List<StreamsTempFile>();
+
+        private BatchHandler.MergedBatchCommand.AttachmentStream WriteAttachment(long size, Stream stream)
+        {
+            var attachmentStream = new BatchHandler.MergedBatchCommand.AttachmentStream();
+
+            if (size <= 32 * 1024)
+            {
+                attachmentStream.Stream = new MemoryStream();
+            }
+            else
+            {
+                StreamsTempFile attachmentStreamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("bulk");
+                attachmentStream.Stream = attachmentStreamsTempFile.StartNewStream();
+                _streamsTempFiles.Add(attachmentStreamsTempFile);
+            }
+
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenWriteTransaction())
+            {
+                attachmentStream.Hash = AsyncHelpers.RunSync(() => AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, stream, attachmentStream.Stream, Database.DatabaseShutdown));
+                attachmentStream.Stream.Flush();
+            }
+
+            return attachmentStream;
         }
 
         private int? _changeVectorSize;
@@ -180,13 +219,7 @@ namespace Raven.Server.Documents.Handlers
 
                     return size;
                 case CommandType.AttachmentPUT:
-                    size += commandData.Id.Length + commandData.Name.Length + commandData.RavenBlobSize;
-                    if (string.IsNullOrEmpty(commandData.ContentType) == false)
-                    {
-                        size += commandData.ContentType.Length;
-                    }
-
-                    return size;
+                    return commandData.RavenBlobSize;
                 case CommandType.TimeSeries:
                     // we don't know the size of the change so we are just estimating
                     foreach (var append in commandData.TimeSeries.Appends)
@@ -241,7 +274,6 @@ namespace Raven.Server.Documents.Handlers
             return disposable;
         }
 
-
         public class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public Logger Logger;
@@ -249,109 +281,83 @@ namespace Raven.Server.Documents.Handlers
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
             public long TotalSize;
-            public StreamsTempFile AttachmentStreamsTempFile;
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                try
+                for (int i = 0; i < NumberOfCommands; i++)
                 {
-                    for (int i = 0; i < NumberOfCommands; i++)
+                    var cmd = Commands[i];
+
+                    Debug.Assert(cmd.Type == CommandType.PUT || cmd.Type == CommandType.Counters || cmd.Type == CommandType.TimeSeries || cmd.Type == CommandType.AttachmentPUT);
+
+                    if (cmd.Type == CommandType.PUT)
                     {
-                        var cmd = Commands[i];
-
-                        Debug.Assert(cmd.Type == CommandType.PUT || cmd.Type == CommandType.Counters || cmd.Type == CommandType.TimeSeries || cmd.Type == CommandType.AttachmentPUT);
-
-                        if (cmd.Type == CommandType.PUT)
+                        try
                         {
-                            try
-                            {
-                                Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
-                            }
-                            catch (VoronConcurrencyErrorException)
-                            {
-                                // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
-                                // this means that we have existing values under the current etag
-                                // we'll generate a new (random) id for them. 
-
-                                // The TransactionMerger will re-run us when we ask it to as a 
-                                // separate transaction
-
-                                for (; i < NumberOfCommands; i++)
-                                {
-                                    cmd = Commands[i];
-                                    if (cmd.Type != CommandType.PUT)
-                                        continue;
-
-                                    if (cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
-                                    {
-                                        cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
-                                        RetryOnError = true;
-                                    }
-                                }
-
-                                throw;
-                            }
+                            Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
                         }
-                        else if (cmd.Type == CommandType.Counters)
+                        catch (VoronConcurrencyErrorException)
                         {
-                            var collection = CountersHandler.ExecuteCounterBatchCommand.GetDocumentCollection(cmd.Id, Database, context, fromEtl: false, out _);
+                            // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                            // this means that we have existing values under the current etag
+                            // we'll generate a new (random) id for them. 
 
-                            foreach (var counterOperation in cmd.Counters.Operations)
+                            // The TransactionMerger will re-run us when we ask it to as a 
+                            // separate transaction
+
+                            for (; i < NumberOfCommands; i++)
                             {
-                                counterOperation.DocumentId = cmd.Counters.DocumentId;
-                                Database.DocumentsStorage.CountersStorage.IncrementCounter(
-                                    context, cmd.Id, collection, counterOperation.CounterName, counterOperation.Delta, out _);
-                            }
-                        }
-                        else if (cmd.Type == CommandType.TimeSeries)
-                        {
-                            var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
-                            Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
-                                cmd.Id,
-                                docCollection,
-                                cmd.TimeSeries.Name,
-                                cmd.TimeSeries.Appends
-                            );
-                        }
-                        else if (cmd.Type == CommandType.AttachmentPUT)
-                        {
-                            try
-                            {
-                                var attachmentStream = new BatchHandler.MergedBatchCommand.AttachmentStream
-                                {
-                                    Stream = AttachmentStreamsTempFile.StartNewStream()
-                                };
+                                cmd = Commands[i];
+                                if (cmd.Type != CommandType.PUT)
+                                    continue;
 
-                                using (var bodyStream = new MemoryStream(cmd.RavenData))
+                                if (cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
                                 {
-                                    attachmentStream.Hash = AsyncHelpers.RunSync(() => AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, bodyStream, attachmentStream.Stream, Database.DatabaseShutdown));
-                                    attachmentStream.Stream.Flush();
-                                }
-
-                                using (attachmentStream.Stream)
-                                {
-                                    Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
-                                        cmd.ContentType ?? "", attachmentStream.Hash, cmd.ChangeVector, attachmentStream.Stream, updateDocument: false);
+                                    cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
+                                    RetryOnError = true;
                                 }
                             }
-                            finally
-                            {
-                                AttachmentStreamsTempFile.Reset();
-                            }
+
+                            throw;
                         }
                     }
-
-                    if (Logger.IsInfoEnabled)
+                    else if (cmd.Type == CommandType.Counters)
                     {
-                        Logger.Info($"Executed {NumberOfCommands:#,#;;0} bulk insert operations, size: ({new Size(TotalSize, SizeUnit.Bytes)})");
-                    }
+                        var collection = CountersHandler.ExecuteCounterBatchCommand.GetDocumentCollection(cmd.Id, Database, context, fromEtl: false, out _);
 
-                    return NumberOfCommands;
+                        foreach (var counterOperation in cmd.Counters.Operations)
+                        {
+                            counterOperation.DocumentId = cmd.Counters.DocumentId;
+                            Database.DocumentsStorage.CountersStorage.IncrementCounter(
+                                context, cmd.Id, collection, counterOperation.CounterName, counterOperation.Delta, out _);
+                        }
+                    }
+                    else if (cmd.Type == CommandType.TimeSeries)
+                    {
+                        var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
+                        Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                            cmd.Id,
+                            docCollection,
+                            cmd.TimeSeries.Name,
+                            cmd.TimeSeries.Appends
+                        );
+                    }
+                    else if (cmd.Type == CommandType.AttachmentPUT)
+                    {
+                        using (cmd.AttachmentStream.Stream)
+                        {
+                            Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
+                                cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
+                        }
+                    }
                 }
-                finally
+
+                if (Logger.IsInfoEnabled)
                 {
-                    AttachmentStreamsTempFile?.Dispose();
+                    Logger.Info($"Executed {NumberOfCommands:#,#;;0} bulk insert operations, size: ({new Size(TotalSize, SizeUnit.Bytes)})");
                 }
+
+                return NumberOfCommands;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)

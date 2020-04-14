@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
@@ -57,6 +59,7 @@ namespace Raven.Server.Documents.Handlers
             public string DestinationName;
             public string ContentType;
             public AttachmentType AttachmentType;
+            public BatchHandler.MergedBatchCommand.AttachmentStream AttachmentStream;
             #endregion
 
             #region Counter
@@ -72,7 +75,7 @@ namespace Raven.Server.Documents.Handlers
             #endregion
 
             #region ravendata
-            public byte[] RavenData;
+            public Stream RavenData;
             public long RavenBlobSize;
             #endregion
 
@@ -336,44 +339,19 @@ namespace Raven.Server.Documents.Handlers
                 return await ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, modifier, _token);
             }
 
-            public async Task<byte[]> GetRavenData(long dataSize)
+            public Stream GetRavenData(long dataSize)
             {
-                long size = Math.Min(32 * 1024, dataSize);
-                var buffer = new byte[size];
-                var offset = 0;
-                var toRead = dataSize;
+                var bufferSize = _parser.BufferSize - _parser.BufferOffset;
+                var copy = ArrayPool<byte>.Shared.Rent(bufferSize);
+                Buffer.BlockCopy(_buffer.Buffer.Array ?? throw new InvalidOperationException(), _buffer.Buffer.Offset + _parser.BufferOffset, copy, 0, bufferSize);
+                _parser.Skip(dataSize < bufferSize ? (int)dataSize : bufferSize);
 
-                while (toRead > 0)
+                return new LimitedStream(new ConcatStream(new ConcatStream.RentedBuffer
                 {
-                    if (offset != 0)
-                    {
-                        // expand the array
-                        var tmp = new byte[offset + size];
-                        Array.Copy(buffer, tmp, buffer.Length);
-                        buffer = tmp;
-                    }
-
-                    if (_parser.ReadByteArray(size, ref toRead, out var bytes, out var read) == false)
-                        await RefillParserBuffer(_stream, _buffer, _parser, _token);
-
-                    if (read == size)
-                    {
-                        Array.Copy(bytes, 0, buffer, offset, bytes.Length);
-                    }
-                    else if (read != 0)
-                    {
-                        // truncate the array
-                        var tmp = new byte[offset + read];
-                        Array.Copy(buffer, 0, tmp, 0, offset);
-                        Array.Copy(bytes, 0, tmp, offset, read);
-                        buffer = tmp;
-                    }
-                    offset += read;
-                }
-
-                Debug.Assert(offset == dataSize);
-                Debug.Assert(buffer.Length == dataSize);
-                return buffer;
+                    Buffer = copy,
+                    Count = bufferSize,
+                    Offset = 0
+                }, _stream), dataSize, 0, 0);
             }
         }
 

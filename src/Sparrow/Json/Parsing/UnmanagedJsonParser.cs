@@ -147,38 +147,6 @@ namespace Sparrow.Json.Parsing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ReadByteArray(long size, ref long toRead, out byte[] bytes, out int index)
-        {
-            bytes = new byte[size];
-            index = 0;
-            byte* currentBuffer = _inputBuffer;
-            uint bufferSize = _bufSize;
-            uint pos = _pos;
-            while (toRead > 0)
-            {
-                if (pos >= bufferSize)
-                {
-                    _pos = pos;
-                    return false;
-                }
-
-                if (index == size)
-                {
-                    _pos = pos;
-                    return true;
-                }
-
-                bytes[index++] = currentBuffer[pos];
-                pos++;
-                _charPos++;
-                toRead--;
-            }
-
-            _pos = pos;
-            return true;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read()
         {
             var state = _state;

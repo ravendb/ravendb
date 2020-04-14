@@ -33,21 +33,19 @@ namespace SlowTests.Client.Attachments
                 {
                     var user1 = new User { Name = "EGR" };
                     bulkInsert.Store(user1, userId);
-                    using (var attachmentsBulkInsert = bulkInsert.AttachmentsFor(userId))
+                    var attachmentsBulkInsert = bulkInsert.AttachmentsFor(userId);
+                    for (int i = 0; i < count; i++)
                     {
-                        for (int i = 0; i < count; i++)
-                        {
-                            var rnd = new Random(DateTime.Now.Millisecond);
-                            var bArr = new byte[size];
-                            rnd.NextBytes(bArr);
-                            var name = i.ToString();
-                            var stream = new MemoryStream(bArr);
+                        var rnd = new Random(DateTime.Now.Millisecond);
+                        var bArr = new byte[size];
+                        rnd.NextBytes(bArr);
+                        var name = i.ToString();
+                        var stream = new MemoryStream(bArr);
 
-                            await attachmentsBulkInsert.StoreAsync(name, stream);
+                        await attachmentsBulkInsert.StoreAsync(name, stream);
 
-                            stream.Position = 0;
-                            streams[name] = stream;
-                        }
+                        stream.Position = 0;
+                        streams[name] = stream;
                     }
                 }
 
@@ -80,20 +78,18 @@ namespace SlowTests.Client.Attachments
                         var id = $"user/{i}";
                         streams[id] = new Dictionary<string, MemoryStream>();
                         bulkInsert.Store(new User { Name = $"EGR_{i}" }, id);
-                        using (var attachmentsBulkInsert = bulkInsert.AttachmentsFor(id))
+                        var attachmentsBulkInsert = bulkInsert.AttachmentsFor(id);
+                        for (int j = 0; j < attachments; j++)
                         {
-                            for (int j = 0; j < attachments; j++)
-                            {
-                                var rnd = new Random(DateTime.Now.Millisecond);
-                                var bArr = new byte[size];
-                                rnd.NextBytes(bArr);
-                                var name = j.ToString();
-                                var stream = new MemoryStream(bArr);
-                                await attachmentsBulkInsert.StoreAsync(name, stream);
+                            var rnd = new Random(DateTime.Now.Millisecond);
+                            var bArr = new byte[size];
+                            rnd.NextBytes(bArr);
+                            var name = j.ToString();
+                            var stream = new MemoryStream(bArr);
+                            await attachmentsBulkInsert.StoreAsync(name, stream);
 
-                                stream.Position = 0;
-                                streams[id][name] = stream;
-                            }
+                            stream.Position = 0;
+                            streams[id][name] = stream;
                         }
                     }
                 }
