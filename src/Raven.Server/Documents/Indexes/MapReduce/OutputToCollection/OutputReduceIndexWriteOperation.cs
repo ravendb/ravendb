@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -30,9 +29,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public override void Commit(IndexingStatsScope stats)
         {
-            var enqueued = new List<Task>();
-            foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
-                enqueued.Add(DocumentDatabase.TxMerger.Enqueue(command));
+            var enqueue = Task.Factory.StartNew(async () =>
+            {
+                foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
+                    await DocumentDatabase.TxMerger.Enqueue(command);
+            });
 
             using (_txHolder.AcquireTransaction(out _))
             {
@@ -42,7 +43,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             try
             {
                 using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
-                    Task.WaitAll(enqueued.ToArray());
+                {
+                    enqueue.GetAwaiter().GetResult();
+                }
             }
             catch (Exception e)
             {
