@@ -8,7 +8,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Runtime.ConstrainedExecution;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -56,6 +55,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Debugging;
 using Sparrow.Threading;
 using DateTime = System.DateTime;
 
@@ -65,6 +65,7 @@ namespace Raven.Server
     {
         static RavenServer()
         {
+            DebugStuff.Attach();
             UnhandledExceptions.Track(Logger);
         }
 
@@ -342,6 +343,7 @@ namespace Raven.Server
                 throw;
             }
         }
+
         private void OnServerCertificateChanged(object sender, EventArgs e)
         {
             if (RequestExecutor.HasServerCertificateCustomValidationCallback)
@@ -365,6 +367,7 @@ namespace Raven.Server
                 // errors here, it all goes to the log anyway
             }
         }
+
         public void ClearExternalCertificateValidationCache()
         {
             // Can be called from the Admin JS Console
