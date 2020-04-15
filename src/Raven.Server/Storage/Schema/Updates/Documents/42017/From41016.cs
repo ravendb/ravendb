@@ -18,11 +18,12 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Voron.Global.Constants;
+
 #pragma warning disable 618
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
-    public unsafe class From16 : ISchemaUpdate
+    public unsafe class From41016 : ISchemaUpdate
     {
         internal static int NumberOfCountersToMigrateInSingleTransaction = 100_000;
 
@@ -39,11 +40,18 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             TableType = (byte)TableType.LegacyCounter
         };
 
+        public int From => 41_016;
+
+        public int To => 42_017;
+
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Documents;
+
         private enum LegacyCountersTable
         {
             // Format of this is:
             // lower document id, record separator, lower counter name, record separator, 16 bytes dbid
             CounterKey = 0,
+
             Name = 1, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
             Etag = 2,
             Value = 3,
@@ -52,7 +60,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             TransactionMarker = 6
         }
 
-        static From16()
+        static From41016()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
@@ -82,7 +90,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 StartIndex = (int)LegacyCountersTable.Etag,
                 Name = CollectionCountersEtagsSlice
             });
-
         }
 
         public bool Update(UpdateStep step)
@@ -100,7 +107,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 {
                     var current = it.CurrentKey;
                     var currentAsString = current.ToString();
-                    
+
                     if (currentAsString.StartsWith(legacyCounterCollectionTablePrefix, StringComparison.OrdinalIgnoreCase))
                     {
                         var type = step.ReadTx.GetRootObjectType(current);
@@ -114,7 +121,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             }
 
             // this schema update uses DocumentsStorage.GenerateNextEtag() so we need to read and set LastEtag in storage
-            step.DocumentsStorage.InitializeLastEtag(step.ReadTx); 
+            step.DocumentsStorage.InitializeLastEtag(step.ReadTx);
 
             step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
 
@@ -256,7 +263,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                 if (step.WriteTx.LowLevelTransaction.RootObjects.Read(CounterKeysSlice) != null)
                     step.WriteTx.DeleteTree(CounterKeysSlice);
-                
+
                 if (step.WriteTx.LowLevelTransaction.RootObjects.Read(AllCountersEtagSlice) != null)
                     step.WriteTx.DeleteFixedTree(AllCountersEtagSlice.ToString());
             }
@@ -474,8 +481,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return scope;
         }
 
-
-
         private static string ReadDbId(UpdateStep step)
         {
             var metadataTree = step.WriteTx.ReadTree(Constants.MetadataTreeNameSlice);
@@ -618,12 +623,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     builder.FinalizeDocument();
 
                     data = builder.CreateReader();
-
                 }
 
                 return data;
             }
-
             finally
             {
                 foreach (var scope in toDispose)
@@ -631,7 +634,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     scope.Dispose();
                 }
             }
-
         }
 
         private static void WriteRawBlob(DocumentsOperationContext context, List<string> dbIds, List<CounterDetail> counters, ByteString newVal, ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> builder)

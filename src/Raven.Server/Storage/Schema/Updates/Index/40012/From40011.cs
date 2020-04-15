@@ -4,8 +4,12 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Storage.Schema.Updates.Index
 {
-    public class From11 : ISchemaUpdate
+    public class From40011 : ISchemaUpdate
     {
+        public int From => 40_011;
+        public int To => 40_012;
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Index;
+
         public bool Update(UpdateStep step)
         {
             using (Slice.From(step.ReadTx.Allocator, "ErrorTimestamps", out var errorTimestampsSlice))

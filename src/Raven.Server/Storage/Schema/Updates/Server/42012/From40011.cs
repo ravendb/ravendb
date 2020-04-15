@@ -7,18 +7,16 @@ using Raven.Client;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Threading;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public class From11 : ISchemaUpdate
+    public class From40011 : ISchemaUpdate
     {
         private const string LocalNodeStateTreeName = "LocalNodeState";
 
@@ -28,6 +26,12 @@ namespace Raven.Server.Storage.Schema.Updates.Server
         private static readonly Slice CertificatesSlice;
         private static readonly Slice CertificatesHashSlice;
 
+        public int From => 40_011;
+
+        public int To => 42_012;
+
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Server;
+
         public enum CertificatesTable
         {
             Key = 0,
@@ -35,7 +39,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             Data = 2
         }
 
-        static From11()
+        static From40011()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
@@ -116,7 +120,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                         {
                             // in this update we trim 'certificates/' prefix from key name, CollectionPrimaryKey and CollectionSecondaryKeys
                             DropCertificatePrefixFromDefinition(def, out _);
-                            
+
                             using (var newCert = context.ReadObject(def.ToJson(), "certificate/new/schema"))
                             {
                                 ClusterStateMachine.UpdateCertificate(certsTable, newKeySlice, hashSlice, newCert);
@@ -194,11 +198,11 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             Transaction.DebugDisposeReaderAfterTransaction(tx, doc);
             return (key, doc);
         }
-        
+
         public static void DropCertificatePrefixFromDefinition(CertificateDefinition definition, out bool touched)
         {
             touched = false;
-            
+
             if (definition.CollectionSecondaryKeys != null)
             {
                 var secondaryKeys = new List<string>();
@@ -220,7 +224,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     }
                 }
             }
-            
+
             if (definition.CollectionPrimaryKey != null && definition.CollectionPrimaryKey.StartsWith(Constants.Certificates.Prefix))
             {
                 touched = true;

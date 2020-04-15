@@ -9,8 +9,12 @@ using static Raven.Server.Documents.Revisions.RevisionsStorage;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
-    public unsafe class From14 : ISchemaUpdate
+    public unsafe class From40014 : ISchemaUpdate
     {
+        public int From => 40_014;
+        public int To => 40_015;
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Documents;
+
         public bool Update(UpdateStep step)
         {
             step.DocumentsStorage.RevisionsStorage = new RevisionsStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);

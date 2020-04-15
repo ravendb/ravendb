@@ -23,7 +23,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanMigrateLegacyCounters()
         {
-            From16.NumberOfCountersToMigrateInSingleTransaction = 20;
+            From41016.NumberOfCountersToMigrateInSingleTransaction = 20;
 
             var backupPath = NewDataPath(forceCreateDir: true);
             var fullBackupPath = Path.Combine(backupPath, "northwind.ravendb-snapshot");

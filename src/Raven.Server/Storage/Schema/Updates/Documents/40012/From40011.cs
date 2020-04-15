@@ -8,8 +8,12 @@ using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
-    public unsafe class From11 : ISchemaUpdate
+    public unsafe class From40011 : ISchemaUpdate
     {
+        public int From => 40_011;
+        public int To => 40_012;
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Documents;
+
         public bool Update(UpdateStep step)
         {
             // When the revision are enabled and we delete a document we stored it with a 'RevisionDelete' flag. This flag was used to find the deleted revisions.
