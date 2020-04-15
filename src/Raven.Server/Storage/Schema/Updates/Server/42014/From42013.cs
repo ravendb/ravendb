@@ -7,8 +7,14 @@ using static Raven.Server.ServerWide.Commands.CompareExchangeCommandBase;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public unsafe class From13 : ISchemaUpdate
+    public unsafe class From42013 : ISchemaUpdate
     {
+        public int From => 42_013;
+
+        public int To => 42_014;
+
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Server;
+
         public bool Update(UpdateStep step)
         {
             var dbs = new List<string>();

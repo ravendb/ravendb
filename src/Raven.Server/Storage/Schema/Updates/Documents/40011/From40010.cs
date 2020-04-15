@@ -10,8 +10,12 @@ using static Raven.Server.Documents.Revisions.RevisionsStorage;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
-    public unsafe class From10 : ISchemaUpdate
+    public unsafe class From40010 : ISchemaUpdate
     {
+        public int From => 40_010;
+        public int To => 40_011;
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Documents;
+
         public bool Update(UpdateStep step)
         {
             // Update collections

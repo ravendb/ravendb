@@ -6,8 +6,12 @@ using Voron.Exceptions;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
-    public unsafe class From13 : ISchemaUpdate
+    public unsafe class From40013 : ISchemaUpdate
     {
+        public int From => 40_013;
+        public int To => 40_014;
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Documents;
+
         public bool Update(UpdateStep step)
         {
             try

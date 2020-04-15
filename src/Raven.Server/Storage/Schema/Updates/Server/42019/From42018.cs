@@ -7,8 +7,14 @@ using Voron;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public unsafe class From18 : ISchemaUpdate
+    public unsafe class From42018 : ISchemaUpdate
     {
+        public int From => 42_018;
+
+        public int To => 42_019;
+
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Server;
+
         public bool Update(UpdateStep step)
         {
             var ids = new HashSet<long>();

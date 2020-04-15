@@ -7,8 +7,14 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public unsafe class From17 : ISchemaUpdate
+    public unsafe class From42017 : ISchemaUpdate
     {
+        public int From => 42_017;
+
+        public int To => 42_018;
+
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Server;
+
         public bool Update(UpdateStep step)
         {
             var oldCompareExchangeSchema = new TableSchema().

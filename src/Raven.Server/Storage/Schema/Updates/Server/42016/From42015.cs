@@ -8,8 +8,14 @@ using Voron.Impl;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public unsafe class From15 : ISchemaUpdate
+    public unsafe class From42015 : ISchemaUpdate
     {
+        public int From => 42_015;
+
+        public int To => 42_016;
+
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Server;
+
         public bool Update(UpdateStep step)
         {
             return UpdateCertificatesTableInternal(step);
@@ -31,7 +37,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     using (doc)
                     {
                         var def = JsonDeserializationServer.CertificateDefinition(doc);
-                        From11.DropCertificatePrefixFromDefinition(def, out var touched);
+                        From40011.DropCertificatePrefixFromDefinition(def, out var touched);
 
                         var loweredKey = key.ToLowerInvariant();
 

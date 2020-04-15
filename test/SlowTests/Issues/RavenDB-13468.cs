@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanMigrateLegacyCountersWithMultipleDbIds()
         {
-            From16.NumberOfCountersToMigrateInSingleTransaction = 20;
+            From41016.NumberOfCountersToMigrateInSingleTransaction = 20;
             
             var jsonPath = Path.Combine(NewDataPath(forceCreateDir: true), "RavenDB_13468.counters-snapshot");
             ExtractFile(jsonPath, "SlowTests.Data.RavenDB_13468.counters-snapshot-document.json");
