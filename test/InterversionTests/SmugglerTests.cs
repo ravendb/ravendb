@@ -1,18 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Config;
+using Raven.Server.Documents;
+using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,366 +23,25 @@ namespace InterversionTests
 {
     public class SmugglerTests : InterversionTestBase
     {
-        //TODO Need to be changed to version with relevant fix
-        private const string Server42Version = "4.2.101";
-
+        const string Server42Version = "4.2.102-nightly-20200415-0501";
+        readonly TimeSpan _operationTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
+        
+        public enum ExcludeOn
+        {
+            Non,
+            Export,
+            Import
+        }
+        
         public SmugglerTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public async Task CanExportFrom41AndImportToCurrent()
-        {
-            var file = GetTempFileName();
-
-            try
-            {
-                long countOfDocuments;
-                long countOfAttachments;
-                long countOfIndexes;
-                long countOfRevisions;
-                using (var store41 = await GetDocumentStoreAsync("4.1.4", new InterversionTestOptions
-                {
-                    ModifyDatabaseRecord = record =>
-                    {
-                        record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "1024";
-                        record.ConflictSolverConfig = new ConflictSolver
-                        {
-                            ResolveToLatest = false,
-                            ResolveByCollection = new Dictionary<string, ScriptResolver>
-                                {
-                                    {
-                                        "ConflictSolver", new ScriptResolver()
-                                        {
-                                            Script = "Script"
-                                        }
-                                    }
-                                }
-                        };
-                        record.Sorters = new Dictionary<string, SorterDefinition>
-                        {
-                            {
-                                "MySorter", new SorterDefinition
-                                {
-                                    Name = "MySorter",
-                                    Code = GetSorter("RavenDB_8355.MySorter.cs")
-                                }
-                            }
-                        };
-                        record.ExternalReplications = new List<ExternalReplication>
-                        {
-                            new ExternalReplication("tempDatabase", "ExternalReplication")
-                            {
-                                TaskId = 1,
-                                Name = "External",
-                                MentorNode = "B",
-                                DelayReplicationFor = new TimeSpan(4),
-                                Url = "http://127.0.0.1/",
-                                Disabled = false
-                            }
-                        };
-                        record.SinkPullReplications = new List<PullReplicationAsSink>
-                        {
-                            new PullReplicationAsSink()
-                            {
-                                Database = "sinkDatabase",
-                                CertificatePassword = "CertificatePassword",
-                                CertificateWithPrivateKey = "CertificateWithPrivateKey",
-                                TaskId = 2,
-                                Name = "Sink",
-                                MentorNode = "A",
-                                HubDefinitionName = "hub"
-                            }
-                        };
-                        record.HubPullReplications = new List<PullReplicationDefinition>
-                        {
-                            new PullReplicationDefinition()
-                            {
-                                TaskId = 3,
-                                Name = "hub",
-                                MentorNode = "A",
-                                DelayReplicationFor = new TimeSpan(3),
-                            }
-                        };
-                        record.RavenEtls = new List<RavenEtlConfiguration>
-                        {
-                            new RavenEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "ConnectionName",
-                                MentorNode = "A",
-                                Name = "Etl",
-                                TaskId = 4
-                            }
-                        };
-                        record.SqlEtls = new List<SqlEtlConfiguration>
-                        {
-                            new SqlEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "connection",
-                                ForceQueryRecompile = false,
-                                Name = "sql",
-                                ParameterizeDeletes = false,
-                                TaskId = 5
-                            }
-                        };
-                    }
-                }))
-                {
-                    store41.Maintenance.Send(new CreateSampleDataOperation());
-
-                    var options = new DatabaseSmugglerExportOptions();
-#pragma warning disable 618
-                    options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
-                    options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
-                    options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
-#pragma warning restore 618
-
-                    var operation = await store41.Smuggler.ExportAsync(options, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    var stats = await store41.Maintenance.SendAsync(new GetStatisticsOperation());
-
-                    countOfDocuments = stats.CountOfDocuments;
-                    countOfAttachments = stats.CountOfAttachments;
-                    countOfIndexes = stats.CountOfIndexes;
-                    countOfRevisions = stats.CountOfRevisionDocuments;
-                }
-
-                using (var store42 = GetDocumentStore())
-                {
-                    var options = new DatabaseSmugglerImportOptions
-                    {
-                        SkipRevisionCreation = true
-                    };
-
-                    var operation = await store42.Smuggler.ImportAsync(options, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    var stats = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
-
-                    Assert.Equal(countOfDocuments, stats.CountOfDocuments);
-                    Assert.Equal(countOfAttachments, stats.CountOfAttachments);
-                    Assert.Equal(countOfIndexes, stats.CountOfIndexes);
-                    Assert.Equal(countOfRevisions, stats.CountOfRevisionDocuments);
-
-                    var record = await store42.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store42.Database));
-
-                    record.Settings.TryGetValue("Patching.MaxNumberOfCachedScripts", out string value);
-                    Assert.Null(value);
-                    Assert.Null(record.ConflictSolverConfig);
-                    Assert.Equal(0, record.Sorters.Count);
-                    Assert.Equal(0, record.ExternalReplications.Count);
-                    Assert.Equal(0, record.SinkPullReplications.Count);
-                    Assert.Equal(0, record.HubPullReplications.Count);
-                    Assert.Equal(0, record.RavenEtls.Count);
-                    Assert.Equal(0, record.SqlEtls.Count);
-                    Assert.Equal(0, record.PeriodicBackups.Count);
-                }
-            }
-            finally
-            {
-                File.Delete(file);
-            }
-        }
-
-        [Fact]
-        public async Task CanExportFromCurrentAndImportTo41()
-        {
-            var file = GetTempFileName();
-            try
-            {
-                long countOfDocuments;
-                using (var store42 = GetDocumentStore(new Options
-                {
-                    ModifyDatabaseRecord = record =>
-                    {
-                        record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "1024";
-                        record.ConflictSolverConfig = new ConflictSolver
-                        {
-                            ResolveToLatest = false,
-                            ResolveByCollection = new Dictionary<string, ScriptResolver>
-                                {
-                                    {
-                                        "ConflictSolver", new ScriptResolver()
-                                        {
-                                            Script = "Script"
-                                        }
-                                    }
-                                }
-                        };
-                        record.Sorters = new Dictionary<string, SorterDefinition>
-                        {
-                            {
-                                "MySorter", new SorterDefinition
-                                {
-                                    Name = "MySorter",
-                                    Code = GetSorter("RavenDB_8355.MySorter.cs")
-                                }
-                            }
-                        };
-                        record.ExternalReplications = new List<ExternalReplication>
-                        {
-                            new ExternalReplication("tempDatabase", "ExternalReplication")
-                            {
-                                TaskId = 1,
-                                Name = "External",
-                                MentorNode = "B",
-                                DelayReplicationFor = new TimeSpan(4),
-                                Url = "http://127.0.0.1/",
-                                Disabled = false
-                            }
-                        };
-                        record.SinkPullReplications = new List<PullReplicationAsSink>
-                        {
-                            new PullReplicationAsSink()
-                            {
-                                Database = "sinkDatabase",
-                                CertificatePassword = "CertificatePassword",
-                                CertificateWithPrivateKey = "CertificateWithPrivateKey",
-                                TaskId = 2,
-                                Name = "Sink",
-                                MentorNode = "A",
-                                HubDefinitionName = "hub"
-                            }
-                        };
-                        record.HubPullReplications = new List<PullReplicationDefinition>
-                        {
-                            new PullReplicationDefinition()
-                            {
-                                TaskId = 3,
-                                Name = "hub",
-                                MentorNode = "A",
-                                DelayReplicationFor = new TimeSpan(3),
-                            }
-                        };
-                        record.RavenEtls = new List<RavenEtlConfiguration>
-                        {
-                            new RavenEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "ConnectionName",
-                                MentorNode = "A",
-                                Name = "Etl",
-                                TaskId = 4
-                            }
-                        };
-                        record.SqlEtls = new List<SqlEtlConfiguration>
-                        {
-                            new SqlEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "connection",
-                                ForceQueryRecompile = false,
-                                Name = "sql",
-                                ParameterizeDeletes = false,
-                                TaskId = 5
-                            }
-                        };
-                    }
-                }))
-                {
-                    using (var session = store42.OpenSession())
-                    {
-                        for (var i = 0; i < 5; i++)
-                        {
-                            session.Store(new User { Name = "raven" + i });
-                        }
-                        session.SaveChanges();
-                    }
-                    var operation = await store42.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    var stats = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
-
-                    countOfDocuments = stats.CountOfDocuments;
-                }
-
-                using (var store41 = await GetDocumentStoreAsync("4.1.4"))
-                {
-                    var options = new DatabaseSmugglerImportOptions();
-                    options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
-                    options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
-                    options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
-                    options.SkipRevisionCreation = true;
-
-                    var operation = await store41.Smuggler.ImportAsync(options, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    var stats = await store41.Maintenance.SendAsync(new GetStatisticsOperation());
-
-                    Assert.Equal(countOfDocuments, stats.CountOfDocuments);
-
-                    var record = await store41.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store41.Database));
-
-                    record.Settings.TryGetValue("Patching.MaxNumberOfCachedScripts", out string value);
-                    Assert.Null(value);
-                    Assert.Null(record.ConflictSolverConfig);
-                    Assert.Equal(0, record.Sorters.Count);
-                    Assert.Equal(0, record.ExternalReplications.Count);
-                    Assert.Equal(0, record.SinkPullReplications.Count);
-                    Assert.Equal(0, record.HubPullReplications.Count);
-                    Assert.Equal(0, record.RavenEtls.Count);
-                    Assert.Equal(0, record.SqlEtls.Count);
-                    Assert.Equal(0, record.PeriodicBackups.Count);
-                }
-            }
-            finally
-            {
-                File.Delete(file);
-            }
-        }
-
-        [Fact]
-        public async Task CanExportAndImportCurrentClientWithServer41()
-        {
-            var file = GetTempFileName();
-            try
-            {
-                using (var store41 = await GetDocumentStoreAsync("4.1.4"))
-                {
-                    using (var session = store41.OpenSession())
-                    {
-                        for (var i = 0; i < 5; i++)
-                        {
-                            session.Store(new User { Name = "raven" + i });
-                        }
-                        session.SaveChanges();
-                    }
-                    var operation = await store41.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
-                    {
-                        OperateOnDatabaseRecordTypes = DatabaseRecordItemType.PeriodicBackups,
-                        OperateOnTypes = DatabaseItemType.DatabaseRecord
-                    }, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    var stats = await store41.Maintenance.SendAsync(new GetStatisticsOperation());
-
-                    long countOfDocuments = stats.CountOfDocuments;
-                    var options = new DatabaseSmugglerImportOptions()
-                    {
-                        OperateOnDatabaseRecordTypes = DatabaseRecordItemType.PeriodicBackups,
-                        OperateOnTypes = DatabaseItemType.DatabaseRecord
-                    };
-                    options.SkipRevisionCreation = true;
-
-                    operation = await store41.Smuggler.ImportAsync(options, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    stats = await store41.Maintenance.SendAsync(new GetStatisticsOperation());
-
-                    Assert.Equal(countOfDocuments, stats.CountOfDocuments);
-                }
-            }
-            finally
-            {
-                File.Delete(file);
-            }
-        }
-
-        [Fact]
-        public async Task CanExportFrom42AndImportToCurrent()
+        [Theory]
+        [InlineData(ExcludeOn.Non)]
+        [InlineData(ExcludeOn.Export)]
+        [InlineData(ExcludeOn.Import)]
+        public async Task CanExportFrom42AndImportTo5(ExcludeOn excludeOn)
         {
             var file = GetTempFileName();
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -401,29 +62,51 @@ namespace InterversionTests
             //Export
             var exportOptions = new DatabaseSmugglerExportOptions();
             exportOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
-
+            if (excludeOn == ExcludeOn.Export)
+                exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await store42.Smuggler.ExportAsync(exportOptions, file);
-            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            await exportOperation.WaitForCompletionAsync(_operationTimeout);
 
             var expected = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
 
             //Import
             var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
-
+            if (excludeOn == ExcludeOn.Import)
+                importOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var importOperation = await store5.Smuggler.ImportAsync(importOptions, file);
-            await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            await importOperation.WaitForCompletionAsync(_operationTimeout);
 
             var actual = await store5.Maintenance.SendAsync(new GetStatisticsOperation());
 
             //Assert
-            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
-            Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
             Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
-            Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
+            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
+
+            var export = await GetMetadataCounts(store42);
+            var import = await GetMetadataCounts(store5);
+            if (excludeOn == ExcludeOn.Non)
+            {
+                Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
+                Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
+                Assert.Equal(expected.CountOfCounterEntries, actual.CountOfCounterEntries);
+
+                Assert.Equal(export, import);
+            }
+            else
+            {
+                Assert.Equal(0, actual.CountOfAttachments);
+                Assert.Equal(0, actual.CountOfRevisionDocuments);
+                Assert.Equal(0, actual.CountOfCounterEntries);
+
+                Assert.Equal((0,0,0), import);
+            }
         }
 
-        [Fact]
-        public async Task CanExportFromCurrentAndImportTo42()
+        [Theory]
+        [InlineData(ExcludeOn.Non)]
+        [InlineData(ExcludeOn.Export)]
+        [InlineData(ExcludeOn.Import)]
+        public async Task CanExportFrom5AndImportTo42(ExcludeOn excludeOn)
         {
             var file = GetTempFileName();
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -442,31 +125,125 @@ namespace InterversionTests
                 }
                 await session.SaveChangesAsync();
             }
-            var exportOperation = await store5.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            var exportOptions = new DatabaseSmugglerExportOptions();
+            if (excludeOn == ExcludeOn.Export)
+                exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
+            var exportOperation = await store5.Smuggler.ExportAsync(exportOptions, file);
+            
+            await exportOperation.WaitForCompletionAsync(_operationTimeout);
 
             DatabaseStatistics expected = await store5.Maintenance.SendAsync(new GetStatisticsOperation());
 
             //Import
             var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
             importOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
+            if (excludeOn == ExcludeOn.Import)
+                importOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var importOperation = await store42.Smuggler.ImportAsync(importOptions, file);
-            await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            await importOperation.WaitForCompletionAsync(_operationTimeout);
 
             var actual = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
 
             //Assert
-            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
-            Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
             Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
-            Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
+            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
+
+            var export = await GetMetadataCounts(store5);
+            var import = await GetMetadataCounts(store42);
+            if (excludeOn == ExcludeOn.Non)
+            {
+                Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
+                Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
+                Assert.Equal(expected.CountOfCounterEntries, actual.CountOfCounterEntries);
+
+                Assert.Equal(export, import);
+            }
+            else
+            {
+                Assert.Equal(0, actual.CountOfAttachments);
+                Assert.Equal(0, actual.CountOfRevisionDocuments);
+                Assert.Equal(0, actual.CountOfCounterEntries);
+
+                Assert.Equal((0,0,0), import);
+            }
         }
 
-        [Fact]
-        public async Task CanExportAndImportCurrentClientWithServer42()
+        [Theory]
+        [InlineData(ExcludeOn.Non)]
+        [InlineData(ExcludeOn.Export)]
+        [InlineData(ExcludeOn.Import)]
+        public async Task CanExportAndImportClient5Server42(ExcludeOn excludeOn)
         {
             var file = GetTempFileName();
+            using var exportStore42 = await GetDocumentStoreAsync(Server42Version);
+
+            exportStore42.Maintenance.Send(new CreateSampleDataOperation());
+            using (var session = exportStore42.OpenAsyncSession())
+            {
+                for (var i = 0; i < 5; i++)
+                {
+                    var user = new User { Name = "raven" + i };
+                    await session.StoreAsync(user);
+                    session.CountersFor(user).Increment("Like");
+                }
+                await session.SaveChangesAsync();
+            }
+            
+            //Export
+            var exportOptions = new DatabaseSmugglerExportOptions();
+            exportOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
+            if (excludeOn == ExcludeOn.Export)
+                exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
+            var exportOperation = await exportStore42.Smuggler.ExportAsync(exportOptions, file);
+            await exportOperation.WaitForCompletionAsync(_operationTimeout);
+
+            var expected = await exportStore42.Maintenance.SendAsync(new GetStatisticsOperation());
+
+            //Import
+            var databaseName = "Import" + exportStore42.Database;
+            exportStore42.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName)));
+            using var importStore42 = new DocumentStore {Database = databaseName, Urls = exportStore42.Urls}.Initialize();
+            
+            var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
+            importOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
+            if (excludeOn == ExcludeOn.Import)
+                importOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
+            var importOperation = await importStore42.Smuggler.ImportAsync(importOptions, file);
+            await importOperation.WaitForCompletionAsync(_operationTimeout);
+
+            var actual = await importStore42.Maintenance.SendAsync(new GetStatisticsOperation());
+
+            //Assert
+            Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
+            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
+
+            var export = await GetMetadataCounts(exportStore42);
+            var import = await GetMetadataCounts(importStore42);
+            if (excludeOn == ExcludeOn.Non)
+            {
+                Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
+                Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
+                Assert.Equal(expected.CountOfCounterEntries, actual.CountOfCounterEntries);
+
+                Assert.Equal(export, import);
+            }
+            else
+            {
+                Assert.Equal(0, actual.CountOfAttachments);
+                Assert.Equal(0, actual.CountOfRevisionDocuments);
+                Assert.Equal(0, actual.CountOfCounterEntries);
+
+                Assert.Equal((0,0,0), import);
+            }
+        }
+
+        //Migrator
+        [Fact]
+        public async Task CanMigrateFrom42To5()
+        {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
+            using var store5 = GetDocumentStore();
 
             store42.Maintenance.Send(new CreateSampleDataOperation());
             using (var session = store42.OpenAsyncSession())
@@ -480,41 +257,107 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            //Export
-            var exportOptions = new DatabaseSmugglerExportOptions();
-            exportOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
-            var exportOperation = await store42.Smuggler.ExportAsync(exportOptions, file);
-            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            var operation = await Migrate(store42, store5);
+            await operation.WaitForCompletionAsync(_operationTimeout);
 
-            var expected = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
-
-            //Import
-            var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
-            importOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
-
-            var importOperation = await store42.Smuggler.ImportAsync(importOptions, file);
-            await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-            var actual = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
-
+            var fromStat = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
+            var toStat = await store5.Maintenance.SendAsync(new GetStatisticsOperation());
+            
             //Assert
-            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
-            Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
-            Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
-            Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
+            Assert.Equal(fromStat.CountOfIndexes, toStat.CountOfIndexes);
+            Assert.True(fromStat.CountOfDocuments < toStat.CountOfDocuments, 
+                $"The count of document in target server should be at least the count of the source. source({fromStat.CountOfDocuments}) target({toStat.CountOfDocuments})");
+
+            Assert.Equal(fromStat.CountOfAttachments, toStat.CountOfAttachments);
+            Assert.Equal(fromStat.CountOfCounterEntries, toStat.CountOfCounterEntries);
+
+            var fromMetadataCount = await GetMetadataCounts(store42);
+            var toMetadataCount = await GetMetadataCounts(store5);
+            Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        private static Stream GetDump(string name)
+        [Fact]
+        public async Task CanMigrateFrom5To42()
         {
-            var assembly = typeof(RavenDB_9912).Assembly;
-            return assembly.GetManifestResourceStream("SlowTests.Data." + name);
+            using var store42 = await GetDocumentStoreAsync(Server42Version);
+            using var store5 = GetDocumentStore();
+
+            store5.Maintenance.Send(new CreateSampleDataOperation());
+            using (var session = store5.OpenAsyncSession())
+            {
+                for (var i = 0; i < 5; i++)
+                {
+                    var user = new User { Name = "raven" + i };
+                    await session.StoreAsync(user);
+                    session.CountersFor(user).Increment("Like");
+                }
+                DateTime dateTime = new DateTime(2020, 4, 12);
+                for (var i = 0; i < 5; i++)
+                {
+                    var user = new User { Name = "raven" + i };
+                    await session.StoreAsync(user);
+                    session.TimeSeriesFor(user, "Heartrate").Append(dateTime, 59d, "watches/fitbit");
+                }
+                await session.SaveChangesAsync();
+            }
+
+            var operation = await Migrate(store5, store42, DatabaseItemType.TimeSeries);
+            await operation.WaitForCompletionAsync(_operationTimeout);
+
+            var fromStat = await store5.Maintenance.SendAsync(new GetStatisticsOperation());
+            var toStat = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
+            
+            //Assert
+            Assert.Equal(fromStat.CountOfIndexes, toStat.CountOfIndexes);
+            Assert.True(fromStat.CountOfDocuments < toStat.CountOfDocuments, 
+                $"The count of document in target server should be at least the count of the source. source({fromStat.CountOfDocuments}) target({toStat.CountOfDocuments})");
+
+            Assert.Equal(fromStat.CountOfAttachments, toStat.CountOfAttachments);
+            Assert.Equal(fromStat.CountOfCounterEntries, toStat.CountOfCounterEntries);
+
+            var fromMetadataCount = await GetMetadataCounts(store5);
+            var toMetadataCount = await GetMetadataCounts(store42);
+            Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        private static string GetSorter(string name)
+        
+        private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType exclude = DatabaseItemType.None)
         {
-            using (var stream = GetDump(name))
-            using (var reader = new StreamReader(stream))
-                return reader.ReadToEnd();
+            using var client = new HttpClient();
+            var url = Uri.EscapeUriString($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
+            var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
+            var versionRespond = JsonConvert.DeserializeObject<BuildInfo>(rawVersionRespond);
+
+            var configuration = new SingleDatabaseMigrationConfiguration
+            {
+                ServerUrl = @from.Urls.First(),
+                BuildVersion = versionRespond.BuildVersion,
+                BuildMajorVersion = versionRespond.MajorVersion,
+                MigrationSettings = new DatabaseMigrationSettings
+                {
+                    DatabaseName = @from.Database, OperateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes & ~exclude
+                }
+            };
+
+            var serializeObject = JsonConvert.SerializeObject(configuration, new StringEnumConverter());
+            var data = new StringContent(serializeObject, Encoding.UTF8, "application/json");
+            var rawOperationIdResult = await client.PostAsync($"{to.Urls.First()}/databases/{to.Database}/admin/smuggler/migrate/ravendb", data);
+            var operationIdResult = JsonConvert.DeserializeObject<OperationIdResult>(rawOperationIdResult.Content.ReadAsStringAsync().Result);
+
+            return new Operation(to.GetRequestExecutor(), () => to.Changes(), to.Conventions, operationIdResult.OperationId);
+        }
+
+        private static async Task<(int Counter, int Attachment, int Revision)> GetMetadataCounts(IDocumentStore importStore42)
+        {
+            using (var session = importStore42.OpenAsyncSession())
+            {
+                var allDoc = await session.Advanced.AsyncRawQuery<dynamic>("from @all_docs").ToArrayAsync();
+                var metadatas = allDoc.Select(session.Advanced.GetMetadataFor).ToArray();
+                var counters = metadatas.Count(md => md.TryGetValue(Constants.Documents.Metadata.Flags, out string f) && f.Contains(nameof(DocumentFlags.HasCounters)) );
+                var attachment = metadatas.Count(md => md.TryGetValue(Constants.Documents.Metadata.Flags, out string f) && f.Contains(nameof(DocumentFlags.HasAttachments)) );
+                var revision = metadatas.Count(md => md.TryGetValue(Constants.Documents.Metadata.Flags, out string f) && f.Contains(nameof(DocumentFlags.HasRevisions)) );
+                return (counters, attachment, revision);
+            }
         }
     }
 }
