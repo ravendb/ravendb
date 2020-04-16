@@ -11,6 +11,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -78,6 +79,69 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 Assert.Equal(TimeValue.FromYears(3), policies[5].RetentionTime);
                 Assert.Equal(TimeValue.FromYears(1), policies[5].AggregationTime);
+            }
+        }
+
+        [Fact]
+        public async Task NotValidConfigureShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromMonths(1)),
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                new TimeSeriesPolicy("By30DaysFor5Years", TimeValue.FromDays(30), TimeValue.FromYears(5)),
+                            }
+                        }
+                    }
+                };
+
+                var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config)));
+                Assert.Contains("month might have different number of days", ex.Message);
+
+
+                config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromMonths(12)),
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                new TimeSeriesPolicy("By365DaysFor5Years", TimeValue.FromSeconds(365 * 24 * 3600), TimeValue.FromYears(5)),
+                            }
+                        }
+                    }
+                };
+
+                ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config)));
+                Assert.Contains("month might have different number of days", ex.Message);
+
+
+                config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromMonths(1)),
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                new TimeSeriesPolicy("By27DaysFor1Year", TimeValue.FromDays(27), TimeValue.FromYears(1)),
+                                new TimeSeriesPolicy("By364DaysFor5Years", TimeValue.FromDays(364), TimeValue.FromYears(5)),
+                            }
+                        }
+                    }
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
             }
         }
 

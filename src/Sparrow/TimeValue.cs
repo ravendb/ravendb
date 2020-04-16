@@ -157,10 +157,12 @@ namespace Sparrow
 
         private const int SecondsIn28Days = 28 * SecondsPerDay; // lower-bound of seconds in month
         private const int SecondsIn31Days = 31 * SecondsPerDay; // upper-bound of seconds in month
+        private const int SecondsIn365Days = 365 * SecondsPerDay; // lower-bound of seconds in a year
+        private const int SecondsIn366Days = 366 * SecondsPerDay; // upper-bound of seconds in a year
 
         public int Compare(TimeValue other)
         {
-            if (IsSpecialCompare(ref this, ref other, out var result))
+            if (IsSpecialCompare(this, other, out var result))
                 return result;
 
             if (Seconds == other.Seconds)
@@ -178,52 +180,58 @@ namespace Sparrow
             if (otherBounds.LowerBound > myBounds.UpperBound)
                 return -1;
             
-            throw new InvalidOperationException("We can't compare ");
+            throw new InvalidOperationException($"Unable to compare {this} with {other}, since a month might have different number of days.");
         }
 
         private static (int UpperBound, int LowerBound) GetBounds(TimeValue time)
         {
-            var myUpperBound = time.Months * SecondsIn31Days + time.Seconds;
-            var myLowerBound = time.Months * SecondsIn28Days + time.Seconds;
-            return (myUpperBound, myLowerBound);
+            var years = time.Months / 12;
+            var upperBound = years * SecondsIn366Days;
+            var lowerBound = years * SecondsIn365Days;
+
+            var remainingMonths = time.Months % 12;
+            upperBound += remainingMonths * SecondsIn31Days + time.Seconds;
+            lowerBound += remainingMonths * SecondsIn28Days + time.Seconds;
+
+            return (upperBound, lowerBound);
         }
 
-        private static bool IsSpecialCompare(ref TimeValue current, ref TimeValue other, out int result)
+        private static bool IsSpecialCompare(TimeValue current, TimeValue other, out int result)
         {
             result = 0;
-            if (IsMax(ref current))
+            if (IsMax(current))
             {
-                result = IsMax(ref other) ? 0 : 1;
+                result = IsMax(other) ? 0 : 1;
                 return true;
             }
 
-            if (IsMax(ref other))
+            if (IsMax(other))
             {
-                result = IsMax(ref current) ? 0 : -1;
+                result = IsMax(current) ? 0 : -1;
                 return true;
             }
 
-            if (IsMin(ref current))
+            if (IsMin(current))
             {
-                result = IsMin(ref other) ? 0 : -1;
+                result = IsMin(other) ? 0 : -1;
                 return true;
             }
 
-            if (IsMin(ref other))
+            if (IsMin(other))
             {
-                result = IsMin(ref current) ? 0 : 1;
+                result = IsMin(current) ? 0 : 1;
                 return true;
             }
 
             return false;
         }
 
-        private static bool IsMax(ref TimeValue time)
+        private static bool IsMax(TimeValue time)
         {
             return time.Seconds == int.MaxValue && time.Months == int.MaxValue;
         }
 
-        private static bool IsMin(ref TimeValue time)
+        private static bool IsMin(TimeValue time)
         {
             return time.Seconds == int.MinValue && time.Months == int.MinValue;
         }
@@ -293,6 +301,11 @@ namespace Sparrow
         {
             a.AssertMonthIsZero();
             return new TimeSpan(0, 0, a.Seconds);
+        }
+
+        public static implicit operator TimeValue(TimeSpan a)
+        {
+            return new TimeValue(0, (int)a.TotalSeconds);
         }
 
         public bool Equals(TimeValue other)
