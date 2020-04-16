@@ -169,7 +169,10 @@ class query extends viewModelBase {
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     deleteDocumentDisableReason: KnockoutComputed<string>;
     canExportCsv: KnockoutComputed<boolean>;
+    
     isMapReduceIndex: KnockoutComputed<boolean>;
+    queryResultsContainMatchingDocuments: KnockoutComputed<boolean>;
+    
     isCollectionQuery: KnockoutComputed<boolean>;
     isGraphQuery: KnockoutComputed<boolean>;
     isDynamicQuery: KnockoutComputed<boolean>;
@@ -306,15 +309,15 @@ class query extends viewModelBase {
             this.queriedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.queriedIndex()) : null);
 
         this.isMapReduceIndex = ko.pureComputed(() => {
-            const indexName = this.queriedIndex();
-            if (!indexName)
-                return false;
-
-            const indexes = this.indexes() || [];
-            const currentIndex = indexes.find(i => i.Name === indexName);
+            const currentIndex = this.getCurrentIndex();
             return !!currentIndex && (currentIndex.Type === "AutoMapReduce" || currentIndex.Type === "MapReduce" || currentIndex.Type === "JavaScriptMapReduce");
         });
 
+        this.queryResultsContainMatchingDocuments = ko.pureComputed(() => {
+            const currentIndex = this.getCurrentIndex();
+            return !!currentIndex && currentIndex.SourceType !== "TimeSeries" && currentIndex.SourceType !== "Counters" && !this.isMapReduceIndex();
+        });
+        
         this.isCollectionQuery = ko.pureComputed(() => {
             const indexName = this.queriedIndex();
             if (!indexName)
@@ -350,7 +353,9 @@ class query extends viewModelBase {
             const mapReduce = this.isMapReduceIndex();
             const graphQuery = this.isGraphQuery();
             const hasAnyItemSelected = this.gridController() ? this.gridController().getSelectedItems().length > 0 : false;
-            return !mapReduce && !graphQuery && !hasAnyItemSelected;
+            const queryResultsAreMatchingDocuments = this.queryResultsContainMatchingDocuments();
+            
+            return !mapReduce && !graphQuery && !hasAnyItemSelected && queryResultsAreMatchingDocuments;
         });
         
         this.canExportCsv = ko.pureComputed(() => {
@@ -374,7 +379,7 @@ class query extends viewModelBase {
             if (canDelete) {
                 return "";
             } else {
-                return "Available only for map indexes";
+                return "Available only for Map indexes (that are not defined on Counters or Time Series)";
             }
         });
         
@@ -615,6 +620,15 @@ class query extends viewModelBase {
         });
         
         this.queryHasFocus(true);
+    }
+    
+    private getCurrentIndex() {
+        const indexName = this.queriedIndex();
+        if (!indexName)
+            return null;
+
+        const indexes = this.indexes() || [];
+        return indexes.find(i => i.Name === indexName);
     }
     
     private getTimeSeriesColumns(grid: virtualGridController<any>, tab: timeSeriesTableDetails): virtualColumn[] {
