@@ -4,75 +4,76 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow
 {
+    public enum TimeValueUnit
+    {
+        None,
+        Second,
+        Month
+    }
     public struct TimeValue : IDynamicJson, IEquatable<TimeValue>
     {
-        private const int SecondsPerDay = 86_400;
-
         public static readonly TimeValue Zero = new TimeValue
         {
-            Months = 0,
-            Seconds = 0
+            Value = 0
         };
 
         public static readonly TimeValue MaxValue = new TimeValue
         {
-            Months = int.MaxValue,
-            Seconds = int.MaxValue
+            Value = int.MaxValue
         };
 
         public static readonly TimeValue MinValue = new TimeValue
         {
-            Months = int.MinValue, 
-            Seconds = int.MinValue
+            Value = int.MinValue
         };
 
-        public int Months { get; private set; }
+        public int Value { get; private set; }
+        public TimeValueUnit Unit { get; private set; }
 
-        public int Seconds { get; private set; }
-
-        private TimeValue(int months, int seconds)
+        private TimeValue(int value, TimeValueUnit unit)
         {
-            Months = months;
-            Seconds = seconds;
-            AssertMonthOrSeconds();
+            AssertValidUnit(unit);
+
+            Value = value;
+            Unit = unit;
         }
 
         public static TimeValue FromSeconds(int seconds)
         {
-            return new TimeValue(0, seconds);
+            return new TimeValue(seconds, TimeValueUnit.Second);
         }
 
         public static TimeValue FromMinutes(int minutes)
         {
-            return new TimeValue(0, minutes * 60);
+            return new TimeValue(minutes * 60, TimeValueUnit.Second);
         }
 
         public static TimeValue FromHours(int hours)
         {
-            return new TimeValue(0, hours * 3_600);
+            return new TimeValue(hours * 3600, TimeValueUnit.Second);
         }
 
         public static TimeValue FromDays(int days)
         {
-            return new TimeValue(0, days * SecondsPerDay);
+            return new TimeValue(days * SecondsPerDay, TimeValueUnit.Second);
         }
 
         public static TimeValue FromMonths(int months)
         {
-            return new TimeValue(months, 0);
+            return new TimeValue(months, TimeValueUnit.Month);
         }
 
         public static TimeValue FromYears(int years)
         {
-            return new TimeValue(years * 12, 0);
+            return new TimeValue(12 * years, TimeValueUnit.Month);
         }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Seconds)] = Seconds,
-                [nameof(Months)] = Months
+                [nameof(Value)] = Value,
+                [nameof(Unit)] = Unit
             };
         }
 
@@ -96,65 +97,83 @@ namespace Sparrow
 
         public override string ToString()
         {
-            if (this == MaxValue)
+            if (Value == int.MaxValue)
                 return "MaxValue";
-            if (this == MinValue)
+            if (Value == int.MinValue)
                 return "MinValue";
-            if (this == Zero)
+            if (Value == 0)
                 return "Zero";
 
+            if (Unit == TimeValueUnit.None)
+                return "Unknown time unit";
+
             var str = new StringBuilder();
-            if (Months >= 12)
-                Append(str, Months / 12, "year");
-            if (Months % 12 > 0)
-                Append(str, Months % 12, "month");
-
-            var remainingSeconds = Seconds;
-
-            if (remainingSeconds > SecondsPerDay)
+            switch (Unit)
             {
-                var days = Seconds / SecondsPerDay;
-                Append(str, days, "day");
-                remainingSeconds -= days * SecondsPerDay;
+                case TimeValueUnit.Second:
+                    var remainingSeconds = Value;
+
+                    if (remainingSeconds > SecondsPerDay)
+                    {
+                        var days = Value / SecondsPerDay;
+                        Append(str, days, "day");
+                        remainingSeconds -= days * SecondsPerDay;
+                    }
+
+                    if (remainingSeconds > 3_600)
+                    {
+                        var hours = remainingSeconds / 3_600;
+                        Append(str, hours, "hour");
+                        remainingSeconds -= hours * 3_600;
+                    }
+
+                    if (remainingSeconds > 60)
+                    {
+                        var minutes = remainingSeconds / 60;
+                        Append(str, minutes, "minute");
+                        remainingSeconds -= minutes * 60;
+                    }
+
+                    if (remainingSeconds > 0)
+                        Append(str, remainingSeconds, "second");
+                    break;
+
+                case TimeValueUnit.Month:
+                    if (Value >= 12)
+                        Append(str, Value / 12, "year");
+                    if (Value % 12 > 0)
+                        Append(str, Value % 12, "month");
+                    break;
+                
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(Unit), $"Not supported time value unit '{Unit}'");
             }
 
-            if (remainingSeconds > 3_600)
-            {
-                var hours = remainingSeconds / 3_600;
-                Append(str, hours, "hour");
-                remainingSeconds -= hours * 3_600;
-            }
-
-            if (remainingSeconds > 60)
-            {
-                var minutes = remainingSeconds / 60;
-                Append(str, minutes, "minute");
-                remainingSeconds -= minutes * 60;
-            }
-
-            if (remainingSeconds > 0)
-                Append(str, remainingSeconds, "second");
-
-            return str.ToString();
+            return str.ToString().TrimEnd();
         }
 
-        private void AssertMonthIsZero()
+        private void AssertSeconds()
         {
-            if (Months != 0)
-                throw new ArgumentException("Must be zero", nameof(Months));
+            if (Unit != TimeValueUnit.Second)
+                throw new ArgumentException("The value must be in seconds", nameof(Unit));
         }
 
-        internal void AssertMonthOrSeconds()
+
+        private static void AssertValidUnit(TimeValueUnit unit)
         {
-            if (Months == 0 || Seconds == 0) 
+            if (unit == TimeValueUnit.Month || unit == TimeValueUnit.Second)
                 return;
 
-            if (this == MaxValue || this == MinValue)
-                return;
-
-            throw new NotSupportedException($"Either {nameof(Months)} or {nameof(Seconds)} can be set.");
+            throw new ArgumentException($"Invalid time unit {unit}");
         }
 
+        private static void AssertSameUnits(TimeValue a, TimeValue b)
+        {
+            if (a.Unit != b.Unit)
+                throw new InvalidOperationException($"Unit isn't the same {a.Unit} != {b.Unit}");
+        }
+
+        private const int SecondsPerDay = 86_400;
         private const int SecondsIn28Days = 28 * SecondsPerDay; // lower-bound of seconds in month
         private const int SecondsIn31Days = 31 * SecondsPerDay; // upper-bound of seconds in month
         private const int SecondsIn365Days = 365 * SecondsPerDay; // lower-bound of seconds in a year
@@ -162,17 +181,17 @@ namespace Sparrow
 
         public int Compare(TimeValue other)
         {
+            if (Value == 0 || other.Value == 0)
+                return Value - other.Value;
+
             if (IsSpecialCompare(this, other, out var result))
                 return result;
 
-            if (Seconds == other.Seconds)
-                return TrimCompareResult(Months - other.Months);
+            if (Unit == other.Unit)
+                return TrimCompareResult(Value - other.Value);
 
-            if (Months == other.Months) 
-                return TrimCompareResult(Seconds - other.Seconds);
-
-            var myBounds = GetBounds(this);
-            var otherBounds = GetBounds(other);
+            var myBounds = GetBoundsInSeconds(this);
+            var otherBounds = GetBoundsInSeconds(other);
 
             if (otherBounds.UpperBound < myBounds.LowerBound)
                 return 1;
@@ -183,17 +202,26 @@ namespace Sparrow
             throw new InvalidOperationException($"Unable to compare {this} with {other}, since a month might have different number of days.");
         }
 
-        private static (int UpperBound, int LowerBound) GetBounds(TimeValue time)
+        private static (long UpperBound, long LowerBound) GetBoundsInSeconds(TimeValue time)
         {
-            var years = time.Months / 12;
-            var upperBound = years * SecondsIn366Days;
-            var lowerBound = years * SecondsIn365Days;
+            switch (time.Unit)
+            {
+                case TimeValueUnit.Second:
+                    return (time.Value, time.Value);
 
-            var remainingMonths = time.Months % 12;
-            upperBound += remainingMonths * SecondsIn31Days + time.Seconds;
-            lowerBound += remainingMonths * SecondsIn28Days + time.Seconds;
+                case TimeValueUnit.Month:
+                    var years = time.Value / 12;
+                    var upperBound = years * SecondsIn366Days;
+                    var lowerBound = years * SecondsIn365Days;
 
-            return (upperBound, lowerBound);
+                    var remainingMonths = time.Value % 12;
+                    upperBound += remainingMonths * SecondsIn31Days;
+                    lowerBound += remainingMonths * SecondsIn28Days;
+                    return (upperBound, lowerBound);
+         
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(time.Unit), $"Not supported time value unit '{time.Unit}'");
+            }
         }
 
         private static bool IsSpecialCompare(TimeValue current, TimeValue other, out int result)
@@ -228,12 +256,12 @@ namespace Sparrow
 
         private static bool IsMax(TimeValue time)
         {
-            return time.Seconds == int.MaxValue && time.Months == int.MaxValue;
+            return time.Unit == TimeValueUnit.None && time.Value == int.MaxValue;
         }
 
         private static bool IsMin(TimeValue time)
         {
-            return time.Seconds == int.MinValue && time.Months == int.MinValue;
+            return time.Unit == TimeValueUnit.None && time.Value == int.MinValue;
         }
 
         private static int TrimCompareResult(long result)
@@ -249,22 +277,36 @@ namespace Sparrow
 
         public static TimeValue operator +(TimeValue a, TimeValue b)
         {
-            return new TimeValue(a.Months + b.Months, a.Seconds + b.Seconds);
+            if (a.Value == 0)
+                return b;
+
+            if (b.Value == 0)
+                return a;
+
+            AssertSameUnits(a, b);
+            return new TimeValue(checked(a.Value + b.Value), a.Unit);
         }
 
         public static TimeValue operator -(TimeValue a, TimeValue b)
         {
-            return new TimeValue(a.Months - b.Months, a.Seconds - b.Seconds);
+            if (a.Value == 0)
+                return -b;
+
+            if (b.Value == 0)
+                return a;
+
+            AssertSameUnits(a, b);
+            return new TimeValue(checked(a.Value - b.Value), a.Unit);
         }
 
         public static TimeValue operator -(TimeValue a)
         {
-            return new TimeValue(-a.Months, -a.Seconds);
+            return new TimeValue(-a.Value, a.Unit);
         }
 
         public static TimeValue operator *(TimeValue a, double c)
         {
-            return new TimeValue((int)(c * a.Months), (int)(c * a.Seconds));
+            return new TimeValue(checked((int)(c * a.Value)), a.Unit);
         }
 
         public static bool operator >(TimeValue a, TimeValue b)
@@ -299,13 +341,13 @@ namespace Sparrow
 
         public static explicit operator TimeSpan(TimeValue a)
         {
-            a.AssertMonthIsZero();
-            return new TimeSpan(0, 0, a.Seconds);
+            a.AssertSeconds();
+            return new TimeSpan(0, 0, a.Value);
         }
 
         public static implicit operator TimeValue(TimeSpan a)
         {
-            return new TimeValue(0, (int)a.TotalSeconds);
+            return new TimeValue(checked((int)a.TotalSeconds), TimeValueUnit.Second);
         }
 
         public bool Equals(TimeValue other)
@@ -320,7 +362,7 @@ namespace Sparrow
 
         public override int GetHashCode()
         {
-            return Hashing.Combine(Months, Seconds);
+            return Hashing.Combine(Value, (int)Unit);
         }
     }
 
@@ -328,7 +370,22 @@ namespace Sparrow
     {
         public static DateTime Add(this DateTime date, TimeValue time)
         {
-            return date.AddMonths(time.Months).AddSeconds(time.Seconds);
+            if (time.Value == 0)
+                return date;
+            if (time.Value == int.MaxValue)
+                return DateTime.MaxValue;
+            if (time.Value == int.MinValue)
+                return DateTime.MinValue;
+
+            switch (time.Unit)
+            {
+                case TimeValueUnit.Month:
+                    return date.AddMonths(time.Value);
+                case TimeValueUnit.Second:
+                    return date.AddSeconds(time.Value);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(time.Unit), $"Not supported time value unit '{time.Unit}'");
+            }
         }
     }
 }

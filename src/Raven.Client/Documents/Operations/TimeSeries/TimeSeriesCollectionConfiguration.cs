@@ -29,8 +29,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             Policies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
 
-            RawPolicy.RetentionTime.AssertMonthOrSeconds();
-
             var hashSet = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
             for (var index = 0; index < Policies.Count; index++)
             {
@@ -38,14 +36,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (hashSet.Add(policy.Name) == false)
                     throw new InvalidOperationException($"Policy names must be unique, policy with the name '{policy.Name}' has duplicates.");
 
-                policy.AggregationTime.AssertMonthOrSeconds();
-                policy.RetentionTime.AssertMonthOrSeconds();
-
                 if (policy.AggregationTime <= TimeValue.Zero)
-                    throw new InvalidOperationException($" aggregation time of '{policy.Name}' must be greater than zero");
+                    throw new InvalidOperationException($"Aggregation time of '{policy.Name}' must be greater than zero");
 
                 if (policy.RetentionTime <= TimeValue.Zero)
-                    throw new InvalidOperationException($" retention time of '{policy.Name}' must be greater than zero");
+                    throw new InvalidOperationException($"Retention time of '{policy.Name}' must be greater than zero");
 
                 var prev = GetPreviousPolicy(index + 1);
                 if (prev.AggregationTime == policy.AggregationTime)
