@@ -697,11 +697,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private class StreamTimeSeriesActions : StreamActionsBase, ITimeSeriesActions
         {
-            private readonly DocumentsOperationContext _context;
-
             public StreamTimeSeriesActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName) : base(writer, propertyName)
             {
-                _context = context;
             }
 
             public unsafe void WriteTimeSeries(TimeSeriesItem item)
