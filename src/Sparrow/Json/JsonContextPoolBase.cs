@@ -24,8 +24,7 @@ namespace Sparrow.Json
         private long _numberOfContextsDisposedInGlobalStack;
 
         private readonly T[][] _perCoreContexts;
-        private CountingConcurrentStack<T> _previousGlobalStack;
-        private CountingConcurrentStack<T> _currentGlobalStack = new CountingConcurrentStack<T>();
+        private readonly CountingConcurrentStack<T> _globalStack = new CountingConcurrentStack<T>();
         private readonly Timer _cleanupTimer;
 
         protected JsonContextPoolBase()
@@ -102,7 +101,7 @@ namespace Sparrow.Json
                 };
             }
 
-            if (TryGetFromStack(_previousGlobalStack, out context) || TryGetFromStack(_currentGlobalStack, out context))
+            if (TryGetFromStack(_globalStack, out context))
             {
                 return new ReturnRequestContext
                 {
@@ -198,7 +197,7 @@ namespace Sparrow.Json
             {
                 var currentTime = DateTime.UtcNow;
                 var idleTime = TimeSpan.FromMinutes(5);
-                var currentGlobalStack = _currentGlobalStack;
+                var currentGlobalStack = _globalStack;
 
                 var perCoreCleanupNeeded = currentGlobalStack.IsEmpty || currentTime - _lastPerCoreCleanup >= _perCoreCleanupInterval;
                 if (perCoreCleanupNeeded)
@@ -252,30 +251,26 @@ namespace Sparrow.Json
                 {
                     _lastGlobalStackRebuild = currentTime;
 
-                    var previousGlobalStack = _previousGlobalStack;
-
                     _numberOfContextsDisposedInGlobalStack = 0;
-                    _currentGlobalStack = new CountingConcurrentStack<T>();
-                    _previousGlobalStack = currentGlobalStack;
 
-                    ClearStack(previousGlobalStack);
+                    var localStack = new CountingConcurrentStack<T>();
+
+                    while (_globalStack.TryPop(out var context))
+                    {
+                        if (context.InUse.Raise() == false)
+                            continue;
+
+                        context.InUse.Lower();
+                        localStack.Push(context);
+                    }
+
+                    while (localStack.TryPop(out var context))
+                        _globalStack.Push(context);
                 }
             }
             finally
             {
                 Monitor.Exit(_locker);
-            }
-
-            static void ClearStack(CountingConcurrentStack<T> stack)
-            {
-                if (stack == null || stack.IsEmpty)
-                    return;
-
-                while (stack.TryPop(out var context))
-                {
-                    if (context.InUse.Raise())
-                        context.Dispose();
-                }
             }
         }
 
@@ -298,7 +293,7 @@ namespace Sparrow.Json
                 return;
             }
 
-            var currentGlobalStack = _currentGlobalStack;
+            var currentGlobalStack = _globalStack;
 
             // couldn't find a place for it, let's add it to the global list
             if (currentGlobalStack.Count >= _maxNumberOfContextsToKeepInGlobalStack)
@@ -324,8 +319,7 @@ namespace Sparrow.Json
                 _disposed = true;
                 _cleanupTimer.Dispose();
 
-                ClearStack(_previousGlobalStack);
-                ClearStack(_currentGlobalStack);
+                ClearStack(_globalStack);
 
                 foreach (var coreContext in _perCoreContexts)
                 {
@@ -361,8 +355,7 @@ namespace Sparrow.Json
 
             Interlocked.Increment(ref _generation);
 
-            ClearStack(_previousGlobalStack);
-            ClearStack(_currentGlobalStack);
+            ClearStack(_globalStack);
 
             foreach (var coreContext in _perCoreContexts)
             {
