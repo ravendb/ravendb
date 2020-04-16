@@ -1,7 +1,15 @@
-﻿using FastTests;
+﻿using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.ServerWide.Commands;
+using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.PeriodicBackup
+namespace SlowTests.Server.Documents.Replication
 {
     public class ServerWideReplication : RavenTestBase
     {
@@ -10,7 +18,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             DoNotReuseServer();
         }
 
-        /*[Fact]
+        [Fact]
         public async Task CanStoreServerWideExternalReplication()
         {
             using (var store = GetDocumentStore())
@@ -18,7 +26,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var putConfiguration = new ServerWideExternalReplication
                 {
                     Disabled = true,
-                    Database = "test",
                     TopologyDiscoveryUrls = new[] { store.Urls.First() }
                 };
 
@@ -32,18 +39,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var externalReplications1 = record1.ExternalReplications;
                 Assert.Equal(1, externalReplications1.Count);
-                ValidateBackupConfiguration(serverWideConfiguration, externalReplications1.First(), store.Database);
+                ValidateConfiguration(serverWideConfiguration, externalReplications1.First(), store.Database);
 
                 // the configuration is applied to new databases
                 var newDbName = store.Database + "-testDatabase";
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
-                var backups2 = record1.PeriodicBackups;
-                Assert.Equal(1, backups2.Count);
+                var externalReplications = record1.ExternalReplications;
+                Assert.Equal(1, externalReplications.Count);
                 var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
-                ValidateBackupConfiguration(serverWideConfiguration, record2.PeriodicBackups.First(), newDbName);
+                ValidateConfiguration(serverWideConfiguration, record2.ExternalReplications.First(), newDbName);
 
                 // update the external replication configuration
-                putConfiguration.Database = "test2";
+                putConfiguration.TopologyDiscoveryUrls = new[] {store.Urls.First(), "http://localhost:8080"};
                 putConfiguration.Name = serverWideConfiguration.Name;
 
                 result = await store.Maintenance.Server.SendAsync(new PutServerWideExternalReplicationOperation(putConfiguration));
@@ -51,14 +58,28 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ValidateServerWideConfiguration(serverWideConfiguration, putConfiguration);
 
                 record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                Assert.Equal(1, record1.PeriodicBackups.Count);
-                ValidateBackupConfiguration(serverWideConfiguration, record1.PeriodicBackups.First(), store.Database);
+                Assert.Equal(1, record1.ExternalReplications.Count);
+                ValidateConfiguration(serverWideConfiguration, record1.ExternalReplications.First(), store.Database);
 
                 record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
-                Assert.Equal(1, record2.PeriodicBackups.Count);
-                ValidateBackupConfiguration(serverWideConfiguration, record2.PeriodicBackups.First(), newDbName);
+                Assert.Equal(1, record2.ExternalReplications.Count);
+                ValidateConfiguration(serverWideConfiguration, record2.ExternalReplications.First(), newDbName);
             }
         }
-    }*/
+
+        private static void ValidateServerWideConfiguration(ServerWideExternalReplication serverWideConfiguration, ServerWideExternalReplication putConfiguration)
+        {
+            Assert.Equal(serverWideConfiguration.Name, putConfiguration.Name ?? putConfiguration.GetDefaultTaskName());
+            Assert.Equal(putConfiguration.Disabled, serverWideConfiguration.Disabled);
+            Assert.True(putConfiguration.TopologyDiscoveryUrls.SequenceEqual(serverWideConfiguration.TopologyDiscoveryUrls));
+        }
+
+        private static void ValidateConfiguration(ServerWideExternalReplication serverWideConfiguration, ExternalReplication externalReplication, string databaseName)
+        {
+            Assert.Equal(PutServerWideExternalReplicationCommand.GetTaskName(serverWideConfiguration.Name), externalReplication.Name);
+            Assert.Equal(serverWideConfiguration.Disabled, externalReplication.Disabled);
+            Assert.Equal(databaseName, externalReplication.Database);
+            Assert.Equal(PutServerWideExternalReplicationCommand.GetRavenConnectionStringName(serverWideConfiguration.Name), externalReplication.ConnectionStringName);
+        }
     }
 }
