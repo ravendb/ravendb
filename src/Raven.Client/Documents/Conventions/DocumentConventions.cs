@@ -43,7 +43,8 @@ namespace Raven.Client.Documents.Conventions
 
         internal static readonly DocumentConventions DefaultForServer = new DocumentConventions
         {
-            SendApplicationIdentifier = false
+            SendApplicationIdentifier = false,
+            MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes)
         };
 
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
