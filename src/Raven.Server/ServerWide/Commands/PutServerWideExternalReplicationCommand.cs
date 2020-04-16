@@ -85,14 +85,15 @@ namespace Raven.Server.ServerWide.Commands
 
         public static string GetRavenConnectionStringName(string serverWideName)
         {
-            return $"{ServerWideExternalReplication.RavenConnectionStringPrefix}, {serverWideName}";
+            return $"{ServerWideExternalReplication.RavenConnectionStringPrefix} for {serverWideName}";
         }
 
         public static RavenConnectionString UpdateExternalReplicationTemplateForDatabase(ExternalReplication configuration, string databaseName, string[] topologyDiscoveryUrls)
         {
-            configuration.Name = GetTaskName(configuration.Name);
+            var serverWideName = configuration.Name;
+            configuration.Name = GetTaskName(serverWideName);
             configuration.Database = databaseName;
-            configuration.ConnectionStringName = GetRavenConnectionStringName(configuration.Name);
+            configuration.ConnectionStringName = GetRavenConnectionStringName(serverWideName);
 
             return new RavenConnectionString
             {
