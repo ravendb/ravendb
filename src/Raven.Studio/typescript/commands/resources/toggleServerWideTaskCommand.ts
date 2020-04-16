@@ -14,7 +14,7 @@ class toggleServerWideTaskCommand extends commandBase {
             disable: this.disable
         };
         
-        const url = endpoints.global.adminServerWide.adminConfigurationServerWideToggleState;
+        const url = endpoints.global.adminServerWide.adminConfigurationServerWideState;
 
         const operationText = this.disable ? "disable" : "enable";
      
