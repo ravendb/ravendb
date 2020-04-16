@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -14,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class OutputReduceIndexWriteOperation : IndexWriteOperation
     {
-        private readonly OutputReduceToCollectionCommand _outputReduceToCollectionCommand;
+        private readonly OutputReduceToCollectionCommandBatcher _outputReduceToCollectionCommandBatcher;
         private readonly TransactionHolder _txHolder;
 
         public OutputReduceIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction,
@@ -23,12 +24,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             Debug.Assert(index.OutputReduceToCollection != null);
             _txHolder = new TransactionHolder(writeTransaction);
-            _outputReduceToCollectionCommand = index.OutputReduceToCollection.CreateCommand(indexContext, _txHolder);
+            _outputReduceToCollectionCommandBatcher = index.OutputReduceToCollection.CreateCommandBatcher(indexContext, _txHolder);
         }
 
         public override void Commit(IndexingStatsScope stats)
         {
-            var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
+            var enqueue = CommitOutputReduceToCollection();
 
             using (_txHolder.AcquireTransaction(out _))
             {
@@ -48,11 +49,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
+        private async Task CommitOutputReduceToCollection()
+        {
+            foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
+                await DocumentDatabase.TxMerger.Enqueue(command);
+        }
+
         public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             base.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
 
-            _outputReduceToCollectionCommand.AddReduce(key, document, stats);
+            _outputReduceToCollectionCommandBatcher.AddReduce(key, document, stats);
         }
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
@@ -64,14 +71,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             base.DeleteReduceResult(reduceKeyHash, stats);
 
-            _outputReduceToCollectionCommand.DeleteReduce(reduceKeyHash);
+            _outputReduceToCollectionCommandBatcher.DeleteReduce(reduceKeyHash);
         }
 
         public override void Dispose()
         {
             base.Dispose();
 
-            _outputReduceToCollectionCommand.Dispose();
+            _outputReduceToCollectionCommandBatcher.Dispose();
         }
     }
 }

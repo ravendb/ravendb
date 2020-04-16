@@ -120,9 +120,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             tree.Delete(reduceResultId);
         }
 
-        public OutputReduceToCollectionCommand CreateCommand(JsonOperationContext indexContext, TransactionHolder writeTxHolder)
+        public OutputReduceToCollectionCommandBatcher CreateCommandBatcher(JsonOperationContext indexContext, TransactionHolder writeTxHolder)
         {
-            return new OutputReduceToCollectionCommand(_index.DocumentDatabase, _collectionOfReduceOutputs, _reduceOutputVersion, _patternForOutputReduceToCollectionReferences, _index, indexContext, writeTxHolder);
+            return new OutputReduceToCollectionCommandBatcher(_index.DocumentDatabase, _collectionOfReduceOutputs, _reduceOutputVersion, _patternForOutputReduceToCollectionReferences, _index, indexContext, writeTxHolder);
         }
 
         public void AddPrefixesOfDocumentsToDelete(Dictionary<string, string> prefixes)

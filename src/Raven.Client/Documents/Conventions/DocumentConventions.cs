@@ -43,7 +43,8 @@ namespace Raven.Client.Documents.Conventions
 
         internal static readonly DocumentConventions DefaultForServer = new DocumentConventions
         {
-            SendApplicationIdentifier = false
+            SendApplicationIdentifier = false,
+            MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes)
         };
 
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
@@ -178,6 +179,9 @@ namespace Raven.Client.Documents.Conventions
             _secondBroadcastAttemptTimeout = TimeSpan.FromSeconds(30);
 
             _sendApplicationIdentifier = true;
+            _maxContextSizeToKeep = PlatformDetails.Is32Bits == false
+                ? new Size(1, SizeUnit.Megabytes)
+                : new Size(256, SizeUnit.Kilobytes);
         }
 
         private bool _frozen;
@@ -222,6 +226,17 @@ namespace Raven.Client.Documents.Conventions
         private string _topologyCacheLocation;
         private Version _httpVersion;
         private bool _sendApplicationIdentifier;
+        private Size _maxContextSizeToKeep;
+
+        public Size MaxContextSizeToKeep
+        {
+            get => _maxContextSizeToKeep;
+            set
+            {
+                AssertNotFrozen();
+                _maxContextSizeToKeep = value;
+            }
+        }
 
         /// <summary>
         /// Enables sending a unique application identifier to the RavenDB Server that is used for Client API usage tracking.

@@ -83,8 +83,8 @@ namespace Raven.Server
             LoggingSource.UseUtcTime = configuration.Logs.UseUtcTime;
             LoggingSource.Instance.MaxFileSizeInBytes = configuration.Logs.MaxFileSize.GetValue(SizeUnit.Bytes);
             LoggingSource.Instance.SetupLogMode(
-                configuration.Logs.Mode, 
-                configuration.Logs.Path.FullPath, 
+                configuration.Logs.Mode,
+                configuration.Logs.Path.FullPath,
                 configuration.Logs.RetentionTime?.AsTimeSpan,
                 configuration.Logs.RetentionSize?.GetValue(SizeUnit.Bytes),
                 configuration.Logs.Compress
@@ -210,7 +210,6 @@ namespace Raven.Server
                                 Console.ForegroundColor = ConsoleColor.Red;
                                 Console.WriteLine(message);
                                 Console.ForegroundColor = prevColor;
-
                             }
 
                             IsRunningNonInteractive = false;
