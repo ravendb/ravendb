@@ -4,7 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -65,7 +67,7 @@ namespace SlowTests.Client.Attachments
 
         [Theory]
         [InlineData(100, 100, 16 * 1024)]
-        [InlineData(250, 50, 64 * 1024)]
+        [InlineData(75, 75, 64 * 1024)]
         public async Task StoreManyAttachmentsAndDocs(int count, int attachments, int size)
         {
             using (var store = GetDocumentStore())
@@ -108,6 +110,152 @@ namespace SlowTests.Client.Attachments
                         }
                     }
                 }
+            }
+        }
+
+        [Theory]
+        [InlineData(10, 100, 32 * 1024)]
+        [InlineData(500, 750, 16 * 1024)]
+        public async Task BulkStoreAttachmentsForRandomDocs(int count, int attachments, int size)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
+                var ids = new List<string>();
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var id = $"user/{i}";
+                        ids.Add(id);
+                        streams[id] = new Dictionary<string, MemoryStream>();
+                        bulkInsert.Store(new User {Name = $"EGR_{i}"}, id);
+                    }
+
+                    for (int j = 0; j < attachments; j++)
+                    {
+                        var rnd = new Random(DateTime.Now.Millisecond);
+                        var id = ids[rnd.Next(0, count)];
+                        var attachmentsBulkInsert = bulkInsert.AttachmentsFor(id);
+                        var bArr = new byte[size];
+                        rnd.NextBytes(bArr);
+                        var name = j.ToString();
+                        var stream = new MemoryStream(bArr);
+                        await attachmentsBulkInsert.StoreAsync(name, stream);
+
+                        stream.Position = 0;
+                        streams[id][name] = stream;
+                    }
+                }
+
+                foreach (var id in streams.Keys)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var attachmentsNames = streams.Select(x => new AttachmentRequest(id, x.Key));
+                        var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
+
+                        while (attachmentsEnumerator.MoveNext())
+                        {
+                            Assert.NotNull(attachmentsEnumerator.Current != null);
+                            Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanHaveAttachmentBulkInsertsWithCounters()
+        {
+            int count = 100;
+            int size = 64 * 1024;
+            using (var store = GetDocumentStore())
+            {
+                var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
+                var counters = new Dictionary<string, string>();
+                var bulks = new Dictionary<string, BulkInsertOperation.AttachmentsBulkInsert>();
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var id = $"user/{i}";
+                        streams[id] = new Dictionary<string, MemoryStream>();
+                        bulkInsert.Store(new User { Name = $"EGR_{i}" }, id);
+                        bulks[id] = bulkInsert.AttachmentsFor(id);
+                    }
+
+                    foreach (var bulk in bulks)
+                    {
+                        var rnd = new Random(DateTime.Now.Millisecond);
+                        var bArr = new byte[size];
+                        rnd.NextBytes(bArr);
+                        var name = $"{bulk.Key}_{rnd.Next(100)}";
+                        var stream = new MemoryStream(bArr);
+                        await bulk.Value.StoreAsync(name, stream);
+
+                        stream.Position = 0;
+                        streams[bulk.Key][name] = stream;
+                        await bulkInsert.CountersFor(bulk.Key).IncrementAsync(name);
+                        counters[bulk.Key] = name;
+                    }
+                }
+
+                foreach (var id in streams.Keys)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var attachmentsNames = streams.Select(x => new AttachmentRequest(id, x.Key));
+                        var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
+
+                        while (attachmentsEnumerator.MoveNext())
+                        {
+                            Assert.NotNull(attachmentsEnumerator.Current != null);
+                            Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
+                        }
+                    }
+
+                    var val = store.Operations
+                        .Send(new GetCountersOperation(id, new[] { counters[id] }))
+                        .Counters[0]?.TotalValue;
+                    Assert.Equal(1, val);
+                }
+            }
+        }
+
+        [Fact]
+        public void StoreAsyncShouldThrowIfRunningTimeSeriesBulkInsert()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var argumentError = Assert.Throws<InvalidOperationException> (() =>
+                {
+                    using (var bulkInsert = store.BulkInsert())
+                    {
+                        bulkInsert.TimeSeriesFor("id", "name");
+                        var bulk = bulkInsert.AttachmentsFor("id");
+                        bulk.Store("name", new MemoryStream());
+                    }
+                });
+
+                Assert.Equal("There is an already running time series operation, did you forget to Dispose it?", argumentError.Message);
+            }
+        }
+
+        [Fact]
+        public void StoreAsyncNullId()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var argumentError = Assert.Throws<ArgumentException>(() =>
+                {
+                    using (var bulkInsert = store.BulkInsert())
+                    {
+                        bulkInsert.AttachmentsFor(null);
+                    }
+                });
+
+                Assert.Equal("Document id cannot be null or empty (Parameter 'id')", argumentError.Message);
             }
         }
     }
