@@ -21,11 +21,12 @@ namespace Sparrow.Json
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly long _maxContextSizeToKeepInBytes;
         private readonly long _maxNumberOfContextsToKeepInGlobalStack;
+        private long _numberOfContextsDisposedInGlobalStack;
 
         private readonly T[][] _perCoreContexts;
         private CountingConcurrentStack<T> _previousGlobalStack;
         private CountingConcurrentStack<T> _currentGlobalStack = new CountingConcurrentStack<T>();
-        private readonly Timer _idleTimer;
+        private readonly Timer _cleanupTimer;
 
         protected JsonContextPoolBase()
         {
@@ -34,7 +35,7 @@ namespace Sparrow.Json
             {
                 _perCoreContexts[i] = new T[64];
             }
-            _idleTimer = new Timer(CleanupTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            _cleanupTimer = new Timer(CleanupTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
             _maxContextSizeToKeepInBytes = long.MaxValue;
             _maxNumberOfContextsToKeepInGlobalStack = PlatformDetails.Is32Bits == false
@@ -238,18 +239,22 @@ namespace Sparrow.Json
                             continue;
 
                         if (context.InUse.Raise())
+                        {
                             context.Dispose();
+                            _numberOfContextsDisposedInGlobalStack++;
+                        }
                     }
                 }
 
                 var globalStackRebuildNeeded = currentTime - _lastGlobalStackRebuild >= _globalStackRebuildInterval;
 
-                if (globalStackRebuildNeeded)
+                if (globalStackRebuildNeeded && _numberOfContextsDisposedInGlobalStack > 0)
                 {
                     _lastGlobalStackRebuild = currentTime;
 
                     var previousGlobalStack = _previousGlobalStack;
 
+                    _numberOfContextsDisposedInGlobalStack = 0;
                     _currentGlobalStack = new CountingConcurrentStack<T>();
                     _previousGlobalStack = currentGlobalStack;
 
@@ -317,7 +322,7 @@ namespace Sparrow.Json
 
                 _cts.Cancel();
                 _disposed = true;
-                _idleTimer.Dispose();
+                _cleanupTimer.Dispose();
 
                 ClearStack(_previousGlobalStack);
                 ClearStack(_currentGlobalStack);
