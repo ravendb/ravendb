@@ -41,11 +41,11 @@ namespace InterversionTests
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
-        public async Task CanExportFrom42AndImportTo5(ExcludeOn excludeOn)
+        public async Task CanExportFrom42AndImportToCurrent(ExcludeOn excludeOn)
         {
             var file = GetTempFileName();
             using var store42 = await GetDocumentStoreAsync(Server42Version);
-            using var store5 = GetDocumentStore();
+            using var storeCurrent = GetDocumentStore();
 
             store42.Maintenance.Send(new CreateSampleDataOperation());
             using (var session = store42.OpenAsyncSession())
@@ -73,17 +73,17 @@ namespace InterversionTests
             var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
             if (excludeOn == ExcludeOn.Import)
                 importOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
-            var importOperation = await store5.Smuggler.ImportAsync(importOptions, file);
+            var importOperation = await storeCurrent.Smuggler.ImportAsync(importOptions, file);
             await importOperation.WaitForCompletionAsync(_operationTimeout);
 
-            var actual = await store5.Maintenance.SendAsync(new GetStatisticsOperation());
+            var actual = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
 
             //Assert
             Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
             Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
 
             var export = await GetMetadataCounts(store42);
-            var import = await GetMetadataCounts(store5);
+            var import = await GetMetadataCounts(storeCurrent);
             if (excludeOn == ExcludeOn.Non)
             {
                 Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
@@ -106,14 +106,14 @@ namespace InterversionTests
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
-        public async Task CanExportFrom5AndImportTo42(ExcludeOn excludeOn)
+        public async Task CanExportFromCurrentAndImportTo42(ExcludeOn excludeOn)
         {
             var file = GetTempFileName();
             using var store42 = await GetDocumentStoreAsync(Server42Version);
-            using var store5 = GetDocumentStore();
+            using var storeCurrent = GetDocumentStore();
             //Export
-            store5.Maintenance.Send(new CreateSampleDataOperation());
-            using (var session = store5.OpenAsyncSession())
+            storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
+            using (var session = storeCurrent.OpenAsyncSession())
             {
                 var dateTime = new DateTime(2020, 3, 29);
 
@@ -129,11 +129,11 @@ namespace InterversionTests
             var exportOptions = new DatabaseSmugglerExportOptions();
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
-            var exportOperation = await store5.Smuggler.ExportAsync(exportOptions, file);
+            var exportOperation = await storeCurrent.Smuggler.ExportAsync(exportOptions, file);
             
             await exportOperation.WaitForCompletionAsync(_operationTimeout);
 
-            DatabaseStatistics expected = await store5.Maintenance.SendAsync(new GetStatisticsOperation());
+            DatabaseStatistics expected = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
 
             //Import
             var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
@@ -149,7 +149,7 @@ namespace InterversionTests
             Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
             Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
 
-            var export = await GetMetadataCounts(store5);
+            var export = await GetMetadataCounts(storeCurrent);
             var import = await GetMetadataCounts(store42);
             if (excludeOn == ExcludeOn.Non)
             {
@@ -173,7 +173,7 @@ namespace InterversionTests
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
-        public async Task CanExportAndImportClient5Server42(ExcludeOn excludeOn)
+        public async Task CanExportAndImportClientCurrentServer42(ExcludeOn excludeOn)
         {
             var file = GetTempFileName();
             using var exportStore42 = await GetDocumentStoreAsync(Server42Version);
@@ -240,10 +240,10 @@ namespace InterversionTests
 
         //Migrator
         [Fact]
-        public async Task CanMigrateFrom42To5()
+        public async Task CanMigrateFrom42ToCurrent()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
-            using var store5 = GetDocumentStore();
+            using var storeCurrent = GetDocumentStore();
 
             store42.Maintenance.Send(new CreateSampleDataOperation());
             using (var session = store42.OpenAsyncSession())
@@ -257,11 +257,11 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            var operation = await Migrate(store42, store5);
+            var operation = await Migrate(store42, storeCurrent);
             await operation.WaitForCompletionAsync(_operationTimeout);
 
             var fromStat = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
-            var toStat = await store5.Maintenance.SendAsync(new GetStatisticsOperation());
+            var toStat = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
             
             //Assert
             Assert.Equal(fromStat.CountOfIndexes, toStat.CountOfIndexes);
@@ -272,18 +272,18 @@ namespace InterversionTests
             Assert.Equal(fromStat.CountOfCounterEntries, toStat.CountOfCounterEntries);
 
             var fromMetadataCount = await GetMetadataCounts(store42);
-            var toMetadataCount = await GetMetadataCounts(store5);
+            var toMetadataCount = await GetMetadataCounts(storeCurrent);
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
         [Fact]
-        public async Task CanMigrateFrom5To42()
+        public async Task CanMigrateFromCurrentTo42()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
-            using var store5 = GetDocumentStore();
+            using var storeCurrent = GetDocumentStore();
 
-            store5.Maintenance.Send(new CreateSampleDataOperation());
-            using (var session = store5.OpenAsyncSession())
+            storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
+            using (var session = storeCurrent.OpenAsyncSession())
             {
                 for (var i = 0; i < 5; i++)
                 {
@@ -301,10 +301,10 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            var operation = await Migrate(store5, store42, DatabaseItemType.TimeSeries);
+            var operation = await Migrate(storeCurrent, store42, DatabaseItemType.TimeSeries);
             await operation.WaitForCompletionAsync(_operationTimeout);
 
-            var fromStat = await store5.Maintenance.SendAsync(new GetStatisticsOperation());
+            var fromStat = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
             var toStat = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
             
             //Assert
@@ -315,7 +315,7 @@ namespace InterversionTests
             Assert.Equal(fromStat.CountOfAttachments, toStat.CountOfAttachments);
             Assert.Equal(fromStat.CountOfCounterEntries, toStat.CountOfCounterEntries);
 
-            var fromMetadataCount = await GetMetadataCounts(store5);
+            var fromMetadataCount = await GetMetadataCounts(storeCurrent);
             var toMetadataCount = await GetMetadataCounts(store42);
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
