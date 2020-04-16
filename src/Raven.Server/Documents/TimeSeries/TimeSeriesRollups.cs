@@ -685,11 +685,20 @@ namespace Raven.Server.Documents.TimeSeries
             var aggStates = new TimeSeriesAggregation(mode); // we always will aggregate here by Min, Max, First, Last, Sum, Count, Mean
             var results = new List<TimeSeriesStorage.Reader.SingleResult>();
 
-            var rangeSpec = new TimeSeriesFunction.RangeGroup
+                
+            var rangeSpec = new TimeSeriesFunction.RangeGroup();
+            switch (rangeGroup.Unit)
             {
-                Ticks = TimeSpan.FromSeconds(rangeGroup.Seconds).Ticks,
-                Months = rangeGroup.Months
-            };
+                case TimeValueUnit.Second:
+                    rangeSpec.Ticks = TimeSpan.FromSeconds(rangeGroup.Value).Ticks;
+                    break;
+                case TimeValueUnit.Month:
+                    rangeSpec.Months = rangeGroup.Value;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(rangeGroup.Unit), $"Not supported time value unit '{rangeGroup.Unit}'");
+            }
+           
             DateTime next = default;
 
             foreach (var it in reader.SegmentsOrValues())
@@ -771,22 +780,27 @@ namespace Raven.Server.Documents.TimeSeries
             if (time == DateTime.MinValue)
                 return time.Add(nextPolicy.AggregationTime).Ticks;
 
-            if (nextPolicy.AggregationTime.Seconds != 0)
+            switch (nextPolicy.AggregationTime.Unit)
             {
-                // align by seconds
-                var timespan = TimeSpan.FromSeconds(nextPolicy.AggregationTime.Seconds);
-                var integerPart = time.Ticks / timespan.Ticks;
-                var nextRollup = timespan.Ticks * (integerPart + 1);
-                return nextRollup;
-            }
+                case TimeValueUnit.Second:
+                    // align by seconds
+                    var timespan = TimeSpan.FromSeconds(nextPolicy.AggregationTime.Value);
+                    var integerPart = time.Ticks / timespan.Ticks;
+                    var nextRollup = timespan.Ticks * (integerPart + 1);
+                    return nextRollup;
 
-            // align by months
-            var totalMonths = time.Year * 12 + time.Month - 1;
-            var integerAggPart = totalMonths / nextPolicy.AggregationTime.Months;
-            var nextInMonths = nextPolicy.AggregationTime.Months * (integerAggPart + 1);
-            var years = nextInMonths / 12;
-            var months = nextInMonths % 12;
-            return new DateTime(years, months + 1, 1).Ticks;
+                case TimeValueUnit.Month:
+                    // align by months
+                    var totalMonths = time.Year * 12 + time.Month - 1;
+                    var integerAggPart = totalMonths / nextPolicy.AggregationTime.Value;
+                    var nextInMonths = nextPolicy.AggregationTime.Value * (integerAggPart + 1);
+                    var years = nextInMonths / 12;
+                    var months = nextInMonths % 12;
+                    return new DateTime(years, months + 1, 1).Ticks;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(nextPolicy.AggregationTime.Unit), $"Not supported time value unit '{nextPolicy.AggregationTime.Unit}'");
+            }
         }
     }
 }
