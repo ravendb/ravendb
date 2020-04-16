@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Server;
@@ -238,6 +239,9 @@ namespace Voron.Data.Tables
 
             ~CompressionDictionary()
             {
+#if DEBUG
+                Trace.WriteLine("CompressionDictionary finalized without being properly disposed");
+#endif
                 Dispose();
             }
 

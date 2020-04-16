@@ -131,7 +131,7 @@ namespace Raven.Server.Documents
 
             DefineIndexesForDocsSchema(DocsSchema);
             DefineIndexesForDocsSchema(CompressedDocsSchema);
-            DocsSchema.CompressValues(CompressedDocsSchema.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
+            DocsSchema.CompressValues(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
             CompressedDocsSchema.CompressValues(CompressedDocsSchema.FixedSizeIndexes[CollectionEtagsSlice], compress: true);
 
             TombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -302,7 +302,7 @@ namespace Raven.Server.Documents
                         tx.LowLevelTransaction.RootObjects,
                         tx.LowLevelTransaction);
 
-                    tx.CreateTree(TableSchema.DictionariesSlice);
+                    tx.CreateTree(TableSchema.CompressionDictionariesSlice);
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);

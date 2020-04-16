@@ -328,8 +328,10 @@ namespace Raven.Client.ServerWide
 
         protected bool Equals(CompressionConfiguration other)
         {
+            var mine = new HashSet<string>(Collections,StringComparer.OrdinalIgnoreCase);
+            var them = new HashSet<string>(other.Collections, StringComparer.OrdinalIgnoreCase);
             return CompressRevisions == other.CompressRevisions && 
-                   Collections.SequenceEqual(other.Collections);
+                   mine.SetEquals(them);
         }
 
         public override bool Equals(object obj)

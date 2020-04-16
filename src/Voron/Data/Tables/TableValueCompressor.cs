@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -154,82 +156,95 @@ namespace Voron.Data.Tables
         {
             // the idea is that we'll get better results by including the most recently modified documents
             // by iterating over the tag index, which is guaranteed to be always increasing
-            var dataIds = new List<long>(256);
-            var sizes = new UIntPtr[256];
-            var totalSize = 0;
-            int totalSkipped =0 ;
-            using (var it = etagsTree.Iterate())
+            var dataIds = ArrayPool<long>.Shared.Rent(256);
+            var sizes = ArrayPool<UIntPtr>.Shared.Rent(256);
+            try
             {
-                if (it.SeekToLast() == false)
-                    return; // empty table, nothing to train on
-
-                do
+                int used = 0;
+                var totalSize = 0;
+                int totalSkipped = 0;
+                using (var it = etagsTree.Iterate())
                 {
-                    long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-                    table.DirectRead(id, out var size);
-                    if (size > 32 * 1024)
+                    if (it.SeekToLast() == false)
+                        return; // empty table, nothing to train on
+
+                    do
                     {
-                        if (totalSkipped++ > 16 * 1024)
-                            return;  // we are scanning too much, no need to try this hard
-                        // we don't want to skip documents that are too big, they will compress
-                        // well on their own, and likely be *too* unique to add meaningfully to the
-                        // dictionary
-                        continue; 
+                        long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                        table.DirectRead(id, out var size);
+                        if (size > 32 * 1024)
+                        {
+                            if (totalSkipped++ > 16 * 1024)
+                                return;  // we are scanning too much, no need to try this hard
+                                         // we don't want to skip documents that are too big, they will compress
+                                         // well on their own, and likely be *too* unique to add meaningfully to the
+                                         // dictionary
+                            continue;
+                        }
+
+                        sizes[used] = (UIntPtr)size;
+                        dataIds[used++] = id;
+                        totalSize += size;
+                    } while (used < 256 && it.MovePrev() && totalSize < 1024 * 1024);
+                }
+
+                if (used < 16)
+                    return;// too few samples to measure
+
+                var tx = table._tx;
+                using (tx.Allocator.Allocate(totalSize, out var buffer))
+                {
+                    var cur = buffer.Ptr;
+                    foreach (long id in dataIds)
+                    {
+                        var ptr = table.DirectRead(id, out var size);
+                        Memory.Copy(cur, ptr, size);
+                        cur += size;
                     }
 
-                    sizes[dataIds.Count] = (UIntPtr)size;
-                    dataIds.Add(id);
-                    totalSize += size;
-                } while (dataIds.Count < 256 && it.MovePrev() && totalSize < 1024 * 1024);
+                    using (tx.Allocator.Allocate(
+                        // the dictionary 
+                        Constants.Storage.PageSize - PageHeader.SizeOf - sizeof(CompressionDictionaryInfo)
+                        , out var dictionaryBuffer))
+                    {
+
+                        Span<byte> dictionaryBufferSpan = dictionaryBuffer.ToSpan();
+                        ZstdLib.Train(new ReadOnlySpan<byte>(buffer.Ptr, totalSize),
+                            new ReadOnlySpan<UIntPtr>(sizes, 0, used),
+                            ref dictionaryBufferSpan);
+
+                        var dictionariesTree = tx.CreateTree(TableSchema.CompressionDictionariesSlice);
+
+                        var newId = (int)(dictionariesTree.State.NumberOfEntries + 1);
+
+                        using var compressionDictionary = new ZstdLib.CompressionDictionary(newId, dictionaryBuffer.Ptr, dictionaryBufferSpan.Length, 3);
+
+                        if (ShouldReplaceDictionary(tx, compressionDictionary) == false)
+                        {
+                            return;
+                        }
+
+                        table.CurrentCompressionDictionaryId = newId;
+                        compressionDictionary.ExpectedCompressionRatio = GetCompressionRatio(CompressedBuffer.Length, RawBuffer.Length);
+
+                        var rev = Bits.SwapBytes(newId);
+                        using (Slice.External(tx.Allocator, (byte*)&rev, sizeof(int), out var slice))
+                        using (dictionariesTree.DirectAdd(slice, sizeof(CompressionDictionaryInfo) + dictionaryBufferSpan.Length, out var dest))
+                        {
+                            *((CompressionDictionaryInfo*)dest) =
+                                new CompressionDictionaryInfo {ExpectedCompressionRatio = compressionDictionary.ExpectedCompressionRatio};
+                            Memory.Copy(dest + sizeof(CompressionDictionaryInfo), dictionaryBuffer.Ptr, dictionaryBufferSpan.Length);
+                        }
+
+                        tx.LowLevelTransaction.OnDispose += RecreateRecoveryDictionaries;
+                    }
+                }
             }
-
-            if (dataIds.Count < 16)
-                return;// too few samples to measure
-
-            var tx = table._tx;
-            using var _ = tx.Allocator.Allocate(totalSize, out var buffer);
-            var cur = buffer.Ptr;
-            foreach (long id in dataIds)
+            finally
             {
-                var ptr = table.DirectRead(id, out var size);
-                Memory.Copy(cur, ptr, size);
-                cur += size;
+                ArrayPool<long>.Shared.Return(dataIds);
+                ArrayPool<UIntPtr>.Shared.Return(sizes);
             }
-
-            using var __ = tx.Allocator.Allocate(
-                // the dictionary 
-                Constants.Storage.PageSize - PageHeader.SizeOf - sizeof(CompressionDictionaryInfo)
-                , out var dictionaryBuffer);
-
-            Span<byte> dictionaryBufferSpan = dictionaryBuffer.ToSpan();
-            ZstdLib.Train(new ReadOnlySpan<byte>(buffer.Ptr, totalSize), 
-                new ReadOnlySpan<UIntPtr>(sizes, 0, dataIds.Count), 
-                ref dictionaryBufferSpan);
-
-            var dictionariesTree = tx.CreateTree(TableSchema.DictionariesSlice);
-
-            var newId = (int)(dictionariesTree.State.NumberOfEntries + 1);
-
-            using var compressionDictionary = new ZstdLib.CompressionDictionary(newId, dictionaryBuffer.Ptr, dictionaryBufferSpan.Length, 3);
-
-            if (ShouldReplaceDictionary(tx, compressionDictionary) == false)
-            {
-                return;
-            }
-
-            table.CurrentCompressionDictionaryId = newId;
-            compressionDictionary.ExpectedCompressionRatio = GetCompressionRatio(CompressedBuffer.Length, RawBuffer.Length);
-
-            var rev = Bits.SwapBytes(newId);
-            using var _____ = Slice.External(tx.Allocator, (byte*)&rev, sizeof(int), out var slice);
-            using var ____ = dictionariesTree.DirectAdd(slice, sizeof(CompressionDictionaryInfo) + dictionaryBufferSpan.Length, out var dest);
-            *((CompressionDictionaryInfo*)dest) = new CompressionDictionaryInfo
-            {
-                ExpectedCompressionRatio = compressionDictionary.ExpectedCompressionRatio
-            };
-            Memory.Copy(dest + sizeof(CompressionDictionaryInfo), dictionaryBuffer.Ptr, dictionaryBufferSpan.Length);
-
-            tx.LowLevelTransaction.OnDispose += RecreateRecoveryDictionaries;
         }
 
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Compress");
@@ -246,10 +261,13 @@ namespace Voron.Data.Tables
             {
                 using var tx = obj.Environment.ReadTransaction();
 
-                var dictionaries = tx.ReadTree(TableSchema.DictionariesSlice);
+                var dictionaries = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
 
                 if (dictionaries == null)
+                {
+                    Debug.Assert(dictionaries != null);
                     return; // should never happen
+                }
 
                 int nonceSize = (int)Sodium.crypto_stream_xchacha20_noncebytes();
                 var subKeyLen = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();

@@ -51,8 +51,8 @@ namespace Raven.Server.Config.Categories
         /// </summary>
         [Description("Whatever revisions compression should be on by default or not on new databases")]
         [DefaultValue(true)]
-        [ConfigurationEntry("Databases.DefaultRevisionsCompression", ConfigurationEntryScope.ServerWideOnly)]
-        public bool DefaultRevisionsCompression { get; set; }
+        [ConfigurationEntry("Databases.Compression.CompressRevisionsDefault", ConfigurationEntryScope.ServerWideOnly)]
+        public bool CompressRevisionsDefault { get; set; }
 
         /// <summary>
         /// This much time has to wait for the database to become available when too much
