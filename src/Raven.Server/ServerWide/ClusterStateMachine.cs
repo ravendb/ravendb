@@ -1523,8 +1523,10 @@ namespace Raven.Server.ServerWide
                     if (externalReplications.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
                         continue;
 
-                    if (configurationBlittable.TryGet(nameof(ServerWideExternalReplication.TopologyDiscoveryUrls), out string[] topologyDiscoveryUrls) == false)
+                    if (configurationBlittable.TryGet(nameof(ServerWideExternalReplication.TopologyDiscoveryUrls), out BlittableJsonReaderArray topologyDiscoveryUrlsBlittableArray) == false)
                         continue;
+
+                    var topologyDiscoveryUrls = topologyDiscoveryUrlsBlittableArray.Select(x => x.ToString()).ToArray();
 
                     var externalReplication = JsonDeserializationCluster.ExternalReplication(configurationBlittable);
                     var connectionString = PutServerWideExternalReplicationCommand.UpdateExternalReplicationTemplateForDatabase(externalReplication, addDatabaseCommand.Name, topologyDiscoveryUrls);

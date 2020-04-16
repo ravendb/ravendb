@@ -10,6 +10,11 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public string[] TopologyDiscoveryUrls;
 
+        public override string GetDefaultTaskName()
+        {
+            return $"External Replication to {string.Join(",", TopologyDiscoveryUrls)}";
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();

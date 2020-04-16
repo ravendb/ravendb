@@ -104,7 +104,7 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
-                    var taskName = ServerStore.Cluster.GetServerWideTaskNameByTaskId(context, ClusterStateMachine.ServerWideConfigurationKey.Backup, newIndex);
+                    var taskName = ServerStore.Cluster.GetServerWideTaskNameByTaskId(context, ClusterStateMachine.ServerWideConfigurationKey.ExternalReplication, newIndex);
                     if (taskName == null)
                         throw new InvalidOperationException($"External replication name is null for server-wide external replication with task id: {newIndex}");
 
