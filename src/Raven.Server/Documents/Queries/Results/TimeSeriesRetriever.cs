@@ -660,6 +660,11 @@ namespace Raven.Server.Documents.Queries.Results
                             continue;
                         }
 
+                        if (timeSeriesFunction.Between.FromList.Count == 1 && args[paramIndex] is BlittableJsonReaderObject bjro)
+                        {
+                            return ExtractSourcesFromListParameter(bjro, compound[0], sources);
+                        }
+
                         if (!(args[paramIndex] is string s))
                             throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"Expected argument '{compound[0]}' to be a string, but got '{args[paramIndex].GetType()}'");
@@ -702,6 +707,35 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return sources;
             }
+        }
+
+        private static List<string> ExtractSourcesFromListParameter(BlittableJsonReaderObject blittable, StringSegment arg, List<string> sources)
+        {
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            for (var j = 0; j < blittable.Count; j++)
+            {
+                blittable.GetPropertyByIndex(j, ref propertyDetails);
+
+                if (int.TryParse(propertyDetails.Name, out _) == false)
+                    continue;
+
+                var name = propertyDetails.Value;
+
+                if (name is LazyStringValue lsv)
+                {
+                    sources.Add(lsv.ToString());
+                    continue;
+                }
+
+                if (!(name is string str))
+                    throw new InvalidQueryException(
+                        $"Unable to parse TimeSeries names from expression '{arg}'. " +
+                        $"Expected argument '{arg}' to be an array of strings, but got element of type '{name.GetType()}' on index {j} in the array ");
+
+                sources.Add(str);
+            }
+
+            return sources;
         }
 
         private static object GetValueFromArgument(DeclaredFunction declaredFunction, object[] args, FieldExpression fe)
@@ -905,7 +939,7 @@ namespace Raven.Server.Documents.Queries.Results
                 _min = min;
                 _max = max;
                 _offset = offset;
-                _current = 0;
+                _current = _names.Count - 1;
 
                 _reader = _tss.GetReader(_context, _id, _names[_current], _min, _max, _offset);
             }
@@ -958,7 +992,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             private string GetNextName()
             {
-                if (++_current > _names.Count - 1)
+                if (--_current < 0)
                     return null;
                 return _names[_current];
             }
