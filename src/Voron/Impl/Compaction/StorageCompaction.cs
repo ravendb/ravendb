@@ -115,7 +115,7 @@ namespace Voron.Impl.Compaction
 
                 var globalTableIndexesToSkipCopying = new HashSet<string>
                 {
-                    TableSchema.DictionariesSlice.ToString()
+                    TableSchema.CompressionDictionariesSlice.ToString()
                 };
 
                 do

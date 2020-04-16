@@ -1327,7 +1327,7 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message);
             }
 
-            if(!newLicenseStatus.HasCompression && documentCompressionCount > 0)
+            if(!newLicenseStatus.HasDocumentCompression && documentCompressionCount > 0)
             {
                 var message = GenerateDetails(documentCompressionCount, "document compression");
                 throw GenerateLicenseLimit(LimitType.DocumentCompression, message);
@@ -1458,7 +1458,7 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasCompression)
+            if (_licenseStatus.HasDocumentCompression)
                 return;
 
             var details = $"Your current license ({_licenseStatus.Type}) does not allow document compression";

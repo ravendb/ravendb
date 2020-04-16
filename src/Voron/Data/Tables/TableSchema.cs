@@ -27,8 +27,8 @@ namespace Voron.Data.Tables
         public static readonly Slice StatsSlice;
         public static readonly Slice SchemasSlice;
         public static readonly Slice PkSlice;
-        public static readonly Slice DictionariesSlice;
-        public static readonly Slice CompressionDictionaryIdSlice;
+        public static readonly Slice CompressionDictionariesSlice;
+        public static readonly Slice CurrentCompressionDictionaryIdSlice;
 
         private SchemaIndexDef _primaryKey;
         private bool _compressed;
@@ -56,8 +56,8 @@ namespace Voron.Data.Tables
                 Slice.From(ctx, "Stats", ByteStringType.Immutable, out StatsSlice);
                 Slice.From(ctx, "Schemas", ByteStringType.Immutable, out SchemasSlice);
                 Slice.From(ctx, "PK", ByteStringType.Immutable, out PkSlice);
-                Slice.From(ctx, "CompressionDictionaries", ByteStringType.Immutable, out DictionariesSlice);
-                Slice.From(ctx, "CurrentCompressionDictionaryId", ByteStringType.Immutable, out CompressionDictionaryIdSlice);
+                Slice.From(ctx, "CompressionDictionaries", ByteStringType.Immutable, out CompressionDictionariesSlice);
+                Slice.From(ctx, "CurrentCompressionDictionaryId", ByteStringType.Immutable, out CurrentCompressionDictionaryIdSlice);
             }
         }
 
@@ -417,7 +417,7 @@ namespace Voron.Data.Tables
             if (tableTree.State.NumberOfEntries > 0)
                 return; // this was already created
 
-            tableTree.Add(CompressionDictionaryIdSlice, 0);
+            tableTree.Add(CurrentCompressionDictionaryIdSlice, 0);
 
             // Create raw data. This is where we will actually store the documents
             using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx, name, 

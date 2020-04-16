@@ -30,16 +30,6 @@ namespace Voron.Data.RawData
             _transaction = tx;
         }
 
-        public static int CompressionDictionaryHashFor(LowLevelTransaction tx,long id)
-        {
-            long sectionPageNumber = GetSectionPageNumber(tx, id);
-            var page = tx.GetPage(sectionPageNumber);
-            if ((page.Flags & PageFlags.RawData) != PageFlags.RawData)
-                ThrowInvalidPage(sectionPageNumber);
-
-            return *(int*)page.DataPointer;
-        }
-
         /// <summary>
         ///     Try allocating some space in the section, defrag if needed (including moving other valid entries)
         ///     Once a section returned false for try allocation, it should be retired as an actively allocating

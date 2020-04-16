@@ -249,12 +249,12 @@ namespace Raven.Server.Web.System
                     auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
                 
-                if(ServerStore.LicenseManager.GetLicenseStatus().HasCompression &&
+                if(ServerStore.LicenseManager.GetLicenseStatus().HasDocumentCompression &&
                    Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental &&
                    databaseRecord.Compression == null)
                 {
                     databaseRecord.Compression = new CompressionConfiguration(
-                        Server.Configuration.Databases.DefaultRevisionsCompression
+                        Server.Configuration.Databases.CompressRevisionsDefault
                         );
                 }
 
@@ -266,7 +266,7 @@ namespace Raven.Server.Web.System
                 {
                     ServerStore.LicenseManager.AssertCanUseDocumentCompression();
                     if (Server.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
-                        FeaturesAvailabilityException.Throw("Compression");
+                        FeaturesAvailabilityException.Throw("Document Compression");
                 }
 
 

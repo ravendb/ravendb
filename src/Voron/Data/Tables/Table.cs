@@ -51,12 +51,12 @@ namespace Voron.Data.Tables
             get
             {
                 return _currentCompressionDictionaryId ??= 
-                    _tableTree.ReadInt32(TableSchema.CompressionDictionaryIdSlice) ?? 0;
+                    _tableTree.ReadInt32(TableSchema.CurrentCompressionDictionaryIdSlice) ?? 0;
             }
             set
             {
                 _currentCompressionDictionaryId = value;
-                _tableTree.Add(TableSchema.CompressionDictionaryIdSlice, value);
+                _tableTree.Add(TableSchema.CurrentCompressionDictionaryIdSlice, value);
             }
         }
 
@@ -232,8 +232,6 @@ namespace Voron.Data.Tables
                 return t.Ptr;
             }
 
-            //TODO: For encrypted databases, we need to allocate on locked memory
-
             // we explicitly do *not* dispose the buffer, it lives as long as the tx
             var _ = DecompressValue(_tx, directRead, size, out ByteString buffer);
             _tx.LowLevelTransaction.DecompressedBufferBytes += buffer.Length;
@@ -257,7 +255,7 @@ namespace Voron.Data.Tables
             var internalScope = tx.Allocator.Allocate(decompressedSize, out buffer);
             var actualSize = ZstdLib.Decompress(data, buffer.ToSpan(), dictionary);
             if (actualSize != decompressedSize)
-                throw new InvalidDataException($"Got decompressed size {actualSize} but expected {decompressedSize}");
+                throw new InvalidDataException($"Got decompressed size {actualSize} but expected {decompressedSize} in tx #{tx.LowLevelTransaction.Id}, dic id: {dictionary?.Id ?? 0}");
             return internalScope;
         }
 
@@ -598,7 +596,7 @@ namespace Voron.Data.Tables
                 AssertNoReferenceToThisPage(builder, id);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, builder.Size, builder.Compressed, out pos) == false)
-                    ThrowBadWriter(builder.Size);
+                    ThrowBadWriter(builder.Size, id, builder.Compressed);
 
                 // Memory Copy into final position.
                 builder.CopyTo(pos);
@@ -662,10 +660,10 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        private void ThrowBadWriter(int size)
+        private void ThrowBadWriter(int size, long id, bool compressed)
         {
             throw new VoronErrorException(
-                $"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
+                $"After successfully allocating {size:#,#;;0} bytes (id: {id} compressed: {compressed}), failed to write them on {Name}");
         }
 
         private void ThrowBadAllocation(int size)
@@ -674,7 +672,7 @@ namespace Voron.Data.Tables
                 $"After changing active sections, failed to allocate {size:#,#;;0} bytes on {Name}");
         }
 
-        public class CompressionDictionariesHolder
+        public class CompressionDictionariesHolder : IDisposable
         {
             private readonly ConcurrentDictionary<int, ZstdLib.CompressionDictionary> _compressionDictionaries = new ConcurrentDictionary<int, ZstdLib.CompressionDictionary>();
 
@@ -696,7 +694,7 @@ namespace Voron.Data.Tables
 
             private ZstdLib.CompressionDictionary CreateCompressionDictionary(Transaction tx, int id)
             {
-                var dictionariesTree = tx.ReadTree(TableSchema.DictionariesSlice);
+                var dictionariesTree = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
                 var rev = Bits.SwapBytes(id);
                 using var _ = Slice.From(tx.Allocator, (byte*)&rev, sizeof(int), out var slice);
                 var readResult = dictionariesTree?.Read(slice);
@@ -720,6 +718,15 @@ namespace Voron.Data.Tables
                     ExpectedCompressionRatio = info->ExpectedCompressionRatio
                 };
                 return dic;
+            }
+
+            public void Dispose()
+            {
+                foreach (var (_, dic) in _compressionDictionaries)
+                {
+                    dic.Dispose();
+
+                }
             }
         }
 
@@ -806,7 +813,7 @@ namespace Voron.Data.Tables
                 }
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, dataSize, compressed, out var pos) == false)
-                    ThrowBadWriter(dataSize);
+                    ThrowBadWriter(dataSize, id, compressed);
 
                 Memory.Copy(pos, dataPtr, dataSize);
             }
@@ -962,9 +969,7 @@ namespace Voron.Data.Tables
                             }
 
                             ActiveCandidateSection.Delete(sectionPageNumber);
-                            {
-                                return true;
-                            }
+                            return true;
                         }
                     } while (it.MoveNext());
                 }

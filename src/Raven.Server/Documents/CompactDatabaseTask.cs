@@ -114,8 +114,9 @@ namespace Raven.Server.Documents
                             onProgress?.Invoke(result.Progress);
                         }, (name, schema) =>
                         {
+                            bool isRevision = name.StartsWith(revisionsPrefix,StringComparison.OrdinalIgnoreCase);
                             schema.Compressed = 
-                                name.StartsWith(revisionsPrefix,StringComparison.OrdinalIgnoreCase) ||
+                                (isRevision && databaseRecord.Compression?.CompressRevisions == true) ||
                                 compressedCollectionsTableNames.Contains(name);
                         },_token);
                     }
