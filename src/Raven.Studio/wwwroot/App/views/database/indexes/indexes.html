@@ -163,6 +163,7 @@
                     <h3 class="index-name flex-grow"> 
                         <a href="#" data-bind="text: name, attr: { href: editUrl(), title: 'Index: ' + name }"></a>
                     </h3>
+                    <i class="icon-new-counter" data-bind="visible: sourceType() === 'Counters'" title="Index source: Counters"></i>
                     <i class="icon-timeseries" data-bind="visible: sourceType() === 'TimeSeries'" title="Index source: Time Series"></i>
                     <i class="icon-documents" data-bind="visible: sourceType() === 'Documents'" title="Index source: Documents"></i>
                 </div>

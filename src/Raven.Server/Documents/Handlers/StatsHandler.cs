@@ -109,7 +109,8 @@ namespace Raven.Server.Documents.Handlers
                         LockMode = index.Definition.LockMode,
                         Priority = index.Definition.Priority,
                         Type = index.Type,
-                        LastIndexingTime = index.LastIndexingTime
+                        LastIndexingTime = index.LastIndexingTime,
+                        SourceType = index.SourceType
                     };
 
                     if (stats.LastIndexingTime.HasValue)

@@ -143,5 +143,7 @@ namespace Raven.Client.Documents.Operations
         public IndexType Type { get; set; }
 
         public DateTime? LastIndexingTime { get; set; }
+        
+        public IndexSourceType SourceType { get; set; }
     }
 }
