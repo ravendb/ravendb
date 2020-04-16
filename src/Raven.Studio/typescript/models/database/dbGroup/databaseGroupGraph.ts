@@ -129,7 +129,7 @@ class databaseGroupGraph {
     private savedWidthAndHeight: [number, number] = null;
 
     constructor() {
-        _.bindAll(this, ...["enterFullScreen", "exitFullScreen"] as Array<keyof this>);
+        _.bindAll(this, ...["enterFullScreen", "exitFullScreen"] as Array<keyof this & string>);
     }
 
     init(container: JQuery) {
