@@ -87,8 +87,7 @@ namespace Raven.Server.Documents.Handlers
                                             });
                                         }
 
-                                        if (_streamsTempFiles.Count >= 10)
-                                            ClearStreamsTempFiles(reset: true);
+                                        ClearStreamsTempFiles(reset: true);
 
                                         progress.BatchCount++;
                                         progress.Processed += numberOfCommands;
@@ -109,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
                                         break;
                                     if (commandData.Type == CommandType.AttachmentPUT)
                                     {
-                                        commandData.AttachmentStream = WriteAttachment(commandData.RavenBlobSize, parser.GetRavenData(commandData.RavenBlobSize));
+                                        commandData.AttachmentStream = await WriteAttachment(commandData.ContentLength, parser.GetBlob(commandData.ContentLength));
                                     }
 
                                     totalSize += GetSize(commandData);
@@ -173,7 +172,7 @@ namespace Raven.Server.Documents.Handlers
 
         private List<StreamsTempFile> _streamsTempFiles = new List<StreamsTempFile>();
 
-        private BatchHandler.MergedBatchCommand.AttachmentStream WriteAttachment(long size, Stream stream)
+        private async Task<BatchHandler.MergedBatchCommand.AttachmentStream> WriteAttachment(long size, Stream stream)
         {
             var attachmentStream = new BatchHandler.MergedBatchCommand.AttachmentStream();
 
@@ -191,8 +190,8 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenWriteTransaction())
             {
-                attachmentStream.Hash = AsyncHelpers.RunSync(() => AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, stream, attachmentStream.Stream, Database.DatabaseShutdown));
-                attachmentStream.Stream.Flush();
+                attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, stream, attachmentStream.Stream, Database.DatabaseShutdown);
+                await attachmentStream.Stream.FlushAsync();
             }
 
             return attachmentStream;
@@ -219,7 +218,7 @@ namespace Raven.Server.Documents.Handlers
 
                     return size;
                 case CommandType.AttachmentPUT:
-                    return commandData.RavenBlobSize;
+                    return commandData.ContentLength;
                 case CommandType.TimeSeries:
                     // we don't know the size of the change so we are just estimating
                     foreach (var append in commandData.TimeSeries.Appends)
