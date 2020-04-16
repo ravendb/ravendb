@@ -1,0 +1,26 @@
+#!/bin/bash
+
+export NC="\\e[39m"
+export C_BLACK="\\e[30m"
+export C_RED="\\e[31m"
+export C_GREEN="\\e[32m"
+export C_YELLOW="\\e[33m"
+export C_BLUE="\\e[34m"
+export C_MAGENTA="\\e[35m"
+export C_CYAN="\\e[36m"
+export C_L_GRAY="\\e[37m"
+export C_D_GRAY="\\e[90m"
+export C_L_RED="\\e[91m"
+export C_L_GREEN="\\e[92m"
+export C_L_YELLOW="\\e[93m"
+export C_L_BLUE="\\e[94m"
+export C_L_MAGENTA="\\e[95m"
+export C_L_CYAN="\\e[96m"
+export C_WHITE="\\e[97m"
+
+export NT="\\e[0m"
+export T_BOLD="\\e[1m"
+export T_UL="\\e[4m"
+export T_BLINK="\\e[5m"
+
+export ERR_STRING="${C_L_RED}${T_BOLD}Error: ${NT}${C_L_RED}"
