@@ -3,7 +3,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.TimeSeries;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
