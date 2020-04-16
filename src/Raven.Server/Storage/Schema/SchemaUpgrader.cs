@@ -12,13 +12,13 @@ namespace Raven.Server.Storage.Schema
     {
         internal class CurrentVersion
         {
-            public const int ServerVersion = 42_019;
+            public const int ServerVersion = 50_000;
 
-            public const int ConfigurationVersion = 40_011;
+            public const int ConfigurationVersion = 50_000;
 
-            public const int DocumentsVersion = 42_017;
+            public const int DocumentsVersion = 50_000;
 
-            public const int IndexVersion = 40_012;
+            public const int IndexVersion = 50_000;
         }
 
         private static readonly int[] SkippedDocumentsVersion = { 40_012 };
