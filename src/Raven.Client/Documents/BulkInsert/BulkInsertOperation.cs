@@ -837,7 +837,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        public class AttachmentsBulkInsertOperation
+        private class AttachmentsBulkInsertOperation
         {
             private readonly BulkInsertOperation _operation;
             private readonly CancellationToken _token;
@@ -887,14 +887,14 @@ namespace Raven.Client.Documents.BulkInsert
                             _operation._currentWriter.Write("\",\"ContentType\":\"");
                             WriteString(_operation._currentWriter, contentType);
                         }
-                        _operation._currentWriter.Write("\",\"RavenBlobSize\":");
+                        _operation._currentWriter.Write("\",\"ContentLength\":");
                         _operation._currentWriter.Write(stream.Length);
                         _operation._currentWriter.Write("}");
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
 
                         PutAttachmentCommandHelper.PrepareStream(stream);
                         // pass the default value for bufferSize to make it compile on netstandard2.0
-                        await stream.CopyToAsync(_operation._currentWriter.BaseStream, bufferSize: 81920, cancellationToken: linkedCts.Token).ConfigureAwait(false);
+                        await stream.CopyToAsync(_operation._currentWriter.BaseStream, bufferSize: 16 * 1024, cancellationToken: linkedCts.Token).ConfigureAwait(false);
 
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
