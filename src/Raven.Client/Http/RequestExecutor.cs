@@ -33,7 +33,6 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Threading;
-using Size = Sparrow.Size;
 
 namespace Raven.Client.Http
 {
@@ -353,16 +352,14 @@ namespace Raven.Client.Http
 
             _lastReturnedResponse = DateTime.UtcNow;
 
-            var maxContextSizeToKeep = PlatformDetails.Is32Bits == false
-                ? new Size(1, SizeUnit.Megabytes)
-                : new Size(256, SizeUnit.Kilobytes);
+            Conventions = conventions.Clone();
 
             var maxNumberOfContextsToKeepInGlobalStack = PlatformDetails.Is32Bits == false
                 ? 1024
                 : 256;
 
-            ContextPool = new JsonContextPool(maxContextSizeToKeep, maxNumberOfContextsToKeepInGlobalStack);
-            Conventions = conventions.Clone();
+            ContextPool = new JsonContextPool(Conventions.MaxContextSizeToKeep, maxNumberOfContextsToKeepInGlobalStack);
+
             DefaultTimeout = Conventions.RequestTimeout;
             SecondBroadcastAttemptTimeout = conventions.SecondBroadcastAttemptTimeout;
             FirstBroadcastAttemptTimeout = conventions.FirstBroadcastAttemptTimeout;
