@@ -46,7 +46,7 @@ class patchList {
     });
 
     constructor(useHandler: (patch: storedPatchDto) => void, removeHandler: (patch: storedPatchDto) => void) {
-        _.bindAll(this, ...["previewPatch", "removePatch", "usePatch", "usePatchItem"] as Array<keyof this>);
+        _.bindAll(this, ...["previewPatch", "removePatch", "usePatch", "usePatchItem"] as Array<keyof this & string>);
         this.useHandler = useHandler;
         this.removeHandler = removeHandler;
     }

@@ -28,7 +28,7 @@ abstract class dialogViewModelBase {
         }
     }
 
-    protected bindToCurrentInstance(...methods: Array<keyof this>) {
+    protected bindToCurrentInstance(...methods: Array<keyof this & string>) {
         _.bindAll(this, ...methods);
     }
 
