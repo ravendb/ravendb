@@ -238,11 +238,11 @@ namespace Sparrow.Json
                         if (timeInPool <= idleTime)
                             continue;
 
-                        if (context.InUse.Raise())
-                        {
-                            context.Dispose();
-                            _numberOfContextsDisposedInGlobalStack++;
-                        }
+                        if (context.InUse.Raise() == false)
+                            continue;
+
+                        context.Dispose();
+                        _numberOfContextsDisposedInGlobalStack++;
                     }
                 }
 
