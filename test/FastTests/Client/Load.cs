@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
-    public class Load :  RavenTestBase
+    public class Load : RavenTestBase
     {
         public Load(ITestOutputHelper output) : base(output)
         {
@@ -43,14 +43,14 @@ namespace FastTests.Client
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "RavenDB"}, "users/1");
-                    session.Store(new User {Name = "Hibernating Rhinos"}, "users/2");
+                    session.Store(new User { Name = "RavenDB" }, "users/1");
+                    session.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
                     session.SaveChanges();
                 }
 
                 using (var newSession = store.OpenSession())
                 {
-                    var user = newSession.Load<User>(new[] {"users/1", "users/2"});
+                    var user = newSession.Load<User>(new[] { "users/1", "users/2" });
                     Assert.Equal(user.Count, 2);
                 }
             }
@@ -70,7 +70,7 @@ namespace FastTests.Client
 
                 using (var newSession = store.OpenSession())
                 {
-                    var user1 = newSession.Load<User>((string) null);
+                    var user1 = newSession.Load<User>((string)null);
                     Assert.Null(user1);
                 }
             }
@@ -188,34 +188,34 @@ namespace FastTests.Client
                 }
                 var rq1 = store.GetRequestExecutor();
                 var cmd = new GetDocumentsCommand(ids.ToArray(), null, true);
-                using (var ctx = new JsonOperationContext(1024, 1024, SharedMultipleUseFlag.None))
+                using (var ctx = new JsonOperationContext(1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
                 {
                     rq1.Execute(cmd, ctx);
                 }
             }
         }
-        
+
         private class ToStore
         {
             public IEnumerable<string> Prop { get; set; }
         }
-        
+
         private class ContainEnumerableEmpty
         {
             public IEnumerable<string> Prop { get; set; } = Enumerable.Empty<string>();
         }
-        
+
         [Fact]
         public async Task LoadDoc_WhenContainEnumerableEmpty_ShouldWork()
         {
             const string id = "someId";
-            var prop = new []{"something"};
-            
+            var prop = new[] { "something" };
+
             using var store = GetDocumentStore();
-             
+
             using (var session = store.OpenAsyncSession())
             {
-                await session.StoreAsync(new ToStore{Prop = prop}, id);
+                await session.StoreAsync(new ToStore { Prop = prop }, id);
                 await session.SaveChangesAsync();
             }
             using (var session = store.OpenAsyncSession())

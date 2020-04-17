@@ -1,8 +1,8 @@
 ﻿using System;
 using Sparrow.Json;
-using Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -12,8 +12,8 @@ namespace Raven.Server.ServerWide.Context
 
         public bool IgnoreStalenessDueToReduceOutputsToDelete;
 
-        public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag) :
-            base(initialSize, longLivedSize, lowMemoryFlag)
+        public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
+            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             _environment = environment;
         }
@@ -48,8 +48,8 @@ namespace Raven.Server.ServerWide.Context
 
         public TTransaction Transaction;
 
-        protected TransactionOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag):
-            base(initialSize, longLivedSize, lowMemoryFlag)
+        protected TransactionOperationContext(int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
+            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             PersistentContext = new TransactionPersistentContext();
             Allocator = new ByteStringContext(lowMemoryFlag);
@@ -64,7 +64,6 @@ namespace Raven.Server.ServerWide.Context
 
             return Transaction;
         }
-
 
         public TTransaction CloneReadTransaction()
         {
@@ -95,7 +94,7 @@ namespace Raven.Server.ServerWide.Context
                 return 2;
             if (value < 0)
                 return (short)-value;
-            
+
             return value;
         }
 
@@ -135,7 +134,7 @@ namespace Raven.Server.ServerWide.Context
             Transaction?.Dispose();
             Transaction = null;
         }
-        
+
         public override void Dispose()
         {
             base.Dispose();
@@ -147,9 +146,7 @@ namespace Raven.Server.ServerWide.Context
         {
             CloseTransaction();
 
-
             base.Reset(forceResetLongLivedAllocator);
-
 
             Allocator.Reset();
         }
