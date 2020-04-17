@@ -20,7 +20,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicObject()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -41,11 +41,10 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-
         [Fact]
         public void BasicEmptyObject()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -68,7 +67,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicNestedEmptyObject()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -99,7 +98,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicIntFlatStructure()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -131,11 +130,10 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-
         [Fact]
         public void BasicIntNestedStructure()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -180,7 +178,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var reader = builder.CreateReader();
                     var stream = new MemoryStream();
 
-
                     Assert.Equal(2, reader.Count);
 
                     var data = reader["Data"] as BlittableJsonReaderObject;
@@ -197,7 +194,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicIntDeeperNestedStructure()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -319,7 +316,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithEmptyArray()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -351,7 +348,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     Assert.Equal(0, array.Length);
 
                     Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
-
                 }
             }
         }
@@ -359,7 +355,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithArrayOfEmptyObjects()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -390,7 +386,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     using (var reader = builder.CreateReader())
                     {
-
                         Assert.Equal(2, reader.Count);
 
                         var array = reader["MyArray"] as BlittableJsonReaderArray;
@@ -404,7 +399,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                         Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
                     }
-
                 }
             }
         }
@@ -412,7 +406,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithIntArrayTest()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -449,16 +443,14 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         Assert.Equal(i, int.Parse(array[i].ToString(), CultureInfo.InvariantCulture));
 
                     Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
-
                 }
             }
         }
 
-
         [Fact]
         public void ObjectWithNestedIntArrayTest()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -506,7 +498,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                         for (var j = 0; j < 8; j++)
                             Assert.Equal(i, int.Parse(innerArray[i].ToString(), CultureInfo.InvariantCulture));
-
                     }
                     Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
                 }
@@ -516,7 +507,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithObjectArray()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -564,7 +555,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                             Assert.Equal(i, int.Parse(nested["NestedNode"].ToString(), CultureInfo.InvariantCulture));
                         }
 
-
                         Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
                     }
                 }
@@ -574,7 +564,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithObjectArrayWithNestedArray()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -601,7 +591,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                                                 }
                                                 builder.WriteArrayEnd();
                                             }
-
                                         }
                                         builder.WriteObjectEnd();
                                     }
@@ -642,7 +631,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void SimpleArrayDocument()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -663,11 +652,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     for (var i = 0; i < 8; i++)
                         Assert.Equal(i, int.Parse(reader[i].ToString(), CultureInfo.InvariantCulture));
-
                 }
             }
         }
-
 
         [Theory]
         [InlineData(byte.MaxValue)]
@@ -675,7 +662,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [InlineData(short.MaxValue + 1)]
         public void BigDepthTest(int propertiesAmount)
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -683,7 +670,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     builder.StartWriteObjectDocument();
                     builder.StartWriteObject();
-                    
+
                     for (int i = 0; i < propertiesAmount; i++)
                     {
                         builder.WritePropertyName("Data" + i);
@@ -708,7 +695,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         var val = reader["Age" + i];
                         Assert.Equal(i, int.Parse(val.ToString(), CultureInfo.InvariantCulture));
                     }
-
                 }
             }
         }
@@ -716,7 +702,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public unsafe void ReadDataTypesTest()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 BlittableJsonReaderObject embeddedReader;
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
@@ -786,13 +772,12 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     builder.WritePropertyName("StringEscapedCharsAndNonAscii");
                     builder.WriteValue(longEscapedCharsAndNonAsciiString);
 
-
                     var lsvString = "\"fooאbar\"";
                     var lsvStringBytes = Encoding.UTF8.GetBytes(lsvString);
                     fixed (byte* b = lsvStringBytes)
                     {
                         var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(lsvString, out _);
-                        var lsv = context.AllocateStringValue(null,b,lsvStringBytes.Length);
+                        var lsv = context.AllocateStringValue(null, b, lsvStringBytes.Length);
                         var escapePositions = new FastList<int>();
                         var len = lsvStringBytes.Length;
                         JsonParserState.FindEscapePositionsIn(escapePositions, b, ref len, escapePositionsMaxSize);
@@ -812,7 +797,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     reader.BlittableValidation();
 
                     Assert.Equal(17, reader.Count);
-                    Assert.Equal(float.MinValue, float.Parse(reader["FloatMin"].ToString(),CultureInfo.InvariantCulture));
+                    Assert.Equal(float.MinValue, float.Parse(reader["FloatMin"].ToString(), CultureInfo.InvariantCulture));
                     Assert.Equal(float.MaxValue, float.Parse(reader["FloatMax"].ToString(), CultureInfo.InvariantCulture));
                     Assert.Equal(ushort.MinValue, ushort.Parse(reader["UshortMin"].ToString(), CultureInfo.InvariantCulture));
                     Assert.Equal(ushort.MaxValue, ushort.Parse(reader["UshortMax"].ToString(), CultureInfo.InvariantCulture));
