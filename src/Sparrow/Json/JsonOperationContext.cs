@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -16,7 +15,9 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 
 #if VALIDATE
-using Sparrow.Platform;
+
+using Sparrow.Debugging;
+
 #endif
 
 namespace Sparrow.Json
@@ -32,6 +33,7 @@ namespace Sparrow.Json
         private const int MaxInitialStreamSize = 16 * 1024 * 1024;
         private readonly int _initialSize;
         private readonly int _longLivedSize;
+        private readonly int _maxNumberOfAllocatedStringValues;
         private readonly ArenaMemoryAllocator _arenaAllocator;
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
@@ -66,7 +68,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AcquirePathCache(out Dictionary<StringSegment, object> pathCache, out Dictionary<int, object> pathCacheByIndex)
         {
-            // PERF: Avoids allocating gigabytes in FastDictionary instances on high traffic RW operations like indexing. 
+            // PERF: Avoids allocating gigabytes in FastDictionary instances on high traffic RW operations like indexing.
             if (_numberOfAllocatedPathCaches >= 0)
             {
                 var cache = _allocatePathCaches[_numberOfAllocatedPathCaches--];
@@ -79,7 +81,7 @@ namespace Sparrow.Json
                 return;
             }
 
-            pathCache = new Dictionary<StringSegment, object>(StringSegmentEqualityStructComparer.BoxedInstance); 
+            pathCache = new Dictionary<StringSegment, object>(StringSegmentEqualityStructComparer.BoxedInstance);
             pathCacheByIndex = new Dictionary<int, object>(NumericEqualityComparer.BoxedInstanceInt32);
         }
 
@@ -105,7 +107,7 @@ namespace Sparrow.Json
             }
 
             var allocateStringValue = new LazyStringValue(str, ptr, size, this);
-            if (_numberOfAllocatedStringsValues < 32 * 1_024)
+            if (_numberOfAllocatedStringsValues < _maxNumberOfAllocatedStringValues)
             {
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;
@@ -116,7 +118,7 @@ namespace Sparrow.Json
         public unsafe class ManagedPinnedBuffer : IDisposable
         {
             public const int LargeBufferSize = 128 * Constants.Size.Kilobyte;
-            public const int Size =  32 * Constants.Size.Kilobyte;
+            public const int Size = 32 * Constants.Size.Kilobyte;
 
             internal BufferSegment BufferInstance;
             public ArraySegment<byte> Buffer;
@@ -152,7 +154,6 @@ namespace Sparrow.Json
                 }
 
                 _pinnedBufferPool.Free(this);
-                
             }
 
             ~ManagedPinnedBuffer()
@@ -164,9 +165,8 @@ namespace Sparrow.Json
             public (IDisposable ReleaseBuffer, ManagedPinnedBuffer Buffer) Clone<T>(JsonContextPoolBase<T> pool)
                 where T : JsonOperationContext
             {
-                if(Length != Size)
+                if (Length != Size)
                     throw new InvalidOperationException("Cloned buffer must be of the same size");
-
 
                 var releaseCtx = pool.AllocateOperationContext(out T ctx);
                 var returnBuffer = ctx.GetManagedBuffer(out var buffer);
@@ -179,7 +179,7 @@ namespace Sparrow.Json
 
                     return (clean, buffer);
                 }
-                catch 
+                catch
                 {
                     clean.Dispose();
                     throw;
@@ -194,7 +194,6 @@ namespace Sparrow.Json
                 {
                     _toDispose = toDispose;
                 }
-
 
                 public void Dispose()
                 {
@@ -220,8 +219,9 @@ namespace Sparrow.Json
                 GC.ReRegisterForFinalize(this);
             }
 
-            private static ObjectPool<ManagedPinnedBuffer> _pinnedBufferPool = new ObjectPool<ManagedPinnedBuffer>(()=>new ManagedPinnedBuffer());
+            private static ObjectPool<ManagedPinnedBuffer> _pinnedBufferPool = new ObjectPool<ManagedPinnedBuffer>(() => new ManagedPinnedBuffer());
             private static ObjectPool<BufferSegment> _smallBufferSegments = new ObjectPool<BufferSegment>(CreateSmallBuffers);
+
             private static ObjectPool<BufferSegment> _largeBufferSegments = new ObjectPool<BufferSegment>(() => new BufferSegment
             {
                 Array = new byte[LargeBufferSize],
@@ -287,7 +287,7 @@ namespace Sparrow.Json
             {
                 return AllocateInstance(_smallBufferSegments);
             }
-        }       
+        }
 
         private Stack<ManagedPinnedBuffer> _managedBuffers;
 
@@ -305,21 +305,20 @@ namespace Sparrow.Json
 
         public static JsonOperationContext ShortTermSingleUse()
         {
-            return new JsonOperationContext(4096, 1024, SharedMultipleUseFlag.None);
-        }       
+            return new JsonOperationContext(4096, 1024, 32 * 1024, SharedMultipleUseFlag.None);
+        }
 
-        public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
+        public JsonOperationContext(int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
         {
             Debug.Assert(lowMemoryFlag != null);
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
 #if MEM_GUARD_STACK
-                ElectricFencedMemory.DecrementConext();
-                ElectricFencedMemory.UnRegisterContextAllocation(this);
+                DebugStuff.ElectricFencedMemory.DecrementContext();
+                DebugStuff.ElectricFencedMemory.UnregisterContextAllocation(this);
 #endif
 
                 List<Exception> exceptions = null;
-
 
                 TryExecute(() => Reset(true));
 
@@ -361,11 +360,11 @@ namespace Sparrow.Json
                         exceptions.Add(e);
                     }
                 }
-
             });
 
             _initialSize = initialSize;
             _longLivedSize = longLivedSize;
+            _maxNumberOfAllocatedStringValues = maxNumberOfAllocatedStringValues;
             _arenaAllocator = new ArenaMemoryAllocator(lowMemoryFlag, initialSize);
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(lowMemoryFlag, longLivedSize);
             CachedProperties = new CachedProperties(this);
@@ -375,8 +374,8 @@ namespace Sparrow.Json
             LowMemoryFlag = lowMemoryFlag;
 
 #if MEM_GUARD_STACK
-            ElectricFencedMemory.IncrementConext();
-            ElectricFencedMemory.RegisterContextAllocation(this,Environment.StackTrace);
+            DebugStuff.ElectricFencedMemory.IncrementContext();
+            DebugStuff.ElectricFencedMemory.RegisterContextAllocation(this, Environment.StackTrace);
 #endif
         }
 
@@ -397,14 +396,14 @@ namespace Sparrow.Json
 
         public struct ReturnBuffer : IDisposable
         {
-            private  ManagedPinnedBuffer _buffer;
+            private ManagedPinnedBuffer _buffer;
             private readonly JsonOperationContext _parent;
 
             public ReturnBuffer(ManagedPinnedBuffer buffer, JsonOperationContext parent)
             {
                 _buffer = buffer;
                 _parent = parent;
-            }  
+            }
 
             public void Dispose()
             {
@@ -418,7 +417,7 @@ namespace Sparrow.Json
 
                 _parent._managedBuffers.Push(_buffer);
                 _buffer = null;
-            }         
+            }
 
             private static void ThrowParentWasDisposed()
             {
@@ -486,6 +485,7 @@ namespace Sparrow.Json
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
         public bool Disposed => _disposeOnceRunner.Disposed;
+
         public override void Dispose()
         {
             _disposeOnceRunner.Dispose();
@@ -495,7 +495,7 @@ namespace Sparrow.Json
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
         {
             EnsureNotDisposed();
-                                  
+
             if (_fieldNames.TryGetValue(key, out LazyStringValue value))
             {
                 //sanity check, in case the 'value' is manually disposed outside of this function
@@ -526,15 +526,15 @@ namespace Sparrow.Json
             using (new SingleThreadAccessAssertion(_threadId, "GetLazyStringForFieldWithCachingUnlikely"))
             {
 #endif
-            EnsureNotDisposed();
-            LazyStringValue value = GetLazyString(key, longLived: true);
-            _fieldNames[key.Value] = value;
+                EnsureNotDisposed();
+                LazyStringValue value = GetLazyString(key, longLived: true);
+                _fieldNames[key.Value] = value;
 
-            //sanity check, in case the 'value' is manually disposed outside of this function
-            Debug.Assert(value.IsDisposed == false);
-            return value;
+                //sanity check, in case the 'value' is manually disposed outside of this function
+                Debug.Assert(value.IsDisposed == false);
+                return value;
 #if DEBUG || VALIDATE
-        }
+            }
 #endif
         }
 
@@ -667,7 +667,6 @@ namespace Sparrow.Json
             string debugTag,
             CancellationToken token)
         {
-
             if (Disposed)
                 ThrowObjectDisposed();
 
@@ -746,7 +745,6 @@ namespace Sparrow.Json
             BlittableJsonDocumentBuilder.UsageMode mode,
             ManagedPinnedBuffer bytes, IBlittableDocumentModifier modifier = null)
         {
-
             EnsureNotDisposed();
 
             _jsonParserState.Reset();
@@ -782,7 +780,6 @@ namespace Sparrow.Json
         public unsafe BlittableJsonReaderObject ParseBuffer(byte* buffer, int length, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
-
             EnsureNotDisposed();
 
             _jsonParserState.Reset();
@@ -806,7 +803,6 @@ namespace Sparrow.Json
         public unsafe BlittableJsonReaderArray ParseBufferToArray(string value, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
-
             EnsureNotDisposed();
 
             _jsonParserState.Reset();
@@ -961,7 +957,7 @@ namespace Sparrow.Json
             // if the generation has changed, that means that we had reset the context
             // this can happen if we were waiting on an async call for a while, got timed out / error / something
             // and the context was reset before we got back from the async call
-            // since the full context was reset, there is no point in trying to dispose things, they were already 
+            // since the full context was reset, there is no point in trying to dispose things, they were already
             // taken care of
             if (generation == _generation)
             {
@@ -1014,20 +1010,26 @@ namespace Sparrow.Json
 
                 _arenaAllocatorForLongLivedValues = null;
                 // at this point, the long lived section is far too large, this is something that can happen
-                // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K 
-                // property names before this kicks in, which is a true abuse of the system. In this case, 
+                // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K
+                // property names before this kicks in, which is a true abuse of the system. In this case,
                 // in order to avoid unlimited growth, we'll reset the long lived section
                 allocatorForLongLivedValues.Dispose();
 
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected
             }
+
+            for (var i = 0; i < _numberOfAllocatedStringsValues; i++)
+                _allocateStringValues[i].Reset();
+
+            _numberOfAllocatedStringsValues = 0;
+
             _objectJsonParser.Reset(null);
             _arenaAllocator.ResetArena();
-            _numberOfAllocatedStringsValues = 0;
-            _generation = _generation + 1;
 
-            if (_pooledArrays != null )
+            _generation++;
+
+            if (_pooledArrays != null)
             {
                 foreach (var pooledTypesKVP in _pooledArrays)
                 {
@@ -1039,7 +1041,7 @@ namespace Sparrow.Json
 
                 _pooledArrays = null;
             }
-            
+
             ClearUnreturnedPathCache();
         }
 
@@ -1181,7 +1183,7 @@ namespace Sparrow.Json
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
-            }            
+            }
         }
 
         public void WriteArray(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
@@ -1233,6 +1235,7 @@ namespace Sparrow.Json
         private const int MemoryStreamCacheMaxCapacityInBytes = 64 * Constants.Size.Megabyte;
 
         private long _sizeOfMemoryStreamCache;
+
         public void ReturnMemoryStream(MemoryStream stream)
         {
             //We don't want to hold big streams in the cache or have too big of a cache
@@ -1242,7 +1245,7 @@ namespace Sparrow.Json
             }
 
             EnsureNotDisposed();
-            
+
             stream.SetLength(0);
             _cachedMemoryStreams.Push(stream);
             _sizeOfMemoryStreamCache += stream.Capacity;
@@ -1278,6 +1281,7 @@ namespace Sparrow.Json
         public struct AvoidOverAllocationScope : IDisposable
         {
             private JsonOperationContext _parent;
+
             public AvoidOverAllocationScope(JsonOperationContext parent)
             {
                 _parent = parent;
@@ -1295,8 +1299,6 @@ namespace Sparrow.Json
         {
             if (_pooledArrays == null)
                 _pooledArrays = new Dictionary<Type, (Action<Array> Releaser, List<Array> Array)>();
-            
-            
 
             if (_pooledArrays.TryGetValue(typeof(T), out var allocationsArray) == false)
             {
@@ -1312,16 +1314,17 @@ namespace Sparrow.Json
         }
 
 #if DEBUG || VALIDATE
+
         private class IntReference
         {
             public long Value;
-    }
+        }
 
-        IntReference _threadId = new IntReference {Value = 0};
+        private IntReference _threadId = new IntReference { Value = 0 };
 
         private class SingleThreadAccessAssertion : IDisposable
         {
-            readonly IntReference _capturedThreadId;
+            private readonly IntReference _capturedThreadId;
             private int _currentThreadId;
             private string _method;
 
@@ -1333,8 +1336,9 @@ namespace Sparrow.Json
                 if (Interlocked.CompareExchange(ref expectedCapturedThread.Value, _currentThreadId, 0) != 0)
                 {
                     throw new InvalidOperationException($"Concurrent access to JsonOperationContext.{method} method detected");
-}
+                }
             }
+
             public void Dispose()
             {
                 if (Interlocked.CompareExchange(ref _capturedThreadId.Value, 0, _currentThreadId) != _currentThreadId)
@@ -1343,6 +1347,7 @@ namespace Sparrow.Json
                 }
             }
         }
+
 #endif
     }
 }

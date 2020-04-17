@@ -18,13 +18,13 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveEmpty()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
@@ -35,7 +35,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveIdentical()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -43,7 +43,7 @@ namespace SlowTests.Utils
                 obj2["name"] = "Oren";
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
@@ -56,7 +56,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveTwoEmptyArrays()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -64,7 +64,7 @@ namespace SlowTests.Utils
                 obj2["name"] = new DynamicJsonArray();
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
@@ -77,22 +77,22 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveOneEmptyArraysAndOneWithValue()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
-                obj1["name"] = new DynamicJsonArray {1};
+                obj1["name"] = new DynamicJsonArray { 1 };
                 obj2["name"] = new DynamicJsonArray();
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
                 BlittableJsonReaderArray name;
                 resolvled.TryGet("name", out name);
                 Assert.Equal(">>>> auto merged array start", name[0].ToString());
-                Assert.Equal((long) 1, name[1]);
+                Assert.Equal((long)1, name[1]);
                 Assert.Equal("<<<< auto merged array end", name[2].ToString());
             }
         }
@@ -100,7 +100,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanMergeAdditionalProperties()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -108,7 +108,7 @@ namespace SlowTests.Utils
                 obj2["Age"] = 2;
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
@@ -125,7 +125,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanDetectAndSuggestOptionsForConflict_SimpleProp()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -133,7 +133,7 @@ namespace SlowTests.Utils
                 obj2["Name"] = "Ayende";
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
@@ -149,7 +149,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanMergeProperties_Nested()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -163,7 +163,7 @@ namespace SlowTests.Utils
                 };
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
@@ -177,7 +177,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanDetectConflict_DifferentValues()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -188,14 +188,14 @@ namespace SlowTests.Utils
                 obj2["Name"] = "Eini";
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
                 BlittableJsonReaderArray name;
                 resolvled.TryGet("Name", out name);
                 Assert.Equal(">>>> conflict start", name[0].ToString());
-                Assert.Equal("Oren", ((BlittableJsonReaderObject) name[1])["First"].ToString());
+                Assert.Equal("Oren", ((BlittableJsonReaderObject)name[1])["First"].ToString());
                 Assert.Equal("Eini", name[2].ToString());
                 Assert.Equal("<<<< conflict end", name[3].ToString());
             }
@@ -204,15 +204,15 @@ namespace SlowTests.Utils
         [Fact]
         public void CanMergeArrays()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
-                obj1["Nicks"] = new DynamicJsonArray {"Oren"};
-                obj2["Nicks"] = new DynamicJsonArray {"Ayende"};
+                obj1["Nicks"] = new DynamicJsonArray { "Oren" };
+                obj2["Nicks"] = new DynamicJsonArray { "Ayende" };
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
@@ -228,25 +228,25 @@ namespace SlowTests.Utils
         [Fact]
         public void CanMergeArrays_SameStart()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
-                obj1["Comments"] = new DynamicJsonArray {1, 2, 4};
-                obj2["Comments"] = new DynamicJsonArray {1, 2, 5};
+                obj1["Comments"] = new DynamicJsonArray { 1, 2, 4 };
+                obj2["Comments"] = new DynamicJsonArray { 1, 2, 5 };
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
 
                 BlittableJsonReaderArray comments;
                 resolvled.TryGet("Comments", out comments);
                 Assert.Equal(">>>> auto merged array start", comments[0].ToString());
-                Assert.Equal((long) 1, comments[1]);
-                Assert.Equal((long) 2, comments[2]);
-                Assert.Equal((long) 4, comments[3]);
-                Assert.Equal((long) 5, comments[4]);
+                Assert.Equal((long)1, comments[1]);
+                Assert.Equal((long)2, comments[2]);
+                Assert.Equal((long)4, comments[3]);
+                Assert.Equal((long)5, comments[4]);
                 Assert.Equal("<<<< auto merged array end", comments[5].ToString());
             }
         }
@@ -254,7 +254,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveEmptyWithMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -262,7 +262,7 @@ namespace SlowTests.Utils
                 obj2["@metadata"] = new DynamicJsonValue();
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
 
@@ -273,7 +273,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveIdenticalMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -287,7 +287,7 @@ namespace SlowTests.Utils
                 };
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
 
@@ -300,7 +300,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveTwoEmptyArraysInMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -314,7 +314,7 @@ namespace SlowTests.Utils
                 };
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
 
@@ -327,13 +327,13 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveOneEmptyArraysAndOneWithValueInMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
                 obj1["@metadata"] = new DynamicJsonValue
                 {
-                    ["Foo"] = new DynamicJsonArray {1}
+                    ["Foo"] = new DynamicJsonArray { 1 }
                 };
                 obj2["@metadata"] = new DynamicJsonValue
                 {
@@ -341,23 +341,22 @@ namespace SlowTests.Utils
                 };
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
 
                 BlittableJsonReaderArray foo;
                 resolvled.TryGet("Foo", out foo);
                 Assert.Equal(">>>> auto merged array start", foo[0].ToString());
-                Assert.Equal((long) 1, foo[1]);
+                Assert.Equal((long)1, foo[1]);
                 Assert.Equal("<<<< auto merged array end", foo[2].ToString());
             }
         }
 
-
         [Fact]
         public void CanMergeAdditionalMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -371,7 +370,7 @@ namespace SlowTests.Utils
                 };
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
 
@@ -387,7 +386,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanDetectAndSuggestOptionsForConflict_SimpleMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -401,7 +400,7 @@ namespace SlowTests.Utils
                 };
 
                 var conflictResovlerAdvisor = new ConflictResolverAdvisor(
-                    new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
+                    new List<BlittableJsonReaderObject> { ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1") },
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
 

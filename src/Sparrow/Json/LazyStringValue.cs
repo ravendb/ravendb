@@ -1017,6 +1017,12 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Reset()
+        {
+            Renew(null, null, 0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew(string str, byte* buffer, int size)
         {
             Debug.Assert(size >= 0);

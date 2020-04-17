@@ -27,10 +27,10 @@ namespace Raven.Server.ServerWide.Context
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
         {
             base.Reset(forceResetLongLivedAllocator);
-            
+
             // make sure that we don't remember an old value here from a previous
-            // tx. This can be an issue if we resort to context stealing from 
-            // other threads, so we are going the safe route and ensuring that 
+            // tx. This can be an issue if we resort to context stealing from
+            // other threads, so we are going the safe route and ensuring that
             // we always create a new instance
             LastDatabaseChangeVector = null;
             LastReplicationEtagFrom = null;
@@ -39,12 +39,12 @@ namespace Raven.Server.ServerWide.Context
 
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
         {
-            var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024, SharedMultipleUseFlag.None);
+            var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024, 32 * 1024, SharedMultipleUseFlag.None);
             return shortTermSingleUse;
         }
 
-        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag) :
-            base(initialSize, longLivedSize, lowMemoryFlag)
+        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
+            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             _documentDatabase = documentDatabase;
         }
@@ -70,7 +70,7 @@ namespace Raven.Server.ServerWide.Context
         {
             var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator, timeout), _documentDatabase.Changes);
 
-            CurrentTxMarker = (short) tx.InnerTransaction.LowLevelTransaction.Id;
+            CurrentTxMarker = (short)tx.InnerTransaction.LowLevelTransaction.Id;
 
             var options = _documentDatabase.DocumentsStorage.Environment.Options;
 
@@ -80,7 +80,7 @@ namespace Raven.Server.ServerWide.Context
                 options.TransactionsMode = TransactionsMode.Safe;
             }
 
-            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = 
+            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction =
                 options.TransactionsMode == TransactionsMode.Lazy;
             // IsLazyTransaction can be overriden later by a specific feature like bulk insert
 
@@ -94,12 +94,11 @@ namespace Raven.Server.ServerWide.Context
         public bool ShouldRenewTransactionsToAllowFlushing()
         {
             // if we have the same transaction id right now, there hasn't been write since we started the transaction
-            // so there isn't really a major point in renewing the transaction, since we wouldn't be releasing any 
+            // so there isn't really a major point in renewing the transaction, since we wouldn't be releasing any
             // resources (scratch space, mostly) back to the system, let us continue with the current one.
 
             return Transaction?.InnerTransaction.LowLevelTransaction.Id !=
-                   _documentDatabase.DocumentsStorage.Environment.CurrentReadTransactionId ;
-
+                   _documentDatabase.DocumentsStorage.Environment.CurrentReadTransactionId;
         }
     }
 }

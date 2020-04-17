@@ -32,7 +32,7 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation(null,"Operations Test", (Raven.Server.Documents.Operations.Operations.OperationType) 0, 
+                db.Operations.AddOperation(null, "Operations Test", (Raven.Server.Documents.Operations.Operations.OperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         var p = new DeterminateProgress
@@ -103,7 +103,7 @@ namespace FastTests.Server.Documents.Operations
                 db.Operations.AddOperation(null, "Operations Test", (Raven.Server.Documents.Operations.Operations.OperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
-                       throw new Exception("Something bad happened");
+                        throw new Exception("Something bad happened");
                     }), operationId, token: OperationCancelToken.None);
 
                 OperationStatusChange change;
@@ -163,7 +163,7 @@ namespace FastTests.Server.Documents.Operations
                 }
             };
 
-            using (var context = new JsonOperationContext(1024, 1024, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 var json = context.ReadObject(state.ToJson(), "state");
                 var progress = json["Progress"];
@@ -184,7 +184,7 @@ namespace FastTests.Server.Documents.Operations
                 }
             };
 
-            using (var context = new JsonOperationContext(1024, 1024, SharedMultipleUseFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 var json = context.ReadObject(state.ToJson(), "state");
                 var result = json["Result"] as BlittableJsonReaderObject;

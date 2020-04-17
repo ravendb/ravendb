@@ -31,8 +31,8 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Threading;
-using Size = Sparrow.Size;
 
 namespace Raven.Client.Http
 {
@@ -251,18 +251,12 @@ namespace Raven.Client.Http
         {
             add
             {
-                lock (_locker)
-                {
-                    _onTopologyUpdated += value;
-                }
+                _onTopologyUpdated += value;
             }
 
             remove
             {
-                lock (_locker)
-                {
-                    _onTopologyUpdated -= value;
-                }
+                _onTopologyUpdated -= value;
             }
         }
 
@@ -358,8 +352,14 @@ namespace Raven.Client.Http
 
             _lastReturnedResponse = DateTime.UtcNow;
 
-            ContextPool = new JsonContextPool(new Size(8, SizeUnit.Megabytes));
             Conventions = conventions.Clone();
+
+            var maxNumberOfContextsToKeepInGlobalStack = PlatformDetails.Is32Bits == false
+                ? 1024
+                : 256;
+
+            ContextPool = new JsonContextPool(Conventions.MaxContextSizeToKeep, maxNumberOfContextsToKeepInGlobalStack, 1024);
+
             DefaultTimeout = Conventions.RequestTimeout;
             SecondBroadcastAttemptTimeout = conventions.SecondBroadcastAttemptTimeout;
             FirstBroadcastAttemptTimeout = conventions.FirstBroadcastAttemptTimeout;
@@ -1544,6 +1544,7 @@ namespace Raven.Client.Http
             if (broadcastCommand == null)
                 throw new InvalidOperationException("You can broadcast only commands that implement 'IBroadcast'.");
 
+            var failedNodes = command.FailedNodes;
             command.FailedNodes = new Dictionary<ServerNode, Exception>(); // clear the current failures
 
             using (var broadcastCts = CancellationTokenSource.CreateLinkedTokenSource(token))
@@ -1561,7 +1562,21 @@ namespace Raven.Client.Http
                     foreach (var broadcastState in broadcastTasks)
                     {
                         // we can't dispose it right away, we need for the task to be completed in order not to have a concurrent usage of the context.
-                        broadcastState.Key?.ContinueWith(_ => broadcastState.Value.ReturnContext.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                        broadcastState.Key?.ContinueWith(_ =>
+                        {
+                            if (broadcastState.Key.IsFaulted || broadcastState.Key.IsCanceled)
+                            {
+                                var index = broadcastState.Value.Index;
+                                var node = _nodeSelector.Topology.Nodes[index];
+                                if (failedNodes.ContainsKey(node))
+                                {
+                                    // if other node succeed in broadcast we need to send health checks to the original failed node
+                                    SpawnHealthChecks(node, index);
+                                }
+                            }
+
+                            broadcastState.Value.ReturnContext.Dispose();
+                        }, TaskContinuationOptions.ExecuteSynchronously);
                     }
                 }
             }
@@ -1580,6 +1595,7 @@ namespace Raven.Client.Http
                     command.FailedNodes[node] = completed.Exception?.ExtractSingleInnerException() ?? new UnsuccessfulRequestException(failed.Node.Url);
 
                     _nodeSelector.OnFailedRequest(failed.Index);
+                    SpawnHealthChecks(node, failed.Index);
 
                     tasks.Remove(completed);
                     continue;

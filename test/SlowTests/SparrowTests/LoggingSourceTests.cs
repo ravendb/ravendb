@@ -74,7 +74,7 @@ namespace SlowTests.SparrowTests
                 afterEndFiles = Directory.GetFiles(path);
                 return afterEndFiles.Any(f => toCheckLogFiles.Any(tc => tc.Item1.Equals(f) && tc.Item2 == false));
             }, false, 10_000, 1_000);
-            
+
             loggingSource.EndLogging();
 
             AssertNoFileMissing(afterEndFiles);
@@ -143,17 +143,17 @@ namespace SlowTests.SparrowTests
             const int threshold = 2 * fileSize;
             long size = 0;
             string[] afterEndFiles = null;
-            var isRetentionPolicyApplied = WaitForValue( () =>
-            {
-                Task.Delay(TimeSpan.FromSeconds(1));
+            var isRetentionPolicyApplied = WaitForValue(() =>
+           {
+               Task.Delay(TimeSpan.FromSeconds(1));
 
-                afterEndFiles = Directory.GetFiles(path);
-                AssertNoFileMissing(afterEndFiles);
-                size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
+               afterEndFiles = Directory.GetFiles(path);
+               AssertNoFileMissing(afterEndFiles);
+               size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
 
-                return Math.Abs(size - retentionSize) <= threshold;
-            }, true, 10_000, 1_000);
-            
+               return Math.Abs(size - retentionSize) <= threshold;
+           }, true, 10_000, 1_000);
+
             Assert.True(isRetentionPolicyApplied,
                 $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
                 Environment.NewLine +
@@ -244,7 +244,6 @@ namespace SlowTests.SparrowTests
 
             var restartDateTime = DateTime.Now;
 
-
             Exception anotherThreadException = null;
             //To start new LoggingSource the object need to be construct on another thread
             var anotherThread = new Thread(() =>
@@ -303,7 +302,7 @@ namespace SlowTests.SparrowTests
         public async Task Register_WhenLogModeIsOperations_ShouldWriteToLogFileJustAsLogMode(LogMode logMode)
         {
             var timeout = TimeSpan.FromSeconds(10);
-            
+
             var name = GetTestName();
             var path = NewDataPath(forceCreateDir: true);
             path = Path.Combine(path, Guid.NewGuid().ToString());
@@ -327,7 +326,7 @@ namespace SlowTests.SparrowTests
             var _ = loggingSource.Register(socket, context, CancellationToken.None);
             var beforeCloseOperation = Guid.NewGuid().ToString();
             var beforeCloseInformation = Guid.NewGuid().ToString();
-            
+
             var logTasks = Task.WhenAll(logger.OperationsAsync(beforeCloseOperation), logger.InfoAsync(beforeCloseInformation));
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
@@ -336,30 +335,30 @@ namespace SlowTests.SparrowTests
             var socketContainsLogs = WaitForValue(() => socket.LogsReceived.Contains(beforeCloseInformation) && socket.LogsReceived.Contains(beforeCloseOperation),
                 true, socketTimeout, 100);
             Assert.True(socketContainsLogs, $"Waited over {socketTimeout} seconds for log to be written to socket");
-            
+
             //Close socket
             socket.Close();
             tcs.SetResult(new WebSocketReceiveResult(1, WebSocketMessageType.Text, true, WebSocketCloseStatus.NormalClosure, string.Empty));
-            
+
             var afterCloseOperation = Guid.NewGuid().ToString();
             var afterCloseInformation = Guid.NewGuid().ToString();
-            
+
             logTasks = Task.WhenAll(logger.OperationsAsync(afterCloseOperation), logger.InfoAsync(afterCloseInformation));
             await Task.WhenAny(logTasks, Task.Delay(timeout));
-            Assert.True(logTasks.IsCompleted || logMode == LogMode.None, 
+            Assert.True(logTasks.IsCompleted || logMode == LogMode.None,
                 $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
 
             loggingSource.EndLogging();
 
             string logsFileContentAfter = await ReadLogsFileContent(path);
-            
+
             AssertContainsLog(LogMode.Information, logMode)(beforeCloseInformation, logsFileContentAfter);
             AssertContainsLog(LogMode.Operations, logMode)(beforeCloseOperation, logsFileContentAfter);
 
             AssertContainsLog(LogMode.Information, logMode)(afterCloseInformation, logsFileContentAfter);
             AssertContainsLog(LogMode.Operations, logMode)(afterCloseOperation, logsFileContentAfter);
         }
-        
+
         [Theory]
         [InlineData(LogMode.None)]
         [InlineData(LogMode.Operations)]
@@ -367,7 +366,7 @@ namespace SlowTests.SparrowTests
         public async Task AttachPipeSink_WhenLogModeIsOperations_ShouldWriteToLogFileJustOperations(LogMode logMode)
         {
             var timeout = TimeSpan.FromSeconds(10);
-            
+
             var name = GetTestName();
             var path = NewDataPath(forceCreateDir: true);
             path = Path.Combine(path, Guid.NewGuid().ToString());
@@ -385,27 +384,26 @@ namespace SlowTests.SparrowTests
             var tcs = new TaskCompletionSource<WebSocketReceiveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             await using var stream = new MemoryStream();
-            
+
             //Attach Pipe
             loggingSource.AttachPipeSink(stream);
             var beforeDetachOperation = Guid.NewGuid().ToString();
             var beforeDetachInformation = Guid.NewGuid().ToString();
-            
+
             var logTasks = Task.WhenAll(logger.OperationsAsync(beforeDetachOperation), logger.InfoAsync(beforeDetachInformation));
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
-            
+
             //Detach Pipe
             loggingSource.DetachPipeSink();
             await stream.FlushAsync();
-            
-            
+
             var afterDetachOperation = Guid.NewGuid().ToString();
             var afterDetachInformation = Guid.NewGuid().ToString();
-            
+
             logTasks = Task.WhenAll(logger.OperationsAsync(afterDetachOperation), logger.InfoAsync(afterDetachInformation));
             await Task.WhenAny(logTasks, Task.Delay(timeout));
-            Assert.True(logTasks.IsCompleted || logMode == LogMode.None, 
+            Assert.True(logTasks.IsCompleted || logMode == LogMode.None,
                 $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
 
             tcs.SetResult(new WebSocketReceiveResult(1, WebSocketMessageType.Text, true, WebSocketCloseStatus.NormalClosure, ""));
@@ -445,7 +443,7 @@ namespace SlowTests.SparrowTests
 
             return Assert.DoesNotContain;
         }
-        
+
         [Fact]
         public async Task Register_WhenLogModeIsNone_ShouldNotWriteToLogFile()
         {
@@ -480,16 +478,16 @@ namespace SlowTests.SparrowTests
 
             tcs.SetResult(new WebSocketReceiveResult(1, WebSocketMessageType.Text, true, WebSocketCloseStatus.NormalClosure, ""));
             loggingSource.EndLogging();
-            
+
             Assert.Contains(uniqForOperation, socket.LogsReceived);
             Assert.Contains(uniqForInformation, socket.LogsReceived);
-            
+
             var logFile = Directory.GetFiles(path).First();
             var logContent = await File.ReadAllTextAsync(logFile);
             Assert.DoesNotContain(uniqForOperation, logContent);
             Assert.DoesNotContain(uniqForInformation, logContent);
         }
-        
+
         private class DummyWebSocket : WebSocket
         {
             private bool _close;
@@ -498,26 +496,37 @@ namespace SlowTests.SparrowTests
             public void Close() => _close = true;
 
             public Func<Task<WebSocketReceiveResult>> ReceiveAsyncFunc { get; set; } = () => Task.FromResult(new WebSocketReceiveResult(1, WebSocketMessageType.Text, true));
-            public override void Abort() {}
-            public override Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) 
+
+            public override void Abort()
+            {
+            }
+
+            public override Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
                 => Task.CompletedTask;
-            public override Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) 
+
+            public override Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
                 => Task.CompletedTask;
-            public override void Dispose() { }
+
+            public override void Dispose()
+            {
+            }
+
             public override Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) => ReceiveAsyncFunc();
 
-            public override async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
+            public override Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
             {
-                if(_close)
+                if (_close)
                     throw new Exception("Closed");
-                LogsReceived += Encodings.Utf8.GetString(buffer.ToArray()); 
+                LogsReceived += Encodings.Utf8.GetString(buffer.ToArray());
+                return Task.CompletedTask;
             }
+
             public override WebSocketCloseStatus? CloseStatus { get; }
             public override string CloseStatusDescription { get; }
             public override WebSocketState State { get; }
             public override string SubProtocol { get; }
         }
-        
+
         private static string GetTestName([CallerMemberName] string memberName = "") => memberName;
 
         private void AssertNoFileMissing(string[] files)
@@ -540,7 +549,6 @@ namespace SlowTests.SparrowTests
 
                     exceptions.Add(new Exception($"Log between {previous.FileName} and {current.FileName} is missing"));
                 }
-
             }
 
             if (exceptions.Any())

@@ -129,10 +129,12 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
         private static IndexDefinition ReadLegacyIndexDefinition(BlittableJsonReaderObject reader)
         {
-            if (reader.TryGet("name", out string name) == false)
+            if (reader.TryGet("name", out string name) == false &&
+                reader.TryGet("Name", out name) == false)
                 throw new InvalidOperationException("Could not read legacy index definition.");
 
-            if (reader.TryGet("definition", out BlittableJsonReaderObject definition) == false)
+            if (reader.TryGet("definition", out BlittableJsonReaderObject definition) == false &&
+                reader.TryGet("Definition", out definition) == false)
                 throw new InvalidOperationException("Could not read legacy index definition.");
 
             var legacyIndexDefinition = JsonDeserializationServer.LegacyIndexDefinition(definition);

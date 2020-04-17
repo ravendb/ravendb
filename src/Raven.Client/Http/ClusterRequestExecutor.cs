@@ -16,17 +16,10 @@ namespace Raven.Client.Http
 
         protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls) : base(null, certificate, conventions, initialUrls)
         {
-
         }
 
         [Obsolete("Not supported", error: true)]
         public new static ClusterRequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
-        {
-            throw new NotSupportedException();
-        }
-
-        [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, Guid? applicationIdentifier)
         {
             throw new NotSupportedException();
         }
