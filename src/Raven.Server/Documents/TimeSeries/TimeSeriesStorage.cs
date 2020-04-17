@@ -544,7 +544,7 @@ namespace Raven.Server.Documents.TimeSeries
             private readonly DocumentsOperationContext _context;
             private readonly string _documentId;
             private readonly string _name;
-            private readonly DateTime _from, _to;
+            internal readonly DateTime _from, _to;
             private readonly Table _table;
             internal TableValueReader _tvr;
             private double[] _values = Array.Empty<double>();
