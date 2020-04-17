@@ -51,9 +51,6 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.True(filter.Contains(key1));
                         Assert.True(filter.Contains(key2));
                         Assert.Equal(2, filter.Count);
-
-                        context.ReturnMemory(key1.AllocatedMemoryData);
-                        context.ReturnMemory(key2.AllocatedMemoryData);
                     }
 
                     tx.Commit();
@@ -93,8 +90,6 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(1, filter.Count);
                     }
                 }
-
-                context.ReturnMemory(key1.AllocatedMemoryData);
             }
         }
 
@@ -140,9 +135,6 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.True(filter.Writable);
                     }
                 }
-
-                context.ReturnMemory(key1.AllocatedMemoryData);
-                context.ReturnMemory(key2.AllocatedMemoryData);
             }
         }
 
