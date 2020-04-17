@@ -921,80 +921,86 @@ namespace Raven.Server.Documents.Queries.Results
         private class MultiReader
         {
             private TimeSeriesStorage.Reader _reader;
-            private readonly string _id;
+            private readonly string _docId;
             private readonly DocumentsOperationContext _context;
-            private DateTime _min;
-            private readonly DateTime _max;
+            private readonly DateTime _min, _max;
             private readonly TimeSpan? _offset;
-            private readonly List<string> _names;
-            private readonly TimeSeriesStorage _tss;
+            private readonly SortedList<long, string> _names;
             private int _current;
 
             public MultiReader(TimeSeriesStorage timeSeriesStorage, DocumentsOperationContext context, string documentId, List<string> names, DateTime min, DateTime max, TimeSpan? offset)
             {
-                _tss = timeSeriesStorage;
+                if (names == null || names.Count == 0) 
+                    throw new ArgumentNullException(nameof(names));
+
+                _docId = documentId ?? throw new ArgumentNullException(nameof(documentId));
                 _context = context;
-                _id = documentId ?? throw new ArgumentNullException(nameof(documentId));
-                _names = names ?? throw new ArgumentNullException(nameof(names));
                 _min = min;
                 _max = max;
                 _offset = offset;
-                _current = _names.Count - 1;
+                _current = 0;
+                _names = new SortedList<long, string>();
 
-                _reader = _tss.GetReader(_context, _id, _names[_current], _min, _max, _offset);
+                SortNamesByStartDate(timeSeriesStorage, names);
+            }
+
+            private void SortNamesByStartDate(TimeSeriesStorage timeSeriesStorage, List<string> names)
+            {
+                foreach (var name in names)
+                {
+                    var stats = timeSeriesStorage.Stats.GetStats(_context, _docId, name);
+                    if (stats.End < _min || stats.Start > _max)
+                        continue;
+                    _names[stats.Start.Ticks] = name;
+                }
+
+                for (var i = _names.Count - 1; i >= 0; i--)
+                {
+                    if (_names.Keys[i] > _min.Ticks)
+                        continue;
+
+                    _current = i;
+                    break;
+                }
             }
 
             public IEnumerable<(IEnumerable<SingleResult> IndividualValues, SegmentResult Segment)> SegmentsOrValues()
             {
-                while (true)
+                while (_current < _names.Count)
                 {
-                    DateTime last = DateTime.MaxValue;
+                    GetNextReader();
+
                     foreach (var sov in _reader.SegmentsOrValues())
                     {
-                        last = sov.Segment?.End ?? DateTime.MaxValue;
                         yield return sov;
                     }
-
-                    if (GetNext(last) == false)
-                        yield break;
                 }
             }
 
             public IEnumerable<SingleResult> AllValues()
             {
-                while (true)
+                while (_current < _names.Count)
                 {
-                    DateTime last = DateTime.MaxValue;
+                    GetNextReader();
+
                     foreach (var singleResult in _reader.AllValues())
                     {
-                        last = singleResult.Timestamp;
                         yield return singleResult;
                     }
-
-                    if (GetNext(last) == false)
-                        yield break;
                 }
             }
 
-            private bool GetNext(DateTime last)
+            private void GetNextReader()
             {
-                if (last >= _max)
-                    return false;
+                var name = _names.Values[_current];
 
-                var name = GetNextName();
-                if (name == null)
-                    return false;
+                var from = _reader?._to.AddMilliseconds(1) ?? _min;
 
-                _min = last.AddMilliseconds(1); // avoid duplicate timestamps
-                _reader = _tss.GetReader(_context, _id, name, _min, _max, _offset);
-                return true;
-            }
+                var to = ++_current > _names.Count - 1 
+                    ? _max 
+                    : new DateTime(_names.Keys[_current]).AddMilliseconds(-1);
 
-            private string GetNextName()
-            {
-                if (--_current < 0)
-                    return null;
-                return _names[_current];
+                _reader = new TimeSeriesStorage.Reader(_context, _docId, name, from, to, _offset);
             }
         }
     }
