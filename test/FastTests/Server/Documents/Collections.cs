@@ -46,10 +46,10 @@ namespace FastTests.Server.Documents
                     Assert.Equal(2, collectionStats.Collections.Count);
 
                     var orders = collectionStats.Collections.First(x => x.Key == "Orders");
-                    Assert.Equal(2, orders.Value);
+                    Assert.Equal(2, orders.Value.CountOfDocuments);
 
                     var people = collectionStats.Collections.First(x => x.Key == "People");
-                    Assert.Equal(1, people.Value);
+                    Assert.Equal(1, people.Value.CountOfDocuments);
                 }
             }
 
@@ -72,10 +72,10 @@ namespace FastTests.Server.Documents
                 Assert.Equal(2, collectionStats.Collections.Count);
 
                 var orders = collectionStats.Collections.First(x => x.Key == "Orders");
-                Assert.Equal(2, orders.Value);
+                Assert.Equal(2, orders.Value.CountOfDocuments);
 
                 var people = collectionStats.Collections.First(x => x.Key == "People");
-                Assert.Equal(1, people.Value);
+                Assert.Equal(1, people.Value.CountOfDocuments);
             }
         }
     }

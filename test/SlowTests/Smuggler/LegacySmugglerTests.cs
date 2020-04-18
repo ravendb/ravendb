@@ -43,15 +43,15 @@ namespace SlowTests.Smuggler
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(1059, collectionStats.CountOfDocuments);
                 Assert.Equal(9, collectionStats.Collections.Count);
-                Assert.Equal(8, collectionStats.Collections["Categories"]);
-                Assert.Equal(91, collectionStats.Collections["Companies"]);
-                Assert.Equal(9, collectionStats.Collections["Employees"]);
-                Assert.Equal(830, collectionStats.Collections["Orders"]);
-                Assert.Equal(77, collectionStats.Collections["Products"]);
-                Assert.Equal(4, collectionStats.Collections["Regions"]);
-                Assert.Equal(3, collectionStats.Collections["Shippers"]);
-                Assert.Equal(29, collectionStats.Collections["Suppliers"]);
-                Assert.Equal(8, collectionStats.Collections["@hilo"]);
+                Assert.Equal(8, collectionStats.Collections["Categories"].CountOfDocuments);
+                Assert.Equal(91, collectionStats.Collections["Companies"].CountOfDocuments);
+                Assert.Equal(9, collectionStats.Collections["Employees"].CountOfDocuments);
+                Assert.Equal(830, collectionStats.Collections["Orders"].CountOfDocuments);
+                Assert.Equal(77, collectionStats.Collections["Products"].CountOfDocuments);
+                Assert.Equal(4, collectionStats.Collections["Regions"].CountOfDocuments);
+                Assert.Equal(3, collectionStats.Collections["Shippers"].CountOfDocuments);
+                Assert.Equal(29, collectionStats.Collections["Suppliers"].CountOfDocuments);
+                Assert.Equal(8, collectionStats.Collections["@hilo"].CountOfDocuments);
 
                 using (var session = store.OpenSession())
                 {
@@ -169,8 +169,8 @@ namespace SlowTests.Smuggler
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStats.CountOfDocuments);
                 Assert.Equal(2, collectionStats.Collections.Count);
-                Assert.Equal(1, collectionStats.Collections["@empty"]);
-                Assert.Equal(1, collectionStats.Collections["Users"]);
+                Assert.Equal(1, collectionStats.Collections["@empty"].CountOfDocuments);
+                Assert.Equal(1, collectionStats.Collections["Users"].CountOfDocuments);
 
                 using (var session = store.OpenSession())
                 {

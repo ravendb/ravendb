@@ -27,7 +27,7 @@ namespace Raven.Server.Web.Studio
                 {
                     foreach (var collection in Database.DocumentsStorage.GetCollections(context))
                     {
-                        if (collection.Count > 0)
+                        if (collection.CountOfDocuments > 0)
                         {
                             throw new InvalidOperationException("You cannot create sample data in a database that already contains documents");
                         }
