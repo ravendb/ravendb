@@ -153,7 +153,7 @@ namespace SlowTests.Issues
                     Assert.Equal(count + 1, stats.CountOfDocuments); // + hilo
                     var collectionStats = store.Maintenance.Send(new GetCollectionStatisticsOperation());
                     Assert.Equal(1 + 1, collectionStats.Collections.Count); // + hilo
-                    Assert.Equal(count, collectionStats.Collections["Orders"]);
+                    Assert.Equal(count, collectionStats.Collections["Orders"].CountOfDocuments);
 
                     using (var session = store.OpenSession())
                     {

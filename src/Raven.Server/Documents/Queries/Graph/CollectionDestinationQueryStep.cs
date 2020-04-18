@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             if (CollectionName == string.Empty)
                 return _documentStorage.GetNumberOfDocuments() == 0;
-            return _documentStorage.GetCollection(CollectionName, _context).Count == 0;
+            return _documentStorage.GetCollection(CollectionName, _context).CountOfDocuments == 0;
         }
 
         public bool CollectIntermediateResults { get; set; } 

@@ -48,11 +48,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 Assert.True(WaitForDocument(store2, "marker"));
 
                 var collectionStatistics = await store1.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
-                Assert.Equal(8, collectionStatistics.Collections["DailyInvoices"]);
-                Assert.Equal(30, collectionStatistics.Collections["Invoices"]);
+                Assert.Equal(8, collectionStatistics.Collections["DailyInvoices"].CountOfDocuments);
+                Assert.Equal(30, collectionStatistics.Collections["Invoices"].CountOfDocuments);
 
                 collectionStatistics = await store2.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
-                Assert.Equal(30, collectionStatistics.Collections["Invoices"]);
+                Assert.Equal(30, collectionStatistics.Collections["Invoices"].CountOfDocuments);
                 Assert.False(collectionStatistics.Collections.ContainsKey("DailyInvoices"));
                 Assert.Equal(32, collectionStatistics.CountOfDocuments);
 

@@ -38,7 +38,7 @@ namespace Raven.Server.Web.Studio
                 else
                 {
                     changeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
-                    totalResults = Database.DocumentsStorage.GetCollection(collection, context).Count;
+                    totalResults = Database.DocumentsStorage.GetCollection(collection, context).CountOfDocuments;
 
                     if (changeVector != null)
                         etag = $"{changeVector}/{totalResults}";

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
@@ -1773,17 +1774,12 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public class CollectionStats
-        {
-            public string Name;
-            public long Count;
-        }
-
-        public IEnumerable<CollectionStats> GetCollections(DocumentsOperationContext context)
+        public IEnumerable<CollectionDetails> GetCollections(DocumentsOperationContext context)
         {
             foreach (var kvp in _collectionsCache)
             {
                 var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, kvp.Value.GetTableName(CollectionTableType.Documents));
+                Client.Util.Size collectionSizeOnDisk = new Client.Util.Size();
                 //This is the case where a read transaction reading a collection cached by a later write transaction we can safly ignore it.
                 if (collectionTable == null)
                 {
@@ -1791,42 +1787,60 @@ namespace Raven.Server.Documents
                         continue;
                     throw new InvalidOperationException($"Cached collection {kvp.Key} is missing its table, this is likley a bug.");
                 }
-                yield return new CollectionStats
+                else
+                {
+                    TableReport tableReport = collectionTable.GetReport(false);
+                    if (tableReport != null)
+                    {
+                        collectionSizeOnDisk.SizeInBytes = tableReport.DataSizeInBytes;
+                    }
+                    else { }
+                }
+                yield return new CollectionDetails
                 {
                     Name = kvp.Key,
-                    Count = collectionTable.NumberOfEntries
+                    CountOfDocuments = collectionTable.NumberOfEntries,
+                    Size = collectionSizeOnDisk
                 };
             }
         }
 
-        public CollectionStats GetCollection(string collection, DocumentsOperationContext context)
+        public CollectionDetails GetCollection(string collection, DocumentsOperationContext context)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
-                return new CollectionStats
+                return new CollectionDetails
                 {
                     Name = collection,
-                    Count = 0
+                    CountOfDocuments = 0,
+                    Size = new Client.Util.Size()
                 };
             }
 
             var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
                 collectionName.GetTableName(CollectionTableType.Documents));
 
+            Client.Util.Size collectionSize = new Client.Util.Size();
+            TableReport tableReport = collectionTable.GetReport(false);
+            if (tableReport != null)
+                collectionSize.SizeInBytes = tableReport.DataSizeInBytes;
+
             if (collectionTable == null)
             {
-                return new CollectionStats
+                return new CollectionDetails
                 {
                     Name = collection,
-                    Count = 0
+                    CountOfDocuments = 0,
+                    Size = new Client.Util.Size()
                 };
             }
 
-            return new CollectionStats
+            return new CollectionDetails
             {
                 Name = collectionName.Name,
-                Count = collectionTable.NumberOfEntries
+                CountOfDocuments = collectionTable.NumberOfEntries,
+                Size = collectionSize
             };
         }
 

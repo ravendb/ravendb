@@ -43,7 +43,7 @@ namespace SlowTests.Issues
 
                     var collectionStats = store.Maintenance.Send(new GetCollectionStatisticsOperation());
 
-                    Assert.Equal(3, collectionStats.Collections["Companies"]);
+                    Assert.Equal(3, collectionStats.Collections["Companies"].CountOfDocuments);
                 }
             }
         }

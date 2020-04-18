@@ -258,12 +258,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var collectionStats = Database.DocumentsStorage.GetCollection(collection, context);
                 buffer[0] = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
                 buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context, collection);
-                buffer[2] = collectionStats.Count;
+                buffer[2] = collectionStats.CountOfDocuments;
 
                 if (hasCounters)
                     buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context, collection);
 
-                resultToFill.TotalResults = (int)collectionStats.Count;
+                resultToFill.TotalResults = (int)collectionStats.CountOfDocuments;
             }
 
             if (query.HasCmpXchgSelect)

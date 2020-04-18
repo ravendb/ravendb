@@ -206,11 +206,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 using (context.OpenReadTransaction())
                 {
                     var stats = database.DocumentsStorage.GetCollection(outputReduceToCollection, context);
-                    if (stats.Count > 0)
+                    if (stats.CountOfDocuments > 0)
                     {
                         throw new IndexInvalidException(
                             $"Index '{definition.Name}' is defined to output the Reduce results to documents in Collection '{outputReduceToCollection}'. " +
-                            $"This collection currently has {stats.Count} document{(stats.Count == 1 ? ' ' : 's')}. " +
+                            $"This collection currently has {stats.CountOfDocuments} document{(stats.CountOfDocuments == 1 ? ' ' : 's')}. " +
                             $"All documents in Collection '{stats.Name}' must be deleted first.");
                     }
                 }

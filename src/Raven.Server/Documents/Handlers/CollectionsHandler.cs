@@ -18,22 +18,21 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var collections = new DynamicJsonValue();
-                var result = new DynamicJsonValue
+                var collectionStatistics = new CollectionStatistics()
                 {
-                    [nameof(CollectionStatistics.CountOfDocuments)] = Database.DocumentsStorage.GetNumberOfDocuments(context),
-                    [nameof(CollectionStatistics.CountOfConflicts)] = 
-                        Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
-                    [nameof(CollectionStatistics.Collections)] = collections
+                    CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context),
+                    CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context)
                 };
 
-                foreach (var collectionStat in Database.DocumentsStorage.GetCollections(context))
+                foreach (var collectionDetails in Database.DocumentsStorage.GetCollections(context))
                 {
-                    collections[collectionStat.Name] = collectionStat.Count;
+                    collectionStatistics.Collections[collectionDetails.Name] = collectionDetails;
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, result);
+                {
+                    context.Write(writer, collectionStatistics.ToJson());
+                }
             }
 
             return Task.CompletedTask;

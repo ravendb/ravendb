@@ -34,10 +34,10 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 await CreateDataAndIndexes(store);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
-                Assert.Equal(120, collectionStats.Collections["Invoices"]);
-                Assert.Equal(93, collectionStats.Collections["DailyInvoices"]);
-                Assert.Equal(31, collectionStats.Collections["MonthlyInvoices"]);
-                Assert.Equal(4, collectionStats.Collections["YearlyInvoices"]);
+                Assert.Equal(120, collectionStats.Collections["Invoices"].CountOfDocuments);
+                Assert.Equal(93, collectionStats.Collections["DailyInvoices"].CountOfDocuments);
+                Assert.Equal(31, collectionStats.Collections["MonthlyInvoices"].CountOfDocuments);
+                Assert.Equal(4, collectionStats.Collections["YearlyInvoices"].CountOfDocuments);
 
                 using (var session = store.OpenAsyncSession())
                 {

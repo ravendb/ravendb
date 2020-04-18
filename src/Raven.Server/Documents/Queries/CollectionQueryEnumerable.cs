@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Queries
                 else
                 {
                     documents = _documents.GetDocumentsFrom(_context, _collection, 0, _start, _query.PageSize);
-                    _totalResults.Value = (int)_documents.GetCollection(_collection, _context).Count;
+                    _totalResults.Value = (int)_documents.GetCollection(_collection, _context).CountOfDocuments;
                 }
 
                 return documents;
