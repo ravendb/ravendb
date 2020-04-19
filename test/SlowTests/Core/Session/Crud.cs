@@ -80,51 +80,37 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public void StoreDynamic_WhenProvideDelegateForDynamicCollectionAndType_ShouldUseIt()
+        public async Task StoreDynamic_WhenProvideDelegateForDynamicCollectionAndType_ShouldUseIt()
         {
-            using (var store = GetDocumentStore(new Options()
+            const string customCollection = "CustomCollection";
+            const string customType = "CustomType";
+            using var store = GetDocumentStore(new Options
             {
                 ModifyDocumentStore = s =>
                 {
                     s.Conventions.AddIdFieldToDynamicObjects = false;
-                    s.Conventions.FindCollectionNameForDynamic = (entity) =>
-                    {
-                        var dicEntity = (IDictionary<string, object>)entity;
-                        var dicMetadata = (IDictionary<string, object>)dicEntity["@metadata"];
-                        return (string)dicMetadata["@collection"];
-                    };
-                    s.Conventions.FindClrTypeNameForDynamic = (entity) => 
-                    {
-                        var dicEntity = (IDictionary<string, object>)entity;
-                        var dicMetadata = (IDictionary<string, object>)dicEntity["@metadata"];
-                        return (string)dicMetadata["Raven-Clr-Type"];
-                    };
+                    s.Conventions.FindCollectionNameForDynamic = (entity) => customCollection;
+                    s.Conventions.FindClrTypeNameForDynamic = (entity) => customType;
                 }
-            }))
-            {
-                using (var session = store.OpenSession())
-                {
-                    var str = @"
+            });
+
+            var str = @"
 {
     ""heading"": ""Hello, world ⭐️"",
-    ""@metadata"": {
-        ""@collection"": ""homes"",
-        ""Raven-Clr-Type"": ""Brickpile.Web.Models.Home, Brickpile.Web""
-    }
 }";
-                    var expConverter = new ExpandoObjectConverter();
-                    var o = JsonConvert.DeserializeObject<ExpandoObject>(str, expConverter);
-                    session.Store(o, "o/1");
-                    session.SaveChanges();
+            var o = JsonConvert.DeserializeObject<ExpandoObject>(str, new ExpandoObjectConverter());
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(o, "o/1");
+                await session.SaveChangesAsync();
+            }
 
-                    var d = session.Load<ExpandoObject>("o/1");
-                    var dic = (IDictionary<string, object>)d;
-                    var m = (IDictionary<string, object>)dic["@metadata"];
-
-                    IDictionary<string, object> metadata = session.Advanced.GetMetadataFor(d);
-                    Assert.Equal(m["@collection"], metadata["@collection"]);
-                    Assert.Equal(m["Raven-Clr-Type"], metadata["Raven-Clr-Type"]);
-                }
+            using (var session = store.OpenAsyncSession())
+            {
+                var d = await session.LoadAsync<object>("o/1");
+                var metadata = session.Advanced.GetMetadataFor(d);
+                Assert.Equal(customCollection, metadata["@collection"]);
+                Assert.Equal(customType, metadata["Raven-Clr-Type"]);
             }
         }
         
