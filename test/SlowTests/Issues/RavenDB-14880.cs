@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -18,8 +19,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task UpdateClientConfigurationOnlyWhenRequired()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task UpdateClientConfigurationOnlyWhenRequired(bool isServerWide)
         {
             const string databaseName = "test";
             var leader = await CreateRaftClusterAndGetLeader(3);
@@ -42,41 +45,39 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 var re = store.GetRequestExecutor(databaseName);
-                var clientConfigurationEtag = re.ClientConfigurationEtag;
-                var hadSameClientConfiguration = false;
+                var configurationChanges = new HashSet<long>();
 
-                var configurationChangesCount = 0;
                 re.ClientConfigurationChanged += (sender, tuple) =>
                 {
-                    configurationChangesCount++;
-                    hadSameClientConfiguration |= clientConfigurationEtag == re.ClientConfigurationEtag;
-                    clientConfigurationEtag = re.ClientConfigurationEtag;
+                    // since this is a cluster operation, when we fail-over to another node for reads,
+                    // the other node might not get the configuration change yet and we might get the "old" configuration back
+                    configurationChanges.Add(re.ClientConfigurationEtag);
                 };
 
-                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration
+                SetClientConfiguration(new ClientConfiguration
                 {
                     ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin,
                     Disabled = false
-                }));
+                });
 
                 var value = WaitForValue(() =>
                 {
                     ExecuteQuery();
-                    return configurationChangesCount;
+                    return configurationChanges.Count;
                 }, 1);
 
                 Assert.Equal(1, value);
 
-                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration
+                SetClientConfiguration(new ClientConfiguration
                 {
                     ReadBalanceBehavior = ReadBalanceBehavior.None,
                     Disabled = true
-                }));
+                });
 
                 value = WaitForValue(() =>
                 {
                     ExecuteQuery();
-                    return configurationChangesCount;
+                    return configurationChanges.Count;
                 }, 2);
 
                 Assert.Equal(2, value);
@@ -84,10 +85,10 @@ namespace SlowTests.Issues
                 for (var i = 0; i < 5; i++)
                 {
                     ExecuteQuery();
-                    Assert.Equal(2, configurationChangesCount);
+                    Assert.Equal(2, configurationChanges.Count);
                 }
 
-                Assert.False(hadSameClientConfiguration);
+                Assert.Equal(re.ClientConfigurationEtag, configurationChanges.Last());
 
                 void ExecuteQuery()
                 {
@@ -95,6 +96,18 @@ namespace SlowTests.Issues
                     {
                         var result = session.Query<User>().Customize(x => x.NoCaching()).ToList();
                         Assert.Equal(1, result.Count);
+                    }
+                }
+
+                void SetClientConfiguration(ClientConfiguration clientConfiguration)
+                {
+                    if (isServerWide)
+                    {
+                        store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(clientConfiguration));
+                    }
+                    else
+                    {
+                        store.Maintenance.Send(new PutClientConfigurationOperation(clientConfiguration));
                     }
                 }
             }
