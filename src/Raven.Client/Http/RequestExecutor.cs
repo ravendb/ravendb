@@ -457,6 +457,12 @@ namespace Raven.Client.Http
                     if (result == null)
                         return;
 
+                    if (ClientConfigurationEtag == result.Etag)
+                    {
+                        // can happen when the configuration changed on one node but wasn't updated on the one we are requesting the configuration from 
+                        return;
+                    }
+
                     Conventions.UpdateFrom(result.Configuration);
                     ClientConfigurationEtag = result.Etag;
                     ClientConfigurationChanged?.Invoke(this, (result.Etag, result.Configuration));
