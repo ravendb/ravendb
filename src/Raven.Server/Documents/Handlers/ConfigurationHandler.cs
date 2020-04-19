@@ -46,16 +46,9 @@ namespace Raven.Server.Documents.Handlers
             long etag = configuration?.Etag ?? -1;
             var serverConfiguration = GetServerClientConfiguration(out long serverIndex);
             etag = Hashing.Combine(etag, serverIndex);
-            if (inherit)
+            if (inherit && (configuration == null || configuration.Disabled) && serverConfiguration != null)
             {
-                if (configuration == null || configuration.Disabled)
-                {
-                    if (serverConfiguration != null)
-                    {
-                        configuration = serverConfiguration;
-                        etag = serverIndex;
-                    }
-                }
+                configuration = serverConfiguration;
             }
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
