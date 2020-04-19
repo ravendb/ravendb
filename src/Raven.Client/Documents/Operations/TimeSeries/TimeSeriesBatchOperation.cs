@@ -5,6 +5,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
@@ -41,7 +42,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                     foreach (var append in _operation.Appends)
                     {
-                        sorted.Add(append.Timestamp.Ticks, append);
+                        append.Timestamp = append.Timestamp.EnsureMilliseconds();
+                        sorted[append.Timestamp.Ticks] = append; // on duplicate values the last one overrides
                     }
 
                     _operation.Appends = new List<TimeSeriesOperation.AppendOperation>(sorted.Values);
