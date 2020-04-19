@@ -223,7 +223,11 @@ namespace Raven.Server.Documents.TimeSeries
                     start = first.Timestamp;
                 }
 
-                end = tss.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue).Last().Timestamp;
+                if (baseline <= end && end <= last)
+                {
+                    end = tss.GetReader(context, slicer.DocId, slicer.Name, start, baseline.AddMilliseconds(-1)).Last().Timestamp;
+                }
+
                 return true;
             }
         }

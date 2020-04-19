@@ -387,5 +387,14 @@ namespace Sparrow
                     throw new ArgumentOutOfRangeException(nameof(time.Unit), $"Not supported time value unit '{time.Unit}'");
             }
         }
+
+        public static DateTime EnsureMilliseconds(this DateTime date)
+        {
+            var remainder = date.Ticks % 10_000;
+            if (remainder != 0)
+                date = date.AddTicks(-remainder);
+
+            return date;
+        }
     }
 }

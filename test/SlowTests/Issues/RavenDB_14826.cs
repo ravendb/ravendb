@@ -32,9 +32,9 @@ namespace SlowTests.Issues
                 {
                     var employee = new Employee();
                     session.Store(employee);
-
-                    session.TimeSeriesFor(employee, "HeartBeat").Append(DateTime.Now, 10);
-                    session.TimeSeriesFor(employee, "HeartBeat").Append(DateTime.Now, 15);
+                    var baseline = DateTime.Now;
+                    session.TimeSeriesFor(employee, "HeartBeat").Append(baseline, 10);
+                    session.TimeSeriesFor(employee, "HeartBeat").Append(baseline.AddSeconds(1), 15);
 
                     session.SaveChanges();
                 }

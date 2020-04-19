@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -276,7 +277,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 string changeVector = null;
-                bool removeOccured;
+                bool removeOccured = false;
 
                 while (true)
                 {
@@ -315,7 +316,6 @@ namespace Raven.Server.Documents.TimeSeries
                 bool TryRemoveRange(ref TableValueReader reader, out Table.TableValueHolder next)
                 {
                     next = default;
-                    removeOccured = false;
 
                     var key = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
                     var baselineMilliseconds = Bits.SwapBytes(
@@ -532,8 +532,8 @@ namespace Raven.Server.Documents.TimeSeries
                 _tag = new LazyStringValue(null, null, 0, context);
                 _offset = offset;
 
-                _from = EnsureMillisecondsPrecision(from);
-                _to = EnsureMillisecondsPrecision(to);
+                _from = from;
+                _to = to;
             }
 
             internal bool Init()
@@ -1305,6 +1305,58 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        private class AppendEnumerator : IEnumerator<Reader.SingleResult>
+        {
+            private readonly bool _fromReplication;
+            private readonly IEnumerator<Reader.SingleResult> _toAppend;
+            private Reader.SingleResult _current;
+
+            public AppendEnumerator(IEnumerable<Reader.SingleResult> toAppend, bool fromReplication)
+            {
+                _fromReplication = fromReplication;
+                _toAppend = toAppend.GetEnumerator();
+            }
+
+            public bool MoveNext()
+            {
+                var currentTimestamp = _current?.Timestamp;
+                if (_toAppend.MoveNext() == false)
+                {
+                    _current = null;
+                    return false;
+                }
+
+                var next = _toAppend.Current;
+                next.Timestamp = EnsureMillisecondsPrecision(next.Timestamp);
+
+                if (currentTimestamp >= next.Timestamp)
+                    throw new InvalidDataException("TimeSeries entries must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
+                                                   $"Got: current '{currentTimestamp}', next '{next.Timestamp}'.");
+
+                if (_fromReplication == false)
+                {
+                    AssertNoNanValue(next);
+                }
+
+                _current = next;
+                return true;
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+
+            object? IEnumerator.Current => _current;
+
+            public Reader.SingleResult Current => _current;
+
+            public void Dispose()
+            {
+                _toAppend.Dispose();
+            }
+        }
+
         public string AppendTimestamp(
             DocumentsOperationContext context,
             string documentId,
@@ -1323,7 +1375,7 @@ namespace Raven.Server.Documents.TimeSeries
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var newSeries = Stats.GetStats(context, documentId, name).Count == 0;
 
-            using (var appendEnumerator = toAppend.GetEnumerator())
+            using (var appendEnumerator = new AppendEnumerator(toAppend, changeVectorFromReplication != null))
             {
                 while (appendEnumerator.MoveNext())
                 {
@@ -1455,15 +1507,14 @@ namespace Raven.Server.Documents.TimeSeries
                         _documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(context, segmentHolder.SliceHolder, current.Timestamp, current.Status);
 
                         newValueFetched = true;
-                        current = GetNext(appendEnumerator, segmentHolder.FromReplication);
-                        if (current == null)
+                        if (appendEnumerator.MoveNext() == false)
                         {
-                            // we appended everything
                             segmentHolder.AppendExistingSegment(newSegment);
                             return true;
                         }
-
-                        bool unchangedNumberOfValues = EnsureNumberOfValues(newSegment.NumberOfValues, current);
+                        
+                        current = appendEnumerator.Current;
+                        var unchangedNumberOfValues = EnsureNumberOfValues(newSegment.NumberOfValues, current);
                         if (current.Timestamp < nextSegmentBaseline && unchangedNumberOfValues)
                         {
                             continue;
@@ -1547,7 +1598,8 @@ namespace Raven.Server.Documents.TimeSeries
                                     timeSeriesSegment.AddExistingValue(currentTime, updatedValues, currentTag.AsSpan(), ref splitSegment, localStatus);
                                     if (currentTime == current?.Timestamp)
                                     {
-                                        current = GetNext(reader, timeSeriesSegment.FromReplication);
+                                        reader.MoveNext();
+                                        current = reader.Current;
                                     }
                                     break;
                                 }
@@ -1571,10 +1623,12 @@ namespace Raven.Server.Documents.TimeSeries
 
                                 if (currentTime == current.Timestamp)
                                 {
-                                    current = GetNext(reader, timeSeriesSegment.FromReplication);
+                                    reader.MoveNext();
+                                    current = reader.Current;
                                     break; // the local value was overwritten
                                 }
-                                current = GetNext(reader, timeSeriesSegment.FromReplication);
+                                reader.MoveNext();
+                                current = reader.Current;
                             }
                         }
                     }
@@ -1626,30 +1680,6 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             return false;
-        }
-
-        private Reader.SingleResult GetNext(IEnumerator<Reader.SingleResult> reader, bool fromReplication)
-        {
-            Reader.SingleResult next = null;
-            var current = reader.Current?.Timestamp;
-
-            if (reader.MoveNext())
-            {
-                next = reader.Current;
-
-                if (current >= next?.Timestamp)
-                    throw new InvalidDataException("TimeSeries entries must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
-                                                   $"Got: current '{current}', next '{next.Timestamp}'.");
-                if (next != null)
-                    next.Timestamp = EnsureMillisecondsPrecision(next.Timestamp);
-
-                if (fromReplication == false)
-                {
-                    AssertNoNanValue(next);
-                }
-            }
-
-            return next;
         }
 
         public void AddTimeSeriesNameToMetadata(DocumentsOperationContext ctx, string docId, string tsName)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -85,7 +86,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var now1 = DateTime.Now;
+                var now1 = DateTime.Now.EnsureMilliseconds();
 
                 using (var session = store.OpenSession())
                 {
