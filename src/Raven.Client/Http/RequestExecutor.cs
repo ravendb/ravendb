@@ -431,7 +431,7 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        protected virtual async Task UpdateClientConfigurationAsync()
+        protected virtual async Task UpdateClientConfigurationAsync(ServerNode serverNode)
         {
             if (Disposed)
                 return;
@@ -450,18 +450,11 @@ namespace Raven.Client.Http
                 {
                     var command = new GetClientConfigurationOperation.GetClientConfigurationCommand();
 
-                    var (currentIndex, currentNode) = ChooseNodeForRequest(command);
-                    await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
+                    await ExecuteAsync(serverNode, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
 
                     var result = command.Result;
                     if (result == null)
                         return;
-
-                    if (ClientConfigurationEtag == result.Etag)
-                    {
-                        // can happen when the configuration changed on one node but wasn't updated on the one we are requesting the configuration from 
-                        return;
-                    }
 
                     Conventions.UpdateFrom(result.Configuration);
                     ClientConfigurationEtag = result.Etag;
@@ -968,7 +961,7 @@ namespace Raven.Client.Http
                     : Task.CompletedTask;
 
                 tasks[1] = refreshClientConfiguration
-                    ? UpdateClientConfigurationAsync()
+                    ? UpdateClientConfigurationAsync(chosenNode)
                     : Task.CompletedTask;
 
                 return Task.WhenAll(tasks);
