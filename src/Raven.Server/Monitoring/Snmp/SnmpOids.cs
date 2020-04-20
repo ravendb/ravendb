@@ -104,6 +104,12 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Server license expiration left")]
             public const string ServerLicenseExpirationLeft = "1.9.3";
 
+            [Description("Server license utilized CPU cores")]
+            public const string ServerLicenseUtilizedCpuCores = "1.9.4";
+
+            [Description("Server license max CPU cores")]
+            public const string ServerLicenseMaxCpuCores = "1.9.5";
+
             [Description("Server storage used size in MB")]
             public const string StorageUsedSize = "1.10.1";
 
@@ -121,6 +127,15 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Server certificate expiration left")]
             public const string ServerCertificateExpirationLeft = "1.11.2";
+
+            [Description("List of well known admin certificate thumbprints")]
+            public const string WellKnownAdminCertificates = "1.11.3";
+
+            [Description("Number of processor on the machine")]
+            public const string MachineProcessorCount = "1.12.1";
+
+            [Description("Number of assigned processors on the machine")]
+            public const string MachineAssignedProcessorCount = "1.12.2";
 
             public static DynamicJsonArray ToJson()
             {
