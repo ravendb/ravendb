@@ -1415,7 +1415,8 @@ namespace Raven.Server.Documents
 
         public bool HasTopologyChanged(long index)
         {
-            return _lastTopologyIndex != index;
+            // only if have a newer topology index
+            return _lastTopologyIndex > index;
         }
 
         public bool HasClientConfigurationChanged(long index)
