@@ -1,6 +1,6 @@
 <div class="flex-vertical absolute-fill content-margin admin-logs">
-    <div class="flex-horizontal flex-noshrink">
-        <div>
+    <div class="form-inline">
+        <div class="btn-group-label" data-label="Log on this view" role="group">
             <button class="btn btn-primary" data-bind="click: pauseLogs, visible: liveClient">
                 <i class="icon-pause"></i> <span>Pause</span>
             </button>
@@ -10,77 +10,138 @@
             <button class="btn btn-default" data-bind="click: exportToFile">
                 <i class="icon-export"></i><span>Export</span>
             </button>
+            <div class="btn-group dropdown-menu-right">
+                <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" data-bind="click: onOpenOptions">
+                    <i class="icon-settings"></i><span>Options</span>
+                    <span class="caret"></span>
+                </button>
+                <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
+                    <div class="columns-list-container" data-bind="with: editedConfiguration">
+                        <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries" class="margin-bottom">
+                            <label class="control-label pull-left no-margin">
+                                <h4>Max Log Entries</h4>
+                            </label>
+                            <input class="form-control input-sm full-width" type="number" min="0" data-bind="numericInput: maxEntries" />
+                            <span class="help-block" data-bind="validationMessage: maxEntries"></span>
+                        </div>
+                        <h4>Log filters</h4>
+                        <div class="flex-horizontal margin-bottom margin-bottom-sm">
+                            <div class="dropdown">
+                                <button class="btn btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <span data-bind="text: $root.editedHeaderName()"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#" data-bind="click: _.partial($root.editedHeaderName, 'Source')">Source</a></li>
+                                    <li><a href="#" data-bind="click: _.partial($root.editedHeaderName, 'Logger')">Logger</a></li>
+                                </ul>
+                            </div>
+                            <div class="btn-group flex-grow">
+                                <input type="text" class="form-control input-sm full-width"
+                                       data-bind="textInput: $root.editedHeaderValue, attr: { 'placeholder': $root.headerValuePlaceholder }" >
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-default" data-bind="click: $root.includeFilter"><i class="icon-plus"></i> <span>Include</span></button>
+                                <button class="btn btn-sm btn-default" data-bind="click: $root.excludeFilter"><i class="icon-minus"></i> <span>Exclude</span></button>
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <ul class="column-list scroll" data-bind="foreach: entries">
+                                <li>
+                                    <div class="column-name flex-center">
+                                        <div class="padding padding-xs" data-bind="text: headerName() + ': ' + headerValue()"></div>
+                                    </div>
+                                    <div class="flex-center">
+                                        <div class="padding padding-xs" data-bind="css: { 'text-success': mode() === 'include', 'text-warning': mode() === 'exclude' }">
+                                            <i data-bind="css: { 'icon-plus': mode() === 'include', 'icon-minus': mode() === 'exclude' }"></i>
+                                            <span data-bind="text: mode"></span>
+                                        </div>
+                                    </div>
+                                    <a href="#" class="column-remove" data-bind="click: $root.removeConfigurationEntry"><i class="icon-trash"></i></a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="flex-horizontal margin-top margin-top-sm">
+                            <div class="flex-separator"></div>
+                            <button class="btn btn-success btn-sm close-panel" data-bind="click: $root.applyConfiguration, enable: $root.enableApply"><i class="icon-save"></i> <span>Apply</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <input class="form-control margin-right margin-right-sm" placeholder="Filter messages" data-bind="textInput: filter">
+            <div class="checkbox no-padding-left">
+                <input class="styled" id="onlyErrors" type="checkbox" data-bind="checked: onlyErrors">
+                <label for="onlyErrors"><small>Show errors only</small></label>
+            </div>
         </div>
-        <div>
-            <input class="form-control" placeholder="Filter" data-bind="textInput: filter">
-        </div>
-        <div class="checkbox">
-            <input class="styled" id="onlyErrors" type="checkbox" data-bind="checked: onlyErrors">
-            <label for="onlyErrors">Errors Only</label>
+        <div class="btn-group-label margin-left margin-left-lg" data-label="Logs on disk" role="group">
+            <div class="btn-group dropdown-menu-right">
+                <button class="btn btn-info dropdown-toggle" type="button" data-toggle="dropdown" data-bind="click: onOpenSettings">
+                    <i class="icon-config"></i><span>Settings</span>
+                    <span class="caret"></span>
+                </button>
+                <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
+                    <div class="columns-list-container" data-bind="with: onDiskConfiguration" id="settingsContainer">
+                        <form class="form-horizontal" role="form">
+                            <div class="row">
+                                <label class="col-md-3 control-label">Logs Path:</label>
+                                <div class="col-md-9">
+                                    <p class="form-control-static" id="adminLogsPath" data-bind="text: fullPath"></p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-3 control-label">Log Mode:</label>
+                                <div class="col-md-9">
+                                    <div class="dropdown">
+                                        <button type="button" class="btn btn-sm dropdown-toggle" data-toggle="dropdown" title="Set logs mode" id="selectedLogMode">
+                                            <span data-bind="text: selectedLogMode"></span>&nbsp;&nbsp;
+                                            <span class="caret"></span>
+                                            <span class="sr-only">Toggle Dropdown</span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <!-- ko foreach: possibleLogModes -->
+                                            <li class="flex-horizontal">
+                                                <a class="flex-grow" href="#" data-bind="text: $data, click: _.partial($root.setAdminLogMode, $data)"></a>
+                                            </li>
+                                            <!-- /ko -->
+                                            <li class="divider"></li>
+                                            <li><a data-bind="click: _.partial($root.setAdminLogMode, 'None')" href="#">None</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-3 control-label">Retention Time:</label>
+                                <div class="col-md-9">
+                                    <p class="form-control-static" data-bind="text: retentionTimeText"></p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-3 control-label">Retention Size:</label>
+                                <div class="col-md-9">
+                                    <p class="form-control-static" data-bind="text: retentionSizeText"></p>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="flex-horizontal">
+                            <div class="flex-separator"></div>
+                            <button class="btn btn-success btn-sm close-panel"><span>Close</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <small class="margin-left margin-left-sm">
+                <label>Log Level:</label>
+                <strong data-bind="text: onDiskConfiguration().selectedLogMode"></strong>
+                <small class="text-warning bg-warning margin-left margin-left-sm padding padding-sm" data-bind="visible: onDiskConfiguration().selectedLogMode() === 'None'">
+                    <i class="icon-warning"></i>
+                    <span>No log messages are being written to disk</span>
+                </small>
+            </small>
         </div>
     </div>
     <div class="flex-horizontal flex-noshrink">
         <div class="flex-separator"></div>
-        <div class="btn-group dropdown-right">
-            <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" data-bind="click: onOpenOptions">
-                <i class="icon-settings"></i><span>Options</span>
-                <span class="caret"></span>
-            </button>
-            <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
-                <div class="columns-list-container flex-vertical" data-bind="with: editedConfiguration">
-                    <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries"> 
-                        <div class="form-group">
-                            <h4 class="control-label pull-left">Max Log Entries</h4>
-                            <div class="flex-grow">
-                                <input class="form-control input-sm" type="number" data-bind="numericInput: maxEntries" />
-                            </div>
-                            <span class="help-block" data-bind="validationMessage: maxEntries"></span>
-                        </div>                                                
-                    </div>                                   
-                    <h4>Log filters</h4>
-                    <div class="flex-horizontal margin-bottom margin-bottom-sm">
-                        <div class="dropdown">
-                            <button class="btn btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
-                                <span data-bind="text: $root.editedHeaderName()"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a href="#" data-bind="click: _.partial($root.editedHeaderName, 'Source')">Source</a></li>
-                                <li><a href="#" data-bind="click: _.partial($root.editedHeaderName, 'Logger')">Logger</a></li>
-                            </ul>
-                        </div>
-                        <div class="btn-group flex-grow">
-                            <input type="text" class="form-control input-sm" 
-                                   data-bind="textInput: $root.editedHeaderValue, attr: { 'placeholder': $root.headerValuePlaceholder }" >
-                        </div>
-                        <div>
-                            <button class="btn btn-sm btn-default" data-bind="click: $root.includeFilter"><i class="icon-plus"></i> <span>Include</span></button>
-                            <button class="btn btn-sm btn-default" data-bind="click: $root.excludeFilter"><i class="icon-minus"></i> <span>Exclude</span></button>
-                        </div>
-                    </div>
-                    <div class="flex-grow">
-                        <ul class="column-list scroll" data-bind="foreach: entries">
-                            <li>
-                                <div class="column-name flex-center">
-                                    <div class="padding padding-xs" data-bind="text: headerName() + ': ' + headerValue()"></div>
-                                </div>
-                                <div class="flex-center">
-                                    <div class="padding padding-xs" data-bind="css: { 'text-success': mode() === 'include', 'text-warning': mode() === 'exclude' }">
-                                        <i data-bind="css: { 'icon-plus': mode() === 'include', 'icon-minus': mode() === 'exclude' }"></i>
-                                        <span data-bind="text: mode"></span>
-                                    </div>
-                                </div>
-                                <a href="#" class="column-remove" data-bind="click: $root.removeConfigurationEntry"><i class="icon-trash"></i></a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="flex-horizontal margin-top margin-top-sm">
-                        <div class="flex-separator"></div>
-                        <button class="btn btn-success btn-sm close-panel" data-bind="click: $root.applyConfiguration, enable: $root.enableApply"><i class="icon-save"></i> <span>Apply</span></button>
-                    </div>
-                 </div>
-            </div>
-        </div>
         <div class="btn-group">
             <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
                 <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>

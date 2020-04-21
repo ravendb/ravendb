@@ -5,11 +5,14 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Dynamic;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 using FastTests;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Raven.Client.Exceptions.Documents.Session;
 using Xunit;
 
@@ -76,6 +79,41 @@ namespace SlowTests.Core.Session
             }
         }
 
+        [Fact]
+        public async Task StoreDynamic_WhenProvideDelegateForDynamicCollectionAndType_ShouldUseIt()
+        {
+            const string customCollection = "CustomCollection";
+            const string customType = "CustomType";
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.AddIdFieldToDynamicObjects = false;
+                    s.Conventions.FindCollectionNameForDynamic = (entity) => customCollection;
+                    s.Conventions.FindClrTypeNameForDynamic = (entity) => customType;
+                }
+            });
+
+            var str = @"
+{
+    ""heading"": ""Hello, world ⭐️"",
+}";
+            var o = JsonConvert.DeserializeObject<ExpandoObject>(str, new ExpandoObjectConverter());
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(o, "o/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var d = await session.LoadAsync<object>("o/1");
+                var metadata = session.Advanced.GetMetadataFor(d);
+                Assert.Equal(customCollection, metadata["@collection"]);
+                Assert.Equal(customType, metadata["Raven-Clr-Type"]);
+            }
+        }
+        
         [Fact]
         public async Task CanDelete()
         {

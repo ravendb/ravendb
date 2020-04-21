@@ -148,7 +148,7 @@ class documentMetadata {
         };
 
         if (this.nonStandardProps) {
-            this.nonStandardProps.forEach(p => dto[p] = (<any>this)[p]);
+            this.nonStandardProps.forEach(p => (dto as any)[p] = (<any>this)[p]);
         }
 
         return dto;

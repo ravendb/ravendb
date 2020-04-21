@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -24,7 +25,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                     [nameof(GetLogsConfigurationResult.Mode)] = ServerStore.Configuration.Logs.Mode,
                     [nameof(GetLogsConfigurationResult.Path)] = ServerStore.Configuration.Logs.Path.FullPath,
                     [nameof(GetLogsConfigurationResult.UseUtcTime)] = ServerStore.Configuration.Logs.UseUtcTime,
-                    [nameof(GetLogsConfigurationResult.RetentionTime)] = LoggingSource.Instance.RetentionTime
+                    [nameof(GetLogsConfigurationResult.RetentionTime)] = LoggingSource.Instance.RetentionTime,
+                    [nameof(GetLogsConfigurationResult.RetentionSize)] = LoggingSource.Instance.RetentionSize == long.MaxValue ? null : LoggingSource.Instance.RetentionSize,
+                    [nameof(GetLogsConfigurationResult.Compress)] = LoggingSource.Instance.Compressing
                 };
 
                 var json = context.ReadObject(djv, "logs/configuration");
@@ -77,6 +80,5 @@ namespace Raven.Server.Documents.Handlers.Admin
                 await LoggingSource.Instance.Register(socket, context, ServerStore.ServerShutdown);
             }
         }
-
     }
 }

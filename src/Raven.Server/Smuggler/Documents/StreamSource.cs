@@ -112,7 +112,7 @@ namespace Raven.Server.Smuggler.Documents
                     _log.Operations(msg);
                 _result.AddWarning(msg);
 
-                SkipArray(onSkipped: null, token: CancellationToken.None);
+                SkipArray(onSkipped: null, MaySkipBlob, CancellationToken.None);
                 type = ReadType();
                 dbItemType = GetType(type);
             }
@@ -640,7 +640,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Counters:
 #pragma warning restore 618
                 case DatabaseItemType.CounterGroups:
-                    return SkipArray(onSkipped, token);
+                    return SkipArray(onSkipped, null, token);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
                 default:
@@ -802,15 +802,16 @@ namespace Raven.Server.Smuggler.Documents
             return _state.Long;
         }
 
-        private long SkipArray(Action<long> onSkipped, CancellationToken token)
+        private long SkipArray(Action<long> onSkipped, Action<BlittableJsonReaderObject> additionalSkip, CancellationToken token)
         {
             var count = 0L;
-            foreach (var _ in ReadArray())
+            foreach (var reader in ReadArray())
             {
-                using (_)
+                using (reader)
                 {
                     token.ThrowIfCancellationRequested();
-
+                    additionalSkip?.Invoke(reader);
+                    
                     count++; //skipping
                     onSkipped?.Invoke(count);
                 }
@@ -819,6 +820,12 @@ namespace Raven.Server.Smuggler.Documents
             return count;
         }
 
+        private void MaySkipBlob(BlittableJsonReaderObject reader)
+        {
+            if(reader.TryGet(Constants.Documents.Blob.Size, out int size))
+                Skip(size);
+        }
+        
         private void SkipAttachmentStream(BlittableJsonReaderObject data)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue _) == false ||
@@ -826,6 +833,11 @@ namespace Raven.Server.Smuggler.Documents
                 data.TryGet(nameof(DocumentItem.AttachmentStream.Tag), out LazyStringValue _) == false)
                 throw new ArgumentException($"Data of attachment stream is not valid: {data}");
 
+            Skip(size);
+        }
+
+        private void Skip(long size)
+        {
             while (size > 0)
             {
                 var sizeToRead = (int)Math.Min(32 * 1024, size);

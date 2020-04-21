@@ -30,7 +30,7 @@ class fileImporter {
         const fileName = file.name;
         const reader = new FileReader();
         reader.onload = function() {
-            onImport(this.result, fileName);
+            onImport(this.result as string, fileName);
             task.resolve();
         };
 
@@ -39,7 +39,7 @@ class fileImporter {
             task.reject(error);
         };
 
-        reader[mode](file);
+        (reader as any)[mode](file);
         
         fileInput.value = "";
         return task.promise();

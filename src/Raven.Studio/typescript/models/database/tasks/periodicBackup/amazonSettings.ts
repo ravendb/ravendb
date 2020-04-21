@@ -83,39 +83,22 @@ abstract class amazonSettings extends backupSettings {
     }
 
     initAmazonValidation() {
-        const self = this;
+        
         this.awsRegionName.extend({
             required: {
-                onlyIf: () => this.enabled()
+                onlyIf: () => this.isRegionRequired()
             },
             validation: [
                 {
-                    validator: function (awsRegionName: string) {
-                        if (!awsRegionName) {
-                            return false;
-                        }
-
-                        const foundRegion = self.availableAwsRegionEndpoints.find(x =>
-                            x.value.toLowerCase() === awsRegionName.toLowerCase());
-                        if (foundRegion)
-                            return true;
-
-                        if (!awsRegionName.includes("-") ||
-                            awsRegionName.startsWith("-") ||
-                            awsRegionName.endsWith("-")) {
-                            this.message = "AWS Region must include a '-' and cannot start or end with it";
-                            return false;
-                        }
-
-                        // region wasn't found on the list
-                        // we allow custom regions only if administrator didn't resticted regions.
-                        if (self.allowedRegions) {
-                            this.message = "Invalid region";
-                            return false;
-                        } else {
-                            return true;
-                        }
-                    }
+                    validator: (awsRegionName: string) => !this.isRegionRequired() ||
+                                                          (awsRegionName && (this.isRegionFound(awsRegionName) || !this.allowedRegions)),
+                                                          // Allow custom regions only if administrator didn't restrict regions (if this.allowedRegions is null)
+                    message: "Invalid region"
+                },
+                {
+                    validator: (awsRegionName: string) => !this.isRegionRequired() || 
+                                                          (awsRegionName && awsRegionName.includes("-") && !awsRegionName.startsWith("-") && !awsRegionName.endsWith("-")),
+                    message: "AWS Region must include a '-' and cannot start or end with it"
                 }
             ]
         });
@@ -133,12 +116,20 @@ abstract class amazonSettings extends backupSettings {
         });
     }
 
+    isRegionRequired() {
+        return this.enabled();
+    }
+
+    private isRegionFound(region: string) {
+        return this.availableAwsRegionEndpoints.find(x => x.value.toLowerCase() === region.toLowerCase());
+    }
+    
     createAwsRegionAutoCompleter(hasS3: boolean) {
         return ko.pureComputed(() => {
             let key = this.selectedAwsRegion();
             const options = this.availableAwsRegionEndpoints
                 .filter(x => hasS3 ? x.hasS3 : x.hasGlacier)
-                .filter(x => this.allowedRegions ? _.includes(this.allowedRegions, x.value) : true);
+                .filter(x => this.allowedRegions ? _.includes(this.allowedRegions, x.label) : true);
 
             if (key) {
                 key = key.toLowerCase();

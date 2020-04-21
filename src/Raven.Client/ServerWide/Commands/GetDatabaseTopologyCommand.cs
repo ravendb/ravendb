@@ -8,11 +8,18 @@ namespace Raven.Client.ServerWide.Commands
 {
     public class GetDatabaseTopologyCommand : RavenCommand<Topology>
     {
+        private readonly Guid? _applicationIdentifier;
         private readonly string _debugTag;
 
         public GetDatabaseTopologyCommand()
         {
             CanCacheAggressively = false;
+        }
+
+        public GetDatabaseTopologyCommand(string debugTag, Guid? applicationIdentifier)
+            : this(debugTag)
+        {
+            _applicationIdentifier = applicationIdentifier;
         }
 
         public GetDatabaseTopologyCommand(string debugTag)
@@ -26,6 +33,8 @@ namespace Raven.Client.ServerWide.Commands
             url = $"{node.Url}/topology?name={node.Database}";
             if (_debugTag != null)
                 url += "&" + _debugTag;
+            if (_applicationIdentifier != null)
+                url += "&applicationIdentifier=" + _applicationIdentifier;
 
             if (node.Url.IndexOf(".fiddler", StringComparison.OrdinalIgnoreCase) != -1)
             {

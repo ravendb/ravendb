@@ -26,6 +26,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Client.Util;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -469,10 +470,13 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
+                
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
                 var migrationConfiguration = JsonDeserializationServer.MigrationConfiguration(blittable);
+                
+                var migratorFullPath = Server.Configuration.Migration.MigratorPath?.FullPath ?? migrationConfiguration.MigratorFullPath;
 
-                if (string.IsNullOrWhiteSpace(migrationConfiguration.MigratorFullPath))
+                if (string.IsNullOrWhiteSpace(migratorFullPath))
                     throw new ArgumentException("MigratorFullPath cannot be null or empty");
 
                 if (migrationConfiguration.InputConfiguration == null)
@@ -481,7 +485,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (migrationConfiguration.InputConfiguration.TryGet("Command", out string command) == false)
                     throw new ArgumentException("Cannot find the Command property in the InputConfiguration");
 
-                var migratorFile = ResolveMigratorPath(migrationConfiguration);
+                var migratorFile = ResolveMigratorPath(migratorFullPath);
                 if (command == "validateMigratorPath")
                 {
                     NoContentStatus();
@@ -614,11 +618,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             throw new InvalidOperationException($"Process error: {errorString}, exception: {exception}");
         }
 
-        private FileInfo ResolveMigratorPath(MigrationConfiguration migrationConfiguration)
+        private FileInfo ResolveMigratorPath(string migratorPath)
         {
-            var migratorDirectory = new DirectoryInfo(migrationConfiguration.MigratorFullPath);
+            var migratorDirectory = new DirectoryInfo(migratorPath);
             if (migratorDirectory.Exists == false)
-                throw new InvalidOperationException($"Directory {migrationConfiguration.MigratorFullPath} doesn't exist");
+                throw new InvalidOperationException($"Directory {migratorPath} doesn't exist");
 
             var migratorFileName = PlatformDetails.RunningOnPosix
                 ? "Raven.Migrator"
@@ -627,7 +631,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             var path = Path.Combine(migratorDirectory.FullName, migratorFileName);
             var migratorFile = new FileInfo(path);
             if (migratorFile.Exists == false)
-                throw new InvalidOperationException($"The file '{migratorFileName}' doesn't exist in path: {migrationConfiguration.MigratorFullPath}");
+                throw new InvalidOperationException($"The file '{migratorFileName}' doesn't exist in path: {migratorPath}");
 
             return migratorFile;
         }

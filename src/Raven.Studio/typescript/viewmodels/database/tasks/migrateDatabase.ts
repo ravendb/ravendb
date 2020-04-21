@@ -10,6 +10,7 @@ import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import lastUsedAutocomplete = require("common/storage/lastUsedAutocomplete");
+import getMigratorPathConfigurationCommand = require("commands/database/tasks/getMigratorPathConfigurationCommand");
 
 class migrateDatabase extends viewModelBase {
 
@@ -64,12 +65,17 @@ class migrateDatabase extends viewModelBase {
         cosmosConfiguration.primaryKey.subscribe(() => getCollectionsDebounced());
         cosmosConfiguration.databaseName.subscribe(() => getCollectionsDebounced());
     }
+
+    activate() {
+        new getMigratorPathConfigurationCommand().execute()
+            .done(result => this.model.migratorPathInConfiguration(result.HasMigratorPath));
+    }
     
     private initObservables() {
         this.submitButtonText = ko.pureComputed(() => {
             const configuration = this.model.activeConfiguration();
             if (configuration && !configuration.migrateAllCollections()) {
-                return `Migrate ${this.pluralize(configuration.selectedCollectionsCount(), 'collecton', 'collections')}`;
+                return `Migrate ${this.pluralize(configuration.selectedCollectionsCount(), 'collection', 'collections')}`;
             }
 
             return "Migrate all collections";
@@ -99,9 +105,12 @@ class migrateDatabase extends viewModelBase {
             };
         
         this.model.migratorFullPath.extend({
-            required: true,
+            required: {
+                onlyIf: () => !this.model.migratorPathInConfiguration()
+            },
             validation: {
                 async: true,
+                onlyIf: () => !this.model.migratorPathInConfiguration(),
                 validator: generalUtils.debounceAndFunnel(checkMigratorFullPath)
             }
         });

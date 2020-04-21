@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
             }
 
-            public void LowMemory()
+            public void LowMemory(LowMemorySeverity lowMemorySeverity)
             {
                 TermsCachePerReader.Clear();
             }
@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
             }
 
-            public void LowMemory()
+            public void LowMemory(LowMemorySeverity lowMemorySeverity)
             {
                 Results.Clear();
             }

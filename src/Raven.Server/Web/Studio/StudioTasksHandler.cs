@@ -10,6 +10,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
@@ -294,6 +295,26 @@ namespace Raven.Server.Web.Studio
                     {
                         [nameof(NameValidation.IsValid)] = isValid,
                         [nameof(NameValidation.ErrorMessage)] = errorMessage
+                    });
+
+                    writer.Flush();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/studio-tasks/admin/migrator-path", "GET", AuthorizationStatus.Operator)]
+        public Task HasMigratorPathInConfiguration()
+        {
+            // If the path from the configuration is defined, the Studio will block the option to set the path in the import view
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [$"Has{nameof(MigrationConfiguration.MigratorPath)}"] = Server.Configuration.Migration.MigratorPath != null
                     });
 
                     writer.Flush();

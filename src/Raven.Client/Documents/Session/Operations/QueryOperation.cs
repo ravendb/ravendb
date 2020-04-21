@@ -226,16 +226,6 @@ namespace Raven.Client.Documents.Session.Operations
 
             session.OnBeforeConversionToEntityInvoke(id, typeof(T), ref document);
             var result = (T)session.Conventions.DeserializeEntityFromBlittable(type, document);
-
-            if (string.IsNullOrEmpty(id) == false)
-            {
-                // we need to make an additional check, since it is possible that a value was explicitly stated
-                // for the identity property, in which case we don't want to override it.
-                var identityProperty = session.Conventions.GetIdentityProperty(typeof(T));
-                if (identityProperty != null && (document.TryGetMember(identityProperty.Name, out object value) == false || value == null))
-                    session.GenerateEntityIdOnTheClient.TrySetIdentity(result, id);
-            }
-
             session.OnAfterConversionToEntityInvoke(id, document, result);
 
             return result;

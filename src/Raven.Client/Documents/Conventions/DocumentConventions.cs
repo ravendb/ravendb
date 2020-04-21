@@ -36,9 +36,16 @@ namespace Raven.Client.Documents.Conventions
         public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
 
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, bool forRange, out string strValue);
+
         public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
         internal static readonly DocumentConventions Default = new DocumentConventions();
+
+        internal static readonly DocumentConventions DefaultForServer = new DocumentConventions
+        {
+            SendApplicationIdentifier = false,
+            MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes)
+        };
 
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
@@ -115,6 +122,7 @@ namespace Raven.Client.Documents.Conventions
         static DocumentConventions()
         {
             Default.Freeze();
+            DefaultForServer.Freeze();
         }
 
         /// <summary>
@@ -173,6 +181,11 @@ namespace Raven.Client.Documents.Conventions
 
             _firstBroadcastAttemptTimeout = TimeSpan.FromSeconds(5);
             _secondBroadcastAttemptTimeout = TimeSpan.FromSeconds(30);
+
+            _sendApplicationIdentifier = true;
+            _maxContextSizeToKeep = PlatformDetails.Is32Bits == false
+                ? new Size(1, SizeUnit.Megabytes)
+                : new Size(256, SizeUnit.Kilobytes);
         }
 
         private bool _frozen;
@@ -192,6 +205,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, string, string, string, string> _findProjectedPropertyNameForIndex;
 
         private Func<dynamic, string> _findCollectionNameForDynamic;
+        private Func<dynamic, string> _findClrTypeNameForDynamic;
         private Func<Type, string> _findCollectionName;
         private IContractResolver _jsonContractResolver;
         private Func<Type, string> _findClrTypeName;
@@ -216,6 +230,32 @@ namespace Raven.Client.Documents.Conventions
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
         private Version _httpVersion;
+        private bool _sendApplicationIdentifier;
+        private Size _maxContextSizeToKeep;
+
+        public Size MaxContextSizeToKeep
+        {
+            get => _maxContextSizeToKeep;
+            set
+            {
+                AssertNotFrozen();
+                _maxContextSizeToKeep = value;
+            }
+        }
+
+        /// <summary>
+        /// Enables sending a unique application identifier to the RavenDB Server that is used for Client API usage tracking.
+        /// It allows RavenDB Server to issue performance hint notifications e.g. during robust topology update requests which could indicate Client API misuse impacting the overall performance
+        /// </summary>
+        public bool SendApplicationIdentifier
+        {
+            get => _sendApplicationIdentifier;
+            set
+            {
+                AssertNotFrozen();
+                _sendApplicationIdentifier = value;
+            }
+        }
 
         public Version HttpVersion
         {
@@ -251,7 +291,7 @@ namespace Raven.Client.Documents.Conventions
         /// Set the timeout for the second broadcast attempt.
         /// Default: 30 Seconds.
         ///
-        /// Upon failure of the first attempt the request executor will resend the command to all nodes simultaneously. 
+        /// Upon failure of the first attempt the request executor will resend the command to all nodes simultaneously.
         /// </summary>
         public TimeSpan SecondBroadcastAttemptTimeout
         {
@@ -337,7 +377,6 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-
         /// <summary>
         ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" /> for deserializations.
         ///     When creating a JsonSerializer, the CustomizeJsonSerializer is always called before CustomizeJsonDeserializer
@@ -351,8 +390,6 @@ namespace Raven.Client.Documents.Conventions
                 _customizeJsonDeserializer = value;
             }
         }
-
-
 
         /// <summary>
         ///     By default, the field 'Id' field will be added to dynamic objects, this allows to disable this behavior.
@@ -493,6 +530,19 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
+        ///     Gets or sets the function to find the collection name for dynamic type.
+        /// </summary>
+        public Func<dynamic, string> FindClrTypeNameForDynamic
+        {
+            get => _findClrTypeNameForDynamic;
+            set
+            {
+                AssertNotFrozen();
+                _findClrTypeNameForDynamic = value;
+            }
+        }
+
+        /// <summary>
         ///     Gets or sets the function to find the indexed property name
         ///     given the indexed document type, the index name, the current path and the property path.
         /// </summary>
@@ -585,7 +635,7 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     Attempts to prettify the generated linq expressions for indexes 
+        ///     Attempts to prettify the generated linq expressions for indexes
         /// </summary>
         [Obsolete("This feature is currently not implemented and does not have any effect on the generated LINQ expressions")]
         public bool PrettifyGeneratedLinqExpressions
@@ -724,7 +774,7 @@ namespace Raven.Client.Documents.Conventions
                 return null;
 
             // we want to reject queries and other operations on abstract types, because you usually
-            // want to use them for polymorphic queries, and that require the conventions to be 
+            // want to use them for polymorphic queries, and that require the conventions to be
             // applied properly, so we reject the behavior and hint to the user explicitly
             if (t.GetTypeInfo().IsInterface)
                 throw new InvalidOperationException("Cannot find collection name for interface " + t.FullName +
@@ -842,7 +892,6 @@ namespace Raven.Client.Documents.Conventions
             return this;
         }
 
-
         private JsonSerializer CreateInitialSerializer()
         {
             return new JsonSerializer
@@ -869,6 +918,7 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(ParametersConverter.Instance);
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
+            jsonSerializer.Converters.Add(SizeConverter.Instance);
         }
 
         /// <summary>
@@ -902,6 +952,27 @@ namespace Raven.Client.Documents.Conventions
         public string GetClrType(string id, BlittableJsonReaderObject document)
         {
             return FindClrType(id, document);
+        }
+
+        /// <summary>
+        ///     Get the CLR type name to be stored in the entity metadata
+        /// </summary>
+        public string GetClrTypeName(object entity)
+        {
+            if (FindClrTypeNameForDynamic != null && entity is IDynamicMetaObjectProvider)
+            {
+                try
+                {
+                    return FindClrTypeNameForDynamic(entity);
+                }
+                catch (RuntimeBinderException)
+                {
+                    // if we can't find it, we'll just assume that the property
+                    // isn't there
+                }
+            }
+
+            return FindClrTypeName(entity.GetType());
         }
 
         /// <summary>

@@ -7,9 +7,11 @@ using Sparrow.Binary;
 using Sparrow.Global;
 using Sparrow.Platform;
 using Sparrow.Threading;
+
 #if MEM_GUARD
 using Sparrow.Platform;
 #endif
+
 using Sparrow.Utils;
 
 namespace Sparrow.Json
@@ -142,11 +144,14 @@ namespace Sparrow.Json
             _used += size;
             TotalUsed += size;
 
-            Return: return allocation;
+        Return:
+            return allocation;
 #endif
 
-            ErrorDisposed: ThrowAlreadyDisposedException();
-            ErrorResetted: ThrowInvalidAllocateFromResetWithoutRenew();
+        ErrorDisposed:
+            ThrowAlreadyDisposedException();
+        ErrorResetted:
+            ThrowInvalidAllocateFromResetWithoutRenew();
             return null; // Will never happen.
         }
 
@@ -177,7 +182,7 @@ namespace Sparrow.Json
             {
                 newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
             }
-            catch (OutOfMemoryException oom ) 
+            catch (OutOfMemoryException oom)
                 when (oom.Data?.Contains("Recoverable") != true) // this can be raised if the commit charge is low
             {
                 // we were too eager with memory allocations?
@@ -203,7 +208,7 @@ namespace Sparrow.Json
         {
             if (AvoidOverAllocation || PlatformDetails.Is32Bits)
                 return ApplyLimit(Bits.PowerOf2(requestedSize));
-            
+
             // we need the next allocation to cover at least the next expansion (also doubling)
             // so we'll allocate 3 times as much as was requested, or as much as we already have
             // the idea is that a single allocation can server for multiple (increasing in size) calls
@@ -217,8 +222,8 @@ namespace Sparrow.Json
                 if (size > SingleAllocationSizeLimit.Value)
                 {
                     var sizeInMb = requestedSize / Constants.Size.Megabyte + (requestedSize % Constants.Size.Megabyte == 0 ? 0 : 1);
-					return sizeInMb * Constants.Size.Megabyte;
-        		}
+                    return sizeInMb * Constants.Size.Megabyte;
+                }
 
                 return size;
             }
@@ -274,7 +279,7 @@ namespace Sparrow.Json
             if (_ptrStart != null)
                 NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
 
-            // we'll allocate some multiple of the currently allocated amount, that will prevent big spikes in memory 
+            // we'll allocate some multiple of the currently allocated amount, that will prevent big spikes in memory
             // consumption and has the worst case usage of doubling memory utilization
 
             var newSize = (_used / _allocated + (_used % _allocated == 0 ? 0 : 1)) * _allocated;
@@ -311,6 +316,7 @@ namespace Sparrow.Json
         {
             Dispose(true);
         }
+
         public void Dispose(bool disposing)
         {
             if (!_isDisposed?.Raise() ?? true)
@@ -341,7 +347,7 @@ namespace Sparrow.Json
             {
                 if (disposing)
                     Monitor.Exit(this);
-            }            
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -350,12 +356,11 @@ namespace Sparrow.Json
             if (_isDisposed ?? true)
                 return;
 
-
             var address = allocation.Address;
 
 #if DEBUG
             Debug.Assert(address != _ptrCurrent);
-            Debug.Assert(allocation.IsReturned==false);
+            Debug.Assert(allocation.IsReturned == false);
             allocation.IsReturned = true;
 
 #endif
@@ -375,13 +380,12 @@ namespace Sparrow.Json
                 // in the memory we just freed :-)
 
                 // note that this fragmentation will be healed by the call to ResetArena
-                // trying to do this on the fly is too expensive. 
+                // trying to do this on the fly is too expensive.
 
                 Debug.Assert(Bits.PowerOf2(allocation.SizeInBytes) == allocation.SizeInBytes,
                     "Allocation size must always be a power of two"
                 );
                 Debug.Assert(allocation.SizeInBytes >= sizeof(FreeSection));
-
 
                 var index = Bits.MostSignificantBit(allocation.SizeInBytes) - 1;
                 var section = (FreeSection*)address;
@@ -428,6 +432,7 @@ namespace Sparrow.Json
         public bool IsLongLived;
         public bool IsReturned;
         private byte* _address;
+
         public byte* Address
         {
             get
@@ -454,9 +459,9 @@ namespace Sparrow.Json
 
         private void ThrowObjectDisposedException()
         {
-           throw new ObjectDisposedException(nameof(AllocatedMemoryData));
+            throw new ObjectDisposedException(nameof(AllocatedMemoryData));
         }
-#endif
 
+#endif
     }
 }

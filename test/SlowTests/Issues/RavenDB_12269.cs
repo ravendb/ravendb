@@ -4,6 +4,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.LowMemory;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,7 +59,7 @@ namespace SlowTests.Issues
                 var replacementIndex = db.IndexStore.GetIndex("ReplacementOf/Users_ByName");
 
                 // let's try to force calling storageEnvironment.Cleanup() inside ExecuteIndexing method
-                replacementIndex.LowMemory();
+                replacementIndex.LowMemory(LowMemorySeverity.ExtremelyLow);
                 var envOfReplacementIndex = replacementIndex._indexStorage.Environment();
                 envOfReplacementIndex.LogsApplied();
 
@@ -67,7 +68,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 // let's try to force calling storageEnvironment.Cleanup() inside ExecuteIndexing method
-                replacementIndex.LowMemory();
+                replacementIndex.LowMemory(LowMemorySeverity.ExtremelyLow);
                 envOfReplacementIndex.LogsApplied();
 
                 using (var session = store.OpenAsyncSession())

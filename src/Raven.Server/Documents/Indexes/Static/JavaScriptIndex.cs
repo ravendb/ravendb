@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Esprima;
 using Jint;
 using Jint.Native;
@@ -196,12 +197,15 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static readonly ParserOptions DefaultParserOptions = new ParserOptions();
 
-        private HashSet<CollectionName> ExecuteCodeAndCollectReferencedCollections(string code)
+        private HashSet<CollectionName> ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
             var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
             var program = javascriptParser.ParseProgram();
             _engine.ExecuteWithReset(program);
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
+            if (string.IsNullOrEmpty(additionalSources) == false)
+                loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseProgram());
+
             loadVisitor.Visit(program);
             return loadVisitor.ReferencedCollection;
         }
@@ -213,20 +217,24 @@ namespace Raven.Server.Documents.Indexes.Static
             _engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
             _engine.ExecuteWithReset(Code);
 
+            var sb = new StringBuilder();
             if (definition.AdditionalSources != null)
             {
                 foreach (var script in definition.AdditionalSources.Values)
                 {
                     _engine.ExecuteWithReset(script);
+
+                    sb.Append(Environment.NewLine);
+                    sb.AppendLine(script);
                 }
             }
 
             var maps = definition.Maps.ToList();
             var mapReferencedCollections = new List<HashSet<CollectionName>>();
-
+            var additionalSources = sb.ToString();
             foreach (var t in maps)
             {
-                mapReferencedCollections.Add(ExecuteCodeAndCollectReferencedCollections(t));
+                mapReferencedCollections.Add(ExecuteCodeAndCollectReferencedCollections(t, additionalSources));
             }
 
             if (definition.Reduce != null)

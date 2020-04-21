@@ -258,7 +258,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     private scrollDown() {
         const messages = $(".export-messages")[0];
         if (messages) {
-            messages.scrollTop = messages.scrollHeight;    
+            messages.scrollTop = messages.scrollHeight;
         }
     }
 
@@ -269,7 +269,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     attached() {
         super.attached();
 
-        this.registerDisposable(this.messages.subscribe(() => {
+        this.registerDisposable(this.messagesJoined.subscribe(() => {
             if (this.tail()) {
                 this.scrollDown();
             }

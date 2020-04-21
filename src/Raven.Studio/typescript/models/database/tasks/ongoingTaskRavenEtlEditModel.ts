@@ -6,6 +6,7 @@ import jsonUtil = require("common/jsonUtil");
 class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     
     connectionStringName = ko.observable<string>(); // Contains list of discovery urls in the targeted cluster. The task communicates with these urls.
+    loadRequestTimeout = ko.observable<number>();
         
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
     transformationScripts = ko.observableArray<ongoingTaskRavenEtlTransformationModel>([]);
@@ -16,7 +17,6 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     editedTransformationScriptSandbox = ko.observable<ongoingTaskRavenEtlTransformationModel>();
     
     validationGroup: KnockoutValidationGroup;
-    
     dirtyFlag: () => DirtyFlag;
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) {
@@ -52,6 +52,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
                 this.manualChooseMentor,
                 this.connectionStringName,
                 this.allowEtlOnNonEncryptedChannel,
+                this.loadRequestTimeout,
                 scriptsCount,
                 hasAnyDirtyTransformationScript
             ],
@@ -63,6 +64,10 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
         this.connectionStringName.extend({
             required: true
+        });
+        
+        this.loadRequestTimeout.extend({
+            digit: true
         });
         
         this.transformationScripts.extend({
@@ -77,7 +82,8 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
             mentorNode: this.mentorNode,
-            transformationScripts: this.transformationScripts
+            transformationScripts: this.transformationScripts,
+            loadRequestTimeout: this.loadRequestTimeout
         });
     }
 
@@ -88,6 +94,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskRavenEtlTransformationModel(x, false, false)));
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
+            this.loadRequestTimeout(dto.Configuration.LoadRequestTimeoutInSec);
         }
     }
 
@@ -101,6 +108,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             EtlType: "Raven",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             TaskId: this.taskId,
+            LoadRequestTimeoutInSec: this.loadRequestTimeout() || null,
         } as Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration;
     }
 

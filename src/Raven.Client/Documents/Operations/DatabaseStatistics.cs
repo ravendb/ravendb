@@ -37,6 +37,11 @@ namespace Raven.Client.Documents.Operations
         public long? LastDocEtag { get; set; }
 
         /// <summary>
+        /// Last database etag
+        /// </summary>
+        public long? LastDatabaseEtag { get; set; }
+        
+        /// <summary>
         /// Total number of indexes in database.
         /// </summary>
         public int CountOfIndexes { get; set; }

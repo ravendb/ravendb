@@ -321,6 +321,13 @@ namespace Raven.Client
                     public const string Configuration = "Configuration";
                 }
             }
+            
+            internal class Blob
+            {
+                public const string Document = "@raven-data";
+                
+                public const string Size = "@raven-blob-size";
+            }
         }
 
         internal static class Smuggler

@@ -115,6 +115,7 @@ namespace Raven.Server.Documents
             ReadingFlags,
             ReadingLastModified,
             ReadingLegacyLastModified,
+            ReadingLegacyDeleteMarker,
             ReadingChangeVector,
             ReadingFirstEtagOfLegacyRevision,
             ReadingEtag,
@@ -373,7 +374,6 @@ namespace Raven.Server.Documents
                     break;
 
                 case 9: // @counters
-                    SeenCounters = true;
                     // always remove the @counters metadata
                     // not doing so might cause us to have counter on the document but not in the storage.
                     // the counters will be updated when we import the counters themselves
@@ -384,6 +384,7 @@ namespace Raven.Server.Documents
                         return true;
                     }
 
+                    SeenCounters = true;
                     if (reader.Read() == false)
                     {
                         _verifyStartArray = true;
@@ -501,26 +502,51 @@ namespace Raven.Server.Documents
                     state.StringSize = collection.Size;
                     aboutToReadPropertyName = true;
                     return true;
-                case 19: //Raven-Last-Modified
-                    if (*(long*)state.StringBuffer != 7011028672080929106 ||
-                        *(long*)(state.StringBuffer + sizeof(long)) != 7379539893622240371 ||
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 25961 ||
-                        state.StringBuffer[18] != (byte)'d')
+                case 19: //Raven-Last-Modified or Raven-Delete-Marker
+                    if (*(int*)state.StringBuffer != 1702256978 ||
+                        *(short*)(state.StringBuffer + sizeof(int)) != 11630)
                     {
                         aboutToReadPropertyName = true;
                         return true;
                     }
 
+                    var longValue = *(long*)(state.StringBuffer + sizeof(int) + sizeof(short));
+                    var intValue = *(int*)(state.StringBuffer + sizeof(int) + sizeof(short) + sizeof(long));
+                    if ((longValue != 7237087983830262092 || intValue != 1701406313) && // long: Last-Mod, int: ifie
+                        (longValue != 5561212665464644932 || intValue != 1701540449))   // long: Delete-M, int: arke
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    var lb = state.StringBuffer[18];
+                    if (lb != (byte)'d' && lb != (byte)'r')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    var isLegacyLastModified = lb == (byte)'d';
                     if (reader.Read() == false)
                     {
-                        _state = State.ReadingLegacyLastModified;
+                        _state = isLegacyLastModified ? State.ReadingLegacyLastModified : State.ReadingLegacyDeleteMarker;
                         aboutToReadPropertyName = false;
                         return true;
                     }
 
-                    if (state.CurrentTokenType != JsonParserToken.String)
-                        ThrowExpectedFieldTypeOfString(LegacyLastModified, state, reader);
-                    LastModified = ReadDateTime(state, reader, State.ReadingLegacyLastModified);
+                    if (isLegacyLastModified)
+                    {
+                        if (state.CurrentTokenType != JsonParserToken.String)
+                            ThrowExpectedFieldTypeOfString(LegacyLastModified, state, reader);
+
+                        LastModified = ReadDateTime(state, reader, State.ReadingLegacyLastModified);
+                    }
+                    else
+                    {
+                        if (state.CurrentTokenType == JsonParserToken.True)
+                            NonPersistentFlags |= NonPersistentDocumentFlags.LegacyDeleteMarker;
+                    }
+
                     break;
                 case 21: //Raven-Expiration-Date
                     if (*(long*)state.StringBuffer != 8666383010116297042 ||
@@ -742,6 +768,14 @@ namespace Raven.Server.Documents
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state, reader);
                     LastModified = ReadDateTime(state, reader, _state);
                     break;
+                case State.ReadingLegacyDeleteMarker:
+                    if (reader.Read() == false)
+                        return false;
+
+                    if (state.CurrentTokenType == JsonParserToken.True)
+                        NonPersistentFlags |= NonPersistentDocumentFlags.LegacyDeleteMarker;
+
+                    break;
                 case State.ReadingChangeVector:
                     if (reader.Read() == false)
                         return false;
@@ -781,11 +815,6 @@ namespace Raven.Server.Documents
         private void ThrowExpectedFieldTypeOfString(string field, JsonParserState state, IJsonParser reader)
         {
             throw new InvalidDataException($"Expected property @metadata.{field} to have string type, but was: {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
-        }
-
-        private void ThrowInvalidFlagsProperty(LazyStringValue str, IJsonParser reader)
-        {
-            throw new InvalidDataException($"Cannot parse the value of property @metadata.@flags: {str}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
         }
 
         private void ThrowInvalidLastModifiedProperty(State state, LazyStringValue str, IJsonParser reader)

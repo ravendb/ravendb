@@ -6,13 +6,18 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Smuggler.Migration;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Logging;
+using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -35,6 +40,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var createdIndexes = new List<string>();
+
+                var isReplicatedQueryString = GetStringQueryString("is-replicated", required: false);
+                if (isReplicatedQueryString != null && bool.TryParse(isReplicatedQueryString, out var result) && result)
+                {
+                    HandleLegacyIndexes();
+                    return;
+                }
+
                 var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Indexes");
                 if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
                     ThrowRequiredPropertyNameInRequest("Indexes");
@@ -95,6 +108,23 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     writer.WriteEndObject();
                 }
+            }
+        }
+
+        private void HandleLegacyIndexes()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var stream = new ArrayStream(RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
+            using (var source = new StreamSource(stream, context, Database))
+            {
+                var destination = new DatabaseDestination(Database);
+                var options = new DatabaseSmugglerOptionsServerSide
+                {
+                    OperateOnTypes = DatabaseItemType.Indexes
+                };
+
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options);
+                smuggler.Execute();
             }
         }
 

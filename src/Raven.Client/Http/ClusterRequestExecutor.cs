@@ -16,7 +16,6 @@ namespace Raven.Client.Http
 
         protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls) : base(null, certificate, conventions, initialUrls)
         {
-
         }
 
         [Obsolete("Not supported", error: true)]
@@ -68,7 +67,7 @@ namespace Raven.Client.Http
                 _disableClientConfigurationUpdates = true
             };
 
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls);
+            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, null);
             return executor;
         }
 
@@ -77,11 +76,14 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, new GetTcpInfoCommand("health-check"), shouldRetry: false, sessionInfo: null, token: CancellationToken.None);
         }
 
-        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
+        public override async Task<bool> UpdateTopologyAsync(UpdateTopologyParameters parameters)
         {
+            if (parameters is null)
+                throw new ArgumentNullException(nameof(parameters));
+
             if (Disposed)
                 return false;
-            var lockTaken = await _clusterTopologySemaphore.WaitAsync(timeout).ConfigureAwait(false);
+            var lockTaken = await _clusterTopologySemaphore.WaitAsync(parameters.TimeoutInMs).ConfigureAwait(false);
             if (lockTaken == false)
                 return false;
             try
@@ -91,8 +93,8 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetClusterTopologyCommand(debugTag);
-                    await ExecuteAsync(node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
+                    var command = new GetClusterTopologyCommand(parameters.DebugTag);
+                    await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
 
                     ClusterTopologyLocalCache.TrySaving(TopologyHash, command.Result, Conventions, context);
 
@@ -120,7 +122,7 @@ namespace Raven.Client.Http
                             _nodeSelector.ScheduleSpeedTest();
                         }
                     }
-                    else if (_nodeSelector.OnUpdateTopology(newTopology, forceUpdate: forceUpdate))
+                    else if (_nodeSelector.OnUpdateTopology(newTopology, forceUpdate: parameters.ForceUpdate))
                     {
                         DisposeAllFailedNodesTimers();
 
@@ -130,7 +132,7 @@ namespace Raven.Client.Http
                         }
                     }
 
-                    OnTopologyUpdated(newTopology);
+                    OnTopologyUpdatedInvoke(newTopology);
                 }
             }
             catch (Exception)
@@ -146,7 +148,7 @@ namespace Raven.Client.Http
             return true;
         }
 
-        protected override Task UpdateClientConfigurationAsync()
+        protected override Task UpdateClientConfigurationAsync(ServerNode serverNode)
         {
             return Task.CompletedTask;
         }

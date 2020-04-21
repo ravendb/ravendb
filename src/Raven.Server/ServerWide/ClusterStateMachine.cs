@@ -26,6 +26,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -423,6 +424,9 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(UpdateLicenseLimitsCommand):
                         UpdateValue<NodeLicenseLimits>(context, type, cmd, index);
+                        break;
+                    case nameof(ToggleDatabasesStateCommand):
+                        ToggleDatabasesState(cmd, context, type, index);
                         break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
@@ -2137,8 +2141,10 @@ namespace Raven.Server.ServerWide
             ExecuteManyOnDispose(context, index, type, tasks);
         }
 
-        public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value)
+        public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value, CertificateDefinition certificateDefinition)
         {
+            PutCertificateCommand.ValidateCertificateDefinition(certificateDefinition);
+
             var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             using (localState.DirectAdd(thumbprint, value.Size, out var ptr))
             {
@@ -2548,7 +2554,7 @@ namespace Raven.Server.ServerWide
         public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(TransactionOperationContext context, string hash)
         {
             var list = GetCertificatesByPinningHash(context, hash).ToList();
-            list.Sort((x, y) => DateTime.Compare(y.NotAfter, x.NotAfter));
+            list.Sort((x, y) => Nullable.Compare<DateTime>(y.NotAfter, x.NotAfter));
             return list;
         }
 
@@ -2936,10 +2942,99 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private void ToggleDatabasesState(BlittableJsonReaderObject cmd, TransactionOperationContext context, string type, long index)
+        {
+            var command = (ToggleDatabasesStateCommand)JsonDeserializationCluster.Commands[type](cmd);
+            if (command.Value == null)
+                throw new RachisInvalidOperationException($"{nameof(ToggleDatabasesStateCommand.Parameters)} is null for command type: {type}");
+
+            if (command.Value.DatabaseNames == null)
+                throw new RachisInvalidOperationException($"{nameof(ToggleDatabasesStateCommand.Parameters.DatabaseNames)} is null for command type: {type}");
+
+            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
+
+            foreach (var databaseName in command.Value.DatabaseNames)
+            {
+                var key = "db/" + databaseName;
+                using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    var oldDatabaseRecord = ReadInternal(context, out _, valueNameLowered);
+                    if (oldDatabaseRecord == null)
+                        continue;
+
+                    var rawDatabaseRecord = new RawDatabaseRecord(oldDatabaseRecord);
+                    switch (command.Value.Type)
+                    {
+                        case ToggleDatabasesStateCommand.Parameters.ToggleType.Databases:
+                            if (rawDatabaseRecord.IsDisabled == command.Value.Disable)
+                                continue;
+
+                            oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                            {
+                                [nameof(DatabaseRecord.Disabled)] = command.Value.Disable
+                            };
+
+                            break;
+                        case ToggleDatabasesStateCommand.Parameters.ToggleType.Indexes:
+                            var settings = rawDatabaseRecord.Settings;
+                            var configurationKey = RavenConfiguration.GetKey(x => x.Indexing.Disabled);
+                            if (settings.TryGetValue(configurationKey, out var indexingDisabledString) &&
+                                bool.TryParse(indexingDisabledString, out var currentlyIndexingDisabled) &&
+                                currentlyIndexingDisabled == command.Value.Disable)
+                            {
+                                continue;
+                            }
+
+                            settings[configurationKey] = command.Value.Disable.ToString();
+
+                            oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                            {
+                                [nameof(DatabaseRecord.Settings)] = TypeConverter.ToBlittableSupportedType(settings)
+                            };
+
+                            break;
+                        case ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution:
+                            if (rawDatabaseRecord.IsEncrypted)
+                            {
+                                throw new RachisInvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: {databaseName}");
+                            }
+
+                            var topology = rawDatabaseRecord.Topology;
+                            if (topology == null)
+                                continue;
+
+                            var enable = command.Value.Disable == false;
+                            if (topology.DynamicNodesDistribution == enable)
+                                continue;
+
+                            topology.DynamicNodesDistribution = enable;
+
+                            oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                            {
+                                [nameof(DatabaseRecord.Topology)] = topology.ToJson()
+                            };
+
+                            break;
+                        default:
+                            throw new RachisInvalidOperationException($"Argument out of range for `{nameof(ToggleDatabasesStateCommand.Value.Type)}`");
+                    }
+
+                    using (oldDatabaseRecord)
+                    {
+                        var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
+                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName));
+                    }
+                }
+            }
+
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+        }
+
         private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
         {
             if (serverWideBackupConfiguration == null)
-                throw new RachisInvalidOperationException($"Server-wide backup configuration is null for commmand type: {type}");
+                throw new RachisInvalidOperationException($"Server-wide backup configuration is null for command type: {type}");
 
             if (serverWideBackupConfiguration.Name == null)
                 throw new RachisInvalidOperationException($"Server-wide backup configuration name is null or empty for command type: {type}");

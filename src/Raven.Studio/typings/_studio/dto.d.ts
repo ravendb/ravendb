@@ -494,7 +494,6 @@ interface explainQueryResponse extends resultsDto<Raven.Server.Documents.Queries
     IndexName: string;
 }
 
-
 interface virtualBulkOperationItem {
     id: string;
     date: string;
@@ -508,6 +507,11 @@ interface queryBasedVirtualBulkOperationItem extends virtualBulkOperationItem {
 }
 
 type adminLogsHeaderType = "Source" | "Logger";
+
+interface adminLogsConfiguration extends Raven.Client.ServerWide.Operations.Logs.SetLogsConfigurationOperation.Parameters {
+    Path: string;
+    CurrentMode: Sparrow.Logging.LogMode;
+}
 
 declare module Raven.Server.Documents.ETL.Providers.SQL.Test {
     interface SqlEtlTestScriptResult {
@@ -643,3 +647,7 @@ interface rawStackTraceResponseItem {
 }
 
 type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle";
+
+interface MigratorPathConfiguration {
+    HasMigratorPath: boolean;
+}

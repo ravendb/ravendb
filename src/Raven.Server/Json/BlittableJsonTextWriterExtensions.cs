@@ -712,7 +712,7 @@ namespace Raven.Server.Json
             throw new NotSupportedException($"Not supported query type: {query.GetType()}");
         }
 
-        public static void WriteIndexQuery(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)
+        private static void WriteIndexQuery(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)
         {
             writer.WriteStartObject();
 
@@ -764,7 +764,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
         }
-
+        
         public static void WriteDatabaseStatistics(this BlittableJsonTextWriter writer, JsonOperationContext context, DatabaseStatistics statistics)
         {
             writer.WriteStartObject();
@@ -773,7 +773,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
         }
-
+        
         private static void WriteDatabaseStatisticsInternal(BlittableJsonTextWriter writer, DatabaseStatistics statistics)
         {
             writer.WritePropertyName(nameof(statistics.CountOfIndexes));
@@ -838,6 +838,13 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(statistics.LastDocEtag));
             if (statistics.LastDocEtag.HasValue)
                 writer.WriteInteger(statistics.LastDocEtag.Value);
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(statistics.LastDatabaseEtag));
+            if (statistics.LastDatabaseEtag.HasValue)
+                writer.WriteInteger(statistics.LastDatabaseEtag.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
@@ -926,7 +933,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndArray();
         }
-
+        
         public static void WriteIndexDefinition(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, bool removeAnalyzers = false)
         {
             writer.WriteStartObject();

@@ -37,6 +37,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
+using Raven.Server.Utils.IoMetrics;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -80,6 +81,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
+        private DateTime _nextIoMetricsCleanupTime;
         private long _lastTopologyIndex = -1;
         private long _lastClientConfigurationIndex = -1;
         private long _preventUnloadCounter;
@@ -102,6 +104,7 @@ namespace Raven.Server.Documents
             StartTime = Time.GetUtcNow();
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
+            _nextIoMetricsCleanupTime = DateTime.UtcNow.Add(Configuration.Storage.IoMetricsCleanupInterval.AsTimeSpan);
             Scripts = new ScriptRunnerCache(this, Configuration);
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
@@ -906,14 +909,21 @@ namespace Raven.Server.Documents
             try
             {
                 var sp = Stopwatch.StartNew();
+                var utcNow = DateTime.UtcNow;
 
-                _lastIdleTicks = DateTime.UtcNow.Ticks;
+                _lastIdleTicks = utcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
                 SubscriptionStorage?.CleanupSubscriptions();
 
                 DocumentsStorage.Environment.Cleanup();
                 ConfigurationStorage.Environment.Cleanup();
+
+                if (utcNow >= _nextIoMetricsCleanupTime)
+                {
+                    IoMetricsUtil.CleanIoMetrics(GetAllStoragesEnvironment(), _nextIoMetricsCleanupTime.Ticks);
+                    _nextIoMetricsCleanupTime = utcNow.Add(Configuration.Storage.IoMetricsCleanupInterval.AsTimeSpan);
+                }
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Ran idle operations for database '{Name}', took: {sp.ElapsedMilliseconds}ms");
@@ -1405,7 +1415,8 @@ namespace Raven.Server.Documents
 
         public bool HasTopologyChanged(long index)
         {
-            return _lastTopologyIndex != index;
+            // only if have a newer topology index
+            return _lastTopologyIndex > index;
         }
 
         public bool HasClientConfigurationChanged(long index)

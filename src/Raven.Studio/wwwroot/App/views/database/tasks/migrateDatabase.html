@@ -2,19 +2,27 @@
     <div class="panel">
         <div class="panel-body">
             <form class="flex-form" data-bind="submit: migrateDb" autocomplete="off">
-                <h3>Migrate data from another database</h3>
-                <div class="bg-warning padding padding-xs"><small><i class="icon-warning"></i> Note: Migration will overwrite any existing documents.</small></div>
-            
+                <div class="row">
+                    <div class="col-sm-9 col-lg-7 col-xl-6">
+                        <h3>Migrate data from another database</h3>
+                        <div class="bg-warning text-warning padding padding-xs margin-top margin-bottom">
+                            <small><i class="icon-warning"></i><span>Note: Migration will overwrite any existing documents.</span></small>
+                        </div>
+                    </div>
+                </div>
                 <div class="row" data-bind="with: model">
                     <div class="col-sm-8 col-lg-6 margin-top">
-
                         <div class="form-group" data-bind="validationElement: migratorFullPath">
                             <label class="control-label migrator-path">
                                 Migrator Path
-                                <small><i class="icon-info text-info"></i></small>
+                                <small data-bind="visible: !migratorPathInConfiguration()"><i class="icon-info text-info"></i></small>
                             </label>
                             <div class="flex-grow has-feedback">
-                                <input data-bind="textInput: migratorFullPath" id="migratorFullPath" type="text" class="form-control" placeholder="Enter the full path of the directory containing the Raven.Migrator executable" />
+                                <div data-bind="visible: migratorPathInConfiguration" class="form-control-static">
+                                    <small><i class="icon-info margin-right margin-right-sm"></i>Path for Raven.Migrator executable was defined by administrator</small>
+                                </div>
+                                <input data-bind="textInput: migratorFullPath, visible: !migratorPathInConfiguration()" 
+                                       id="migratorFullPath" type="text" class="form-control" placeholder="Enter the full path of the directory containing the Raven.Migrator executable" />
                                 <span class="glyphicon glyphicon-ok text-success form-control-feedback" title="Raven.Migrator was found under specified path" data-bind="visible: migratorFullPath() && migratorFullPath.isValid() && !migratorFullPath.isValidating()"></span>
                                 <ul class="dropdown-menu" role="menu"
                                     data-bind="autoComplete: '#migratorFullPath', foreach: $root.migratorPathAutocomplete.createCompleter()">
@@ -26,7 +34,6 @@
                                 </ul>
                             </div>
                         </div>
-
                         <div class="form-group" data-bind="validationElement: selectMigrationOption, validationOptions: { insertMessages: false }">
                             <label class="control-label">Database Source</label>
                             <div>
@@ -45,7 +52,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <!-- ko with: mongoDbConfiguration -->
                         <div data-bind="visible: $parent.showMongoDbOptions">
                             <div class="form-group" data-bind="validationElement: connectionString">
@@ -62,7 +68,6 @@
                                     <input class="styled" type="checkbox" id="migrate-gridfs" data-bind="checked: migrateGridFs">
                                     <label for="migrate-gridfs">Migrate GridFS</label>
                                 </div>
-
                             </div>
                         </div>
                         <!-- /ko -->
@@ -143,19 +148,15 @@
                             </div>
                         </div>
                         <!-- /ko -->
-
                         <div class="form-group" data-bind="visible: activeConfiguration">
-
                             <label class="control-label" id="scriptPopover">
                                 <small><i class="icon-info text-info"></i></small>
                             </label>
-                            
                             <div class="toggle">
                                 <input class="styled" type="checkbox" id="use-transform-script" data-bind="checked: showTransformScript">
                                 <label for="use-transform-script" class="margin-right">Use Transform script</label>
                             </div>
                         </div>
-
                         <div class="form-group">
                             <label class="control-label"></label>
                             <div class="flex-grow" data-bind="collapse: showTransformScript">
@@ -166,7 +167,6 @@
                         </div>
                     </div>
                 </div>
-
                 <hr />
                 <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': spinners.migration() }, disable: spinners.migration() || !submitButtonEnabled()">
                     <span class="icon-import"></span>

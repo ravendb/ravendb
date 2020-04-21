@@ -408,7 +408,7 @@ class editDocument extends viewModelBase {
 
         this.isConflictDocument = ko.computed(() => {
             const metadata = this.metadata();
-            return metadata && ("Raven-Replication-Conflict" in metadata) && !metadata.id.includes("/conflicts/");
+            return metadata && ("Raven-Replication-Conflict" in metadata) && !(metadata as any).id.includes("/conflicts/");
         });
 
         this.computedDocumentSize = ko.pureComputed(() => {

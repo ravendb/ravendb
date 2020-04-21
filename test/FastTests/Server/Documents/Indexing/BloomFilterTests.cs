@@ -17,7 +17,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void Basic()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024, SharedMultipleUseFlag.None))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var tx = Env.WriteTransaction())
                 {
@@ -51,9 +51,6 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.True(filter.Contains(key1));
                         Assert.True(filter.Contains(key2));
                         Assert.Equal(2, filter.Count);
-                        
-                        context.ReturnMemory(key1.AllocatedMemoryData);
-                        context.ReturnMemory(key2.AllocatedMemoryData);
                     }
 
                     tx.Commit();
@@ -64,7 +61,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CanPersist()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024, SharedMultipleUseFlag.None))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 var key1 = context.GetLazyString("orders/1");
 
@@ -93,15 +90,13 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(1, filter.Count);
                     }
                 }
-
-                context.ReturnMemory(key1.AllocatedMemoryData);
             }
         }
 
         [Fact]
         public void CheckWritability()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024, SharedMultipleUseFlag.None))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 var key1 = context.GetLazyString("orders/1");
                 var key2 = context.GetLazyString("orders/2");
@@ -140,16 +135,13 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.True(filter.Writable);
                     }
                 }
-
-                context.ReturnMemory(key1.AllocatedMemoryData);
-                context.ReturnMemory(key2.AllocatedMemoryData);
             }
         }
 
         [Fact]
         public void CheckReadonly()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024, SharedMultipleUseFlag.None))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -182,7 +174,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void WillExpand()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024, SharedMultipleUseFlag.None))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -215,7 +207,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CannotMixFilters()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024, SharedMultipleUseFlag.None))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -234,7 +226,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void WillGetConsumedFromStorage()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024, SharedMultipleUseFlag.None))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {

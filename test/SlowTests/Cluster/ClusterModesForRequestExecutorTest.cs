@@ -40,7 +40,7 @@ namespace SlowTests.Cluster
         public async Task ProxyServer_should_work()
         {
             int serverPort = 10000;
-            using (var server = GetNewServer(new ServerCreationOptions{CustomSettings = GetServerSettingsForPort(false, out var _), RegisterForDisposal = false}))
+            using (var server = GetNewServer(new ServerCreationOptions { CustomSettings = GetServerSettingsForPort(false, out var _), RegisterForDisposal = false }))
             using (var proxy = new ProxyServer(ref serverPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2])))
             {
                 Servers.Add(server);
@@ -110,12 +110,15 @@ namespace SlowTests.Cluster
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
                 //make sure we have updated topology --> more deterministic test
-                await leaderRequestExecutor.UpdateTopologyAsync(new ServerNode
+                await leaderRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
                 {
                     ClusterTag = leader.ServerStore.NodeTag,
                     Database = databaseName,
                     Url = leader.WebUrl
-                }, 5000);
+                })
+                {
+                    TimeoutInMs = 5000
+                });
 
                 ApplyProxiesOnRequestExecutor(serversToProxies, leaderRequestExecutor);
 
@@ -160,14 +163,14 @@ namespace SlowTests.Cluster
                 var follower2Proxy = ReplacePort(followers[1].WebUrl, serversToProxies[followers[1]].Port);
 
                 Assert.Equal(follower2Proxy, fastest.Url);
-
             }
         }
 
         private void ApplyProxiesOnRequestExecutor(Dictionary<RavenServer, ProxyServer> serversToProxies, RequestExecutor requestExecutor)
         {
-            void ApplyProxies(Topology topology)
+            void ApplyProxies(object sender, TopologyUpdatedEventArgs args)
             {
+                var topology = args.Topology;
                 if (topology == null)
                     return;
                 for (var i = 0; i < topology.Nodes.Count; i++)
@@ -184,10 +187,10 @@ namespace SlowTests.Cluster
 
             if (requestExecutor.Topology != null)
             {
-                ApplyProxies(requestExecutor.Topology);
+                ApplyProxies(requestExecutor, new TopologyUpdatedEventArgs(requestExecutor.Topology));
             }
 
-            requestExecutor.TopologyUpdated += ApplyProxies;
+            requestExecutor.OnTopologyUpdated += ApplyProxies;
         }
 
         [Fact]
@@ -203,19 +206,19 @@ namespace SlowTests.Cluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = new []{ leader.WebUrl },
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower1 = new DocumentStore
             {
-                Urls = new[]{ followers[0].WebUrl },
+                Urls = new[] { followers[0].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower2 = new DocumentStore
             {
-                Urls = new[]{ followers[1].WebUrl },
+                Urls = new[] { followers[1].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
@@ -230,12 +233,16 @@ namespace SlowTests.Cluster
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
                 //make sure we have updated topology --> more deterministic test
-                await leaderRequestExecutor.UpdateTopologyAsync(new ServerNode
+                await leaderRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
                 {
                     ClusterTag = leader.ServerStore.NodeTag,
                     Database = databaseName,
                     Url = leader.WebUrl
-                },  5000, forceUpdate: true);
+                })
+                {
+                    TimeoutInMs = 5000,
+                    ForceUpdate = true
+                });
 
                 //wait until all nodes in database cluster are members (and not promotables)
                 //GetDatabaseTopologyCommand -> does not retrieve promotables
@@ -294,19 +301,19 @@ namespace SlowTests.Cluster
             };
             using (var leaderStore = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower1 = new DocumentStore
             {
-                Urls = new[] {followers[0].WebUrl},
+                Urls = new[] { followers[0].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower2 = new DocumentStore
             {
-                Urls = new[] {followers[1].WebUrl},
+                Urls = new[] { followers[1].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
@@ -354,7 +361,6 @@ namespace SlowTests.Cluster
                         await Task.Delay(100);
                     } while (requestExecutor.TopologyNodes == null);
 
-
                     DisposeServerAndWaitForFinishOfDisposal(leader);
 
                     var failedRequests = new HashSet<(string, Exception)>();
@@ -378,8 +384,8 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task RavenDB_7992()
         {
-            //here we test that when choosing Fastest-Node as the ReadBalanceBehavior, 
-            //we can execute commands that use a context, without it leading to a race condition 
+            //here we test that when choosing Fastest-Node as the ReadBalanceBehavior,
+            //we can execute commands that use a context, without it leading to a race condition
 
             var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(3);
@@ -391,7 +397,7 @@ namespace SlowTests.Cluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
@@ -411,7 +417,7 @@ namespace SlowTests.Cluster
                 {
                     session.Query<User>().Where(u => u.Name.StartsWith("Jo"));
                 }
-            }                          
+            }
         }
     }
 }

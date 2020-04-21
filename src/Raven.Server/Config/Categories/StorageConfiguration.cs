@@ -85,6 +85,15 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.SyncJournalsCountThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int SyncJournalsCountThreshold { get; set; }
 
+        /// <summary>
+        /// Specifies the time interval between each IoMetrics Cleaner run
+        /// </summary>
+        [Description("Time (in hours) between IO Metrics cleanup")]
+        [DefaultValue(24)]
+        [TimeUnit(TimeUnit.Hours)]
+        [ConfigurationEntry("Storage.IoMetricsCleanupIntervalInHrs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting IoMetricsCleanupInterval { get; set; }
+
         [Description("EXPERT: A command or executable to run when creating/opening a directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <data-dir-path> <temp-dir-path> <journal-dir-path>")]
         [DefaultValue(null)]
         [ConfigurationEntry("Storage.OnCreateDirectory.Exec", ConfigurationEntryScope.ServerWideOrPerDatabase)]

@@ -100,7 +100,8 @@ namespace Raven.Server.Web.Authentication
             }
 
             // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, serverStore.Server.Certificate, out var clientCertBytes);
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, serverStore.Server.Certificate, out var clientCertBytes,
+                certificate.NotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
             var newCertDef = new CertificateDefinition
             {
@@ -337,7 +338,7 @@ namespace Raven.Server.Web.Authentication
                     using (var certificate = ctx.ReadObject(currentCertDef.ToJson(), "Client/Certificate/Definition"))
                     using (var tx = ctx.OpenWriteTransaction())
                     {
-                        serverStore.Cluster.PutLocalState(ctx, certKey, certificate);
+                        serverStore.Cluster.PutLocalState(ctx, certKey, certificate, currentCertDef);
                         tx.Commit();
                     }
                 }
@@ -1151,6 +1152,9 @@ namespace Raven.Server.Web.Authentication
         {
             if (string.IsNullOrWhiteSpace(certificate.Name))
                 throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");
+
+            if (certificate.NotAfter.HasValue && certificate.NotAfter <= DateTime.UtcNow.Date)
+                throw new ArgumentException("The certificate expiration date must be in the future.");
 
             ValidatePermissions(certificate, serverStore);
         }

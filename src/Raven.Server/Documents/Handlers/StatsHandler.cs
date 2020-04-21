@@ -57,10 +57,12 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var indexes = Database.IndexStore.GetIndexes().ToList();
-
                 var size = Database.GetSizeOnDisk();
 
                 stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
+                stats.LastDatabaseEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
+                stats.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                    
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
                 stats.CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context);
@@ -74,11 +76,8 @@ namespace Raven.Server.Documents.Handlers
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
                 stats.CountOfAttachments = attachments.AttachmentCount;
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
-
                 stats.CountOfIndexes = indexes.Count;
-                var statsDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-
-                stats.DatabaseChangeVector = statsDatabaseChangeVector;
+                
                 stats.DatabaseId = Database.DocumentsStorage.Environment.Base64Id;
                 stats.Is64Bit = !Database.DocumentsStorage.Environment.Options.ForceUsing32BitsPager && IntPtr.Size == sizeof(long);
                 stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();

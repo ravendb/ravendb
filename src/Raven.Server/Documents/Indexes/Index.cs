@@ -2221,7 +2221,7 @@ namespace Raven.Server.Documents.Indexes
                     stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
                     stats.LastQueryingTime = _lastQueryingTime;
 
-                    if (Type == IndexType.MapReduce)
+                    if (Type == IndexType.MapReduce || Type == IndexType.JavaScriptMapReduce)
                     {
                         var mapReduceIndex = this as MapReduceIndex;
                         stats.ReduceOutputCollection = mapReduceIndex.OutputReduceToCollection?.GetCollectionOfReduceOutput();
@@ -3841,7 +3841,7 @@ namespace Raven.Server.Documents.Indexes
             return Name;
         }
 
-        public void LowMemory()
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
             Interlocked.Increment(ref _allocationCleanupNeeded);
@@ -3862,7 +3862,7 @@ namespace Raven.Server.Documents.Indexes
         internal void SimulateLowMemory()
         {
             _lowMemoryPressure = LowMemoryPressure;
-            LowMemory();
+            LowMemory(LowMemorySeverity.ExtremelyLow);
         }
 
         private Regex GetOrAddRegex(string arg)

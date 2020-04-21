@@ -312,6 +312,17 @@ namespace Raven.Server.Documents
                     // this is already in the process of being deleted, we can just exit and let another thread handle it
                     return;
                 }
+                catch (DatabaseConcurrentLoadTimeoutException e)
+                {
+                    if (e.Data.Contains(nameof(DeleteDatabase)))
+                    {
+                        // This case is when a deletion request was issued during the loading of the database.
+                        // The DB will be deleted after actually finishing the loading process
+                        return;
+                    }
+
+                    throw;
+                }
 
                 if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                 {
@@ -637,14 +648,6 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                // if we are here, there is an error, and if there is an error, we need to clear it from the 
-                // resource store cache so we can try to reload it.
-                // Note that we return the faulted task anyway, because we need the user to look at the error
-                if (e.Data.Contains("Raven/KeepInResourceStore") == false)
-                {
-                    DatabasesCache.TryRemove(databaseName, out _);
-                }
-
                 if (_logger.IsInfoEnabled && e.InnerException is UnauthorizedAccessException)
                 {
                     _logger.Info("Failed to load database because couldn't access certain file. Please check permissions, and make sure that nothing locks that file (an antivirus is a good example of something that can lock the file)", e);

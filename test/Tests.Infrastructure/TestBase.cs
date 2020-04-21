@@ -233,7 +233,7 @@ namespace FastTests
                         Certificate = serverCertificate,
                         PrivateKey = pk
                     },
-                    out var certBytes);
+                    out var certBytes, DateTime.UtcNow.Date.AddYears(5));
 
                 string clientCertificatePath = null;
                 try
@@ -688,11 +688,11 @@ namespace FastTests
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
             var testOutcomeAnalyzer = new TestOutcomeAnalyzer(Context);
-            var threwRavenTimeoutException = testOutcomeAnalyzer.ThrewRavenTimeoutException();
+            var shouldSaveDebugPackage = testOutcomeAnalyzer.ShouldSaveDebugPackage();
 
             Dispose(exceptionAggregator);
 
-            if (threwRavenTimeoutException && _globalServer != null && _globalServer.Disposed == false)
+            if (shouldSaveDebugPackage && _globalServer != null && _globalServer.Disposed == false)
                 exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(_globalServer, Context));
 
             if (_localServer != null && _localServer != _globalServer)
@@ -703,12 +703,12 @@ namespace FastTests
                     _localServer = null;
                 });
 
-                if (threwRavenTimeoutException)
+                if (shouldSaveDebugPackage)
                     exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(_localServer, Context));
             }
 
             var firstServerForDisposal = ServersForDisposal.FirstOrDefault();
-            if (threwRavenTimeoutException && firstServerForDisposal != null)
+            if (shouldSaveDebugPackage && firstServerForDisposal != null)
                 exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(firstServerForDisposal, Context));
 
             foreach (var server in ServersForDisposal)

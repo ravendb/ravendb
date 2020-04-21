@@ -119,7 +119,7 @@ namespace Raven.Server.NotificationCenter
             if (ntv == null || ntv.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                 return new T();
 
-            return (T)EntityToBlittable.ConvertToEntity(typeof(T), null, detailsJson, DocumentConventions.Default);
+            return (T)EntityToBlittable.ConvertToEntity(typeof(T), null, detailsJson, DocumentConventions.DefaultForServer);
         }
     }
 }

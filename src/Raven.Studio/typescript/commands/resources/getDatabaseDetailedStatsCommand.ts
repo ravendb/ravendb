@@ -13,10 +13,6 @@ class getDatabaseDetailedStatsCommand extends commandBase {
         const url = endpoints.databases.stats.statsDetailed;
         return this.query<Raven.Client.Documents.Operations.DetailedDatabaseStatistics>(url, null, this.db, null, null, this.getTimeToAlert(this.longWait));
     }
-
-    private getQueryUrlFragment(): string {
-        return 
-    }
 }
 
 export = getDatabaseDetailedStatsCommand;
