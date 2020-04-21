@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -231,11 +230,11 @@ namespace Raven.Server.Documents.Handlers
                     // we don't know the size of the change so we are just estimating
                     foreach (var append in commandData.TimeSeries.Appends)
                     {
-                        size += 2;
+                        size += sizeof(long); // DateTime
                         if (string.IsNullOrWhiteSpace(append.Tag) == false)
-                            size += 4;
+                            size += 8;
 
-                        size += append.Values.Length * 4;
+                        size += append.Values.Length * sizeof(double);
                     }
 
                     return size;                
