@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             long count = 0;
             var array = new DynamicJsonArray();
-            var multiReader = new MultiReader(tss, _context, documentId, source, min, max, timeSeriesFunction.Offset);
+            var reader = new MultiReader(tss, _context, documentId, source, min, max, timeSeriesFunction.Offset);
 
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             BlittableJsonReaderObject GetRawValues()
             {
-                foreach (var singleResult in multiReader.AllValues())
+                foreach (var singleResult in reader.AllValues())
                 {
                     if (ShouldFilter(singleResult, timeSeriesFunction.Where))
                         continue;
@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             BlittableJsonReaderObject GetAggregatedValues()
             {
-                foreach (var it in multiReader.SegmentsOrValues())
+                foreach (var it in reader.SegmentsOrValues())
                 {
                     if (it.IndividualValues != null)
                     {
@@ -928,7 +928,8 @@ namespace Raven.Server.Documents.Queries.Results
             private readonly SortedList<long, string> _names;
             private int _current;
 
-            public MultiReader(TimeSeriesStorage timeSeriesStorage, DocumentsOperationContext context, string documentId, List<string> names, DateTime min, DateTime max, TimeSpan? offset)
+            public MultiReader(TimeSeriesStorage timeSeriesStorage, DocumentsOperationContext context, string documentId, 
+                List<string> names, DateTime min, DateTime max, TimeSpan? offset)
             {
                 if (names == null || names.Count == 0) 
                     throw new ArgumentNullException(nameof(names));
@@ -941,26 +942,23 @@ namespace Raven.Server.Documents.Queries.Results
                 _current = 0;
                 _names = new SortedList<long, string>();
 
-                SortNamesByStartDate(timeSeriesStorage, names);
+                Initialize(timeSeriesStorage, names);
             }
 
-            private void SortNamesByStartDate(TimeSeriesStorage timeSeriesStorage, List<string> names)
+            private void Initialize(TimeSeriesStorage timeSeriesStorage, List<string> names)
             {
-                foreach (var name in names)
+                // we assume that all the series names are already sorted by AggregationTime
+
+                for (var i = 0; i < names.Count; i++)
                 {
-                    var stats = timeSeriesStorage.Stats.GetStats(_context, _docId, name);
+                    var stats = timeSeriesStorage.Stats.GetStats(_context, _docId, names[i]);
                     if (stats.End < _min || stats.Start > _max)
                         continue;
-                    _names[stats.Start.Ticks] = name;
-                }
 
-                for (var i = _names.Count - 1; i >= 0; i--)
-                {
-                    if (_names.Keys[i] > _min.Ticks)
-                        continue;
+                    _names[stats.Start.Ticks] = names[i];
 
-                    _current = i;
-                    break;
+                    if (stats.Start.Ticks <= _min.Ticks)
+                        break;
                 }
             }
 
