@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
@@ -67,6 +68,55 @@ namespace SlowTests.Client.TimeSeries.Operations
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);
                 Assert.Equal(baseline.AddSeconds(1), value.Timestamp);
+            }
+        }
+
+        [Fact]
+        public void CanGetNonExistedRange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/ayende");
+                    session.SaveChanges();
+                }
+
+                var baseline = DateTime.Today;
+
+                var timeSeriesOp = new TimeSeriesOperation
+                {
+                    Name = "Heartrate",
+                    Appends = new List<TimeSeriesOperation.AppendOperation>()
+                    {
+                        new TimeSeriesOperation.AppendOperation
+                        {
+                            Tag = "watches/fitbit",
+                            Timestamp = baseline.AddSeconds(1),
+                            Values = new[]
+                            {
+                                59d
+                            }
+                        }
+                    }
+                };
+
+                var timeSeriesBatch = new TimeSeriesBatchOperation("users/ayende", timeSeriesOp);
+
+                store.Operations.Send(timeSeriesBatch);
+
+                var timesSeriesDetails = store.Operations.Send(
+                    new GetTimeSeriesOperation("users/ayende", "Heartrate", baseline.AddMonths(-2), baseline.AddMonths(-1)));
+
+                Assert.Equal("users/ayende", timesSeriesDetails.Id);
+                Assert.Equal(1, timesSeriesDetails.Values.Count);
+                Assert.Equal(0, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>().Select(u => RavenQuery.TimeSeries(u, "Heartrate", baseline.AddMonths(-2), baseline.AddMonths(-1)).ToList()).ToList();
+                    Assert.Equal(0, query[0].Results.Length);
+                }
             }
         }
 
