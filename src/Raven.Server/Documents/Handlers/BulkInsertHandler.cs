@@ -106,6 +106,7 @@ namespace Raven.Server.Documents.Handlers
                                     var commandData = await task;
                                     if (commandData.Type == CommandType.None)
                                         break;
+
                                     if (commandData.Type == CommandType.AttachmentPUT)
                                     {
                                         commandData.AttachmentStream = await WriteAttachment(commandData.ContentLength, parser.GetBlob(commandData.ContentLength));
@@ -220,6 +221,7 @@ namespace Raven.Server.Documents.Handlers
                 case CommandType.AttachmentPUT:
                     return commandData.ContentLength;
                 case CommandType.TimeSeries:
+                case CommandType.TimeSeriesBulkInsert:
                     // we don't know the size of the change so we are just estimating
                     foreach (var append in commandData.TimeSeries.Appends)
                     {
@@ -287,66 +289,75 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var cmd = Commands[i];
 
-                    Debug.Assert(cmd.Type == CommandType.PUT || cmd.Type == CommandType.Counters || cmd.Type == CommandType.TimeSeries || cmd.Type == CommandType.AttachmentPUT);
+                    Debug.Assert(cmd.Type == CommandType.PUT || cmd.Type == CommandType.Counters || cmd.Type == CommandType.TimeSeries || cmd.Type == CommandType.TimeSeriesBulkInsert || cmd.Type == CommandType.AttachmentPUT);
 
-                    if (cmd.Type == CommandType.PUT)
+                    switch (cmd.Type)
                     {
-                        try
-                        {
-                            Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
-                        }
-                        catch (VoronConcurrencyErrorException)
-                        {
-                            // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
-                            // this means that we have existing values under the current etag
-                            // we'll generate a new (random) id for them. 
-
-                            // The TransactionMerger will re-run us when we ask it to as a 
-                            // separate transaction
-
-                            for (; i < NumberOfCommands; i++)
+                        case CommandType.PUT:
+                            try
                             {
-                                cmd = Commands[i];
-                                if (cmd.Type != CommandType.PUT)
-                                    continue;
+                                Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
+                            }
+                            catch (VoronConcurrencyErrorException)
+                            {
+                                // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                                // this means that we have existing values under the current etag
+                                // we'll generate a new (random) id for them. 
 
-                                if (cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
+                                // The TransactionMerger will re-run us when we ask it to as a 
+                                // separate transaction
+
+                                for (; i < NumberOfCommands; i++)
                                 {
-                                    cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
-                                    RetryOnError = true;
+                                    cmd = Commands[i];
+                                    if (cmd.Type != CommandType.PUT)
+                                        continue;
+
+                                    if (cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
+                                    {
+                                        cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
+                                        RetryOnError = true;
+                                    }
                                 }
+
+                                throw;
                             }
 
-                            throw;
-                        }
-                    }
-                    else if (cmd.Type == CommandType.Counters)
-                    {
-                        var collection = CountersHandler.ExecuteCounterBatchCommand.GetDocumentCollection(cmd.Id, Database, context, fromEtl: false, out _);
+                            break;
+                        case CommandType.Counters:
+                        {
+                            var collection = CountersHandler.ExecuteCounterBatchCommand.GetDocumentCollection(cmd.Id, Database, context, fromEtl: false, out _);
 
-                        foreach (var counterOperation in cmd.Counters.Operations)
-                        {
-                            counterOperation.DocumentId = cmd.Counters.DocumentId;
-                            Database.DocumentsStorage.CountersStorage.IncrementCounter(
-                                context, cmd.Id, collection, counterOperation.CounterName, counterOperation.Delta, out _);
+                            foreach (var counterOperation in cmd.Counters.Operations)
+                            {
+                                counterOperation.DocumentId = cmd.Counters.DocumentId;
+                                Database.DocumentsStorage.CountersStorage.IncrementCounter(
+                                    context, cmd.Id, collection, counterOperation.CounterName, counterOperation.Delta, out _);
+                            }
+
+                            break;
                         }
-                    }
-                    else if (cmd.Type == CommandType.TimeSeries)
-                    {
-                        var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
-                        Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
-                            cmd.Id,
-                            docCollection,
-                            cmd.TimeSeries.Name,
-                            cmd.TimeSeries.Appends
-                        );
-                    }
-                    else if (cmd.Type == CommandType.AttachmentPUT)
-                    {
-                        using (cmd.AttachmentStream.Stream)
+                        case CommandType.TimeSeries:
+                        case CommandType.TimeSeriesBulkInsert:
                         {
-                            Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
-                                cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
+                            var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
+                            Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                                cmd.Id,
+                                docCollection,
+                                cmd.TimeSeries.Name,
+                                cmd.TimeSeries.Appends
+                            );
+                            break;
+                        }
+                        case CommandType.AttachmentPUT:
+                        {
+                            using (cmd.AttachmentStream.Stream)
+                            {
+                                Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
+                                    cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
+                            }
+
+                            break;
                         }
                     }
                 }

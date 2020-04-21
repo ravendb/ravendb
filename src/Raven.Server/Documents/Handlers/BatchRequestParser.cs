@@ -495,7 +495,9 @@ namespace Raven.Server.Documents.Handlers
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
                         var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
-                        commandData.TimeSeries = TimeSeriesOperation.Parse(timeSeriesOperations);
+                        commandData.TimeSeries = commandData.Type == CommandType.TimeSeriesBulkInsert
+                            ? TimeSeriesOperation.ParseForBulkInsert(timeSeriesOperations)
+                            : TimeSeriesOperation.Parse(timeSeriesOperations);
                         break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
@@ -1038,13 +1040,22 @@ namespace Raven.Server.Documents.Handlers
                         ThrowInvalidProperty(state, ctx);
                     }
                     return CommandType.CompareExchangePUT;
-              
+
+                case 20:
+                    if (*(long*)state.StringBuffer == 7598246930185808212 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 7947001131039880037 &&
+                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1953654131)
+                        return CommandType.TimeSeriesBulkInsert;
+
+                    ThrowInvalidProperty(state, ctx);
+                    return CommandType.None;
+
                 case 21:
                     if (*(long*)state.StringBuffer == 5000528724088418115 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 4928459091005170552 &&
                         *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1413827653 &&
                         state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'E')
-                       return CommandType.CompareExchangeDELETE;
+                        return CommandType.CompareExchangeDELETE;
                     
                     if (*(long*)state.StringBuffer == 8531315664536891206 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 7309979286770381673 &&
