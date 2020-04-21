@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
                                             });
                                         }
 
-                                        ClearStreamsTempFiles(reset: true);
+                                        ClearStreamsTempFiles();
 
                                         progress.BatchCount++;
                                         progress.Processed += numberOfCommands;
@@ -160,18 +160,20 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void ClearStreamsTempFiles(bool reset = false)
+        private void ClearStreamsTempFiles()
         {
+            if (_streamsTempFiles == null)
+                return;
+
             foreach (var file in _streamsTempFiles)
             {
                 file.Dispose();
             }
 
-            if (reset)
-                _streamsTempFiles = new List<StreamsTempFile>();
+            _streamsTempFiles = null;
         }
 
-        private List<StreamsTempFile> _streamsTempFiles = new List<StreamsTempFile>();
+        private List<StreamsTempFile> _streamsTempFiles;
 
         private async Task<BatchHandler.MergedBatchCommand.AttachmentStream> WriteAttachment(long size, Stream stream)
         {
@@ -185,6 +187,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 StreamsTempFile attachmentStreamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("bulk");
                 attachmentStream.Stream = attachmentStreamsTempFile.StartNewStream();
+
+                if (_streamsTempFiles == null)
+                    _streamsTempFiles = new List<StreamsTempFile>();
+
                 _streamsTempFiles.Add(attachmentStreamsTempFile);
             }
 
