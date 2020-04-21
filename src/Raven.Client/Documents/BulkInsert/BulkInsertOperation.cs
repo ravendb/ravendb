@@ -683,7 +683,7 @@ namespace Raven.Client.Documents.BulkInsert
             private readonly string _id;
             private readonly string _name;
             private bool _first = true;
-            private const int _maxTimeSeriesInBatch = 128;
+            private const int _maxTimeSeriesInBatch = 1024;
             private int _timeSeriesInBatch = 0;
 
             public TimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name)
