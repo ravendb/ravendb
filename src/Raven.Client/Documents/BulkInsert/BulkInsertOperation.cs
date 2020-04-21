@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -21,7 +22,6 @@ using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Threading;
-using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.BulkInsert
 {
@@ -755,12 +755,16 @@ namespace Raven.Client.Documents.BulkInsert
 
                         _first = false;
 
-                        _operation._currentWriter.Write("{\"Timestamp\":\"");
-                        _operation._currentWriter.Write(timestamp.GetDefaultRavenFormat());
-                        _operation._currentWriter.Write("\",\"Values\":[");
+                        _operation._currentWriter.Write("[");
+                        _operation._currentWriter.Write(timestamp.Ticks);
+                        _operation._currentWriter.Write(",");
+
+                        var valuesToWrite = values.ToList();
+                        _operation._currentWriter.Write(valuesToWrite.Count);
+                        _operation._currentWriter.Write(",");
 
                         var firstValue = true;
-                        foreach (var value in values)
+                        foreach (var value in valuesToWrite)
                         {
                             if (firstValue == false)
                                 _operation._currentWriter.Write(",");
@@ -769,16 +773,14 @@ namespace Raven.Client.Documents.BulkInsert
                             _operation._currentWriter.Write(value);
                         }
 
-                        _operation._currentWriter.Write("]");
-
                         if (tag != null)
                         {
-                            _operation._currentWriter.Write(",\"Tag\":\"");
+                            _operation._currentWriter.Write(",\"");
                             WriteString(_operation._currentWriter, tag);
                             _operation._currentWriter.Write("\"");
                         }
 
-                        _operation._currentWriter.Write("}");
+                        _operation._currentWriter.Write("]");
 
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
@@ -796,7 +798,7 @@ namespace Raven.Client.Documents.BulkInsert
 
                 _operation._currentWriter.Write("{\"Id\":\"");
                 WriteString(_operation._currentWriter, _id);
-                _operation._currentWriter.Write("\",\"Type\":\"TimeSeries\",\"TimeSeries\":{\"Name\":\"");
+                _operation._currentWriter.Write("\",\"Type\":\"TimeSeriesBulkInsert\",\"TimeSeries\":{\"Name\":\"");
                 WriteString(_operation._currentWriter, _name);
                 _operation._currentWriter.Write("\",\"Appends\":[");
             }
@@ -860,7 +862,6 @@ namespace Raven.Client.Documents.BulkInsert
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _token);
                 using (_operation.ConcurrencyCheck())
                 {
-
                     switch (_operation._inProgressCommand)
                     {
                         case CommandType.Counters:

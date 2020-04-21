@@ -567,7 +567,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool ChangeTypeToString(object result, out string str)
+        internal static bool ChangeTypeToString(object result, out string str)
         {
             switch (result)
             {

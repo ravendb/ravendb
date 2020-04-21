@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -64,9 +66,74 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return result;
         }
 
+        internal static TimeSeriesOperation ParseForBulkInsert(BlittableJsonReaderObject input)
+        {
+            if (input.TryGet(nameof(Name), out string name) == false || name == null)
+                ThrowMissingProperty(nameof(Name));
+
+            var result = new TimeSeriesOperation
+            {
+                Name = name
+            };
+
+            if (input.TryGet(nameof(Appends), out BlittableJsonReaderArray operations) == false || operations == null)
+                ThrowMissingProperty(nameof(Appends));
+
+            var sorted = new SortedList<long, AppendOperation>();
+
+            foreach (var op in operations)
+            {
+                if (!(op is BlittableJsonReaderArray bjro))
+                {
+                    ThrowNotBlittableJsonReaderArrayOperation(op);
+                    return null; //never hit
+                }
+
+                var append = new AppendOperation
+                {
+                    Timestamp = new DateTime((long)bjro[0])
+                };
+
+                var numberOfValues = (long)bjro[1];
+                var doubleValues = new double[numberOfValues];
+
+                for (var i = 0; i < numberOfValues; i++)
+                {
+                    doubleValues[i] = Convert.ToDouble(bjro[i + 2]);
+                }
+
+                append.Values = doubleValues;
+
+                var tagIndex = 2 + numberOfValues;
+                if (bjro.Length > tagIndex)
+                {
+                    if (BlittableJsonReaderObject.ChangeTypeToString(bjro[(int)tagIndex], out string tagAsString) == false)
+                        ThrowNotString(bjro[0]);
+
+                    append.Tag = tagAsString;
+                }
+
+                sorted[append.Timestamp.Ticks] = append;
+            }
+
+            result.Appends = new List<AppendOperation>(sorted.Values);
+
+            return result;
+        }
+
         private static void ThrowNotBlittableJsonReaderObjectOperation(object op)
         {
             throw new InvalidDataException($"'Operations' should contain items of type BlittableJsonReaderObject only, but got {op.GetType()}");
+        }
+
+        private static void ThrowNotBlittableJsonReaderArrayOperation(object op)
+        {
+            throw new InvalidDataException($"'Appends' should contain items of type BlittableJsonReaderArray only, but got {op.GetType()}");
+        }
+
+        private static void ThrowNotString(object obj)
+        {
+            throw new InvalidDataException($"Expected a string but got: {obj.GetType()}");
         }
 
         private static void ThrowMissingProperty(string prop)

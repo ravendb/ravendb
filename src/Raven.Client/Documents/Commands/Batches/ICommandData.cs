@@ -35,6 +35,7 @@ namespace Raven.Client.Documents.Commands.Batches
         ForceRevisionCreation, 
         Counters,
         TimeSeries,
+        TimeSeriesBulkInsert,
 
         BatchPATCH,
         // NOTE: When you add anything here, such as additional 
