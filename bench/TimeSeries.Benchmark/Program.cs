@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -20,8 +21,8 @@ namespace TimeSeries.Benchmark
 {
     public class TimeSeriesBench : IDisposable
     {
+        private readonly int _workers;
         private const string DatabaseName = "TimeSeriesBenchmark";
-        private DataGenerator _dataGenerator;
 
         private readonly DocumentStore _store;
         private readonly string _workingDir;
@@ -32,12 +33,18 @@ namespace TimeSeries.Benchmark
         private int _measuresPerTimeSeries;
         private int _numberOfDocs;
         private int _timeSeriesPerDocument;
+        private int _valuesPerMeasure;
+        private int _interval;
+        private DateTime _from;
+        private DateTime _to;
 
         private int TotalTimeSeries => _timeSeriesPerDocument * _numberOfDocs;
-        private int TotalMeasuresPerDocument => _timeSeriesPerDocument * _measuresPerTimeSeries;
-        
-        public TimeSeriesBench(string url)
+        private int TotalMeasuresPerDocument => _timeSeriesPerDocument * _measuresPerTimeSeries * _valuesPerMeasure;
+        private long TotalMetrics => TotalMeasuresPerDocument * _numberOfDocs;
+
+        public TimeSeriesBench(string url, int workers, string workingDir = null)
         {
+            _workers = workers;
             _store = new DocumentStore
             {
                 Urls = new[] { url },
@@ -47,24 +54,49 @@ namespace TimeSeries.Benchmark
                     DisableTopologyUpdates = true
                 }
             };
-            _workingDir = "./TimeSeriesBenchmarkData";
+            _workingDir = workingDir ?? "./TimeSeriesBenchmarkData";
             _store.Initialize();
         }
 
-        public void Initialize(int docs, int timeSeriesPerDocument, int measuresPerTimeSeries, int valuesPerMeasure)
+        public class BenchParameters
+        {
+            public int Documents;
+            public int TimeSeriesPerDocument;
+            public int ValuesPerTimeSeries;
+            public DateTime From;
+            public DateTime To;
+            public int IntervalMs;
+        }
+
+        public void Initialize(BenchParameters parameters)
+        {
+            Initialize(parameters.Documents, parameters.TimeSeriesPerDocument, parameters.ValuesPerTimeSeries, parameters.From, parameters.To, parameters.IntervalMs);
+        }
+
+        public void Initialize(int docs, int timeSeriesPerDocument, int valuesPerMeasure, DateTime from, DateTime to, int interval)
         {
             _numberOfDocs = docs;
             _timeSeriesPerDocument = timeSeriesPerDocument;
-            _measuresPerTimeSeries = measuresPerTimeSeries;
-            _dataGenerator = new DataGenerator(numberOfValues: valuesPerMeasure);
+            _valuesPerMeasure = valuesPerMeasure;
+            _from = from;
+            _to = to;
+            _interval = interval;
+            _measuresPerTimeSeries = (int)((to - from).TotalMilliseconds / interval);
+
             _names.Clear();
-            Log($"Initialize to run with {_numberOfDocs:N0} documents with {_timeSeriesPerDocument:N0} time-series for each and {_measuresPerTimeSeries:N0} measurements per single time-series of {valuesPerMeasure} dimensions.");
+            Log(
+                $"Initialize to run with {_numberOfDocs:N0} documents, {_timeSeriesPerDocument:N0} time-series for each, {_valuesPerMeasure} metrics per measure. Total metrics {TotalMetrics:N0}.");
+        }
+
+        private DataGenerator GetDataGenerator()
+        {
+            return new DataGenerator(numberOfValues: _valuesPerMeasure, start: _from, millisecondsInterval: _interval);
         }
 
         public void Arm()
         {
             _onFire = new TaskCompletionSource<bool>();
-            _fire = new CountdownEvent(TotalTimeSeries);
+            _fire = new CountdownEvent(Math.Min(TotalTimeSeries, _workers));
         }
 
         public Task Fire()
@@ -103,34 +135,62 @@ namespace TimeSeries.Benchmark
             private static Random _currentThreadRand;
             private Random _rand => _currentThreadRand ??= new Random();
 
-            private static long ElapsedMilliseconds;
+            private long _elapsedMilliseconds;
 
-            private readonly int _maxTagLength;
             private readonly int _numberOfValues;
+            private readonly int _millisecondsInterval;
             private readonly bool _withTag;
             private readonly DateTime _baseline;
-
-            public DataGenerator(int maxTagLength = 0, int numberOfValues = 1, DateTime? start = null)
+            private int _timeJitter = 20; // default is a jitter of 20%
+            public DataGenerator(int numberOfValues = 1, DateTime? start = null, int millisecondsInterval = 10_000)
             {
-                _maxTagLength = maxTagLength;
                 _numberOfValues = numberOfValues;
-                _withTag = _maxTagLength > 0;
+                _millisecondsInterval = millisecondsInterval;
+                _withTag = false;
                 _baseline = start ?? DateTime.UtcNow;
             }
-            public Measure Generate(int millisecondsInterval = 1000)
+
+            public void SetJitter(int jitter)
             {
-                var interval = (int)(millisecondsInterval * ((double)_rand.Next(8, 12) / 10)); // add some jitter
-                var elapsed = Interlocked.Add(ref ElapsedMilliseconds, interval);
+                _timeJitter = jitter;
+            }
+
+            private double Jitter
+            {
+                get
+                {
+                    if (_timeJitter <= 0 || _timeJitter >= 100)
+                        return 1;
+
+                    var window = _timeJitter * 10;
+                    return ((double)_rand.Next(1000 - window, 1000 + window) / 1000); 
+                }
+            }
+
+            public void Reset()
+            {
+                _elapsedMilliseconds = 0;
+            }
+
+            public Measure Generate()
+            {
+                var interval = (int)(_millisecondsInterval * Jitter); // add some jitter
+                _elapsedMilliseconds += interval;
+
                 var m = new Measure
                 {
-                    TimeStamp = _baseline.AddMilliseconds(elapsed), 
+                    TimeStamp = _baseline.AddMilliseconds(_elapsedMilliseconds), 
                     Values = new double[_numberOfValues], 
-                    Tag = _withTag == false ? null : RandomString(_maxTagLength)
                 };
 
                 for (int i = 0; i < _numberOfValues; i++)
                 {
                     m.Values[i] = (double)_rand.Next(-100_000, 100_000) / 1_000;
+                }
+
+                if (_withTag)
+                {
+                    m.Tag = GenerateTag();
                 }
 
                 return m;
@@ -145,23 +205,37 @@ namespace TimeSeries.Benchmark
                 }
                 return new string(str);
             }
+
+            private readonly string[] _tagKeys = {"driver", "fleet", "model", "version"};
+
+            private string GenerateTag()
+            {
+                var sb = new StringBuilder();
+                foreach (var key in _tagKeys)
+                {
+                    sb.Append($"{key}={RandomString(6)} ");
+                }
+
+                return sb.ToString(0, sb.Length - 1);
+            }
+
         }
 
-        private async Task Worker(string documentId, string name)
+        private async Task Worker(int workerIndex)
         {
-            var sp = Stopwatch.StartNew();
-            sp.Stop();
-     
-            var measures = 0;
             string tag = null;
+            var path = Path.Combine(_workingDir, $"worker_{workerIndex}.ts-data");
 
+            await using (var fileStream = new FileStream(path, FileMode.Open))
+            await using (var gzip = new GZipStream(fileStream, CompressionMode.Decompress))
+            using (var file = new StreamReader(gzip))
             await using (var bulk = _store.BulkInsert())
-            using (var ts = bulk.TimeSeriesFor(documentId, name))
-            using (var file = new StreamReader(Path.Combine(_workingDir, documentId, name + ".ts-data")))
             {
-                _fire.Signal();
-                await _onFire.Task;
-                sp.Restart();
+                if (_onFire.Task.IsCompleted == false)
+                {
+                    _fire.Signal();
+                    await _onFire.Task;
+                }
 
                 while (file.EndOfStream == false)
                 {
@@ -170,36 +244,35 @@ namespace TimeSeries.Benchmark
                         continue;
 
                     var parts = line.Split(',');
-                    var time = new DateTime(long.Parse(parts[0]));
-                    var numberOfValues = int.Parse(parts[1]);
 
-                    // we have only one value
-                    if (numberOfValues == 1)
-                    {
-                        var value = double.Parse(parts[2]);
-                        if (parts.Length > 3)
-                            tag = parts[3];
-                        measures++;
-                        await ts.AppendAsync(time, value, tag);
-                        continue;
-                    }
+                    var document = parts[0];
+                    var timeSeriesName = parts[1];
+                    var count = long.Parse(parts[2]);
 
-                    // we have several values
-                    var values = new double[numberOfValues];
-                    for (int i = 2; i < numberOfValues + 2; i++)
+                    using (var ts = bulk.TimeSeriesFor(document, timeSeriesName))
                     {
-                        values[i - 2] = double.Parse(parts[i]);
+                        for (int j = 0; j < count; j++)
+                        {
+                            line = await file.ReadLineAsync();
+                            if (line == null)
+                                continue;
+
+                            parts = line.Split(',');
+                            var time = new DateTime(long.Parse(parts[0]));
+                            var numberOfValues = int.Parse(parts[1]);
+
+                            var values = new double[numberOfValues];
+                            for (int i = 2; i < numberOfValues + 2; i++)
+                            {
+                                values[i - 2] = double.Parse(parts[i]);
+                            }
+                            if (parts.Length > 2 + numberOfValues)
+                                tag = parts[2 + numberOfValues];
+                            await ts.AppendAsync(time, values, tag);
+                        }
                     }
-                    if (parts.Length > 2 + numberOfValues)
-                        tag = parts[2 + numberOfValues];
-                    measures++;
-                    await ts.AppendAsync(time, values, tag);
                 }
             }
-            
-            sp.Stop();
-            var rate = measures / (sp.Elapsed.TotalSeconds);
-            Log($"Finished inserting into document '{documentId}' time-series '{name}' with {measures:N0} measurements in {sp.Elapsed} ({(int)rate:N0} measures per second)");
         }
 
         private class User
@@ -207,19 +280,15 @@ namespace TimeSeries.Benchmark
             public string Id { get; set; }
         }
 
+        private class DataPreparationParams
+        {
+            public readonly Dictionary<string, List<string>> Names = new Dictionary<string, List<string>>();
+        }
+
+        private DataPreparationParams[] _dataPreparationParams;
+
         private async Task CreateDocuments()
         {
-            _names.Clear();
-            for (int i = 0; i < _numberOfDocs; i++)
-            {
-                var id = "users/" + (i + 1);
-                _names[id] = new string[_timeSeriesPerDocument];
-                for (int j = 0; j < _timeSeriesPerDocument; j++)
-                {
-                    _names[id][j] = "time-series-" + j;
-                }
-            }
-
             await using (var bulk = _store.BulkInsert())
             {
                 foreach (var doc in _names.Keys)
@@ -227,6 +296,58 @@ namespace TimeSeries.Benchmark
                     await bulk.StoreAsync(new User(), doc);
                 }
             }
+            Log($"Created {_numberOfDocs} documents");
+        }
+
+        private void InitializeLocalVariables()
+        {
+            _dataPreparationParams = new DataPreparationParams[_workers];
+            var timeSeriesPerWorkerArray = new int[_workers];
+            var timeSeriesPerWorker = TotalTimeSeries / _workers;
+            var remaining = TotalTimeSeries % _workers;
+
+            for (var index = 0; index < timeSeriesPerWorkerArray.Length; index++)
+            {
+                _dataPreparationParams[index] = new DataPreparationParams();
+                timeSeriesPerWorkerArray[index] = timeSeriesPerWorker;
+                if (remaining > 0)
+                {
+                    remaining--;
+                    timeSeriesPerWorkerArray[index]++;
+                }
+            }
+
+            var currentWorkerIndex = 0;
+            var worker = _dataPreparationParams[currentWorkerIndex];
+            var toTake = timeSeriesPerWorkerArray[currentWorkerIndex];
+
+            _names.Clear();
+            for (int i = 0; i < _numberOfDocs; i++)
+            {
+                var id = "users/" + (i + 1);
+                _names[id] = new string[_timeSeriesPerDocument];
+                for (int j = 0; j < _timeSeriesPerDocument; j++)
+                {
+                    var ts = "time-series-" + j;
+                    _names[id][j] = "time-series-" + j;
+
+                    if (toTake == 0)
+                    {
+                        currentWorkerIndex++;
+                        worker = _dataPreparationParams[currentWorkerIndex];
+                        toTake = timeSeriesPerWorkerArray[currentWorkerIndex];
+                    }
+
+                    if (toTake > 0)
+                    {
+                        toTake--;
+                        if (worker.Names.ContainsKey(id) == false)
+                            worker.Names[id] = new List<string>();
+                        worker.Names[id].Add(ts);
+                    }
+                }
+            }
+            Log("Local variables are initialized.");
         }
 
         private async Task<string> DoInsert()
@@ -239,21 +360,19 @@ namespace TimeSeries.Benchmark
             var fired = Fire().ContinueWith(_ => sp.Restart());
 
             var tasks = new List<Task>();
-            foreach (var kvp in _names)
+            for (int i = 0; i < _workers; i++)
             {
-                foreach (var ts in kvp.Value)
-                {
-                    var t = Worker(kvp.Key, ts);
-                    tasks.Add(t);
-                }
+                var t = Worker(i);
+                tasks.Add(t);
             }
+           
             await fired;
             await Task.WhenAll(tasks);
 
             sp.Stop();
-            var rate = _numberOfDocs * (TotalMeasuresPerDocument / sp.Elapsed.TotalSeconds);
+            var rate =  _numberOfDocs * (TotalMeasuresPerDocument / sp.Elapsed.TotalSeconds);
             var stats = await _store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-            return $"Test is completed after {sp.Elapsed} with total rate of {(int)rate:N0} points per second with {stats.SizeOnDisk.HumaneSize} size.";
+            return $"Inserting is completed after {sp.Elapsed} with total rate of {(int)rate:N0} measures per second with {stats.SizeOnDisk.HumaneSize} size.";
         }
 
         public async Task BenchmarkInsert(int iteration)
@@ -261,7 +380,7 @@ namespace TimeSeries.Benchmark
             await PrepareData();
             for (int i = 1; i <= iteration; i++)
             {
-                Log("Start bulk insert iteration "+i);
+                Log("Start inserting data...");
                 var result = await DoInsert();
                 Log(result);
             }
@@ -270,20 +389,31 @@ namespace TimeSeries.Benchmark
         public async Task BenchmarkQuery(int iteration)
         {
             Log("Start benching query");
-            await Aggregation();
+            await SingleGroupBy(1, 1, 1);
+            await SingleGroupBy(1, 1, 12);
+            await SingleGroupBy(1, 8, 1);
+
+            if (_valuesPerMeasure >= 5)
+            {
+                await SingleGroupBy(5, 1, 1);
+                await SingleGroupBy(5, 1, 12);
+                await SingleGroupBy(5, 8, 1);
+            }
         }
 
-        private async Task Aggregation()
+        private async Task SingleGroupBy(int metrics, int series, int hours)
         {
             using (var session = _store.OpenAsyncSession())
             {
-                var id = _names.Keys.ToArray()[0];
-                var name = _names[id][0];
+                var ids = _names.Keys.Take(series);
+                var name = _names.First().Value[0];
+                var to = _from.AddDays(3);
+                var from = to.AddHours(-hours);
 
                 var query = session.Query<User>()
-                    .Where(u => u.Id == id)
+                    .Where(u=>u.Id.In(ids))
                     .Statistics(out var stats)
-                    .Select(u => RavenQuery.TimeSeries(u, name)
+                    .Select(u => RavenQuery.TimeSeries(u, name, from, to)
                         .GroupBy(g => g.Minutes(5))
                         .Select(g => new
                         {
@@ -291,52 +421,60 @@ namespace TimeSeries.Benchmark
                         })
                         .ToList());
                 var result = await query.ToListAsync();
-                Log($"Done aggregation by day in {stats.DurationInMs} ms with total days of {result[0].Results.Length}");
+                var total = 0;
+                foreach (var aggResult in result)
+                {
+                    total += aggResult.Results.Length;
+                }
+                Log($"Done group by for {metrics} metrics, {series} hosts every 5 minutes for {hours} hours in {stats.DurationInMs} ms (total results: {total})");
             }
         }
 
         private async Task PrepareData()
         {
+            var sp = Stopwatch.StartNew();
+            Log($"Start preparing data for {_workers} workers.");
+
+            InitializeLocalVariables();
+
             await CreateDocuments();
 
-            var tasks = new List<Task>();
-            foreach (var kvp in _names)
+            for (int i = 0; i < _workers; i++)
             {
-                tasks.Clear();
-                foreach (var ts in kvp.Value)
-                {
-                    var t = PrepareDataForSingleInsert(kvp.Key, ts, _measuresPerTimeSeries);
-                    tasks.Add(t);
-                }
-                await Task.WhenAll(tasks);
+                await PrepareDataForWorker(i);
+                Log($"Data for worker {i} is ready.");
             }
 
-            Log("Data preparation is completed.");
+            Log($"Preparation of data is completed after {sp.Elapsed}.");
         }
 
-        private async Task PrepareDataForSingleInsert(string documentId, string name, int numberOfMeasures)
+        private async Task PrepareDataForWorker(int workerIndex)
         {
-            Log($"Start preparing {numberOfMeasures:N0} measures for document '{documentId}' and time-series '{name}'");
-
+            var data = _dataPreparationParams[workerIndex];
             try
             {
-                var dir = Path.Combine(_workingDir, documentId);
-                Directory.CreateDirectory(dir);
-                var file = Path.Combine(dir, name + ".ts-data");
+                var path = Path.Combine(_workingDir, $"worker_{workerIndex}.ts-data");
+                var sb = new StringBuilder();
+                var generator = GetDataGenerator();
 
-                await using (var fs = new StreamWriter(file))
+                await using (var fileStream = new FileStream(path, FileMode.Create))
+                await using (var gzip = new GZipStream(fileStream, CompressionMode.Compress))
+                await using (var fs = new StreamWriter(gzip))
                 {
-                    var sb = new StringBuilder();
-                    for (int i = 0; i < numberOfMeasures; i++)
+                    foreach (var names in data.Names)
+                    foreach (var timeSeries in names.Value)
                     {
-                        var measure = _dataGenerator.Generate();
-                        measure.AppendToBuilder(sb);
-                        await fs.WriteLineAsync(sb);
-                        sb.Clear();
+                        generator.Reset();
+                        sb.AppendLine($"{names.Key},{timeSeries},{_measuresPerTimeSeries}");
+                        for (int i = 0; i < _measuresPerTimeSeries; i++)
+                        {
+                            var measure = generator.Generate();
+                            measure.AppendToBuilder(sb);
+                            await fs.WriteLineAsync(sb);
+                            sb.Clear();
+                        } 
                     }
                 }
-
-                Log($"Finished preparation for document '{documentId}' and time-series '{name}'");
             }
             catch (Exception e)
             {
@@ -354,6 +492,7 @@ namespace TimeSeries.Benchmark
 
         public void CreateDb(string dbName)
         {
+            Directory.CreateDirectory(_workingDir);
             try
             {
                 var doc = new DatabaseRecord(dbName);
@@ -362,13 +501,14 @@ namespace TimeSeries.Benchmark
                 {
                     try
                     {
-                        _store.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, hardDelete: true));
+             //           _store.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, hardDelete: true));
                     }
                     catch (Exception ex)
                     {
                         Log("Cannot delete DB " + dbName + ". Exception : " + ex.Message, true);
                     }
                 };
+                
             }
             catch (Exception ex)
             {
@@ -394,17 +534,80 @@ namespace TimeSeries.Benchmark
         {
             public static async Task Main(string[] args)
             {
-                var documents = 1;
-                var timeSeriesPerDocument = 5;
-                var measuresPerTimeSeries = 1_000_000;
-                var valuesPerMeasure = 1;
+                var url = args[0];
+                var workers = int.Parse(args[1]);
 
-                using (var tsb = new TimeSeriesBench("http://localhost:8080"))
+                var now = DateTime.UtcNow;
+
+                var test1 = new BenchParameters
+                {
+                    Documents = 100,
+                    TimeSeriesPerDocument = 1,
+                    ValuesPerTimeSeries = 1,
+                    From = now.AddMonths(-1),
+                    To = now,
+                    IntervalMs = 10_000
+                };
+
+                var test2 = new BenchParameters
+                {
+                    Documents = 100,
+                    TimeSeriesPerDocument = 1,
+                    ValuesPerTimeSeries = 10,
+                    From = now.AddMonths(-1),
+                    To = now,
+                    IntervalMs = 10_000
+                };
+
+                var test3 = new BenchParameters
+                {
+                    Documents = 4000,
+                    TimeSeriesPerDocument = 1,
+                    ValuesPerTimeSeries = 10,
+                    From = now.AddDays(-3),
+                    To = now,
+                    IntervalMs = 10_000
+                };
+
+                var test4 = new BenchParameters
+                {
+                    Documents = 100_000,
+                    TimeSeriesPerDocument = 1,
+                    ValuesPerTimeSeries = 10,
+                    From = now.AddHours(-3),
+                    To = now,
+                    IntervalMs = 10_000
+                };
+
+                var test5 = new BenchParameters
+                {
+                    Documents = 1_000_000,
+                    TimeSeriesPerDocument = 1,
+                    ValuesPerTimeSeries = 10,
+                    From = now.AddMinutes(-3),
+                    To = now,
+                    IntervalMs = 10_000
+                };
+
+                var simpleTest = new BenchParameters
+                {
+                    Documents = 4,
+                    TimeSeriesPerDocument = 2,
+                    ValuesPerTimeSeries = 1,
+                    From = now.AddMonths(-1),
+                    To = now,
+                    IntervalMs = 1_000
+                };
+
+                using (var tsb = new TimeSeriesBench(url, workers))
                 {
                     tsb.CreateDb(DatabaseName);
-                    tsb.Initialize(documents, timeSeriesPerDocument, measuresPerTimeSeries, valuesPerMeasure);
+                    tsb.Initialize(test1);
 
                     await tsb.BenchmarkInsert(1);
+                    await Task.Delay(10_000); // cooldown
+                    Console.WriteLine();
+
                     await tsb.BenchmarkQuery(1);
                 }
             }
