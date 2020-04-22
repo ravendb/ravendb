@@ -536,7 +536,7 @@ namespace Voron
                 throw new ArgumentException("Only read transactions can be cloned");
 
             _cancellationTokenSource.Token.ThrowIfCancellationRequested();
-            transactionPersistentContext = transactionPersistentContext ?? new TransactionPersistentContext();
+            transactionPersistentContext ??= new TransactionPersistentContext();
 
             try
             {
@@ -648,9 +648,14 @@ namespace Voron
                     };
 
                     if (flags == TransactionFlags.ReadWrite)
+                    {
                         tx.CurrentTransactionHolder = _currentWriteTransactionHolder;
+                        tx.AfterCommitWhenNewReadTransactionsPrevented += AfterCommitWhenNewReadTransactionsPrevented;
+                    }
 
                     ActiveTransactions.Add(tx);
+
+                    NewTransactionCreated?.Invoke(tx);
                 }
                 finally
                 {
@@ -790,6 +795,8 @@ namespace Voron
             }
         }
 
+        public event Action<LowLevelTransaction> NewTransactionCreated;
+        public event Action<LowLevelTransaction> AfterCommitWhenNewReadTransactionsPrevented;
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
             if (ActiveTransactions.Contains(tx) == false)

@@ -14,6 +14,8 @@ namespace Raven.Server.Indexing
         private readonly string _name;
         private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
 
+        public string Name => _name;
+
         public long FilesAllocations => _indexOutputFilesSummary.TotalWritten;
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this(tx, environment, "Files")

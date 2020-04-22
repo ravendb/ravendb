@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using CsvHelper;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -19,6 +20,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Threading;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Impl;
 
 using Version = Lucene.Net.Util.Version;
@@ -39,6 +41,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsIndexWriters;
 
         private SnapshotDeletionPolicy _snapshotter;
+
+        // this is used to remember the positions of files in the database
+        // always points to the latest valid transaction and is updated by 
+        // the write tx on commit, thread safety is inherited from the voron
+        // transaction
+        private VoronStreamCache _streamsCache = new VoronStreamCache
+        {
+            ChunksByName = new Dictionary<string, Tree.ChunkDetails[]>()
+        };
 
         private LuceneVoronDirectory _directory;
         private readonly Dictionary<string, LuceneVoronDirectory> _suggestionsDirectories;
@@ -171,6 +182,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized)
                 throw new InvalidOperationException();
 
+            environment.NewTransactionCreated += SetStreamCacheInTx;
+
             using (var tx = environment.WriteTransaction())
             {
                 InitializeMainIndexStorage(tx, environment);
@@ -183,6 +196,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _initialized = true;
+        }
+
+        internal void BuildStreamCacheAfterTx(Transaction tx)
+        {
+            var cache = new Dictionary<string, Tree.ChunkDetails[]>();
+            
+            var filesTree = tx.ReadTree(_directory.Name);
+            using (var it = filesTree.Iterate(false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys))
+                {
+                    do
+                    {
+                        var chunkDetails = filesTree.ReadTreeChunks(it.CurrentKey, out _);
+                        if (chunkDetails == null)
+                            continue;
+                        cache[it.CurrentKey.ToString()] = chunkDetails;
+                    } while (it.MoveNext());
+                }
+            }
+
+            _streamsCache = new VoronStreamCache {ChunksByName = cache};
+        }
+
+        private void SetStreamCacheInTx(LowLevelTransaction tx)
+        {
+            tx.ExternalState = _streamsCache;
         }
 
         private void InitializeSuggestionsIndexStorage(Transaction tx, StorageEnvironment environment)
