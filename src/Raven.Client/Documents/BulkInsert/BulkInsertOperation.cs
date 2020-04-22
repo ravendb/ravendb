@@ -150,6 +150,7 @@ namespace Raven.Client.Documents.BulkInsert
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
         private readonly JsonSerializer _defaultSerializer;
         private readonly Func<object, IMetadataDictionary, StreamWriter, bool> _customEntitySerializer;
+        private readonly int _timeSeriesBatchSize;
         private long _concurrentCheck;
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default)
@@ -219,6 +220,7 @@ namespace Raven.Client.Documents.BulkInsert
 
             _defaultSerializer = _requestExecutor.Conventions.CreateSerializer();
             _customEntitySerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeEntityToJsonStream;
+            _timeSeriesBatchSize = _conventions.BulkInsert.TimeSeriesBatchSize;
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
                 entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
@@ -689,7 +691,6 @@ namespace Raven.Client.Documents.BulkInsert
             private readonly string _id;
             private readonly string _name;
             private bool _first = true;
-            private const int _maxTimeSeriesInBatch = 1024;
             private int _timeSeriesInBatch = 0;
 
             public TimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name)
@@ -738,7 +739,7 @@ namespace Raven.Client.Documents.BulkInsert
 
                             WritePrefixForNewCommand();
                         }
-                        else if (_timeSeriesInBatch >= _maxTimeSeriesInBatch)
+                        else if (_timeSeriesInBatch >= _operation._timeSeriesBatchSize)
                         {
                             _operation._currentWriter.Write("]}},");
                             WritePrefixForNewCommand();

@@ -101,6 +101,7 @@ namespace Raven.Client.Documents.Conventions
         {
             private readonly DocumentConventions _conventions;
             private Func<object, IMetadataDictionary, StreamWriter, bool> _trySerializeEntityToJsonStream;
+            private int _timeSeriesBatchSize;
 
             public Func<object, IMetadataDictionary, StreamWriter, bool> TrySerializeEntityToJsonStream
             {
@@ -112,10 +113,25 @@ namespace Raven.Client.Documents.Conventions
                 }
             }
 
+            public int TimeSeriesBatchSize
+            {
+                get => _timeSeriesBatchSize;
+                set
+                {
+                    _conventions.AssertNotFrozen();
+
+                    if (value <= 0)
+                        throw new InvalidOperationException($"{nameof(TimeSeriesBatchSize)} must be positive");
+
+                    _timeSeriesBatchSize = value;
+                }
+            }
+
             internal BulkInsertConventions(DocumentConventions conventions)
             {
                 _conventions = conventions;
                 TrySerializeEntityToJsonStream = null;
+                TimeSeriesBatchSize = 1024;
             }
         }
 
