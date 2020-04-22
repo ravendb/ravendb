@@ -14,14 +14,16 @@ namespace Raven.Server.Indexing
     {
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
+        private readonly LuceneVoronDirectory _directory;
         private readonly string _name;
         private readonly string _tree;
         private VoronStream _stream;
 
         private bool _isOriginal = true;
 
-        public VoronIndexInput(string name, Transaction transaction, string tree)
+        public VoronIndexInput(LuceneVoronDirectory directory, string name, Transaction transaction, string tree)
         {
+            _directory = directory;
             _name = name;
             _tree = tree;
 
@@ -39,13 +41,16 @@ namespace Raven.Server.Indexing
             {
                 if (transaction.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
                 {
-                    if (cache.ChunksByName.TryGetValue(_name, out var details))
+                    if (cache.DirectoriesByName.TryGetValue(_directory.Name, out var files))
                     {
-                        // we don't dispose here explicitly, the fileName needs to be
-                        // alive as long as the transaction is
-                        Slice.From(transaction.Allocator, _name, out Slice fileName);
-                        _stream = new VoronStream(fileName, details, transaction.LowLevelTransaction);
-                        return;
+                        if (files.ChunksByName.TryGetValue(_name, out var details))
+                        {
+                            // we don't dispose here explicitly, the fileName needs to be
+                            // alive as long as the transaction is
+                            Slice.From(transaction.Allocator, _name, out Slice fileName);
+                            _stream = new VoronStream(fileName, details, transaction.LowLevelTransaction);
+                            return;
+                        }
                     }
                 }
             }

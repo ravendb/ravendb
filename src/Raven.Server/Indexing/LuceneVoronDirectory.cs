@@ -177,7 +177,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexInput(name, state.Transaction, _name);
+            return new VoronIndexInput(this, name, state.Transaction, _name);
         }
 
         public override IndexOutput CreateOutput(string name, IState s)

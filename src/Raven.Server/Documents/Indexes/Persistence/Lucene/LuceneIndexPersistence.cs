@@ -202,7 +202,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             FillCollectionEtags(tx, newCache.Collections);
 
-            FillLuceneFilesChunks(tx, newCache.ChunksByName);
+            var directoryFiles = new IndexTransactionCache.DirectoryFiles();
+            newCache.DirectoriesByName[_directory.Name] = directoryFiles;
+            FillLuceneFilesChunks(tx, directoryFiles.ChunksByName, _directory.Name);
+
+            foreach (var (name, _) in _suggestionsDirectories)
+            {
+                directoryFiles = new IndexTransactionCache.DirectoryFiles();
+                newCache.DirectoriesByName[name] = directoryFiles;
+                FillLuceneFilesChunks(tx, directoryFiles.ChunksByName, name);
+            }
 
             _streamsCache = newCache;
         }
@@ -231,9 +240,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private Dictionary<string, Tree.ChunkDetails[]> FillLuceneFilesChunks(Transaction tx, Dictionary<string, Tree.ChunkDetails[]> cache)
+        private void FillLuceneFilesChunks(Transaction tx, Dictionary<string, Tree.ChunkDetails[]> cache, string name)
         {
-            var filesTree = tx.ReadTree(_directory.Name);
+            var filesTree = tx.ReadTree(name);
+            if (filesTree == null)
+                return;
             using (var it = filesTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys))
@@ -247,8 +258,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     } while (it.MoveNext());
                 }
             }
-
-            return cache;
         }
 
         private void SetStreamCacheInTx(LowLevelTransaction tx)
