@@ -256,8 +256,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
             else
             {
                 var collectionStats = Database.DocumentsStorage.GetCollection(collection, context);
-                buffer[0] = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
-                buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context, collection);
+                buffer[0] = Database.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, collection);
+                buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context.Transaction.InnerTransaction, collection);
                 buffer[2] = collectionStats.Count;
 
                 if (hasCounters)
