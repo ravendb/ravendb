@@ -711,7 +711,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
-                    if (_currentSegment.NumberOfValues > _values.Length)
+                    if (_currentSegment.NumberOfValues != _values.Length)
                     {
                         _values = new double[_currentSegment.NumberOfValues];
                         _states = new TimestampState[_currentSegment.NumberOfValues];
@@ -970,7 +970,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             void AppendEntireSegment()
             {
-                EnsureSegmentSize(segment.NumberOfBytes);
+                ValidateSegment(segment);
 
                 using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
                 {
@@ -1175,7 +1175,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
 
-                EnsureSegmentSize(newValueSegment.NumberOfBytes);
+                ValidateSegment(newValueSegment);
                 if (newValueSegment.NumberOfLiveEntries == 0)
                 {
                     MarkSegmentAsPendingDeletion(_context, _collection.Name, _currentEtag);
@@ -1204,7 +1204,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
 
-                EnsureSegmentSize(newValueSegment.NumberOfBytes);
+                ValidateSegment(newValueSegment);
                 MarkSegmentAsPendingDeletion(_context, _collection.Name, _currentEtag);
 
                 ReduceCountBeforeAppend();
@@ -1234,7 +1234,7 @@ namespace Raven.Server.Documents.TimeSeries
                 newSegment.Initialize(item.Values.Length);
                 newSegment.Append(_context.Allocator, 0, item.Values.Span, SliceHolder.TagAsSpan(item.Tag), item.Status);
 
-                EnsureSegmentSize(newSegment.NumberOfBytes);
+                ValidateSegment(newSegment);
 
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate);
                 _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, BaselineDate, item.Status);
@@ -1461,7 +1461,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                             if (ValueTooFar(segmentHolder, current))
                             {
-                                segmentHolder.AppendToNewSegment(current);
+                                segmentHolder.AppendToNewSegment(appendEnumerator.Current);
                                 break;
                             }
 
@@ -1566,10 +1566,10 @@ namespace Raven.Server.Documents.TimeSeries
                         }
                         
                         current = appendEnumerator.Current;
-                        var unchangedNumberOfValues = EnsureNumberOfValues(newSegment.NumberOfValues, ref current);
-                        if (current.Timestamp < nextSegmentBaseline && unchangedNumberOfValues)
+                        if (current.Timestamp < nextSegmentBaseline)
                         {
-                            continue;
+                            if (EnsureNumberOfValues(newSegment.NumberOfValues, ref current))
+                                continue;
                         }
 
                         canAppend = false;
@@ -1587,7 +1587,7 @@ namespace Raven.Server.Documents.TimeSeries
                     // either the range is too high to fit in a single segment (~25 days) or the
                     // previous segment is full, we can just create a completely new segment with the
                     // new value
-                    segmentHolder.AppendToNewSegment(current);
+                    segmentHolder.AppendToNewSegment(appendEnumerator.Current);
                     return true;
                 }
 
@@ -2067,10 +2067,10 @@ namespace Raven.Server.Documents.TimeSeries
             return (changeVector, newEtag);
         }
 
-        private static void EnsureSegmentSize(int size)
+        private static void ValidateSegment(TimeSeriesValuesSegment segment)
         {
-            if (size > MaxSegmentSize)
-                throw new ArgumentOutOfRangeException("Attempted to write a time series segment that is larger (" + size + ") than the maximum size allowed.");
+            if (segment.NumberOfBytes > MaxSegmentSize)
+                throw new ArgumentOutOfRangeException("Attempted to write a time series segment that is larger (" + segment.NumberOfBytes + ") than the maximum size allowed.");
         }
 
         public long GetNumberOfTimeSeriesSegments(DocumentsOperationContext context)
