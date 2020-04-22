@@ -12,7 +12,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -30,8 +29,7 @@ namespace Raven.Server.Documents.Patch
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
-        public Dictionary<string, BlittableObjectProperty> OwnValues =
-            new Dictionary<string, BlittableObjectProperty>();
+        public Dictionary<string, BlittableObjectProperty> OwnValues;
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
         public IState LuceneState;
@@ -49,13 +47,17 @@ namespace Raven.Server.Documents.Patch
 
         public ObjectInstance GetOrCreate(string key)
         {
-            if (OwnValues.TryGetValue(key, out var property) == false)
-            {
-                property = GenerateProperty(key);
+            BlittableObjectProperty property = default;
+            if (OwnValues?.TryGetValue(key, out property)  == true && 
+                property != null) 
+                return property.Value.AsObject();
 
-                OwnValues[key] = property;
-                Deletes?.Remove(key);
-            }
+            property = GenerateProperty(key);
+            
+            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
+
+            OwnValues[key] = property;
+            Deletes?.Remove(key);
 
             return property.Value.AsObject();
 
@@ -350,12 +352,14 @@ namespace Raven.Server.Documents.Patch
 
             MarkChanged();
             Deletes.Add(propertyName);
-            return OwnValues.Remove(propertyName);
+            return OwnValues?.Remove(propertyName) == true;
         }
 
         public override PropertyDescriptor GetOwnProperty(string propertyName)
         {
-            if (OwnValues.TryGetValue(propertyName, out var val))
+            BlittableObjectProperty val = default;
+            if (OwnValues?.TryGetValue(propertyName, out val) == true &&
+                val != null)
                 return val;
 
             Deletes?.Remove(propertyName);
@@ -368,6 +372,8 @@ namespace Raven.Server.Documents.Patch
             {
                 return PropertyDescriptor.Undefined;
             }
+
+            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
 
             OwnValues[propertyName] = val;
 
@@ -389,17 +395,22 @@ namespace Raven.Server.Documents.Patch
 
         public override IEnumerable<KeyValuePair<string, PropertyDescriptor>> GetOwnProperties()
         {
-            foreach (var value in OwnValues)
+            if (OwnValues != null)
             {
-                yield return new KeyValuePair<string, PropertyDescriptor>(value.Key, value.Value);
+                foreach (var value in OwnValues)
+                {
+                    yield return new KeyValuePair<string, PropertyDescriptor>(value.Key, value.Value);
+                }
             }
+
             if (Blittable == null)
                 yield break;
+
             foreach (var prop in Blittable.GetPropertyNames())
             {
                 if (Deletes?.Contains(prop) == true)
                     continue;
-                if (OwnValues.ContainsKey(prop))
+                if (OwnValues?.ContainsKey(prop) == true)
                     continue;
                 yield return new KeyValuePair<string, PropertyDescriptor>(
                     prop,
@@ -410,8 +421,7 @@ namespace Raven.Server.Documents.Patch
 
         private void RecordNumericFieldType(string key, BlittableJsonToken type)
         {
-            if (OriginalPropertiesTypes == null)
-                OriginalPropertiesTypes = new Dictionary<string, BlittableJsonToken>();
+            OriginalPropertiesTypes ??= new Dictionary<string, BlittableJsonToken>();
             OriginalPropertiesTypes[key] = type;
         }
     }
