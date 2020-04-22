@@ -1448,7 +1448,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 break;
                             }
 
-                            EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, current);
+                            EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, ref current);
 
                             if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, out var newValueFetched))
                                 break;
@@ -1498,7 +1498,7 @@ namespace Raven.Server.Documents.TimeSeries
             return deltaInMs >= int.MaxValue;
         }
 
-        private static bool EnsureNumberOfValues(int segmentNumberOfValues, Reader.SingleResult current)
+        private static bool EnsureNumberOfValues(int segmentNumberOfValues, ref Reader.SingleResult current)
         {
             if (segmentNumberOfValues > current.Values.Length)
             {
@@ -1510,7 +1510,14 @@ namespace Raven.Server.Documents.TimeSeries
                     updatedValues.Span[i] = double.NaN;
                 }
 
-                current.Values = updatedValues;
+                // we create a new instance to avoid having NaN in the case of re-appending
+                current = new Reader.SingleResult
+                {
+                    Timestamp = current.Timestamp,
+                    Values = updatedValues,
+                    Status = current.Status,
+                    Tag = current.Tag
+                };
             }
 
             return segmentNumberOfValues == current.Values.Length;
@@ -1559,7 +1566,7 @@ namespace Raven.Server.Documents.TimeSeries
                         }
                         
                         current = appendEnumerator.Current;
-                        var unchangedNumberOfValues = EnsureNumberOfValues(newSegment.NumberOfValues, current);
+                        var unchangedNumberOfValues = EnsureNumberOfValues(newSegment.NumberOfValues, ref current);
                         if (current.Timestamp < nextSegmentBaseline && unchangedNumberOfValues)
                         {
                             continue;
@@ -1652,7 +1659,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 segmentChanged = true;
                                 Debug.Assert(current != null);
 
-                                if (EnsureNumberOfValues(newNumberOfValues, current) == false)
+                                if (EnsureNumberOfValues(newNumberOfValues, ref current) == false)
                                 {
                                     // the next value to append has a larger number of values.
                                     // we need to append the rest of the open segment and only then we can re-append this value.
