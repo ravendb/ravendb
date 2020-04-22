@@ -495,18 +495,24 @@ namespace Raven.Server.Documents.Handlers
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
 
-                        using (var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
+                        var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        if (commandData.Type == CommandType.TimeSeriesBulkInsert)
                         {
-                            commandData.TimeSeries = commandData.Type == CommandType.TimeSeriesBulkInsert
-                                ? TimeSeriesOperation.ParseForBulkInsert(timeSeriesOperations)
-                                : TimeSeriesOperation.Parse(timeSeriesOperations);
+                            // this is a long running operation and we won't to dispose of the blittable as soon as possible
+                            commandData.TimeSeries = TimeSeriesOperation.ParseForBulkInsert(timeSeriesOperations);
+                            timeSeriesOperations.Dispose();
                         }
+                        else
+                        {
+                            commandData.TimeSeries = TimeSeriesOperation.Parse(timeSeriesOperations);
+                        }
+
                         break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        using (var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
-                            commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing, out commandData.PatchIfMissingArgs);
+                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing, out commandData.PatchIfMissingArgs);
                         break;
                     case CommandPropertyName.ChangeVector:
                         while (parser.Read() == false)
@@ -561,8 +567,8 @@ namespace Raven.Server.Documents.Handlers
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
 
-                        using (var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
-                            commandData.Counters = DocumentCountersOperation.Parse(counterOps);
+                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        commandData.Counters = DocumentCountersOperation.Parse(counterOps);
                         break;
                     case CommandPropertyName.FromEtl:
                         while (parser.Read() == false)
