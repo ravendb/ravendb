@@ -468,7 +468,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         backupStatus.BackupType != periodicBackup.Configuration.BackupType || // backup type has changed
                         backupStatus.LastEtag == null || // last document etag wasn't updated
                         backupToLocalFolder && BackupTask.DirectoryContainsBackupFiles(backupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
-                    // the local folder already includes a full backup or snapshot
+                        // the local folder already includes a full backup or snapshot
                     {
                         isFullBackup = true;
                     }
@@ -507,7 +507,22 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 catch (Exception e)
                 {
-                    _serverStore.ConcurrentBackupsCounter.FinishBackup();
+                    // we failed to START the backup, need to update the status anyway
+                    // in order to reschedule the next full/incremental backup
+                    periodicBackup.BackupStatus.Version++;
+                    periodicBackup.BackupStatus.Error = new Error
+                    {
+                        Exception = e.ToString(),
+                        At = DateTime.UtcNow
+                    };
+
+                    if (isFullBackup)
+                        periodicBackup.BackupStatus.LastFullBackupInternal = startTimeInUtc;
+                    else
+                        periodicBackup.BackupStatus.LastIncrementalBackupInternal = startTimeInUtc;
+
+                    BackupTask.SaveBackupStatus(periodicBackup.BackupStatus, _database, _logger);
+                    ScheduleNextBackup(periodicBackup);
 
                     var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
                     if (_logger.IsOperationsEnabled)
@@ -515,8 +530,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _database.NotificationCenter.Add(AlertRaised.Create(
                         _database.Name,
-                        $"Periodic Backup task: '{periodicBackup.Configuration.Name}'",
                         message,
+                        "The next backup will be rescheduled",
                         AlertType.PeriodicBackup,
                         NotificationSeverity.Error,
                         details: new ExceptionDetails(e)));
@@ -558,35 +573,40 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             finally
             {
-                try
+                ScheduleNextBackup(periodicBackup);
+            }
+        }
+
+        private void ScheduleNextBackup(PeriodicBackup periodicBackup)
+        {
+            try
+            {
+                _serverStore.ConcurrentBackupsCounter.FinishBackup();
+
+                periodicBackup.RunningTask = null;
+                periodicBackup.RunningBackupTaskId = null;
+                periodicBackup.CancelToken = null;
+                periodicBackup.RunningBackupStatus = null;
+
+                if (periodicBackup.HasScheduledBackup() && _cancellationToken.IsCancellationRequested == false)
                 {
-                    _serverStore.ConcurrentBackupsCounter.FinishBackup();
-
-                    periodicBackup.RunningTask = null;
-                    periodicBackup.RunningBackupTaskId = null;
-                    periodicBackup.CancelToken = null;
-                    periodicBackup.RunningBackupStatus = null;
-
-                    if (periodicBackup.HasScheduledBackup() && _cancellationToken.IsCancellationRequested == false)
-                    {
-                        var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
-                        periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
-                    }
+                    var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
+                    periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
                 }
-                catch (Exception e)
-                {
-                    var msg = $"Failed to schedule next backup for backup thread: '{periodicBackup.Configuration.Name}'";
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations(msg, e);
+            }
+            catch (Exception e)
+            {
+                var message = $"Failed to schedule next backup for task: '{periodicBackup.Configuration.Name}'";
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(message, e);
 
-                    _database.NotificationCenter.Add(AlertRaised.Create(
-                        _database.Name,
-                        "Couldn't schedule next backup.",
-                        msg,
-                        AlertType.PeriodicBackup,
-                        NotificationSeverity.Warning,
-                        details: new ExceptionDetails(e)));
-                }
+                _database.NotificationCenter.Add(AlertRaised.Create(
+                    _database.Name,
+                    "Couldn't schedule next backup",
+                    message,
+                    AlertType.PeriodicBackup,
+                    NotificationSeverity.Warning,
+                    details: new ExceptionDetails(e)));
             }
         }
 
