@@ -802,7 +802,7 @@ namespace SlowTests.Client.TimeSeries
             {
                 var baseline = DateTime.Today;
                 const string documentId = "users/ayende";
-                IEnumerable<double> values = new List<double>
+                var values = new double[]
                 {
                     59d
                 };

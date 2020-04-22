@@ -309,7 +309,7 @@ namespace Raven.Client.Documents.BulkInsert
                     _inProgressCommand = CommandType.None;
 
                     _currentWriter.Write("{\"Id\":\"");
-                    WriteString(_currentWriter, id);
+                    WriteString(id);
                     _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
 
                     await FlushIfNeeded().ConfigureAwait(false);
@@ -381,7 +381,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        private static void WriteString(StreamWriter writer, string input)
+        private void WriteString(string input)
         {
             for (var i = 0; i < input.Length; i++)
             {
@@ -389,11 +389,16 @@ namespace Raven.Client.Documents.BulkInsert
                 if (c == '"')
                 {
                     if (i == 0 || input[i - 1] != '\\')
-                        writer.Write("\\");
+                        _currentWriter.Write("\\");
                 }
 
-                writer.Write(c);
+                _currentWriter.Write(c);
             }
+        }
+
+        private void WriteComma()
+        {
+            _currentWriter.Write(",");
         }
 
         private async Task ExecuteBeforeStore()
@@ -614,7 +619,7 @@ namespace Raven.Client.Documents.BulkInsert
                             }
                             else if (_operation._first == false)
                             {
-                                _operation._currentWriter.Write(",");
+                                _operation.WriteComma();
                             }
 
                             _operation._first = false;
@@ -636,13 +641,13 @@ namespace Raven.Client.Documents.BulkInsert
 
                         if (_first == false)
                         {
-                            _operation._currentWriter.Write(",");
+                            _operation.WriteComma();
                         }
 
                         _first = false;
 
                         _operation._currentWriter.Write("{\"Type\":\"Increment\",\"CounterName\":\"");
-                        WriteString(_operation._currentWriter, name);
+                        _operation.WriteString(name);
                         _operation._currentWriter.Write("\",\"Delta\":");
                         _operation._currentWriter.Write(delta);
                         _operation._currentWriter.Write("}");
@@ -671,9 +676,9 @@ namespace Raven.Client.Documents.BulkInsert
                 _countersInBatch = 0;
 
                 _operation._currentWriter.Write("{\"Id\":\"");
-                WriteString(_operation._currentWriter, _id);
+                _operation.WriteString(_id);
                 _operation._currentWriter.Write("\",\"Type\":\"Counters\",\"Counters\":{\"DocumentId\":\"");
-                WriteString(_operation._currentWriter, _id);
+                _operation.WriteString(_id);
                 _operation._currentWriter.Write("\",\"Operations\":[");
             }
         }
@@ -689,15 +694,7 @@ namespace Raven.Client.Documents.BulkInsert
 
             public TimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name)
             {
-                switch (operation._inProgressCommand)
-                {
-                    case CommandType.TimeSeries:
-                        ThrowAlreadyRunningTimeSeries();
-                        break;
-                    case CommandType.Counters:
-                        _operation._countersOperation.EndPreviousCommandIfNeeded();
-                        break;
-                }
+                operation.EndPreviousCommandIfNeeded();
 
                 _operation = operation;
                 _id = id;
@@ -716,17 +713,17 @@ namespace Raven.Client.Documents.BulkInsert
                 return AppendAsyncInternal(timestamp, new[] { value }, tag);
             }
 
-            public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
+            public void Append(DateTime timestamp, double[] values, string tag = null)
             {
                 AsyncHelpers.RunSync(() => AppendAsync(timestamp, values, tag));
             }
 
-            public Task AppendAsync(DateTime timestamp, IEnumerable<double> values, string tag = null)
+            public Task AppendAsync(DateTime timestamp, double[] values, string tag = null)
             {
                 return AppendAsyncInternal(timestamp, values, tag);
             }
 
-            private async Task AppendAsyncInternal(DateTime timestamp, IEnumerable<double> values, string tag = null)
+            private async Task AppendAsyncInternal(DateTime timestamp, double[] values, string tag = null)
             {
                 using (_operation.ConcurrencyCheck())
                 {
@@ -737,7 +734,7 @@ namespace Raven.Client.Documents.BulkInsert
                         if (_first)
                         {
                             if (_operation._first == false)
-                                _operation._currentWriter.Write(",");
+                                _operation.WriteComma();
 
                             WritePrefixForNewCommand();
                         }
@@ -751,24 +748,23 @@ namespace Raven.Client.Documents.BulkInsert
 
                         if (_first == false)
                         {
-                            _operation._currentWriter.Write(",");
+                            _operation.WriteComma();
                         }
 
                         _first = false;
 
                         _operation._currentWriter.Write("[");
                         _operation._currentWriter.Write(timestamp.Ticks);
-                        _operation._currentWriter.Write(",");
+                        _operation.WriteComma();
 
-                        var valuesToWrite = values.ToList();
-                        _operation._currentWriter.Write(valuesToWrite.Count);
-                        _operation._currentWriter.Write(",");
+                        _operation._currentWriter.Write(values.Length);
+                        _operation.WriteComma();
 
                         var firstValue = true;
-                        foreach (var value in valuesToWrite)
+                        foreach (var value in values)
                         {
                             if (firstValue == false)
-                                _operation._currentWriter.Write(",");
+                                _operation.WriteComma();
 
                             firstValue = false;
                             _operation._currentWriter.Write(Convert.ToString(value, CultureInfo.InvariantCulture));
@@ -777,7 +773,7 @@ namespace Raven.Client.Documents.BulkInsert
                         if (tag != null)
                         {
                             _operation._currentWriter.Write(",\"");
-                            WriteString(_operation._currentWriter, tag);
+                            _operation.WriteString(tag);
                             _operation._currentWriter.Write("\"");
                         }
 
@@ -798,9 +794,9 @@ namespace Raven.Client.Documents.BulkInsert
                 _timeSeriesInBatch = 0;
 
                 _operation._currentWriter.Write("{\"Id\":\"");
-                WriteString(_operation._currentWriter, _id);
+                _operation.WriteString(_id);
                 _operation._currentWriter.Write("\",\"Type\":\"TimeSeriesBulkInsert\",\"TimeSeries\":{\"Name\":\"");
-                WriteString(_operation._currentWriter, _name);
+                _operation.WriteString(_name);
                 _operation._currentWriter.Write("\",\"Appends\":[");
             }
 
@@ -863,32 +859,26 @@ namespace Raven.Client.Documents.BulkInsert
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _token);
                 using (_operation.ConcurrencyCheck())
                 {
-                    switch (_operation._inProgressCommand)
-                    {
-                        case CommandType.Counters:
-                            _operation._countersOperation.EndPreviousCommandIfNeeded();
-                            break;
-                        case CommandType.TimeSeries:
-                            TimeSeriesBulkInsert.ThrowAlreadyRunningTimeSeries();
-                            break;
-                    }
+                    _operation.EndPreviousCommandIfNeeded();
 
                     await _operation.ExecuteBeforeStore().ConfigureAwait(false);
 
                     try
                     {
                         if (_operation._first == false)
-                            _operation._currentWriter.Write(",");
+                            _operation.WriteComma();
 
                         _operation._currentWriter.Write("{\"Id\":\"");
-                        WriteString(_operation._currentWriter, id);
+                        _operation.WriteString(id);
                         _operation._currentWriter.Write("\",\"Type\":\"AttachmentPUT\",\"Name\":\"");
-                        WriteString(_operation._currentWriter, name);
+                        _operation.WriteString(name);
+
                         if (contentType != null)
                         {
                             _operation._currentWriter.Write("\",\"ContentType\":\"");
-                            WriteString(_operation._currentWriter, contentType);
+                            _operation.WriteString(contentType);
                         }
+
                         _operation._currentWriter.Write("\",\"ContentLength\":");
                         _operation._currentWriter.Write(stream.Length);
                         _operation._currentWriter.Write("}");
