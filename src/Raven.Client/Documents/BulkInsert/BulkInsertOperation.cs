@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -714,17 +713,17 @@ namespace Raven.Client.Documents.BulkInsert
                 return AppendAsyncInternal(timestamp, new[] { value }, tag);
             }
 
-            public void Append(DateTime timestamp, double[] values, string tag = null)
+            public void Append(DateTime timestamp, ICollection<double> values, string tag = null)
             {
                 AsyncHelpers.RunSync(() => AppendAsync(timestamp, values, tag));
             }
 
-            public Task AppendAsync(DateTime timestamp, double[] values, string tag = null)
+            public Task AppendAsync(DateTime timestamp, ICollection<double> values, string tag = null)
             {
                 return AppendAsyncInternal(timestamp, values, tag);
             }
 
-            private async Task AppendAsyncInternal(DateTime timestamp, double[] values, string tag = null)
+            private async Task AppendAsyncInternal(DateTime timestamp, ICollection<double> values, string tag = null)
             {
                 using (_operation.ConcurrencyCheck())
                 {
@@ -758,7 +757,7 @@ namespace Raven.Client.Documents.BulkInsert
                         _operation._currentWriter.Write(timestamp.Ticks);
                         _operation.WriteComma();
 
-                        _operation._currentWriter.Write(values.Length);
+                        _operation._currentWriter.Write(values.Count);
                         _operation.WriteComma();
 
                         var firstValue = true;
