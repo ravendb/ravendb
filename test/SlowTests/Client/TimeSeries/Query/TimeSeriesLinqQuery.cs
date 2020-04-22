@@ -7,6 +7,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -895,13 +896,13 @@ namespace SlowTests.Client.TimeSeries.Query
             {
                 var id = "users/1";
                 var name = "heartrate";
+                var baseline = DateTime.Today;
 
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User {Name = "karmel"}, id);
 
                     var tsf = session.TimeSeriesFor(id, name);
-                    var baseline = DateTime.Today;
                     for (int i = 0; i < 100; i++)
                     {
                         tsf.Append(baseline.AddDays(i), new[] {1d, 2d, 3d});
@@ -921,6 +922,29 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenAsyncSession())
                 {
+                    var ts = (await session.TimeSeriesFor(id, name).GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToArray();
+
+                    for (int i = 0; i < 100; i++)
+                    {
+                        var entry = ts[i];
+                        Assert.Equal(baseline.AddDays(i), entry.Timestamp);
+                        Assert.Equal(3, entry.Values.Length);
+                    }
+
+                    for (int i = 100; i < 200; i++)
+                    {
+                        var entry = ts[i];
+                        Assert.Equal(baseline.AddDays(i), entry.Timestamp);
+                        Assert.Equal(2, entry.Values.Length);
+                    }
+
+                    for (int i = 200; i < 300; i++)
+                    {
+                        var entry = ts[i];
+                        Assert.Equal(baseline.AddDays(i), entry.Timestamp);
+                        Assert.Equal(3, entry.Values.Length);
+                    }
+
                     var query = session.Query<User>()
                         .Where(u => u.Id == id)
                         .Statistics(out var stats)
@@ -940,6 +964,55 @@ namespace SlowTests.Client.TimeSeries.Query
                 }
             }
         }
+
+        [Fact]
+        public async Task CanQueryTimeSeriesAggregation_DifferentNumberOfValues2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "users/1";
+                var name = "heartrate";
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "karmel"}, id);
+
+                    var tsf = session.TimeSeriesFor(id, name);
+                    for (int i = 2; i < 66; i++)
+                    {
+                        tsf.Append(baseline.AddDays(i), new[] {1d, 2d});
+                    }
+                    await session.SaveChangesAsync();
+
+                    for (int i = 0; i < 96; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), new[] {1d, 2d, 3d});
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.Id == id)
+                        .Statistics(out var stats)
+                        .Select(u => RavenQuery.TimeSeries(u, name)
+                            .GroupBy(g => g.Days(15))
+                            .Select(g => new
+                            {
+                                Max = g.Max()
+                            })
+                            .ToList());
+                    var result = await query.ToListAsync();
+                    var results = result[0].Results;
+                    Assert.Equal(5, results.Length);
+                    Assert.Equal(3, results[0].Count.Length);
+                    Assert.Equal(2, results[4].Count.Length);
+                }
+            }
+        }
+
 
         [Fact]
         public void CanQueryTimeSeriesAggregation_WhereOnVariable()
