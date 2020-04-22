@@ -163,54 +163,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(json.ToString(), TrafficWatchChangeType.Subscriptions);
-
-                var sub = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
-
-                if (Enum.TryParse(
-                    options.ChangeVector,
-                    out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
-                {
-                    switch (changeVectorSpecialValue)
-                    {
-                        case Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
-
-                            options.ChangeVector = null;
-                            break;
-                        case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                            options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, sub.Collection);
-                            break;
-                    }
-                }
                 var id = GetLongQueryString("id", required: false);
                 var disabled = GetBoolValueQueryString("disabled", required: false);
-                var mentor = options.MentorNode;
-                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, GetRaftRequestIdFromQuery(), id, disabled, mentor: mentor);
 
-                var name = options.Name ?? subscriptionId.ToString();
-
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                using (serverContext.OpenReadTransaction())
-                {
-                    // need to wait on the relevant remote node
-                    var node = Database.SubscriptionStorage.GetResponsibleNode(serverContext, name);
-                    if (node != null && node != ServerStore.NodeTag)
-                    {
-                        await WaitForExecutionOnSpecificNode(serverContext, ServerStore.GetClusterTopology(serverContext), node, subscriptionId);
-                    }
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["Name"] = name
-                    });
-                }
+                await CreateInternal(json, options, context, id, disabled);
             }
         }
 
@@ -425,6 +381,109 @@ namespace Raven.Server.Documents.Handlers
 
 
             return NoContent();
+        }
+
+        [RavenAction("/databases/*/subscriptions/update", "POST", AuthorizationStatus.ValidUser)]
+        public async Task Update()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
+                var options = JsonDeserializationServer.SubscriptionCreationParams(json);
+
+                var id = GetLongQueryString("id", required: false);
+                SubscriptionState state;
+
+                if (id == null)
+                {
+                    state = Database.SubscriptionStorage.GetSubscriptionFromServerStore(options.Name);
+                    id = state.SubscriptionId;
+                }
+                else
+                {
+                    state = Database.SubscriptionStorage.GetSubscriptionFromServerStoreById(id.Value);
+
+                    // keep the old subscription name
+                    if (options.Name == null)
+                        options.Name = state.SubscriptionName;
+                }
+
+                if (options.ChangeVector == null)
+                    options.ChangeVector = state.ChangeVectorForNextBatchStartingPoint;
+
+                if (options.MentorNode == null)
+                    options.MentorNode = state.MentorNode;
+
+                if (options.Query == null)
+                    options.Query = state.Query;
+
+                if (SubscriptionHasChanges(options, state) == false)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return;
+                }
+
+                await CreateInternal(json, options, context, id, disabled: false);
+            }
+        }
+
+        private static bool SubscriptionHasChanges(SubscriptionCreationOptions options, SubscriptionState state)
+        {
+            bool gotChanges = options.Name != state.SubscriptionName
+                              || options.ChangeVector != state.ChangeVectorForNextBatchStartingPoint
+                              || options.MentorNode != state.MentorNode
+                              || options.Query != state.Query;
+
+            return gotChanges;
+        }
+
+        private async Task CreateInternal(BlittableJsonReaderObject bjro, SubscriptionCreationOptions options, DocumentsOperationContext context, long? id, bool? disabled)
+        {
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext(bjro.ToString(), TrafficWatchChangeType.Subscriptions);
+
+            var sub = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
+
+            if (Enum.TryParse(options.ChangeVector, out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
+            {
+                switch (changeVectorSpecialValue)
+                {
+                    case Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
+
+                        options.ChangeVector = null;
+                        break;
+                    case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
+                        options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, sub.Collection);
+                        break;
+                }
+            }
+
+            var mentor = options.MentorNode;
+            var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, GetRaftRequestIdFromQuery(), id, disabled, mentor);
+
+            var name = options.Name ?? subscriptionId.ToString();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+            using (serverContext.OpenReadTransaction())
+            {
+                // need to wait on the relevant remote node
+                var node = Database.SubscriptionStorage.GetResponsibleNode(serverContext, name);
+                if (node != null && node != ServerStore.NodeTag)
+                {
+                    await WaitForExecutionOnSpecificNode(serverContext, ServerStore.GetClusterTopology(serverContext), node, subscriptionId);
+                }
+            }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(CreateSubscriptionResult.Name)] = name
+                });
+            }
         }
     }
 

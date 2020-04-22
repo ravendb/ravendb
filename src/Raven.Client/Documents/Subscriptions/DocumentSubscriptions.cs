@@ -457,5 +457,31 @@ namespace Raven.Client.Documents.Subscriptions
             var operation = new ToggleOngoingTaskStateOperation(name, OngoingTaskType.Subscription, disable: true);
             return _store.Maintenance.ForDatabase(database ?? _store.Database).SendAsync(operation, token);
         }
+
+        /// <summary>
+        /// Update a data subscription in a database.
+        /// </summary>
+        public string Update(SubscriptionCreationOptions options, string database = null, long? id = null)
+        {
+            return AsyncHelpers.RunSync(() => UpdateAsync(options, database, id));
+        }
+
+        public async Task<string> UpdateAsync(SubscriptionCreationOptions options, string database = null, long? id = null, CancellationToken token = default)
+        {
+            if (options == null)
+                throw new ArgumentNullException($"Cannot update a subscription if {nameof(options)} is null");
+
+            if (string.IsNullOrEmpty(options.Name) && id == null)
+                throw new ArgumentNullException($"Cannot update a subscription if both {nameof(options)}.{nameof(options.Name)} and {nameof(id)} are null");
+
+            var requestExecutor = _store.GetRequestExecutor(database);
+            using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var command = new UpdateSubscriptionCommand(options, id);
+                await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
+
+                return command.Result.Name;
+            }
+        }
     }
 }

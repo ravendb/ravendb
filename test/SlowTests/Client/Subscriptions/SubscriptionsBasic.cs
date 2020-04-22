@@ -6,9 +6,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client.Subscriptions;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
@@ -385,6 +387,204 @@ namespace SlowTests.Client.Subscriptions
                 var subscriptionStatus = store.Subscriptions.GetSubscriptions(0, 1024).ToList();
 
                 Assert.Equal(subscriptionStatus[0].ChangeVectorForNextBatchStartingPoint, lastChangeVector);
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateSubscriptionToStartFromBeginningOfTime()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var count = 10;
+                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                Assert.Equal(1, subscriptions.Count);
+
+                var state = subscriptions.First();
+                Assert.Equal("from 'Users' as doc", state.Query);
+
+                using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
+                using var docs = new CountdownEvent(count);
+
+                var t = subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
+
+                for (int i = 0; i < count; i++)
+                {
+                    var age = i < (count / 2) ? 18 : 19;
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = $"EGR_{i}",
+                            Age = age
+                        });
+                        session.SaveChanges();
+                    }
+                }
+
+                Assert.True(docs.Wait(_reasonableWaitTime));
+
+                const string newQuery = "from Users where Age > 18";
+
+                store.Subscriptions.Update(new SubscriptionCreationOptions
+                {
+                    Name = state.SubscriptionName,
+                    Query = newQuery,
+                    ChangeVector = $"{Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime}"
+                });
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(newQuery, newState.Query);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+
+                var e = Assert.Throws<AggregateException>(() => t.Wait());
+                Assert.Equal(typeof(SubscriptionClosedException), e.InnerException.GetType()); 
+                Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", e.InnerException.Message);
+                
+                using var cde = new CountdownEvent(count / 2);
+                using var s = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
+                var task = s.Run(x => cde.Signal(x.NumberOfItemsInBatch));
+
+                Assert.True(cde.Wait(_reasonableWaitTime));
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateSubscriptionToStartFromLastDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var count = 10;
+                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                Assert.Equal(1, subscriptions.Count);
+
+                var state = subscriptions.First();
+                Assert.Equal("from 'Users' as doc", state.Query);
+
+                using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
+                using var docs = new CountdownEvent(count);
+
+                var t = subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
+
+                for (int i = 0; i < count; i++)
+                {
+                    var age = i < (count / 2) ? 18 : 19;
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = $"EGR_{i}",
+                            Age = age
+                        });
+                        session.SaveChanges();
+                    }
+                }
+
+                Assert.True(docs.Wait(_reasonableWaitTime));
+
+                const string newQuery = "from Users where Age > 18";
+
+                store.Subscriptions.Update(new SubscriptionCreationOptions
+                {
+                    Name = state.SubscriptionName,
+                    Query = newQuery,
+                    ChangeVector = $"{Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument}"
+                });
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(newQuery, newState.Query);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+
+                using var s = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
+                var flag = true;
+                var task = s.Run(x => flag = false);
+
+                var e = Assert.Throws<AggregateException>(() => t.Wait());
+                Assert.Equal(typeof(SubscriptionClosedException), e.InnerException.GetType());
+                Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", e.InnerException.Message);
+
+                await Task.Delay(1000);
+                Assert.True(flag);
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateSubscriptionToStartFromDoNotChange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var count = 10;
+                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                Assert.Equal(1, subscriptions.Count);
+
+                var state = subscriptions.First();
+                Assert.Equal("from 'Users' as doc", state.Query);
+
+                using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
+                using var docs = new CountdownEvent(count);
+
+                var t = subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
+
+                for (int i = 0; i < count / 2; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = $"EGR_{i}",
+                            Age = 18
+                        });
+                        session.SaveChanges();
+                    }
+                }
+
+                WaitForValue(() => docs.CurrentCount, count / 2);
+
+                const string newQuery = "from Users where Age > 18";
+
+                store.Subscriptions.Update(new SubscriptionCreationOptions
+                {
+                    Name = state.SubscriptionName,
+                    Query = newQuery,
+                    ChangeVector = $"{Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange}"
+                });
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(newQuery, newState.Query);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+
+                var e = Assert.Throws<AggregateException>(() => t.Wait());
+                Assert.Equal(typeof(SubscriptionClosedException), e.InnerException.GetType());
+                Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", e.InnerException.Message);
+
+
+                using var s = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
+                var task = s.Run(x => docs.Signal(x.NumberOfItemsInBatch));
+                for (int i = 0; i < count / 2; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = $"EGR_{i}",
+                            Age = 19
+                        });
+                        session.SaveChanges();
+                    }
+                }
+
+                Assert.True(docs.Wait(_reasonableWaitTime));
             }
         }
     }
