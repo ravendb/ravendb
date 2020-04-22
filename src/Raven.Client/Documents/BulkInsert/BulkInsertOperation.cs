@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -770,7 +771,7 @@ namespace Raven.Client.Documents.BulkInsert
                                 _operation._currentWriter.Write(",");
 
                             firstValue = false;
-                            _operation._currentWriter.Write(value);
+                            _operation._currentWriter.Write(Convert.ToString(value, CultureInfo.InvariantCulture));
                         }
 
                         if (tag != null)

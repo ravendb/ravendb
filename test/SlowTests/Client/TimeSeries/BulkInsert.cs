@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,6 +47,48 @@ namespace SlowTests.Client.TimeSeries
                     Assert.Equal("watches/fitbit", val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
                 }
+            }
+        }
+
+        [Fact]
+        public void CanCreateSimpleTimeSeriesWithDifferentCulture()
+        {
+            var currentCulture = CultureInfo.CurrentCulture;
+
+            try
+            {
+                CultureInfo.CurrentCulture = new CultureInfo("de-DE", true);
+
+                using (var store = GetDocumentStore())
+                {
+                    var baseline = DateTime.Today;
+                    const string documentId = "users/ayende";
+
+                    using (var bulkInsert = store.BulkInsert())
+                    {
+                        bulkInsert.Store(new {Name = "Oren"}, documentId);
+
+                        using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59.5, "watches/fitbit");
+                        }
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var val = session.TimeSeriesFor(documentId, "Heartrate")
+                            .Get(DateTime.MinValue, DateTime.MaxValue)
+                            .Single();
+
+                        Assert.Equal(new[] {59.5}, val.Values);
+                        Assert.Equal("watches/fitbit", val.Tag);
+                        Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                    }
+                }
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = currentCulture;
             }
         }
 
