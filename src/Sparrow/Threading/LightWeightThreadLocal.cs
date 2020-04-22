@@ -82,15 +82,12 @@ namespace Sparrow.Threading
             _globalState.Dispose();
             _values = null;
 
-            while (copy.Count > 0)
+            foreach (var kvp in copy)
             {
-                foreach (var kvp in copy)
+                if (copy.TryRemove(kvp.Key, out var item) &&
+                    item is IDisposable d)
                 {
-                    if (copy.TryRemove(kvp.Key, out var item) &&
-                        item is IDisposable d)
-                    {
-                        d.Dispose();
-                    }
+                    d.Dispose();
                 }
             }
         }
