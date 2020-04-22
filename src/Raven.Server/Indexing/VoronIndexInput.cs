@@ -35,6 +35,21 @@ namespace Raven.Server.Indexing
 
         private void OpenInternal(Transaction transaction)
         {
+            if (transaction.IsWriteTransaction == false)
+            {
+                if (transaction.LowLevelTransaction.ExternalState is VoronStreamCache cache)
+                {
+                    if (cache.ChunksByName.TryGetValue(_name, out var details))
+                    {
+                        // we don't dispose here explicitly, the fileName needs to be
+                        // alive as long as the transaction is
+                        Slice.From(transaction.Allocator, _name, out Slice fileName);
+                        _stream = new VoronStream(fileName, details, transaction.LowLevelTransaction);
+                        return;
+                    }
+                }
+            }
+
             var fileTree = transaction.ReadTree(_tree);
             if (fileTree == null)
                 throw new FileNotFoundException($"Could not find '{_tree}' tree for index input", _name);

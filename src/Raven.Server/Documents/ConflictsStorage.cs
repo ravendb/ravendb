@@ -376,7 +376,7 @@ namespace Raven.Server.Documents
 
             // Only register the event if we actually deleted any conflicts
             var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
-            tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
+            tx.AfterCommitWhenNewReadTransactionsPrevented += _ =>
             {
                 Interlocked.Add(ref ConflictsCount, -listCount);
             };
@@ -413,7 +413,7 @@ namespace Raven.Server.Documents
                     return;
 
                 var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
-                tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                tx.AfterCommitWhenNewReadTransactionsPrevented += _ =>
                 {
                     Interlocked.Decrement(ref ConflictsCount);
                 };

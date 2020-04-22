@@ -239,7 +239,15 @@ namespace Voron.Data.BTrees
 
         public VoronStream ReadStream(Slice key)
         {
-            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
+            var pieces = ReadTreeChunks(key, out var tree);
+            if (pieces == null)
+                return null;
+            return new VoronStream(tree.Name, pieces, _llt);
+        }
+
+        public ChunkDetails[] ReadTreeChunks(Slice key, out FixedSizeTree tree)
+        {
+            tree = FixedTreeFor(key, ChunkDetails.SizeOf);
             var numberOfChunks = tree.NumberOfEntries;
 
             if (numberOfChunks <= 0)
@@ -251,7 +259,10 @@ namespace Voron.Data.BTrees
             using (var it = tree.Iterate())
             {
                 if (it.Seek(0) == false)
-                    return null;
+                {
+                    Debug.Assert(false);
+                    return null; // can never happen
+                }
 
                 do
                 {
@@ -261,7 +272,8 @@ namespace Voron.Data.BTrees
                     }
                 } while (it.MoveNext());
             }
-            return new VoronStream(tree.Name, chunksDetails, _llt);
+
+            return chunksDetails;
         }
 
         public bool StreamExist(Slice key)
