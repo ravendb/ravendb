@@ -1069,7 +1069,9 @@ namespace Raven.Server.Documents.Patch
                         var functionAst = lambda.FunctionDeclaration;
                         var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
 
-                        if (selfInstance.OwnValues.TryGetValue(propName, out var existingValue))
+                        BlittableObjectInstance.BlittableObjectProperty existingValue = default;
+                        if (selfInstance.OwnValues?.TryGetValue(propName, out existingValue) == true && 
+                            existingValue != null)
                         {
                             if (existingValue.Changed)
                             {
