@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.TimeSeries
                 1 + // timestamp uses ControlValue which takes 4 bits, need to account for this
                 sizeof(double) * vals.Length + vals.Length /* may use additional 2 bits per value here for the first items */ +
                 2 + // previous tag position (10 bits)
-                1 // take into account the status 
+                1 // take into account the status bit
                 ;
 
             var copiedHeaderSize = sizeof(SegmentHeader) + Header->NumberOfValues * sizeof(StatefulTimestampValue);
