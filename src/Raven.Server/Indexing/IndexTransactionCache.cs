@@ -11,7 +11,12 @@ namespace Raven.Server.Indexing
             public long LastProcessedTombstoneEtag;
         }
 
+        public class DirectoryFiles
+        {
+            public Dictionary<string, Tree.ChunkDetails[]> ChunksByName = new Dictionary<string, Tree.ChunkDetails[]>();
+        }
+
+        public Dictionary<string, DirectoryFiles> DirectoriesByName = new Dictionary<string, DirectoryFiles>();
         public Dictionary<string, CollectionEtags> Collections = new Dictionary<string, CollectionEtags>();
-        public Dictionary<string, Tree.ChunkDetails[]> ChunksByName = new Dictionary<string, Tree.ChunkDetails[]>();
     }
 }
