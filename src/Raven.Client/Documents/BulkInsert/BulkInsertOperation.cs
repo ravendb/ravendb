@@ -302,7 +302,7 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     if (_first == false)
                     {
-                        _currentWriter.Write(',');
+                        WriteComma();
                     }
 
                     _first = false;
@@ -323,7 +323,7 @@ namespace Raven.Client.Documents.BulkInsert
                         }
                     }
 
-                    _currentWriter.Write("}");
+                    _currentWriter.Write('}');
                 }
                 catch (Exception e)
                 {
@@ -389,7 +389,7 @@ namespace Raven.Client.Documents.BulkInsert
                 if (c == '"')
                 {
                     if (i == 0 || input[i - 1] != '\\')
-                        _currentWriter.Write("\\");
+                        _currentWriter.Write('\\');
                 }
 
                 _currentWriter.Write(c);
@@ -398,7 +398,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private void WriteComma()
         {
-            _currentWriter.Write(",");
+            _currentWriter.Write(',');
         }
 
         private async Task ExecuteBeforeStore()
@@ -650,7 +650,7 @@ namespace Raven.Client.Documents.BulkInsert
                         _operation.WriteString(name);
                         _operation._currentWriter.Write("\",\"Delta\":");
                         _operation._currentWriter.Write(delta);
-                        _operation._currentWriter.Write("}");
+                        _operation._currentWriter.Write('}');
 
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
@@ -753,7 +753,7 @@ namespace Raven.Client.Documents.BulkInsert
 
                         _first = false;
 
-                        _operation._currentWriter.Write("[");
+                        _operation._currentWriter.Write('[');
                         _operation._currentWriter.Write(timestamp.Ticks);
                         _operation.WriteComma();
 
@@ -774,10 +774,10 @@ namespace Raven.Client.Documents.BulkInsert
                         {
                             _operation._currentWriter.Write(",\"");
                             _operation.WriteString(tag);
-                            _operation._currentWriter.Write("\"");
+                            _operation._currentWriter.Write('\"');
                         }
 
-                        _operation._currentWriter.Write("]");
+                        _operation._currentWriter.Write(']');
 
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
@@ -881,7 +881,7 @@ namespace Raven.Client.Documents.BulkInsert
 
                         _operation._currentWriter.Write("\",\"ContentLength\":");
                         _operation._currentWriter.Write(stream.Length);
-                        _operation._currentWriter.Write("}");
+                        _operation._currentWriter.Write('}');
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
 
                         PutAttachmentCommandHelper.PrepareStream(stream);
