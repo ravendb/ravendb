@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         size += sizeof(long); // DateTime
                         if (string.IsNullOrWhiteSpace(append.Tag) == false)
-                            size += 8;
+                            size += append.Tag.Length;
 
                         size += append.Values.Length * sizeof(double);
                     }
