@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _skipModifications = skipModifications;
         }
 
-        public IDisposable StartBackup(string backupName)
+        public void StartBackup(string backupName)
         {
             lock (this)
             {
@@ -49,14 +49,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 _concurrentBackups--;
             }
+        }
 
-            return new DisposableAction(() =>
+        public void FinishBackup()
+        {
+            lock (this)
             {
-                lock (this)
-                {
-                    _concurrentBackups++;
-                }
-            });
+                _concurrentBackups++;
+            }
         }
 
         public void ModifyMaxConcurrentBackups()
