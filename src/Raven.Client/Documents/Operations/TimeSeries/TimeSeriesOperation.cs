@@ -111,7 +111,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                             break;
 
                         default:
-                            doubleValues[i] = (double)obj;
+                            doubleValues[i] = Convert.ToDouble(obj);
                             break;
                     }
                 }
