@@ -15,6 +15,8 @@ using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Exceptions;
+using Voron.Impl;
+using Raven.Server.Indexing;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -261,9 +263,19 @@ namespace Raven.Server.Documents.Indexes
 
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
-            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
+            var txi = tx.InnerTransaction;
+            if (txi.IsWriteTransaction == false)
             {
-                return ReadLastEtag(tx, IndexSchema.EtagsTombstoneTree, collectionSlice);
+                if (txi.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
+                {
+                    if (cache.Collections.TryGetValue(collection, out var val))
+                        return val.LastProcessedTombstoneEtag;
+                }
+            }
+
+            using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
+            {
+                return ReadLastEtag(txi, IndexSchema.EtagsTombstoneTree, collectionSlice);
             }
         }
 
@@ -291,9 +303,19 @@ namespace Raven.Server.Documents.Indexes
 
         public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
         {
-            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
+            var txi = tx.InnerTransaction;
+            if (txi.IsWriteTransaction == false)
             {
-                return ReadLastEtag(tx, IndexSchema.EtagsTree, collectionSlice);
+                if (txi.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
+                {
+                    if (cache.Collections.TryGetValue(collection, out var val))
+                        return val.LastIndexedEtag;
+                }
+            }
+
+            using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
+            {
+                return ReadLastEtag(txi, IndexSchema.EtagsTree, collectionSlice);
             }
         }
 
@@ -374,9 +396,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static long ReadLastEtag(RavenTransaction tx, string tree, Slice collection)
+        internal static long ReadLastEtag(Transaction tx, string tree, Slice collection)
         {
-            var statsTree = tx.InnerTransaction.CreateTree(tree);
+            var statsTree = tx.CreateTree(tree);
             var readResult = statsTree.Read(collection);
             long lastEtag = 0;
             if (readResult != null)
@@ -594,7 +616,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private class IndexSchema
+        internal class IndexSchema
         {
             public const string StatsTree = "Stats";
 

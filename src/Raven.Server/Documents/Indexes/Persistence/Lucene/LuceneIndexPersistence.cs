@@ -46,10 +46,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         // always points to the latest valid transaction and is updated by 
         // the write tx on commit, thread safety is inherited from the voron
         // transaction
-        private VoronStreamCache _streamsCache = new VoronStreamCache
-        {
-            ChunksByName = new Dictionary<string, Tree.ChunkDetails[]>()
-        };
+        private IndexTransactionCache _streamsCache = new IndexTransactionCache();
 
         private LuceneVoronDirectory _directory;
         private readonly Dictionary<string, LuceneVoronDirectory> _suggestionsDirectories;
@@ -188,6 +185,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 InitializeMainIndexStorage(tx, environment);
                 InitializeSuggestionsIndexStorage(tx, environment);
+                BuildStreamCacheAfterTx(tx);
 
                 // force tx commit so it will bump tx counter and just created searcher holder will have valid tx id
                 tx.LowLevelTransaction.ModifyPage(0);
@@ -200,8 +198,41 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         internal void BuildStreamCacheAfterTx(Transaction tx)
         {
-            var cache = new Dictionary<string, Tree.ChunkDetails[]>();
-            
+            var newCache = new IndexTransactionCache();
+
+            FillCollectionEtags(tx, newCache.Collections);
+
+            FillLuceneFilesChunks(tx, newCache.ChunksByName);
+
+            _streamsCache = newCache;
+        }
+
+        private void FillCollectionEtags(Transaction tx, 
+            Dictionary<string, IndexTransactionCache.CollectionEtags> map)
+        {
+            foreach (string collection in _index.Collections)
+            {
+                using (Slice.From(tx.LowLevelTransaction.Allocator, collection, out Slice collectionSlice))
+                {
+                    var etags = new IndexTransactionCache.CollectionEtags
+                    {
+                        LastIndexedEtag = IndexStorage.ReadLastEtag(tx,
+                            IndexStorage.IndexSchema.EtagsTree,
+                            collectionSlice
+                        ),
+                        LastProcessedTombstoneEtag = IndexStorage.ReadLastEtag(tx,
+                            IndexStorage.IndexSchema.EtagsTombstoneTree,
+                            collectionSlice
+                        )
+                    };
+
+                    map[collection] = etags;
+                }
+            }
+        }
+
+        private Dictionary<string, Tree.ChunkDetails[]> FillLuceneFilesChunks(Transaction tx, Dictionary<string, Tree.ChunkDetails[]> cache)
+        {
             var filesTree = tx.ReadTree(_directory.Name);
             using (var it = filesTree.Iterate(false))
             {
@@ -217,7 +248,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            _streamsCache = new VoronStreamCache {ChunksByName = cache};
+            return cache;
         }
 
         private void SetStreamCacheInTx(LowLevelTransaction tx)

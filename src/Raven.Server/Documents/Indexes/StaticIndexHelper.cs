@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes
 
                 foreach (var referencedCollection in referencedCollections)
                 {
-                    var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
+                    var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext.Transaction.InnerTransaction, referencedCollection.Name);
                     var lastProcessedReferenceEtag = index._indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
                     var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
 
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes
                                                  $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
                         }
 
-                        var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
+                        var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext.Transaction.InnerTransaction, referencedCollection.Name);
 
                         if (lastTombstoneEtag > lastProcessedTombstoneEtag)
                         {
@@ -133,10 +133,10 @@ namespace Raven.Server.Documents.Indexes
 
                 foreach (var referencedCollection in referencedCollections)
                 {
-                    var lastDocEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection.Name);
+                    var lastDocEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext.Transaction.InnerTransaction, referencedCollection.Name);
                     var lastProcessedReferenceEtag = index._indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
 
-                    var lastTombstoneEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, referencedCollection.Name);
+                    var lastTombstoneEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext.Transaction.InnerTransaction, referencedCollection.Name);
                     var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
 
                     *(long*)writePos = lastDocEtag;

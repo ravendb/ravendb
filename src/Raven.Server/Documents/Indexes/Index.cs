@@ -2248,9 +2248,9 @@ namespace Raven.Server.Documents.Indexes
                                 var collectionStats = stats.Collections[collection];
 
                                 var lastDocumentEtag =
-                                    DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
+                                    DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext.Transaction.InnerTransaction, collection);
                                 var lastTombstoneEtag =
-                                    DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
+                                    DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext.Transaction.InnerTransaction, collection);
 
                                 collectionStats.DocumentLag = Math.Max(0,
                                     lastDocumentEtag - collectionStats.LastProcessedDocumentEtag);
@@ -3179,8 +3179,8 @@ namespace Raven.Server.Documents.Indexes
 
             foreach (var collection in Collections)
             {
-                var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
-                var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
+                var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext.Transaction.InnerTransaction, collection);
+                var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext.Transaction.InnerTransaction, collection);
                 var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
                 var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
@@ -3807,8 +3807,8 @@ namespace Raven.Server.Documents.Indexes
             }
             else
             {
-                lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
-                lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+                lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext.Transaction.InnerTransaction, collection);
+                lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext.Transaction.InnerTransaction, collection);
             }
             return Math.Max(lastDocEtag, lastTombstoneEtag);
         }
@@ -3818,14 +3818,14 @@ namespace Raven.Server.Documents.Indexes
         {
             return collection == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
-                : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext.Transaction.InnerTransaction, collection);
         }
 
         public long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
             return collection == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
-                : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+                : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext.Transaction.InnerTransaction, collection);
         }
 
         public virtual DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)

@@ -37,7 +37,7 @@ namespace Raven.Server.Indexing
         {
             if (transaction.IsWriteTransaction == false)
             {
-                if (transaction.LowLevelTransaction.ExternalState is VoronStreamCache cache)
+                if (transaction.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
                 {
                     if (cache.ChunksByName.TryGetValue(_name, out var details))
                     {

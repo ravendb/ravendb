@@ -90,6 +90,8 @@ namespace Voron.Impl
 
         public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
 
+        public event Action<LowLevelTransaction> LastChanceToReadFromWriteTransactionBeforeCommit;
+
         public Size TotalEncryptionBufferSize
         {
             get
@@ -1090,6 +1092,8 @@ namespace Voron.Impl
             _state.Root.CopyTo(&_txHeader->Root);
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
+
+            LastChanceToReadFromWriteTransactionBeforeCommit?.Invoke(this);
         }
 
         private static void ThrowNextPageNumberCannotBeSmallerOrEqualThanOne([CallerMemberName] string caller = null)
