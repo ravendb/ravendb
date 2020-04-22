@@ -480,6 +480,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
+        private static readonly Sort SortByFieldScore = new Sort(SortField.FIELD_SCORE);
         private Sort GetSort(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
         {
             if (query.PageSize == 0) // no need to sort when counting only
@@ -492,10 +493,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (query.Metadata.HasBoost == false && index.HasBoostedFields == false)
                     return null;
 
-                return new Sort(SortField.FIELD_SCORE);
+                return SortByFieldScore;
             }
 
-            var sort = new List<SortField>();
+            int sortIndex = 0;
+            var sort = new SortField[orderByFields.Length];
 
             foreach (var field in orderByFields)
             {
@@ -505,16 +507,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (field.Arguments != null && field.Arguments.Length > 0)
                         value = field.Arguments[0].NameOrValue;
 
-                    sort.Add(new RandomSortField(value));
+                    sort[sortIndex++] = new RandomSortField(value);
                     continue;
                 }
 
                 if (field.OrderingType == OrderByFieldType.Score)
                 {
                     if (field.Ascending)
-                        sort.Add(SortField.FIELD_SCORE);
+                        sort[sortIndex++] = SortField.FIELD_SCORE;
                     else
-                        sort.Add(new SortField(null, 0, true));
+                        sort[sortIndex++] = new SortField(null, 0, true);
                     continue;
                 }
 
@@ -559,7 +561,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         : 0;
 
                     var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point, query, roundTo);
-                    sort.Add(new SortField(field.Name, dsort, field.Ascending == false));
+                    sort[sortIndex++] = new SortField(field.Name, dsort, field.Ascending == false);
                     continue;
                 }
 
@@ -571,11 +573,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     case OrderByFieldType.Custom:
                         var cName = field.Arguments[0].NameOrValue;
                         var cSort = new CustomComparatorSource(cName, _index.DocumentDatabase.Name, query);
-                        sort.Add(new SortField(fieldName, cSort, field.Ascending == false));
+                        sort[sortIndex++] = new SortField(fieldName, cSort, field.Ascending == false);
                         continue;
                     case OrderByFieldType.AlphaNumeric:
                         var anSort = new AlphaNumericComparatorSource(documentsContext);
-                        sort.Add(new SortField(fieldName, anSort, field.Ascending == false));
+                        sort[sortIndex++] = new SortField(fieldName, anSort, field.Ascending == false);
                         continue;
                     case OrderByFieldType.Long:
                         sortOptions = SortField.LONG;
@@ -587,10 +589,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         break;
                 }
 
-                sort.Add(new SortField(fieldName, sortOptions, field.Ascending == false));
+                sort[sortIndex++] = new SortField(fieldName, sortOptions, field.Ascending == false);
             }
 
-            return new Sort(sort.ToArray());
+            return new Sort(sort);
         }
 
         public HashSet<string> Terms(string field, string fromValue, int pageSize, CancellationToken token)
