@@ -73,6 +73,12 @@ namespace Raven.Server.Documents.Subscriptions
 
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
+            if (subscriptionId != null)
+            {
+                // updated existing subscription
+                return subscriptionId.Value;
+            }
+
             return etag;
         }
 
@@ -120,6 +126,19 @@ namespace Raven.Server.Documents.Subscriptions
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
+                return GetSubscriptionFromServerStore(serverStoreContext, name);
+            }
+        }
+
+        public SubscriptionState GetSubscriptionFromServerStoreById(long id)
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+            using (serverStoreContext.OpenReadTransaction())
+            {
+                var name = GetSubscriptionNameById(serverStoreContext, id);
+                if (string.IsNullOrEmpty(name))
+                    throw new SubscriptionDoesNotExistException($"Subscription with id {id} was not found in server store");
+
                 return GetSubscriptionFromServerStore(serverStoreContext, name);
             }
         }

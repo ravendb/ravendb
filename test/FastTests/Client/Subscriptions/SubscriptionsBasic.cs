@@ -876,6 +876,129 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
+        [Fact]
+        public async Task CanUpdateSubscriptionByName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subsId = store.Subscriptions.Create(new SubscriptionCreationOptions
+                {
+                    Query = "from Users",
+                    Name = "Created"
+                });
+
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var state = subscriptions.First();
+                Assert.Equal(1, subscriptions.Count);
+                Assert.Equal("Created", state.SubscriptionName);
+                Assert.Equal("from Users", state.Query);
+
+                var newQuery = "from Users where Age > 18";
+
+                store.Subscriptions.Update(new SubscriptionCreationOptions
+                {
+                    Name = subsId,
+                    Query = newQuery
+                });
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(newQuery, newState.Query);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateSubscriptionById()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Subscriptions.Create(new SubscriptionCreationOptions
+                {
+                    Query = "from Users",
+                    Name = "Created"
+                });
+
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var state = subscriptions.First();
+                Assert.Equal(1, subscriptions.Count);
+                Assert.Equal("Created", state.SubscriptionName);
+                Assert.Equal("from Users", state.Query);
+
+                var newQuery = "from Users where Age > 18";
+
+                store.Subscriptions.Update(new SubscriptionCreationOptions
+                {
+                    Query = newQuery
+                }, id: state.SubscriptionId);
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(newQuery, newState.Query);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+            }
+        }
+
+        [Fact]
+        public void UpdateNonExistentSubscriptionShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var name = "Update";
+                var id = 322;
+                var idMsg = $"Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionDoesNotExistException: Subscription with id {id} was not found in server store";
+
+                var argumentError = Assert.Throws<SubscriptionDoesNotExistException>(() => store.Subscriptions.Update(new SubscriptionCreationOptions { Name = name }));
+                Assert.StartsWith($"Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionDoesNotExistException: Subscription with name {name} was not found in server store", argumentError.Message);
+                
+                argumentError = Assert.Throws<SubscriptionDoesNotExistException>(() => store.Subscriptions.Update(new SubscriptionCreationOptions { Name = name }, id: id) );
+                Assert.StartsWith(idMsg, argumentError.Message);
+
+                var subsId = store.Subscriptions.Create(new SubscriptionCreationOptions
+                {
+                    Query = "from Users",
+                    Name = "Created"
+                });
+
+                argumentError = Assert.Throws<SubscriptionDoesNotExistException>(() => store.Subscriptions.Update(new SubscriptionCreationOptions { Name = subsId }, id: id));
+                Assert.StartsWith(idMsg, argumentError.Message);
+            }
+        }
+
+        [Fact]
+        public async Task UpdateSubscriptionShouldReturnNotModified()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var options = new SubscriptionCreationOptions
+                {
+                    Query = "from Users",
+                    Name = "Created"
+                };
+
+                store.Subscriptions.Create(options);
+
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var state = subscriptions.First();
+                Assert.Equal(1, subscriptions.Count);
+                Assert.Equal("Created", state.SubscriptionName);
+                Assert.Equal("from Users", state.Query);
+
+                store.Subscriptions.Update(options);
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(state.Query, newState.Query);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+            }
+        }
+
         public class CreateDatabaseOperationWithoutNameValidation : IServerOperation<DatabasePutResult>
         {
             private readonly DatabaseRecord _databaseRecord;
