@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -190,5 +191,31 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
+        [Fact]
+        public async Task CanAppendDifferentNumberOfValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "users/1";
+                var name = "heartrate";
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "karmel"}, id);
+
+                    var tsf = session.TimeSeriesFor(id, name);
+                    var baseline = DateTime.Today;
+                    for (int i = 0; i < 100; i++)
+                    {
+                        tsf.Append(baseline.AddDays(i), new[] {1d, 2d, 3d});
+                    }
+                    for (int i = 100; i < 200; i++)
+                    {
+                        tsf.Append(baseline.AddDays(i), new[] {1d, 2d});
+                    }
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
     }
 }
