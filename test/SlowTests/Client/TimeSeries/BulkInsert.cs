@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -993,6 +996,73 @@ namespace SlowTests.Client.TimeSeries
                     Assert.Equal(1, tsNames.Count);
 
                     Assert.Equal("Heartrate", tsNames[0]);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(2)]
+        [InlineData(4)]
+        [InlineData(8)]
+        [InlineData(16)]
+        [InlineData(32)]
+        public void CanAppendALotOfValuesAndTimeSeriesInParallel(int numberOfValues)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+                const string documentId = "users/ayende";
+                var numberOfMeasures = 10_000;
+                var numberOfTimeSeries = 10;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new {Name = "Oren"}, documentId);
+                    session.SaveChanges();
+                }
+                var count = new CountdownEvent(numberOfTimeSeries);
+                Parallel.For(0, numberOfTimeSeries, async (i) =>
+                {
+                    var rand = new Random();
+                    var offset = 0;
+                    await using (var bulkInsert = store.BulkInsert())
+                    using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate" + "/" + i))
+                    {
+                        for (int j = 0; j < numberOfMeasures; j++)
+                        {
+                            var values = new double[numberOfValues];
+                            for (int k = 0; k < numberOfValues; k++)
+                            {
+                                values[k] = (double)rand.Next(-100_000, 100_000) / 1000; // between -100.000 and 100.000
+                            }
+
+                            offset += rand.Next(1, 5);
+                            await timeSeriesBulkInsert.AppendAsync(baseline.AddSeconds(offset), values);
+                        }
+                    }
+
+                    count.Signal();
+                });
+
+                count.Wait();
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(numberOfTimeSeries, tsNames.Count);
+                }
+
+                for (int j = 0; j < numberOfTimeSeries; j++)
+                {
+                    var tsName = "Heartrate" + "/" + j;
+                    using (var session = store.OpenSession())
+                    {
+                        var vals = session.TimeSeriesFor(documentId, tsName)
+                            .Get(DateTime.MinValue, DateTime.MaxValue)
+                            .ToList();
+                        Assert.Equal(numberOfMeasures, vals.Count);
+                    }
                 }
             }
         }
