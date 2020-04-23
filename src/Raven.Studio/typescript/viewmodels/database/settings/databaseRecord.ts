@@ -1,13 +1,13 @@
 import appUrl = require("common/appUrl");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
+import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import messagePublisher = require("common/messagePublisher");
 import accessManager = require("common/shell/accessManager");
 import eventsCollector = require("common/eventsCollector");
-import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
+import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
 
 class databaseRecord extends viewModelBase {
     autoCollapseMode = ko.observable<boolean>(false);
@@ -18,7 +18,7 @@ class databaseRecord extends viewModelBase {
     
     inEditMode = ko.observable<boolean>(false);
 
-    static containerId = "#databaseSettingsContainer";
+    static containerId = "#databaseRecordContainer";
 
     constructor() {
         super();
@@ -45,10 +45,10 @@ class databaseRecord extends viewModelBase {
                     deferred.resolve({ can: true });
                 } else {
                     const db: database = this.activeDatabase();
-                    this.fetchDatabaseSettings(db)
+                    this.fetchDatabaseRecord(db)
                         .done(() => deferred.resolve({ can: true }))
                         .fail((response: JQueryXHR) => {
-                            messagePublisher.reportError("Error fetching database settings!", response.responseText, response.statusText);
+                            messagePublisher.reportError("Error fetching database record!", response.responseText, response.statusText);
                             deferred.resolve({ redirect: appUrl.forStatus(db) });
                         });
                 }
@@ -88,9 +88,8 @@ class databaseRecord extends viewModelBase {
     }
     
     refreshFromServer(reportFetchProgress: boolean = true) {
-        eventsCollector.default.reportEvent("database-settings", "refresh");
-
-        this.fetchDatabaseSettings(this.activeDatabase(), reportFetchProgress);
+        eventsCollector.default.reportEvent("database-record", "refresh");
+        this.fetchDatabaseRecord(this.activeDatabase(), reportFetchProgress);
     }
 
     enterEditMode() {
@@ -112,7 +111,7 @@ class databaseRecord extends viewModelBase {
     
     confirm() {
         return this.confirmationMessage("Are you sure?", 
-            "Tampering with database record may result in unwanted behavior including loss of database along with all its data.",
+            "Tampering with the Database Record may result in unwanted behavior including loss of database along with all its data.",
             {
                 buttons: ["Cancel", "Ok, I understand the risk"]
             });
@@ -123,7 +122,7 @@ class databaseRecord extends viewModelBase {
             .then(result => {
                 if (result.can) {
                     const dto = JSON.parse(this.documentText());
-                    new saveDatabaseSettingsCommand(this.activeDatabase(), dto, dto.Etag)
+                    new saveDatabaseRecordCommand(this.activeDatabase(), dto, dto.Etag)
                         .execute()
                         .done(() => {
                             this.refreshFromServer(false);
@@ -133,8 +132,8 @@ class databaseRecord extends viewModelBase {
             });
     }
 
-    private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
-        return new getDatabaseSettingsCommand(db, reportFetchProgress)
+    private fetchDatabaseRecord(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
+        return new getDatabaseRecordCommand(db, reportFetchProgress)
             .execute()
             .done((document: document) => this.document(document));
     }

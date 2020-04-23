@@ -1,0 +1,28 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">The following database settings will be saved:</h4>
+        </div>
+        <div class="modal-body">
+            <div class="padding padding-sm">
+                <div class="panel">
+                    <div data-bind="html: settingsToSaveText">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="padding">
+                <button type="button" class="btn btn-default" data-bind="click: cancel">
+                    <i class="icon-cancel"></i><span>Cancel</span>
+                </button>
+                <button type="button" class="btn btn-danger" data-bind="click: save">
+                    <i class="icon-save"></i><span>Save</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

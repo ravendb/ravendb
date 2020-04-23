@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Json;
@@ -12,7 +11,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
@@ -34,26 +32,22 @@ namespace Raven.Server.Web.System
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var status = feature?.Status ?? RavenServer.AuthenticationStatus.ClusterAdmin;
 
-            var values = new DynamicJsonArray();
+            var settingsResult = new SettingsResult();
 
             foreach (var configurationEntryMetadata in RavenConfiguration.AllConfigurationEntries.Value)
             {
                 if (scope.HasValue && scope != configurationEntryMetadata.Scope)
                     continue;
 
-                var configurationEntryValue = new ConfigurationEntryServerValue(Server.Configuration, configurationEntryMetadata, status);
-
-                values.Add(configurationEntryValue.ToJson());
+                var entry = new ConfigurationEntryServerValue(Server.Configuration, configurationEntryMetadata, status);
+                settingsResult.Settings.Add(entry);
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(DatabaseRecord.Settings)] = values
-                    });
+                    context.Write(writer, settingsResult.ToJson());
                 }
             }
 

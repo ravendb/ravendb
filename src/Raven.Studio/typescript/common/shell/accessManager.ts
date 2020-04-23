@@ -88,6 +88,7 @@ class accessManager {
     };
     
     databaseSettingsMenu = {
+        showDatabaseSettingsMenuItem: this.operatorAndAbove,
         showDatabaseRecordMenuItem: this.operatorAndAbove,
         showConnectionStringsMenuItem: this.operatorAndAbove,
         enableConnectionStringsMenuItem: this.clusterAdminOrClusterNode, 

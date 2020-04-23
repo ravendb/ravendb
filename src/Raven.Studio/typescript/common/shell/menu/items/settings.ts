@@ -11,6 +11,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
     
     const items: menuItem[] = [
         new leafMenuItem({
+            route: ['databases/settings/databaseSettings', 'databases/settings/databaseSettings'],
+            moduleId: 'viewmodels/database/settings/databaseSettings',
+            title: 'Database Settings',
+            nav: access.showDatabaseSettingsMenuItem,
+            css: 'icon-settings',
+            dynamicHash: appUrls.databaseSettings
+        }),
+        new leafMenuItem({
             route: ['databases/record', 'databases/settings/databaseRecord'],
             moduleId: 'viewmodels/database/settings/databaseRecord',
             title: 'Database Record',
