@@ -426,7 +426,7 @@ namespace SlowTests.Client.Subscriptions
 
                 const string newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionCreationOptions
+                store.Subscriptions.Update(new SubscriptionUpdateOptions
                 {
                     Name = state.SubscriptionName,
                     Query = newQuery,
@@ -488,7 +488,7 @@ namespace SlowTests.Client.Subscriptions
 
                 const string newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionCreationOptions
+                store.Subscriptions.Update(new SubscriptionUpdateOptions
                 {
                     Name = state.SubscriptionName,
                     Query = newQuery,
@@ -550,7 +550,7 @@ namespace SlowTests.Client.Subscriptions
 
                 const string newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionCreationOptions
+                store.Subscriptions.Update(new SubscriptionUpdateOptions
                 {
                     Name = state.SubscriptionName,
                     Query = newQuery,

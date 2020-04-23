@@ -390,23 +390,63 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
-                var options = JsonDeserializationServer.SubscriptionCreationParams(json);
+                var options = JsonDeserializationServer.SubscriptionUpdateOptions(json);
 
-                var id = GetLongQueryString("id", required: false);
+                var id = options.Id;
                 SubscriptionState state;
 
-                if (id == null)
+                try
                 {
-                    state = Database.SubscriptionStorage.GetSubscriptionFromServerStore(options.Name);
-                    id = state.SubscriptionId;
-                }
-                else
-                {
-                    state = Database.SubscriptionStorage.GetSubscriptionFromServerStoreById(id.Value);
+                    if (id == null)
+                    {
+                        state = Database.SubscriptionStorage.GetSubscriptionFromServerStore(options.Name);
+                        id = state.SubscriptionId;
+                    }
+                    else
+                    {
+                        state = Database.SubscriptionStorage.GetSubscriptionFromServerStoreById(id.Value);
 
-                    // keep the old subscription name
-                    if (options.Name == null)
-                        options.Name = state.SubscriptionName;
+                        // keep the old subscription name
+                        if (options.Name == null)
+                            options.Name = state.SubscriptionName;
+                    }
+                }
+                catch (SubscriptionDoesNotExistException)
+                {
+                    if (options.CreateIfNotExist)
+                    {
+                        if (id == null)
+                        {
+                            // subscription with such name doesn't exist, add new subscription
+                            await CreateInternal(json, options, context, id: null, disabled: false);
+                            return;
+                        }
+
+                        if (options.Name == null)
+                        {
+                            // subscription with such id doesn't exist, add new subscription using id
+                            await CreateInternal(json, options, context, id, disabled: false);
+                            return;
+                        }
+
+                        // this is the case when we have both name and id, and there no subscription with such id
+                        try
+                        {
+                            // check the name
+                            state = Database.SubscriptionStorage.GetSubscriptionFromServerStore(options.Name);
+                            id = state.SubscriptionId;
+                        }
+                        catch (SubscriptionDoesNotExistException)
+                        {
+                            // subscription with such id or name doesn't exist, add new subscription using both name and id
+                            await CreateInternal(json, options, context, id, disabled: false);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        throw;
+                    }
                 }
 
                 if (options.ChangeVector == null)
