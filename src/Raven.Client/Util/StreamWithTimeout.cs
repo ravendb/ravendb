@@ -192,8 +192,14 @@ namespace Raven.Client.Util
             set => _stream.Position = value;
         }
 
+        ~StreamWithTimeout()
+        {
+            _readCts?.Dispose();
+            _writeCts?.Dispose();
+        }
         protected override void Dispose(bool disposing)
         {
+            GC.SuppressFinalize(this);
             base.Dispose(disposing);
             _stream.Dispose();
             _readCts?.Dispose();
