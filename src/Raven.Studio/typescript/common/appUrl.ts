@@ -75,6 +75,7 @@ class appUrl {
         ongoingTasksStats: ko.pureComputed(() => appUrl.forOngoingTasksStats(appUrl.currentDatabase())),
         runningQueries: ko.pureComputed(() => appUrl.forRunningQueries(appUrl.currentDatabase())),
         visualizer: ko.pureComputed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
+        databaseSettings: ko.pureComputed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
         revertRevisions: ko.pureComputed(() => appUrl.forRevertRevisions(appUrl.currentDatabase())),
@@ -289,6 +290,11 @@ class appUrl {
         return url;
     }
 
+    static forDatabaseSettings(db: database | databaseInfo): string {
+        const databasePart = appUrl.getEncodedDbPart(db); 
+        return "#databases/settings/databaseSettings?"  + databasePart;
+    }
+    
     static forDatabaseRecord(db: database | databaseInfo): string {
         return "#databases/settings/databaseRecord?" + appUrl.getEncodedDbPart(db);
     }

@@ -1,0 +1,147 @@
+#database-settings-view {
+    
+    @source-item-color: @database-settings-source-item;
+    @source-item-color-basic: @database-settings-source-item-basic; 
+    
+    .all-entries {
+        overflow-x: hidden;
+        top: 50px;
+    }
+    
+    .entries-grid {
+        margin-top: 0px;
+    }
+
+    .summary-buttons {
+        margin-right: 30px;
+    }
+    
+    .filter-entries {
+        min-width: 230px;
+    }
+    
+    .add-vertical-split::before {
+        content: "";
+        background: @gray-dark;
+        position: absolute;
+        bottom: 15%;
+        left: 0;
+        height: 70%;
+        width: 1px;
+    }
+    
+    .customized-item::after {
+        content: '*';
+        color: @database-settings-customized-item;
+        margin-left: 4px;
+        font-size: large;
+    }
+    
+    .customized-item-with-error::after {
+        content: "\e93f"; 
+        color: @database-settings-customized-item-error;
+        margin-left: 4px;
+        font-size: small;
+        font-family: 'icomoon' !important;
+    }
+    
+    .categories-list-container {
+        width: 310px;
+        position: relative;
+    }
+    
+    .edit-entries-titles {
+        padding-left: 10px;
+    }
+    
+    .summary-list-container {
+        position: relative;
+
+        .effective-value {
+            color: darken(@color-1-2, 5%);
+        }
+        
+        .source-item {
+            color: @source-item-color-basic;
+            padding-left: 25px;
+            
+            &::before {
+                font-family: @font-family-icon;
+                font-size: small;
+                margin-left: 5px;
+                padding-left: 10px;
+                color: @source-item-color;
+            }
+            
+            &.null-value::before {
+                font-family: @font-family-icon;
+                font-size: small;
+                margin-left: 5px;
+                padding-left: 10px;
+                color: @source-item-color-basic;
+            }
+        }
+        
+        .source-item-default {
+            &::before {
+                content: "\e9d9";
+            }
+        }
+
+        .source-item-server {
+            &::before {
+                content:"\e93d";
+            }
+        }
+
+        .source-item-database {
+            &::before {
+                content: "\e9ce";
+            }
+        }
+    }
+    
+    .entry-basic-template {
+        .panel-body {
+            padding-top: 0px;
+            padding-bottom: 0px;
+        }
+    }
+    
+    .entry-content {
+        word-break: break-word;
+    }
+
+    .tooltip-inner {
+        max-width: 600px;
+        background-color: lighten(@gray-darker, 5%);
+        padding: 10px;
+        text-align: left;
+    }
+    
+    .override-options {
+        position: relative;
+        left: -65px;
+    }
+
+    .source-icon {
+        color: @source-item-color;
+    }
+    
+    .source-icon-null {
+        color: @source-item-color-basic;
+    }
+    
+    .set-default {
+        width: 75px;
+        
+        a {
+            color: @gray-light;
+
+            &:hover
+            {
+                color: @gray-lighter; 
+            }
+        }
+    }
+}

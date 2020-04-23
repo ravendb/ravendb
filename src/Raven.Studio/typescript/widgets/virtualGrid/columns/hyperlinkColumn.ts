@@ -36,15 +36,17 @@ class hyperlinkColumn<T> extends textColumn<T> {
             // decorate with link
             const preparedValue = this.prepareValue(item);
             const extraHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
+            
             let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
+            let extraCssClassesForLink = this.opts.extraClassForLink ? this.opts.extraClassForLink(item) : '';
             
             if (isSorted) {
                 extraCssClasses += ' sorted';
             }
-            
-            const customAction = this.customHandler ? `data-action="${this.linkActionUniqueId}"` : "";
 
-            return `<div ${extraHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}"><a href="${hyperlinkValue}" ${customAction}>${preparedValue.rawText}</a></div>`;
+            const customAction = this.customHandler ? `data-action="${this.linkActionUniqueId}"` : "";
+            
+            return `<div ${extraHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}"><a class="${extraCssClassesForLink}" href="${hyperlinkValue}" ${customAction}>${preparedValue.rawText}</a></div>`;
         } else {
             // fallback to plain text column
             return super.renderCell(item, isSelected, isSorted);

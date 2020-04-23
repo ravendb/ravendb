@@ -34,6 +34,18 @@ class genUtils {
     static readonly urlRegex = /^(https?:\/\/)([^\s]+)$/; // allow any char, exclude white space
     static readonly invalidUrlMessage = "Url format expected: 'http(s)://hostName'";
     
+    static isValidUri(uri: string) {
+        let valid = true;
+        
+        try {
+            new URL(uri);
+        } catch (e) {
+            valid = false;
+        }
+        
+        return valid;
+    }
+    
     static isHostname(address: string): boolean {
         const info = genUtils.getAddressInfo(address);
         return info.Type === "hostname";
