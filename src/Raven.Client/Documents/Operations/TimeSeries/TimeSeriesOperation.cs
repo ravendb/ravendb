@@ -97,7 +97,17 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 for (var i = 0; i < numberOfValues; i++)
                 {
-                    doubleValues[i] = Convert.ToDouble(bjro[i + 2]);
+                    var obj = bjro[i + 2];
+                    if (obj is long l)
+                    {
+                        // when we send the number without the decimal point
+                        // this is the same as what Convert.ToDouble is doing
+                        doubleValues[i] = l;
+                    }
+                    else
+                    {
+                        doubleValues[i] = (double)obj;
+                    }
                 }
 
                 append.Values = doubleValues;
