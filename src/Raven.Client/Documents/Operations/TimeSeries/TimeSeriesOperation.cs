@@ -98,15 +98,21 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 for (var i = 0; i < numberOfValues; i++)
                 {
                     var obj = bjro[i + 2];
-                    if (obj is long l)
+                    switch (obj)
                     {
-                        // when we send the number without the decimal point
-                        // this is the same as what Convert.ToDouble is doing
-                        doubleValues[i] = l;
-                    }
-                    else
-                    {
-                        doubleValues[i] = (double)obj;
+                        case long l:
+                            // when we send the number without the decimal point
+                            // this is the same as what Convert.ToDouble is doing
+                            doubleValues[i] = l;
+                            break;
+
+                        case LazyNumberValue lnv:
+                            doubleValues[i] = lnv;
+                            break;
+
+                        default:
+                            doubleValues[i] = (double)obj;
+                            break;
                     }
                 }
 
@@ -148,7 +154,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             throw new InvalidDataException($"Missing '{prop}' property on 'TimeSeriesOperation'");
         }
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
