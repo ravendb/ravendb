@@ -655,7 +655,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            private void AggregateOnceByItem(AggregationType aggregation, int i, double val)
+            private void AggregateOnceByItem(AggregationType aggregation, int i, double val, AggregationMode mode)
             {
                 switch (aggregation)
                 {
@@ -687,7 +687,10 @@ namespace Raven.Server.Documents.TimeSeries
                     case AggregationType.Count:
                         if (double.IsNaN(Values[i]))
                             Values[i] = 0;
-                        Values[i]++;
+                        if (mode == AggregationMode.FromAggregated)
+                            Values[i] = Values[i] + val;
+                        else
+                            Values[i]++;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + aggregation);
@@ -708,7 +711,7 @@ namespace Raven.Server.Documents.TimeSeries
                             {
                                 var aggregation = Aggregations[index];
                                 var aggIndex = index + (i * Aggregations.Length);
-                                AggregateOnceByItem(aggregation, aggIndex, val);
+                                AggregateOnceByItem(aggregation, aggIndex, val, _mode);
                             }
 
                             break;
@@ -716,7 +719,7 @@ namespace Raven.Server.Documents.TimeSeries
                             {
                                 var aggIndex = i % Aggregations.Length;
                                 var type = Aggregations[aggIndex];
-                                AggregateOnceByItem(type, i, val);
+                                AggregateOnceByItem(type, i, val, _mode);
                             }
                             break;
                         default:
