@@ -1,7 +1,7 @@
-﻿using Sparrow;
+﻿using System;
+using Sparrow;
 using Sparrow.Json;
 using Voron;
-using System;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -20,16 +20,19 @@ namespace Raven.Server.ServerWide.Context
         protected override ClusterOperationContext CreateContext()
         {
             int initialSize;
+            int maxNumberOfAllocatedStringValues;
             if (_storageEnvironment.Options.RunningOn32Bits)
             {
                 initialSize = 4096;
+                maxNumberOfAllocatedStringValues = 8 * 1024;
             }
             else
             {
                 initialSize = 32 * 1024;
+                maxNumberOfAllocatedStringValues = 32 * 1024;
             }
 
-            return new ClusterOperationContext(_changes, _storageEnvironment, initialSize, 16 * 1024, LowMemoryFlag);
+            return new ClusterOperationContext(_changes, _storageEnvironment, initialSize, 16 * 1024, maxNumberOfAllocatedStringValues, LowMemoryFlag);
         }
 
         public override void Dispose()
