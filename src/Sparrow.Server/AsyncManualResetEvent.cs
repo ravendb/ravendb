@@ -7,10 +7,11 @@ using Sparrow.Utils;
 
 namespace Sparrow.Server
 {
-    public class AsyncManualResetEvent
+    public class AsyncManualResetEvent : IDisposable
     {
         private volatile TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         private CancellationToken _token;
+        private CancellationTokenRegistration _cancellationTokenRegistration;
 
         public AsyncManualResetEvent()
         {
@@ -19,7 +20,7 @@ namespace Sparrow.Server
 
         public AsyncManualResetEvent(CancellationToken token)
         {
-            token.Register(() => _tcs.TrySetCanceled());
+            _cancellationTokenRegistration = token.Register(() => _tcs.TrySetCanceled());
             _token = token;
         }
 
@@ -29,10 +30,9 @@ namespace Sparrow.Server
             return _tcs.Task;
         }
 
-        public Task<bool> WaitAsync(CancellationToken token)
+        public async Task<bool> WaitAsync(CancellationToken token)
         {
-            if (token.IsCancellationRequested)
-                return Task.FromCanceled<bool>(token);
+            token.ThrowIfCancellationRequested();
 
             // for each wait we will create a new task, since the cancellation token is unique.
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -56,8 +56,11 @@ namespace Sparrow.Server
                 }
                 tcs.TrySetResult(t.Result);
             }, token);
-            token.Register(() => tcs.TrySetCanceled(token));
-            return tcs.Task;
+            
+            using (token.Register(() => tcs.TrySetCanceled(token)))
+            {
+                return await tcs.Task.ConfigureAwait(false);
+            }
         }
 
         public bool IsSet => _tcs.Task.IsCompleted;
@@ -171,6 +174,17 @@ namespace Sparrow.Server
                     break;
                 }
             }
+        }
+
+        ~AsyncManualResetEvent()
+        {
+            _cancellationTokenRegistration.Dispose();
+        }
+
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+            _cancellationTokenRegistration.Dispose();
         }
     }
 }

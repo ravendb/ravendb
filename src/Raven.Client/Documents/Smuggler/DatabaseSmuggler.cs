@@ -93,12 +93,13 @@ namespace Raven.Client.Documents.Smuggler
                 var operationId = getOperationIdCommand.Result;
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                token.Register(() => tcs.TrySetCanceled(token));
+                var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
                 var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs);
                 var requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
                     .ContinueWith(t =>
                     {
+                        cancellationTokenRegistration.Dispose();
                         if (t.IsFaulted)
                         {
                             tcs.TrySetException(t.Exception);
@@ -230,7 +231,7 @@ namespace Raven.Client.Documents.Smuggler
                     var operationId = getOperationIdCommand.Result;
 
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    token.Register(() => tcs.TrySetCanceled(token));
+                    var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
                     var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this);
 
@@ -238,6 +239,7 @@ namespace Raven.Client.Documents.Smuggler
                     var requestTask = task
                         .ContinueWith(t =>
                         {
+                            cancellationTokenRegistration.Dispose();
                             using (disposeStream)
                             {
                                 if (t.IsFaulted)

@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Subscriptions
                     return;
 
                 _disposed = true;
-                _processingCts.Cancel();
+                _processingCts?.Cancel();
 
                 CloseTcpClient(); // we disconnect immediately, freeing the subscription task
 
@@ -111,6 +111,7 @@ namespace Raven.Client.Documents.Subscriptions
                 }
 
                 _subscriptionLocalRequestExecutor?.Dispose();
+                _processingCts?.Dispose();
             }
             catch (Exception ex)
             {
