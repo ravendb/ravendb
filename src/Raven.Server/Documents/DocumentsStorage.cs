@@ -364,7 +364,7 @@ namespace Raven.Server.Documents
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 Table.TableValueHolder holder = default;
-                foreach (var collection in IterateCollectionNames(tx))
+                foreach (var collection in IterateCollectionNames(tx, ctx))
                 {
                     var collectionName = new CollectionName(collection);
                     if (ReadLastDocument(tx, collectionName, CollectionTableType.Documents, ref holder) == false)
@@ -2140,16 +2140,13 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException("This method requires active transaction, and no active transactions in the current context...");
         }
 
-        private IEnumerable<string> IterateCollectionNames(Transaction tx)
+        private IEnumerable<string> IterateCollectionNames(Transaction tx, JsonOperationContext context)
         {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
+            foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
             {
-                var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
-                foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
-                {
-                    var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
-                    yield return collection.ToString();
-                }
+                var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
+                yield return collection.ToString();
             }
         }
 

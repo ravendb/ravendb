@@ -2116,8 +2116,8 @@ namespace Raven.Server.Documents.Indexes
                                 continue;
                             }
 
-                            var lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection.Key, value);
-                            var lastReferenceTombstoneEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, referencedCollection.Key, value);
+                            var lastReferenceEtag = IndexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, referencedCollection.Key, value);
+                            var lastReferenceTombstoneEtag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, referencedCollection.Key, value);
                             var lastEtags = GetLastEtags(_inMemoryReferencesIndexProgress, collectionName, lastReferenceEtag, lastReferenceTombstoneEtag);
 
                             progressStats = progress.Collections[collectionName] = new IndexProgress.CollectionStats

@@ -238,6 +238,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     map[collection] = etags;
                 }
             }
+
+            var referencedCollections = _index.GetReferencedCollections();
+            if (referencedCollections == null || referencedCollections.Count == 0)
+                return;
+            
+            foreach (var (src, collections)  in referencedCollections)
+            {
+                var collectionEtags = map[src];
+                collectionEtags.LastReferencedEtags ??= new Dictionary<string, IndexTransactionCache.ReferenceCollectionEtags>(StringComparer.OrdinalIgnoreCase);
+                foreach (var collectionName in collections)
+                {
+                    collectionEtags.LastReferencedEtags[collectionName.Name] = new IndexTransactionCache.ReferenceCollectionEtags
+                    {
+                        LastEtag = IndexStorage.ReadLastProcessedReferenceEtag(tx, src, collectionName),
+                        LastProcessedTombstoneEtag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, src, collectionName),
+                    };
+                }
+            }
         }
 
         private void FillLuceneFilesChunks(Transaction tx, Dictionary<string, Tree.ChunkDetails[]> cache, string name)
