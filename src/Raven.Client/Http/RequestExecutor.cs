@@ -38,6 +38,8 @@ namespace Raven.Client.Http
 {
     public class RequestExecutor : IDisposable
     {
+        private const int DefaultConnectionLimit = int.MaxValue;
+
         private static Guid GlobalApplicationIdentifier = Guid.NewGuid();
 
         private const int InitialTopologyEtag = -2;
@@ -956,7 +958,7 @@ namespace Raven.Client.Http
                     })
                     {
                         TimeoutInMs = 0,
-                        DebugTag = refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null
+                        DebugTag = "refresh-topology-header"
                     })
                     : Task.CompletedTask;
 
@@ -1780,7 +1782,7 @@ namespace Raven.Client.Http
 
         public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
         {
-            var httpMessageHandler = new HttpClientHandler();
+            var httpMessageHandler = new HttpClientHandler {MaxConnectionsPerServer = DefaultConnectionLimit };
             if (httpMessageHandler.SupportsAutomaticDecompression)
             {
                 httpMessageHandler.AutomaticDecompression =
@@ -1788,9 +1790,7 @@ namespace Raven.Client.Http
                         DecompressionMethods.GZip | DecompressionMethods.Deflate
                         : DecompressionMethods.None;
             }
-            else if (httpMessageHandler.SupportsAutomaticDecompression == false &&
-                     useCompression &&
-                     hasExplicitlySetCompressionUsage)
+            else if (useCompression && hasExplicitlySetCompressionUsage)
             {
                 throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
             }
@@ -1871,7 +1871,7 @@ namespace Raven.Client.Http
                 try
                 {
                     var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
-                    servicePoint.ConnectionLimit = Math.Max(servicePoint.ConnectionLimit, 1024 * 10);
+                    servicePoint.ConnectionLimit = Math.Max(servicePoint.ConnectionLimit, DefaultConnectionLimit);
                     servicePoint.MaxIdleTime = -1;
                 }
                 catch (Exception e)
