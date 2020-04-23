@@ -87,16 +87,26 @@ namespace Raven.Server.Web
             return new MemoryStream(Encoding.UTF8.GetBytes(value[0]));
         }
 
+        private Stream _requestBodyStream;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected Stream RequestBodyStream()
         {
-            return new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
+            if (_requestBodyStream != null)
+                return _requestBodyStream;
+            _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
+            
+            _context.HttpContext.Response.RegisterForDispose(_requestBodyStream);
+            
+            return _requestBodyStream;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected Stream GetBodyStream(MultipartSection section)
         {
-            return new StreamWithTimeout(GetDecompressedStream(section.Body, section.Headers));
+            Stream stream = new StreamWithTimeout(GetDecompressedStream(section.Body, section.Headers));
+            _context.HttpContext.Response.RegisterForDispose(stream);
+            return stream;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -248,7 +258,17 @@ namespace Raven.Server.Web
 
         private Stream _responseStream;
 
-        protected Stream ResponseBodyStream() => _responseStream ??= new StreamWithTimeout(HttpContext.Response.Body);
+        protected Stream ResponseBodyStream()
+        {
+            if (_responseStream != null)
+                return _responseStream;
+
+            _responseStream = new StreamWithTimeout(HttpContext.Response.Body);
+            
+            _context.HttpContext.Response.RegisterForDispose(_responseStream);
+            
+            return _responseStream;
+        }
 
         protected bool IsWebsocketRequest()
         {
