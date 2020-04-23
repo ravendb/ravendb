@@ -23,6 +23,7 @@ namespace Raven.Server.Config.Categories
             _root = root;
         }
 
+        [DefaultValue(false)]
         [Description("Whether the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.RunInMemory", ConfigurationEntryScope.ServerWideOrPerDatabase, setDefaultValueIfNeeded: false)]

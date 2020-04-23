@@ -1,10 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Server.Config.Attributes;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Config
 {
+    public class SettingsResult : IDynamicJson
+    {
+        public List<ConfigurationEntryValue> Settings { get; set; }
+
+        public SettingsResult()
+        {
+            Settings = new List<ConfigurationEntryValue>();
+        }
+        
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Settings)] = new DynamicJsonArray(Settings.Select(x => x.ToJson()))
+            };
+        }
+    }
+    
     public abstract class ConfigurationEntryValue : IDynamicJson
     {
         protected ConfigurationEntryValue(ConfigurationEntryMetadata metadata)

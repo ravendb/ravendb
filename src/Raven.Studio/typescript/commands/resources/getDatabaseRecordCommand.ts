@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import endpoints = require("endpoints");
 
-class getDatabaseSettingsCommand extends commandBase {
+class getDatabaseRecordCommand extends commandBase {
 
     constructor(private db: database, private reportRefreshProgress = false) {
         super();
@@ -23,11 +23,11 @@ class getDatabaseSettingsCommand extends commandBase {
         const getTask = this.query(url, null, null, resultsSelector);
 
         if (this.reportRefreshProgress) {
-            getTask.done(() => this.reportSuccess("Database Settings of '" + this.db.name + "' were successfully refreshed!"));
-            getTask.fail((response: JQueryXHR) => this.reportError("Failed to refresh Database Settings!", response.responseText, response.statusText));
+            getTask.done(() => this.reportSuccess("Database Record of '" + this.db.name + "' was successfully refreshed!"));
+            getTask.fail((response: JQueryXHR) => this.reportError("Failed to refresh Database Record!", response.responseText, response.statusText));
         }
         return getTask;
     }
 }
 
-export = getDatabaseSettingsCommand;
+export = getDatabaseRecordCommand;

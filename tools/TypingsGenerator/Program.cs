@@ -43,6 +43,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Commercial;
+using Raven.Server.Config;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
@@ -168,6 +169,11 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(DetailedDatabaseStatistics));
+            
+            // database settings
+            scripter.AddType(typeof(SettingsResult));
+            scripter.AddType(typeof(ConfigurationEntryServerValue));
+            scripter.AddType(typeof(ConfigurationEntryDatabaseValue));
             
             // restore database from cloud backup
             scripter.AddType(typeof(S3Settings));

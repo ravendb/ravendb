@@ -11,7 +11,6 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -33,30 +32,40 @@ namespace Raven.Server.Documents.Handlers.Admin
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var status = feature?.Status ?? RavenServer.AuthenticationStatus.ClusterAdmin;
 
-            var values = new DynamicJsonArray();
+            var settingsResult = new SettingsResult();
 
             foreach (var configurationEntryMetadata in RavenConfiguration.AllConfigurationEntries.Value)
             {
                 if (scope.HasValue && scope != configurationEntryMetadata.Scope)
                     continue;
 
-                var configurationEntryValue = new ConfigurationEntryDatabaseValue(Database.Configuration, configurationEntryMetadata, status);
-
-                values.Add(configurationEntryValue.ToJson());
+                var entry = new ConfigurationEntryDatabaseValue(Database.Configuration, configurationEntryMetadata, status);
+                settingsResult.Settings.Add(entry);
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(DatabaseRecord.Settings)] = values
-                    });
+                    context.Write(writer, settingsResult.ToJson());
                 }
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/admin/configuration/settings", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        public async Task PutSettings()
+        {
+            ServerStore.EnsureNotPassive();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+              // todo
+            }
+
+            NoContentStatus();
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
 
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]

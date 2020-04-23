@@ -46,6 +46,7 @@ interface computedAppUrls {
     ongoingTasksStats: KnockoutComputed<string>;
     runningQueries: KnockoutComputed<string>;
     visualizer: KnockoutComputed<string>;
+    databaseSettings: KnockoutComputed<string>;
     databaseRecord: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;
     revertRevisions: KnockoutComputed<string>;
