@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Dynamic;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Extensions;
@@ -128,7 +132,7 @@ namespace FastTests.Client.BulkInsert
                 using (var bulkInsert = store.BulkInsert())
                 {
                     var exception = Assert.Throws<NotSupportedException>(() =>
-                            bulkInsert.Store(new FooBar { Name = "John Doe" }, "foobars|"));
+                        bulkInsert.Store(new FooBar { Name = "John Doe" }, "foobars|"));
                     Assert.Contains("Document ids cannot end with '|', but was called with foobars|", exception.Message);
                 }
             }
@@ -161,6 +165,39 @@ namespace FastTests.Client.BulkInsert
             }
         }
 
+        [Fact]
+        public async Task BulkInsertDynamic_WhenProvideDelegateForDynamicCollectionAndType_ShouldUseIt()
+        {
+            const string customCollection = "CustomCollection";
+            const string customType = "CustomType";
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.AddIdFieldToDynamicObjects = false;
+                    s.Conventions.FindCollectionNameForDynamic = (entity) => customCollection;
+                    s.Conventions.FindClrTypeNameForDynamic = (entity) => customType;
+                }
+            });
+
+            var str = @"
+{
+    ""heading"": ""Hello, world ⭐️"",
+}";
+            var o = JsonConvert.DeserializeObject<ExpandoObject>(str, new ExpandoObjectConverter());
+            await using (var bulkInsert = store.BulkInsert())
+            {
+                await bulkInsert.StoreAsync(o, "o/1");
+            }
+            using (var session = store.OpenAsyncSession())
+            {
+                var d = await session.LoadAsync<object>("o/1");
+                IDictionary<string, object> metadata = session.Advanced.GetMetadataFor(d);
+                Assert.Equal(customCollection, metadata["@collection"]);
+                Assert.Equal(customType, metadata["Raven-Clr-Type"]);
+            }
+        }
+        
         private class FooBar
         {
             public string Name { get; set; }

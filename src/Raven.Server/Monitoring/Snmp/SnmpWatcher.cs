@@ -370,6 +370,8 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerLicenseType(server.ServerStore));
             store.Add(new ServerLicenseExpiration(server.ServerStore));
             store.Add(new ServerLicenseExpirationLeft(server.ServerStore));
+            store.Add(new ServerLicenseUtilizedCpuCores(server.ServerStore));
+            store.Add(new ServerLicenseMaxCpuCores(server.ServerStore));
 
             store.Add(new ServerStorageUsedSize(server.ServerStore));
             store.Add(new ServerStorageTotalSize(server.ServerStore));
@@ -378,6 +380,10 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new ServerCertificateExpiration(server.ServerStore));
             store.Add(new ServerCertificateExpirationLeft(server.ServerStore));
+            store.Add(new WellKnownAdminCertificates(server.ServerStore));
+
+            store.Add(new MachineProcessorCount());
+            store.Add(new MachineAssignedProcessorCount());
 
             return store;
         }

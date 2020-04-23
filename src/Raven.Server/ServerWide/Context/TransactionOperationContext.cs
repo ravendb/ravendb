@@ -12,8 +12,8 @@ namespace Raven.Server.ServerWide.Context
 
         public readonly StorageEnvironment Environment;
 
-        public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
-            : base(initialSize, longLivedSize, lowMemoryFlag)
+        public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
+            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             Environment = environment;
         }
@@ -46,8 +46,8 @@ namespace Raven.Server.ServerWide.Context
 
         public TTransaction Transaction;
 
-        protected TransactionOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag) :
-            base(initialSize, longLivedSize, lowMemoryFlag)
+        protected TransactionOperationContext(int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
+            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             PersistentContext = new TransactionPersistentContext();
             Allocator = new ByteStringContext(lowMemoryFlag);

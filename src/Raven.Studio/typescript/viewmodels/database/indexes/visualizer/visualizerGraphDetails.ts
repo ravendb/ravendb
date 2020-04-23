@@ -674,7 +674,7 @@ class visualizerGraphDetails {
     };
 
     constructor() {
-        _.bindAll(this, ["goToMasterView", "goToNextTree", "goToPreviousTree"] as Array<keyof this>);
+        _.bindAll(this, ...["goToMasterView", "goToNextTree", "goToPreviousTree"] as Array<keyof this & string>);
 
         this.initObservables();
     }

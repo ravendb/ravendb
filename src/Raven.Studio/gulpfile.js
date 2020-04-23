@@ -2,75 +2,83 @@
 
 require('./gulp/shim');
 
-var gulp = require('gulp'),
-    gulpLoadPlugins = require('gulp-load-plugins'),
-    plugins = gulpLoadPlugins(),
-    path = require('path'),
-    fs = require('fs'),
-    del = require('del'),
-    Map = require('es6-map'),
-    runSequence = require('run-sequence'),
-    exec = require('child_process').exec,
-    parseHandlers = require('./gulp/parseHandlers'),
-    parseConfiguration = require('./gulp/parseConfiguration'),
-    findNewestFile = require('./gulp/findNewestFile'),
-    checkAllFilesExist = require('./gulp/checkAllFilesExist'),
-    gutil = require('gulp-util'),
-    cachebust = require('gulp-cache-bust'),
-    autoPrefixer = require('gulp-autoprefixer'),
-    fileExists = require('file-exists'),
-    fsUtils = require('./gulp/fsUtils');
+const gulp = require('gulp');
+const typescript = require("gulp-typescript");
+const gulpLess = require("gulp-less");
+const zip = require("gulp-zip");
+const path = require('path');
+const fs = require('fs');
+const del = require('del');
+const exec = require('child_process').exec;
+const bower = require("gulp-bower");
+const parseHandlers = require('./gulp/parseHandlers');
+const parseConfiguration = require('./gulp/parseConfiguration');
+const checkAllFilesExist = require('./gulp/checkAllFilesExist');
+const gutil = require('gulp-util');
+const sourcemaps = require("gulp-sourcemaps");
+const cachebust = require('gulp-cache-bust');
+const autoPrefixer = require('gulp-autoprefixer');
+const fsUtils = require('./gulp/fsUtils');
+const typings = require("gulp-typings");
+const processHtml = require("gulp-processhtml");
+const naturalSort = require("gulp-natural-sort");
+const cssNano = require("gulp-cssnano");
+const changed = require("gulp-changed");
+const concatCss = require("gulp-concat-css");
+const insert = require("gulp-insert");
+const reduceFile = require("gulp-reduce-file");
+const concat = require("gulp-concat");
+const uglify = require("gulp-uglify");
+const durandal = require("gulp-durandal");
 
-var PATHS = require('./gulp/paths');
+const PATHS = require('./gulp/paths');
 
-var tsProject = plugins.typescript.createProject('tsconfig.json');
-var testTsProject = plugins.typescript.createProject('tsconfig.json');
+const tsProject = typescript.createProject('tsconfig.json');
+const testTsProject = typescript.createProject('tsconfig.json');
 
-gulp.task('z_clean', ['z_clean:js'], function () {
+function z_clean(cb) {
+    del.sync(['./wwwroot/App/**/*.js']);
+    del.sync(['./wwwroot/App/**/*.js.map']);
     del.sync(PATHS.releaseTarget);
     del.sync(['./typings/*', '!./typings/_studio/**', '!./typings/tsd.d.ts']);
     del.sync([PATHS.bowerSource]);
-});
+    cb();
+}
 
-gulp.task('z_clean:js', function() {
-    del.sync(['./wwwroot/App/**/*.js']);
-    del.sync(['./wwwroot/App/**/*.js.map']);
-});
-
-gulp.task('z_parse-handlers', function() {
+function z_parse_handlers() {
     return gulp.src(PATHS.handlersToParse)
         .pipe(parseHandlers('endpoints.ts'))
         .pipe(gulp.dest(PATHS.constantsTargetDir));
-});
-
-gulp.task('z_parse-configuration', function() {
+}
+    
+function z_parse_configuration() {
     return gulp.src(PATHS.configurationFilesToParse)
         .pipe(parseConfiguration('configuration.ts'))
         .pipe(gulp.dest(PATHS.constantsTargetDir));
-});
+}
 
-gulp.task('less', function() {
+function less() {
     return gulp.src(PATHS.lessSource, { base: './wwwroot/Content/' })
-        .pipe(plugins.sourcemaps.init())
-        .pipe(plugins.less({ sourceMap: true }))
+        .pipe(sourcemaps.init())
+        .pipe(gulpLess({ sourceMap: true }))
         .pipe(autoPrefixer())
-        .pipe(plugins.sourcemaps.write("."))
+        .pipe(sourcemaps.write("."))
         .pipe(gulp.dest(PATHS.lessTarget));
-});
+}
 
-gulp.task('z_generate-typings', function (cb) {
-    var possibleTypingsGenPaths = [
+function z_generate_typings(cb) {
+    const possibleTypingsGenPaths = [
         '../../tools/TypingsGenerator/bin/Debug/netcoreapp3.1/TypingsGenerator.dll',
         '../../tools/TypingsGenerator/bin/Release/netcoreapp3.1/TypingsGenerator.dll' ];
 
-    var dllPath = fsUtils.getLastRecentlyModifiedFile(possibleTypingsGenPaths);
+    const dllPath = fsUtils.getLastRecentlyModifiedFile(possibleTypingsGenPaths);
     if (!dllPath) {
         cb(new Error('TypingsGenerator.dll not found neither for Release nor Debug directory.'));
         return;
     }
 
     gutil.log(`Running: dotnet ${dllPath}`);
-    exec('dotnet ' + dllPath, function (err, stdout, stderr) {
+    return exec('dotnet ' + dllPath, function (err, stdout, stderr) {
         if (err) {
             gutil.log(stdout);
             gutil.log(stderr);
@@ -78,139 +86,139 @@ gulp.task('z_generate-typings', function (cb) {
 
         cb(err);
     });
-});
+}
 
-gulp.task('z_compile:test', ['z_generate-ts'], function() {
-     return gulp.src([PATHS.test.tsSource])
-        .pipe(plugins.naturalSort())
-        .pipe(plugins.sourcemaps.init())
+function z_compile_app() {
+    return gulp.src([PATHS.tsSource])
+        .pipe(naturalSort())
+        .pipe(sourcemaps.init())
+        .pipe(tsProject())
+        .js
+        .pipe(sourcemaps.write("."))
+        .pipe(gulp.dest(PATHS.tsOutput));
+}
+
+function z_compile_test() {
+    return gulp.src([PATHS.test.tsSource])
+        .pipe(naturalSort())
+        .pipe(sourcemaps.init())
         .pipe(testTsProject())
         .js
-        .pipe(plugins.sourcemaps.write("."))
+        .pipe(sourcemaps.write("."))
         .pipe(gulp.dest(PATHS.test.tsOutput));
-});
+}
 
-gulp.task('z_compile:app', ['z_generate-ts'], function () {
+function z_compile_app_changed() {
     return gulp.src([PATHS.tsSource])
-        .pipe(plugins.naturalSort())
-        .pipe(plugins.sourcemaps.init())
+        .pipe(changed(PATHS.tsOutput, { extension: '.js' }))
+        .pipe(sourcemaps.init())
         .pipe(tsProject())
         .js
-        .pipe(plugins.sourcemaps.write("."))
+        .pipe(sourcemaps.write("."))
         .pipe(gulp.dest(PATHS.tsOutput));
-});
+}
 
-gulp.task('z_compile:app-changed', [], function () {
-    return gulp.src([PATHS.tsSource])
-        .pipe(plugins.changed(PATHS.tsOutput, { extension: '.js' }))
-        .pipe(plugins.sourcemaps.init())
-        .pipe(tsProject())
-        .js
-        .pipe(plugins.sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.tsOutput));
-});
-
-gulp.task('z_typings', function() {
+function z_typings() {
     return gulp.src(PATHS.typingsConfig)
-        .pipe(plugins.typings());
-});
+        .pipe(typings()); 
+}
 
-gulp.task('z_bower', function () {
-    return plugins.bower();
-});
+function z_bower() {
+    return bower();
+}
 
-gulp.task('z_release:favicon', function() {
+function z_release_favicon() {
     return gulp.src([
-            "wwwroot/android-chrome*",
-            "wwwroot/apple*",
-            "wwwroot/browserconfig.xml",
-            "wwwroot/favicon*",
-            "wwwroot/manifest.json",
-            "wwwroot/mstile-*",
-            "wwwroot/safari-pinned-tab*"
-        ])
+        "wwwroot/android-chrome*",
+        "wwwroot/apple*",
+        "wwwroot/browserconfig.xml",
+        "wwwroot/favicon*",
+        "wwwroot/manifest.json",
+        "wwwroot/mstile-*",
+        "wwwroot/safari-pinned-tab*"
+    ])
         .pipe(gulp.dest(PATHS.releaseTarget));
-});
+}
 
-gulp.task('z_release:ace-workers', function () {
+function z_release_ace_workers() {
     return gulp.src("wwwroot/Content/ace/worker*.js")
         .pipe(gulp.dest(PATHS.releaseTarget));
-});
+}
 
-gulp.task('z_release:images', function() {
+function z_release_images() {
     return gulp.src('wwwroot/Content/img/*', { base: 'wwwroot/Content' })
-       .pipe(gulp.dest(PATHS.releaseTargetContent));
-});
+        .pipe(gulp.dest(PATHS.releaseTargetContent));
+}
 
-gulp.task('z_release:fonts', function() {
+function z_release_fonts() {
     return gulp.src('wwwroot/Content/css/fonts/**/*')
-       .pipe(gulp.dest(path.join(PATHS.releaseTargetContentCss, 'fonts')));
-});
+        .pipe(gulp.dest(path.join(PATHS.releaseTargetContentCss, 'fonts')));
+}
 
-gulp.task('z_release:html', function() {
+function z_release_html() {
     return gulp.src('wwwroot/index.html')
-        .pipe(plugins.processhtml())
-        .pipe(cachebust({ 
+        .pipe(processHtml())
+        .pipe(cachebust({
             type: 'timestamp'
         }))
         .pipe(gulp.dest(PATHS.releaseTarget));
-});
+}
 
-gulp.task('z_release:css-common', function () {
+function z_release_css_common() {
     checkAllFilesExist(PATHS.cssToMerge);
     return gulp.src(PATHS.cssToMerge)
-        .pipe(plugins.concatCss('styles-common.css', { rebaseUrls: false }))
-        .pipe(plugins.cssnano())
+        .pipe(concatCss('styles-common.css', { rebaseUrls: false }))
+        .pipe(cssNano())
         .pipe(gulp.dest(PATHS.releaseTargetContentCss));
-});
+}
 
-gulp.task('z_release:theme-css', function () {
+function z_release_theme_css() {
     checkAllFilesExist(PATHS.themeCss);
     return gulp.src(PATHS.themeCss)
-        .pipe(plugins.cssnano())
+        .pipe(cssNano())
         .pipe(gulp.dest(PATHS.releaseTargetContentCss));
-});
+}
 
-gulp.task('z_release:libs', function() {
-    var externalLibs = PATHS.externalLibs.map(function (x) { return PATHS.bowerSource + x; });
+function z_release_libs() {
+    const externalLibs = PATHS.externalLibs.map(function (x) { return PATHS.bowerSource + x; });
     checkAllFilesExist(externalLibs);
 
     return gulp.src(externalLibs)
-        .pipe(plugins.concat('external-libs.js'))
-        .pipe(plugins.uglify())
+        .pipe(concat('external-libs.js'))
+        .pipe(uglify())
         .pipe(gulp.dest(PATHS.releaseTargetApp));
-});
+}
 
-gulp.task('z_release:copy-version', function () {
+function z_release_copy_version() {
     return gulp.src("./wwwroot/version.txt")
         .pipe(gulp.dest(PATHS.releaseTarget));
-});
+}
 
-gulp.task('z_release:package', function () {
+function z_release_package() {
     return gulp.src(PATHS.releaseTarget + "/**/*.*")
-    .pipe(plugins.zip("Raven.Studio.zip"))
-    .pipe(gulp.dest(PATHS.releaseTarget));
-});
+        .pipe(zip("Raven.Studio.zip"))
+        .pipe(gulp.dest(PATHS.releaseTarget));
+}
 
-gulp.task('z_release:durandal', function () {
-    var extraModules = [
+function z_release_durandal() {
+    const extraModules = [
         'transitions/fadeIn',
         'ace/ace',
         '../lib/forge/js/forge.js'
     ];
 
-    var aceFileNames = fs.readdirSync(PATHS.aceDir)
+    const aceFileNames = fs.readdirSync(PATHS.aceDir)
         .filter(x => x !== "." && x !== ".." && x !== "ace.js" && !x.startsWith("worker"));
 
-    for (var i = 0; i < aceFileNames.length; i++) {
-        var fileName = aceFileNames[i];
+    for (let i = 0; i < aceFileNames.length; i++) {
+        const fileName = aceFileNames[i];
         if (fileName.endsWith(".js")) {
-            var moduleName = "ace/" + path.basename(fileName, ".js");
+            const moduleName = "ace/" + path.basename(fileName, ".js");
             extraModules.push(moduleName);
         }
     }
 
-    return plugins.durandal({
+    return durandal({
         baseDir: 'wwwroot/App',
         extraModules: extraModules,
         almond: true,
@@ -220,18 +228,18 @@ gulp.task('z_release:durandal', function () {
             return cfg;
         }
     })
-   .pipe(plugins.insert.prepend('window.ravenStudioRelease = true;'))
-   .pipe(gulp.dest(PATHS.releaseTargetApp));
-});
+        .pipe(insert.prepend('window.ravenStudioRelease = true;'))
+        .pipe(gulp.dest(PATHS.releaseTargetApp));
+}
 
-gulp.task('z_generate-test-list', function () {
-    var reduceFiles = plugins.reduceFile('tests.js',
+function z_generate_test_list() {
+    const reduceFiles = reduceFile('tests.js',
         function (file, memo) {
             memo.push(file.relative.replace(/\\/g, '/'));
             return memo;
         }, function (memo) {
             return 'var tests = ' + JSON.stringify(memo, null , 2) + ';';
-        }, [])
+        }, []);
 
     return gulp.src([
         '**/*.spec.js'
@@ -239,88 +247,72 @@ gulp.task('z_generate-test-list', function () {
         cwd: PATHS.test.tsOutput,
         base: PATHS.test.dir
     })
-    .pipe(reduceFiles)
-    .pipe(gulp.dest(PATHS.test.setup));
-});
+        .pipe(reduceFiles)
+        .pipe(gulp.dest(PATHS.test.setup));
+}
 
-gulp.task('z_mochaTests', function () {
-    var mochaPhantomJs;
-    
+function z_mocha_tests() {
+    let mochaPhantomJs;
+
     try {
-        var mochaPhantomJs = require("gulp-mocha-phantomjs");
+       mochaPhantomJs = require("gulp-mocha-phantomjs");
     } catch (e) {
         throw new Error("Looks like gulp-mocha-phantomjs is missing. Please run 'npm install gulp-mocha-phantomjs --no-save' in src/Raven.Studio directory, and rerun the tests. " + e);
     }
 
-    var mocha = mochaPhantomJs({
+    const mocha = mochaPhantomJs({
         reporter: 'spec', //use json for debugging,
         suppressStdout: false,
         suppressStderr: false
     });
 
     return gulp.src(PATHS.test.html).pipe(mocha);
-});
+}
 
-gulp.task('test', [ 'z_compile:test' ], function (cb) {
-    return runSequence('z_generate-test-list', 'z_mochaTests', cb);
-});
+function watch() {
+    gulp.watch(PATHS.tsSource, z_compile_app_changed);
+    gulp.watch(PATHS.test.tsSource, z_compile_test);
+    gulp.watch(PATHS.lessSourcesToWatch, less);
+}
 
-gulp.task('generate-tests', [ 'z_compile:test' ], function (cb) {
-    return runSequence('z_generate-test-list', cb);
-});
+const compile_chain = gulp.series(
+    gulp.parallel(z_parse_handlers, z_parse_configuration, z_generate_typings),
+    less,
+    z_compile_app
+);
 
-gulp.task('z_watch:test', ['test'], function () {
-    gulp.watch(PATHS.tsSource, ['z_mochaTests']);
-    gulp.watch(PATHS.test.tsSource, ['test']);
-});
+const test_chain = gulp.series(compile_chain, z_compile_test, z_generate_test_list, z_mocha_tests);
 
-gulp.task('z_watch_test', ['compile', 'generate-tests'], function () {
-    gulp.watch(PATHS.watchDirectories, ['z_compile:app-changed', 'generate-tests']);
-    gulp.watch(PATHS.lessSourcesToWatch, ['less']);
-});
+const watch_chain = gulp.series(compile_chain, watch);
 
-gulp.task('compile', ['less', 'z_compile:app'], function() { });
+const restore_chain = gulp.series(z_bower, z_typings);
 
-gulp.task('watch', ['compile'], function () {
-    gulp.watch(PATHS.tsSource, ['z_compile:app-changed']);
-    gulp.watch(PATHS.test.tsSource, ['z_compile:test']);
-    gulp.watch(PATHS.lessSourcesToWatch, ['less']);
-});
+const restore_compile_chain = gulp.series(restore_chain, compile_chain);
 
-gulp.task('z_generate-ts', [
-    'z_parse-handlers',
-    'z_parse-configuration',
-    'z_generate-typings'],
-    function() {});
+const release_chain = gulp.series(
+    z_clean, 
+    restore_compile_chain, 
+    gulp.parallel(
+        z_release_libs,
+        z_release_copy_version,
+        z_release_favicon,
+        z_release_ace_workers,
+        z_release_images,
+        z_release_html,
+        z_release_css_common,
+        z_release_theme_css,
+        z_release_fonts,
+        z_release_durandal
+    ), 
+    z_release_package);
 
-gulp.task('restore', [
-    'z_bower',
-    'z_typings'
-]);
-
-gulp.task('release', function (cb) {
-    return runSequence(
-        'z_clean',
-        'restore+compile',
-        [
-            'z_release:libs',
-            'z_release:copy-version',
-            'z_release:favicon',
-            'z_release:ace-workers',
-            'z_release:images',
-            'z_release:html',
-            'z_release:css-common',
-            'z_release:theme-css',
-            'z_release:fonts',
-            'z_release:durandal'
-        ],
-        'z_release:package',
-        cb);
-});
-
-gulp.task('restore+compile', function (cb) {
-    return runSequence(
-        'restore',
-        'compile',
-        cb);
-});
+exports.less = less;
+exports.compile = compile_chain;
+exports.restore = restore_chain;
+exports.restore_compile = restore_compile_chain;
+exports.test = test_chain;
+exports.watch = watch_chain;
+exports.release = release_chain;
+exports.build = restore_compile_chain;
+exports.default = restore_compile_chain;
+exports.clean = z_clean;

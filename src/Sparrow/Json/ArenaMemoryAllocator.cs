@@ -7,9 +7,11 @@ using Sparrow.Binary;
 using Sparrow.Global;
 using Sparrow.Platform;
 using Sparrow.Threading;
+
 #if MEM_GUARD
 using Sparrow.Platform;
 #endif
+
 using Sparrow.Utils;
 
 namespace Sparrow.Json
@@ -277,7 +279,7 @@ namespace Sparrow.Json
             if (_ptrStart != null)
                 NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
 
-            // we'll allocate some multiple of the currently allocated amount, that will prevent big spikes in memory 
+            // we'll allocate some multiple of the currently allocated amount, that will prevent big spikes in memory
             // consumption and has the worst case usage of doubling memory utilization
 
             var newSize = (_used / _allocated + (_used % _allocated == 0 ? 0 : 1)) * _allocated;
@@ -314,6 +316,7 @@ namespace Sparrow.Json
         {
             Dispose(true);
         }
+
         public void Dispose(bool disposing)
         {
             if (!_isDisposed?.Raise() ?? true)
@@ -353,7 +356,6 @@ namespace Sparrow.Json
             if (_isDisposed ?? true)
                 return;
 
-
             var address = allocation.Address;
 
 #if DEBUG
@@ -378,13 +380,12 @@ namespace Sparrow.Json
                 // in the memory we just freed :-)
 
                 // note that this fragmentation will be healed by the call to ResetArena
-                // trying to do this on the fly is too expensive. 
+                // trying to do this on the fly is too expensive.
 
                 Debug.Assert(Bits.PowerOf2(allocation.SizeInBytes) == allocation.SizeInBytes,
                     "Allocation size must always be a power of two"
                 );
                 Debug.Assert(allocation.SizeInBytes >= sizeof(FreeSection));
-
 
                 var index = Bits.MostSignificantBit(allocation.SizeInBytes) - 1;
                 var section = (FreeSection*)address;
@@ -431,6 +432,7 @@ namespace Sparrow.Json
         public bool IsLongLived;
         public bool IsReturned;
         private byte* _address;
+
         public byte* Address
         {
             get
@@ -459,7 +461,7 @@ namespace Sparrow.Json
         {
             throw new ObjectDisposedException(nameof(AllocatedMemoryData));
         }
-#endif
 
+#endif
     }
 }

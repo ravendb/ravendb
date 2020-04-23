@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
@@ -55,6 +56,33 @@ namespace SlowTests.Issues
                     var q = session.Query<ThirdOutput>(collectionName: "ThirdOutput");
                     var res2 = q.ToList();
                     Assert.Equal("2", res2.First().Communications.CommunicationType.Communication.Value);
+                }
+            }
+        }
+
+        // RavenDB-14884
+        [Fact]
+        public void CanCompileScriptWithSwitch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Index_Rows().Execute(store);
+                var id = "row/1";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Row
+                    {
+                        DataId = "Line/322",
+                        LineNumber = 322
+                    }, id);
+                    session.SaveChanges();
+                }
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var entities = session.Query<Row, Index_Rows>().ProjectInto<Row>().ToList();
+                    Assert.Equal(1, entities.Count);
+                    Assert.Equal(1, entities.First().LineNumber);
                 }
             }
         }
@@ -211,6 +239,46 @@ namespace SlowTests.Issues
                                         return communications;
                                     }"
                 };
+            }
+        }
+
+        private class Index_Rows : AbstractIndexCreationTask
+        {
+            public override string IndexName => "IndexRows";
+
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Maps =
+                    {
+                        @"map(""Rows"", (row) => {
+        return {
+            DataId: row.DataId,
+            LineNumber: getK(row)
+        };
+})"
+                    },
+                    AdditionalSources = new Dictionary<string, string>
+                    {
+                        ["The Script"] = @"function getK(doc) {
+                                            var k;
+
+                                            switch (typeof a) {
+                                            default:
+                                                k = 1
+                                            }
+
+                                            return k;
+                                            }"
+                    },
+                    Fields = new Dictionary<string, IndexFieldOptions>
+                    {
+                        {
+                            Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions { Storage = FieldStorage.Yes }
+                        }
+                    }
+            };
             }
         }
     }

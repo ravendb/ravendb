@@ -292,7 +292,7 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (metadata.ContainsKey(Constants.Documents.Metadata.RavenClrType) == false)
                 {
-                    var clrType = _requestExecutor.Conventions.GetClrTypeName(entity.GetType());
+                    var clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
                     if (clrType != null)
                         metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
                 }

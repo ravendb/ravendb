@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
@@ -275,8 +276,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _periodicBackup.BackupStatus = runningBackupStatus;
 
+
                     // save the backup status
-                    WriteStatus(runningBackupStatus);
+                    AddInfo("Saving backup status");
+                    SaveBackupStatus(runningBackupStatus, _database, _logger);
                 }
             }
         }
@@ -841,30 +844,28 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database.NotificationCenter.Dismiss(id);
         }
 
-        private void WriteStatus(PeriodicBackupStatus status)
+        public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger)
         {
-            AddInfo("Saving backup status");
 
             try
             {
-                var command = new UpdatePeriodicBackupStatusCommand(_database.Name, RaftIdGenerator.NewId())
+                var command = new UpdatePeriodicBackupStatusCommand(documentDatabase.Name, RaftIdGenerator.NewId())
                 {
                     PeriodicBackupStatus = status
                 };
 
-                var result = AsyncHelpers.RunSync(() => _serverStore.SendToLeaderAsync(command));
+                var result = AsyncHelpers.RunSync(() => documentDatabase.ServerStore.SendToLeaderAsync(command));
+                AsyncHelpers.RunSync(() => documentDatabase.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index));
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
-
-                AsyncHelpers.RunSync(() => _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index));
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
             }
             catch (Exception e)
             {
                 const string message = "Error saving the periodic backup status";
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations(message, e);
+                if (logger.IsOperationsEnabled)
+                    logger.Operations(message, e);
             }
         }
 

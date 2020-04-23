@@ -84,7 +84,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
                 Assert.Equal(expected, stringResult);
                 Assert.Equal(expected, readerResult.ReadToEnd());
-                _ctx.ReturnMemory(lazyString.AllocatedMemoryData);
             }
         }
 

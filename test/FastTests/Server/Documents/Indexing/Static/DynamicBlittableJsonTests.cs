@@ -69,7 +69,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(2, user.Friends.Length);
                 Assert.Equal("Users", user[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Collection]);
                 Assert.Equal(now, user[Constants.Documents.Metadata.Key].Value<DateTime>(Constants.Documents.Metadata.LastModified));
-                _ctx.ReturnMemory(stringValue.AllocatedMemoryData);
             }
         }
 

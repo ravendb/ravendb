@@ -1,5 +1,5 @@
 {
-  "name": "Raven.Studio",
+  "name": "ravendb-studio",
   "private": true,
   "dependencies": {
     "jquery": "2.2.4",

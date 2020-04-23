@@ -132,6 +132,32 @@ namespace Raven.Server.Documents.Indexes
 
             }
 
+            if (indexDefinition.AdditionalSources.Count > 0)
+            {
+                var list = new List<SyntaxNodeOrToken>();
+                var c = 0;
+
+                foreach (var source in indexDefinition.AdditionalSources)
+                {
+                    list.Add(AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
+                            IdentifierName(Identifier(TriviaList(Tab, Tab, Tab), $"[\"{source.Key}\"]", TriviaList(Space))),
+                            LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(TriviaList(), $"@\"{source.Value}\"", source.Value, TriviaList())))
+                        .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(Space))));
+
+                    if (++c < indexDefinition.AdditionalSources.Count)
+                        list.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
+                }
+
+                syntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
+                syntaxNodeOrToken.Add(AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
+                        IdentifierName(Identifier(TriviaList(Tab, Tab, Tab), nameof(indexDefinition.AdditionalSources), TriviaList(Space))),
+                        ObjectCreationExpression(IdentifierName(Identifier(TriviaList(), "Dictionary<string, string>", TriviaList(LineFeed))))
+                            .WithNewKeyword(Token(TriviaList(), SyntaxKind.NewKeyword, TriviaList(Space)))
+                            .WithInitializer(InitializerExpression(SyntaxKind.ObjectInitializerExpression,
+                                SeparatedList<ExpressionSyntax>(list))))
+                    .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(Space))));
+            }
+
             return syntaxNodeOrToken;
         }
 

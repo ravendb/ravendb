@@ -148,7 +148,7 @@ namespace Raven.Client.Http
             return true;
         }
 
-        protected override Task UpdateClientConfigurationAsync()
+        protected override Task UpdateClientConfigurationAsync(ServerNode serverNode)
         {
             return Task.CompletedTask;
         }

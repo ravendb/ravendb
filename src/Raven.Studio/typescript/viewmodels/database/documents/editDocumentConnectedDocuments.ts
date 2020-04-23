@@ -86,7 +86,7 @@ class connectedDocuments {
         crudActionsProvider: () => editDocumentCrudActions,
         inReadOnlyMode: KnockoutObservable<boolean>) {
 
-        _.bindAll(this, "toggleStar" as keyof this);
+        _.bindAll(this, ...["toggleStar"] as Array<keyof this & string>);
 
         this.document = document;
         this.db = db;
