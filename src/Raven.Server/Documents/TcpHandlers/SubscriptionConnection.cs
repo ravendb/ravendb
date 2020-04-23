@@ -910,6 +910,15 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 try
                 {
+                    _waitForMoreDocuments.Dispose();
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+                
+                try
+                {
                     CancellationTokenSource.Dispose();
                 }
                 catch (Exception)

@@ -66,15 +66,17 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Task<object> WaitForResults(string id, CancellationToken token)
+        public async Task<object> WaitForResults(string id, CancellationToken token)
         {
             if (_results.TryGetValue(id, out var task) == false)
             {
                 throw new InvalidOperationException($"Task with the id '{id}' was not found.");
             }
 
-            token.Register(() => task.TrySetCanceled());
-            return task.Task;
+            using (token.Register(() => task.TrySetCanceled()))
+            {
+                return await task.Task.ConfigureAwait(false);
+            }
         }
     }
 }

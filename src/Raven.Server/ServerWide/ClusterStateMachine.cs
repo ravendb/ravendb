@@ -261,6 +261,12 @@ namespace Raven.Server.ServerWide
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            _rachisLogIndexNotifications.Dispose();
+        }
+
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet("Type", out string type) == false)
@@ -3234,7 +3240,7 @@ namespace Raven.Server.ServerWide
         }
     }
 
-    public class RachisLogIndexNotifications
+    public class RachisLogIndexNotifications : IDisposable
     {
         public long LastModifiedIndex;
         private readonly AsyncManualResetEvent _notifiedListeners;
@@ -3254,6 +3260,11 @@ namespace Raven.Server.ServerWide
         public RachisLogIndexNotifications(CancellationToken token)
         {
             _notifiedListeners = new AsyncManualResetEvent(token);
+        }
+
+        public void Dispose()
+        {
+            _notifiedListeners.Dispose();
         }
 
         public async Task WaitForIndexNotification(long index, CancellationToken token)

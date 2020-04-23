@@ -74,6 +74,11 @@ namespace Raven.Server.ServerWide
             DisposeInternal();
         }
 
+        ~OperationCancelToken()
+        {
+            _cts?.Dispose();
+        }
+
         private void DisposeInternal()
         {
             if (_disposed)

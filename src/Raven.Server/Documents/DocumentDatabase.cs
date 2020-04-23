@@ -801,6 +801,10 @@ namespace Raven.Server.Documents
                         }
                     }
                 });
+                
+                exceptionAggregator.Execute(RachisLogIndexNotifications);
+                
+                exceptionAggregator.Execute(_hasClusterTransaction);
 
                 exceptionAggregator.ThrowIfNeeded();
             }
