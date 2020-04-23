@@ -10,7 +10,7 @@ using Voron.Impl;
 
 namespace Voron.Exceptions
 {
-    public class VoronUnrecoverableErrorException : Exception
+    public class VoronUnrecoverableErrorException : ApplicationException
     {
         public static void Raise(LowLevelTransaction tx, string message)
         {

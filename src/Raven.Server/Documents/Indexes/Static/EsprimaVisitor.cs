@@ -175,7 +175,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitSwitchCase(SwitchCase switchCase)
         {
-            VisitExpression(switchCase.Test);
+            if (switchCase.Test != null)
+                VisitExpression(switchCase.Test);
+
             foreach (var s in switchCase.Consequent)
             {
                 //In most cases it is going to be statment

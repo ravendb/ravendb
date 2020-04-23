@@ -33,6 +33,7 @@ namespace Sparrow.Json
         private const int MaxInitialStreamSize = 16 * 1024 * 1024;
         private readonly int _initialSize;
         private readonly int _longLivedSize;
+        private readonly int _maxNumberOfAllocatedStringValues;
         private readonly ArenaMemoryAllocator _arenaAllocator;
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
@@ -109,7 +110,7 @@ namespace Sparrow.Json
             }
 
             var allocateStringValue = new LazyStringValue(str, ptr, size, this);
-            if (_numberOfAllocatedStringsValues < 32 * 1_024)
+            if (_numberOfAllocatedStringsValues < _maxNumberOfAllocatedStringValues)
             {
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;
@@ -307,10 +308,10 @@ namespace Sparrow.Json
 
         public static JsonOperationContext ShortTermSingleUse()
         {
-            return new JsonOperationContext(4096, 1024, SharedMultipleUseFlag.None);
+            return new JsonOperationContext(4096, 1024, 32 * 1024, SharedMultipleUseFlag.None);
         }
 
-        public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
+        public JsonOperationContext(int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
         {
             Debug.Assert(lowMemoryFlag != null);
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
@@ -366,6 +367,7 @@ namespace Sparrow.Json
 
             _initialSize = initialSize;
             _longLivedSize = longLivedSize;
+            _maxNumberOfAllocatedStringValues = maxNumberOfAllocatedStringValues;
             _arenaAllocator = new ArenaMemoryAllocator(lowMemoryFlag, initialSize);
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(lowMemoryFlag, longLivedSize);
             CachedProperties = new CachedProperties(this);
@@ -1046,10 +1048,16 @@ namespace Sparrow.Json
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected
             }
+
+            for (var i = 0; i < _numberOfAllocatedStringsValues; i++)
+                _allocateStringValues[i].Reset();
+
+            _numberOfAllocatedStringsValues = 0;
+
             _objectJsonParser.Reset(null);
             _arenaAllocator.ResetArena();
-            _numberOfAllocatedStringsValues = 0;
-            _generation = _generation + 1;
+
+            _generation++;
 
             if (_pooledArrays != null)
             {

@@ -39,12 +39,12 @@ namespace Raven.Server.ServerWide.Context
 
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
         {
-            var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024, SharedMultipleUseFlag.None);
+            var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024, 32 * 1024, SharedMultipleUseFlag.None);
             return shortTermSingleUse;
         }
 
-        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag) :
-            base(initialSize, longLivedSize, lowMemoryFlag)
+        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
+            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             _documentDatabase = documentDatabase;
         }
@@ -102,7 +102,6 @@ namespace Raven.Server.ServerWide.Context
 
             return Transaction?.InnerTransaction.LowLevelTransaction.Id !=
                    _documentDatabase.DocumentsStorage.Environment.CurrentReadTransactionId;
-
         }
     }
 }

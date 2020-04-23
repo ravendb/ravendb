@@ -38,7 +38,9 @@ namespace Raven.Client.Http
 {
     public class RequestExecutor : IDisposable
     {
-        private static Guid GlobalApplicationIdentifier = Guid.NewGuid();
+        private const int DefaultConnectionLimit = int.MaxValue;
+
+        private static readonly Guid GlobalApplicationIdentifier = Guid.NewGuid();
 
         private const int InitialTopologyEtag = -2;
 
@@ -306,7 +308,7 @@ namespace Raven.Client.Http
                 ? 1024
                 : 256;
 
-            ContextPool = new JsonContextPool(Conventions.MaxContextSizeToKeep, maxNumberOfContextsToKeepInGlobalStack);
+            ContextPool = new JsonContextPool(Conventions.MaxContextSizeToKeep, maxNumberOfContextsToKeepInGlobalStack, 1024);
 
             DefaultTimeout = Conventions.RequestTimeout;
             SecondBroadcastAttemptTimeout = conventions.SecondBroadcastAttemptTimeout;
@@ -379,7 +381,7 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        protected virtual async Task UpdateClientConfigurationAsync()
+        protected virtual async Task UpdateClientConfigurationAsync(ServerNode serverNode)
         {
             if (Disposed)
                 return;
@@ -398,8 +400,7 @@ namespace Raven.Client.Http
                 {
                     var command = new GetClientConfigurationOperation.GetClientConfigurationCommand();
 
-                    var (currentIndex, currentNode) = ChooseNodeForRequest(command);
-                    await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
+                    await ExecuteAsync(serverNode, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
 
                     var result = command.Result;
                     if (result == null)
@@ -888,12 +889,12 @@ namespace Raven.Client.Http
                     })
                     {
                         TimeoutInMs = 0,
-                        DebugTag = refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null
+                        DebugTag = "refresh-topology-header"
                     })
                     : Task.CompletedTask;
 
                 tasks[1] = refreshClientConfiguration
-                    ? UpdateClientConfigurationAsync()
+                    ? UpdateClientConfigurationAsync(chosenNode)
                     : Task.CompletedTask;
 
                 return Task.WhenAll(tasks);
@@ -1721,7 +1722,7 @@ namespace Raven.Client.Http
 
         public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
         {
-            var httpMessageHandler = new HttpClientHandler();
+            var httpMessageHandler = new HttpClientHandler { MaxConnectionsPerServer = DefaultConnectionLimit };
             if (httpMessageHandler.SupportsAutomaticDecompression)
             {
                 httpMessageHandler.AutomaticDecompression =
@@ -1729,9 +1730,7 @@ namespace Raven.Client.Http
                         DecompressionMethods.GZip | DecompressionMethods.Deflate
                         : DecompressionMethods.None;
             }
-            else if (httpMessageHandler.SupportsAutomaticDecompression == false &&
-                     useCompression &&
-                     hasExplicitlySetCompressionUsage)
+            else if (useCompression && hasExplicitlySetCompressionUsage)
             {
                 throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
             }
@@ -1812,7 +1811,7 @@ namespace Raven.Client.Http
                 try
                 {
                     var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
-                    servicePoint.ConnectionLimit = Math.Max(servicePoint.ConnectionLimit, 1024 * 10);
+                    servicePoint.ConnectionLimit = DefaultConnectionLimit;
                     servicePoint.MaxIdleTime = -1;
                 }
                 catch (Exception e)
