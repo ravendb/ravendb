@@ -767,7 +767,7 @@ namespace Raven.Client.Documents.BulkInsert
                                 _operation.WriteComma();
 
                             firstValue = false;
-                            _operation._currentWriter.Write(Convert.ToString(value, CultureInfo.InvariantCulture));
+                            _operation._currentWriter.Write(value.ToString("R", CultureInfo.InvariantCulture));
                         }
 
                         if (tag != null)
