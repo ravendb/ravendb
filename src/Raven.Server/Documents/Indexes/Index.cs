@@ -725,7 +725,6 @@ namespace Raven.Server.Documents.Indexes
             }
             // outside the DrainRunningQueries loop
             waiter?.Join(Timeout.Infinite);
-            _indexingProcessCancellationTokenSource?.Dispose();
         }
 
         private PoolOfThreads.LongRunningWork GetWaitForIndexingThreadToExit(bool disableIndex)
@@ -3758,7 +3757,6 @@ namespace Raven.Server.Documents.Indexes
             // are handled using the DrainRunningQueries portion
             var thread = GetWaitForIndexingThreadToExit(disableIndex: false);
             thread?.Join(Timeout.Infinite);
-            _indexingProcessCancellationTokenSource?.Dispose();
 
             _environment.Dispose();
 
