@@ -279,9 +279,22 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
+        public static long ReadLastProcessedReferenceEtag(Transaction tx, string collection, CollectionName referencedCollection)
         {
-            var tree = tx.InnerTransaction.ReadTree("$" + collection);
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
+                {
+                    IndexTransactionCache.ReferenceCollectionEtags last = default;
+                    if (cache.Collections.TryGetValue(collection, out var val) && 
+                        val.LastReferencedEtags?.TryGetValue(referencedCollection.Name, out last) == true)
+                    {
+                        return last.LastEtag;
+                    }
+                }
+            }
+            
+            var tree = tx.ReadTree("$" + collection);
 
             var result = tree?.Read(referencedCollection.Name);
             if (result == null)
@@ -290,9 +303,21 @@ namespace Raven.Server.Documents.Indexes
             return result.Reader.ReadLittleEndianInt64();
         }
 
-        public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
+        public static long ReadLastProcessedReferenceTombstoneEtag(Transaction tx, string collection, CollectionName referencedCollection)
         {
-            var tree = tx.InnerTransaction.ReadTree("%" + collection);
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
+                {
+                    IndexTransactionCache.ReferenceCollectionEtags last = default;
+                    if (cache.Collections.TryGetValue(collection, out var val) && 
+                        val.LastReferencedEtags?.TryGetValue(referencedCollection.Name, out last) == true)
+                    {
+                        return last.LastProcessedTombstoneEtag;
+                    }
+                }
+            }
+            var tree = tx.ReadTree("%" + collection);
 
             var result = tree?.Read(referencedCollection.Name);
             if (result == null)

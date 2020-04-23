@@ -260,7 +260,7 @@ namespace Voron.Data.BTrees
             {
                 if (it.Seek(0) == false)
                 {
-                    Debug.Assert(false);
+                    Debug.Assert(false, "ReadTreeChunks failed to find any chunks, but we checked that the fst is not empty");
                     return null; // can never happen
                 }
 
