@@ -135,12 +135,13 @@ namespace Raven.Server.Documents.TimeSeries
                 return false;
 
             var maximumSize =
-                sizeof(BitsBufferHeader) +
-                sizeof(int) + // max timestamp
-                1 + // timestamp uses ControlValue which takes 4 bits, need to account for this
-                sizeof(double) * vals.Length + vals.Length /* may use additional 2 bits per value here for the first items */ +
-                2 + // previous tag position (10 bits)
-                1 // take into account the status bit
+                    sizeof(BitsBufferHeader) +
+                    sizeof(int) + // max timestamp
+                    1 + // timestamp uses ControlValue which takes 4 bits, need to account for this
+                    sizeof(double) * vals.Length + vals.Length /* may use additional 2 bits per value here for the first items */ +
+                    ((LeadingZerosLengthBits + BlockSizeLengthBits) / 8 + 1) * vals.Length + // LeadingZerosLengthBits and BlockSizeLengthBits for each value (total 11 bits)
+                    2 + // previous tag position (10 bits)
+                    1 // take into account the status bit
                 ;
 
             var copiedHeaderSize = sizeof(SegmentHeader) + Header->NumberOfValues * sizeof(StatefulTimestampValue);
