@@ -41,6 +41,11 @@ namespace Raven.Client.Documents.Subscriptions
         }
     }
 
+    public class SubscriptionUpdateOptions : SubscriptionCreationOptions
+    {
+        public long? Id { get; set; }
+        public bool CreateIfNotExist { get; set; }
+    }
 
     public class Revision<T> where T : class
     {

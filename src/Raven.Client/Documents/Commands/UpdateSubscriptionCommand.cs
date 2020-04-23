@@ -9,22 +9,19 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class UpdateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>, IRaftCommand
+    internal class UpdateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>, IRaftCommand
     {
-        private readonly SubscriptionCreationOptions _options;
-        private readonly long? _id;
+        private readonly SubscriptionUpdateOptions _options;
 
-        public UpdateSubscriptionCommand(SubscriptionCreationOptions options, long? id = null)
+        public UpdateSubscriptionCommand(SubscriptionUpdateOptions options)
         {
             _options = options;
-            _id = id;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/subscriptions/update";
-            if (_id != null)
-                url += $"?id={_id}";
+
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
