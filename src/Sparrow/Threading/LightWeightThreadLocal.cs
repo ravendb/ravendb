@@ -83,15 +83,6 @@ namespace Sparrow.Threading
             Interlocked.Increment(ref GlobalVersion);
             _disposed = true;
             _values = null;
-
-            foreach (var kvp in copy)
-            {
-                if (copy.TryRemove(kvp.Key, out var item) &&
-                    item is IDisposable d)
-                {
-                    d.Dispose();
-                }
-            }
         }
 
         private sealed class CurrentThreadState
@@ -149,11 +140,7 @@ namespace Sparrow.Threading
                     var copy = liveParent._values;
                     if (copy == null)
                         continue;
-                    if (copy.TryRemove(SelfReference, out var value)
-                        && value is IDisposable d)
-                    {
-                        d.Dispose();
-                    }
+                    copy.TryRemove(SelfReference, out _);
                 }
             }
         }
