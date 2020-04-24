@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Patch
                 using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), false, out var run))
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (_database?.DocumentsStorage.ContextPool.AllocateOperationContext(out docsCtx))
-                using (var result = run.Run(ctx, docsCtx, "execute", new object[] { _server, _database }))
+                using (var result = run.Run(ctx, docsCtx, "execute", new object[] {_server, _database}))
                 {
                     var toJson = RavenCli.ConvertResultToString(result);
 
@@ -54,6 +54,7 @@ namespace Raven.Server.Documents.Patch
                     {
                         Log.Operations($"Finished executing database script. Total time: {sw.Elapsed} ");
                     }
+
                     return toJson;
                 }
             }
@@ -63,7 +64,12 @@ namespace Raven.Server.Documents.Patch
                 {
                     Log.Operations("An Exception was thrown while executing the script: ", e);
                 }
+
                 throw;
+            }
+            finally
+            {
+                _server.AdminScripts.RunIdleOperations();
             }
 
         }

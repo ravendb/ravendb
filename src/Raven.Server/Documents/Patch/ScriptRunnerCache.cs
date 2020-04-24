@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using JetBrains.Annotations;
 using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Sparrow.Json.Parsing;
@@ -21,7 +20,6 @@ namespace Raven.Server.Documents.Patch
             new ConcurrentDictionary<Key, Lazy<ScriptRunner>>();
 
         private int _numberOfCachedScripts;
-        private SpinLock _cleaning = new SpinLock();
         public bool EnableClr;
         internal static string PolyfillJs;
 
@@ -93,53 +91,7 @@ namespace Raven.Server.Documents.Patch
                 runner.ScriptType = script.GetType().Name;
                 return runner;
             });
-            var lazy = _cache.GetOrAdd(script, value);
-            if (value != lazy)
-                return lazy.Value;
-
-            // we were the one who added it, need to check that we are there
-            var count = Interlocked.Increment(ref _numberOfCachedScripts);
-            if (count > _configuration.Patching.MaxNumberOfCachedScripts)
-            {
-                bool taken = false;
-                try
-                {
-                    _cleaning.TryEnter(ref taken);
-                    if (taken)
-                    {
-                        var numRemaining = CleanTheCache();
-                        Interlocked.Add(ref _numberOfCachedScripts, -(count - numRemaining));
-                    }
-                }
-                finally
-                {
-                    if (taken)
-                        _cleaning.Exit();
-                }
-
-            }
-            return lazy.Value;
-        }
-
-
-        private int CleanTheCache()
-        {
-            
-            foreach (var pair in _cache.ForceEnumerateInThreadSafeManner().OrderBy(x => x.Value.Value.Runs)
-                .Take(_configuration.Patching.MaxNumberOfCachedScripts / 4)
-            )
-            {
-                _cache.TryRemove(pair.Key, out _);
-            }            
-            int count = 0;
-            foreach (var pair in _cache)
-            {
-                count++;
-                var valueRuns = pair.Value.Value.Runs / 2;
-                Interlocked.Add(ref pair.Value.Value.Runs, -valueRuns);
-            }
-
-            return count;
+            return _cache.GetOrAdd(script, value).Value;
         }
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
@@ -149,6 +101,16 @@ namespace Raven.Server.Documents.Patch
 
         public void LowMemoryOver()
         {
+        }
+
+        public void RunIdleOperations()
+        {
+            foreach (var (_, lazyRunner) in _cache)
+            {
+                if (lazyRunner.IsValueCreated == false)
+                    continue;
+                lazyRunner.Value.RunIdleOperations();
+            }
         }
     }
 }
