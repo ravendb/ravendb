@@ -114,7 +114,7 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
         return this.series()
             .filter(x => x.visible())
             .map(x => {
-                const approxIndex = _.sortedIndexBy(x.points, { from: pointInTime }, p => p.from);
+                const approxIndex = _.sortedIndexBy<dataRangePoint>(x.points, { from: pointInTime } as dataRangePoint, p => p.from);
                 
                 if (approxIndex > 0) {
                     // check if point in time is between
@@ -162,7 +162,7 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
         return this.series()
             .filter(x => x.visible())
             .map(x => {
-                const approxIndex = _.clamp(_.sortedIndexBy(x.points, { date: pointInTime }, p => p.date), 0, x.points.length - 1);
+                const approxIndex = _.clamp(_.sortedIndexBy<dataPoint>(x.points, { date: pointInTime } as dataPoint, p => p.date), 0, x.points.length - 1);
 
                 let effectiveIndex = approxIndex;
                 if (effectiveIndex > 0) {
@@ -249,7 +249,7 @@ class timeSeriesPlotDetails extends viewModelBase {
     
     private zoom: d3.behavior.Zoom<void>;
     private rect: d3.Selection<any>;
-    private readonly colorClassScale: d3.scale.Ordinal<string, keyof this["colors"]>;
+    private readonly colorClassScale: d3.scale.Ordinal<string, keyof this["colors"] & string>;
     
     constructor(timeSeries: Array<timeSeriesPlotItem>) {
         super();
@@ -785,11 +785,12 @@ class timeSeriesPlotDetails extends viewModelBase {
             for (let i = 0; i < data.pointSeries.length; i++) {
                 const points = data.pointSeries[i];
                 
-                const startIdx = Math.max(_.sortedIndexBy(points.points, { date: visibleRange[0] }, x => x.date) - 1, 0); 
-                const endIdx = Math.min(points.points.length, _.sortedIndexBy(points.points, { date: visibleRange[1] }, x => x.date) + 1); 
+                const startIdx = Math.max(_.sortedIndexBy<dataPoint>(points.points, { date: visibleRange[0] } as dataPoint, x => x.date) - 1, 0); 
+                const endIdx = Math.min(points.points.length, _.sortedIndexBy<dataPoint>(points.points, { date: visibleRange[1] } as dataPoint, x => x.date) + 1); 
                 
                 if (points.points.length) {
                     focusContext.beginPath();
+                    const a = this.colorClassScale(points.uniqueId);
                     focusContext.strokeStyle = this.colors[this.colorClassScale(points.uniqueId)];
                     focusContext.lineWidth = 1;
                     const renderer = new quantizedLineRenderer(focusContext, pixelTimeDelta, this.x, this.y);
