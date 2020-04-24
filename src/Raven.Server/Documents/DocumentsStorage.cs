@@ -336,7 +336,7 @@ namespace Raven.Server.Documents
 
         private void SetTransactionCache(LowLevelTransaction tx)
         {
-            tx.ExternalState = _documentsMetadataCache;
+            tx.ImmutableExternalState = _documentsMetadataCache;
 
             if (tx.Flags != TransactionFlags.ReadWrite)
                 return;
@@ -386,14 +386,14 @@ namespace Raven.Server.Documents
             }
             // we set it on the current transaction because we aren't committed yet
             // we'll publish this after the commit finalization
-            tx.LowLevelTransaction.ExternalState = currentCache;
+            tx.LowLevelTransaction.ImmutableExternalState = currentCache;
             
 
         }
 
         private void UpdateDocumentTransactionCache(LowLevelTransaction obj)
         {
-            _documentsMetadataCache = obj.ExternalState as DocumentTransactionCache;
+            _documentsMetadataCache = obj.ImmutableExternalState as DocumentTransactionCache;
         }
 
         public void AssertFixedSizeTrees(Transaction tx)
@@ -538,7 +538,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     return cache.LastDocumentEtag;
                 }
@@ -551,7 +551,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     return cache.LastTombstoneEtag;
                 }
@@ -563,7 +563,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     return cache.LastConflictEtag;
                 }
@@ -575,7 +575,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     return cache.LastRevisionsEtag;
                 }
@@ -587,7 +587,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     return cache.LastAttachmentsEtag;
                 }
@@ -599,7 +599,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     return cache.LastCounterEtag;
                 }
@@ -628,7 +628,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     return cache.LastEtag;
                 }
@@ -1191,7 +1191,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
                         return col.LastDocumentEtag;
@@ -1208,7 +1208,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
                         return col.LastChangeVector;
@@ -1251,7 +1251,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
                 {
                     if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
                         return col.LastTombstoneEtag;

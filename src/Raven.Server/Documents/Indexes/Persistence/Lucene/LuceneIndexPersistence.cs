@@ -196,7 +196,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _initialized = true;
         }
 
-        internal void BuildStreamCacheAfterTx(Transaction tx)
+        public void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
+        {
+            _streamsCache = transactionCache;
+        }
+
+        internal IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
         {
             var newCache = new IndexTransactionCache();
 
@@ -213,7 +218,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 FillLuceneFilesChunks(tx, directoryFiles.ChunksByName, name);
             }
 
-            _streamsCache = newCache;
+            return newCache;
         }
 
         private void FillCollectionEtags(Transaction tx, 
@@ -280,7 +285,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void SetStreamCacheInTx(LowLevelTransaction tx)
         {
-            tx.ExternalState = _streamsCache;
+            tx.ImmutableExternalState = _streamsCache;
         }
 
         private void InitializeSuggestionsIndexStorage(Transaction tx, StorageEnvironment environment)

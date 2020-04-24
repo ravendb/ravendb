@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Indexes
             var txi = tx.InnerTransaction;
             if (txi.IsWriteTransaction == false)
             {
-                if (txi.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
+                if (txi.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
                 {
                     if (cache.Collections.TryGetValue(collection, out var val))
                         return val.LastProcessedTombstoneEtag;
@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
                 {
                     IndexTransactionCache.ReferenceCollectionEtags last = default;
                     if (cache.Collections.TryGetValue(collection, out var val) && 
@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
+                if (tx.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
                 {
                     IndexTransactionCache.ReferenceCollectionEtags last = default;
                     if (cache.Collections.TryGetValue(collection, out var val) && 
@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.Indexes
             var txi = tx.InnerTransaction;
             if (txi.IsWriteTransaction == false)
             {
-                if (txi.LowLevelTransaction.ExternalState is IndexTransactionCache cache)
+                if (txi.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
                 {
                     if (cache.Collections.TryGetValue(collection, out var val))
                         return val.LastIndexedEtag;

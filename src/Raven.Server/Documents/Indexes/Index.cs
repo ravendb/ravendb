@@ -35,6 +35,7 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
+using Raven.Server.Indexing;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -1707,11 +1708,13 @@ namespace Raven.Server.Documents.Indexes
 
                             tx.InnerTransaction.LowLevelTransaction.LastChanceToReadFromWriteTransactionBeforeCommit += llt =>
                             {
-                                IndexPersistence.BuildStreamCacheAfterTx(llt.Transaction);
+                                llt.ImmutableExternalState = IndexPersistence.BuildStreamCacheAfterTx(llt.Transaction);
                             };
 
                             tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += llt =>
                             {
+                                IndexPersistence.PublishIndexCacheToNewTransactions((IndexTransactionCache)llt.ImmutableExternalState);
+
                                 if (writeOperation.IsValueCreated == false)
                                     return;
 

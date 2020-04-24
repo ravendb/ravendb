@@ -34,7 +34,7 @@ namespace Voron.Impl
         private bool _disposeAllocator;
         internal TestingStuff _forTestingPurposes;
 
-        public object ExternalState;
+        public object ImmutableExternalState;
 
         private Tree _root;
         public Tree RootObjects => _root;
@@ -180,6 +180,7 @@ namespace Voron.Impl
             _disposeAllocator = allocator == null;
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
             Flags = TransactionFlags.Read;
+            ImmutableExternalState = previous.ImmutableExternalState;
 
             foreach (var scratchPagerState in previous._pagerStates)
             {
@@ -820,7 +821,7 @@ namespace Voron.Impl
 
                 OnDispose?.Invoke(this);
 
-                ExternalState = null;
+                ImmutableExternalState = null;
             }
         }
 
