@@ -41,7 +41,7 @@ class editTimeSeries extends viewModelBase {
         datePickerBindingHandler.install();
     }
     
-    canActivate(args: any): JQueryPromise<canActivateResultDto> {
+    canActivate(args: any): JQueryPromise<any> {
         return $.when<any>(super.canActivate(args))
             .then(() => {
                 if (!args.name) {
