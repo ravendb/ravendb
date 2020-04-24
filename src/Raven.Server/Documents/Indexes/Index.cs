@@ -1705,10 +1705,13 @@ namespace Raven.Server.Documents.Indexes
                         {
                             tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
 
-                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+                            tx.InnerTransaction.LowLevelTransaction.LastChanceToReadFromWriteTransactionBeforeCommit += llt =>
                             {
-                                IndexPersistence.BuildStreamCacheAfterTx(tx.InnerTransaction);
+                                IndexPersistence.BuildStreamCacheAfterTx(llt.Transaction);
+                            };
 
+                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += llt =>
+                            {
                                 if (writeOperation.IsValueCreated == false)
                                     return;
 
@@ -1718,8 +1721,8 @@ namespace Raven.Server.Documents.Indexes
                                     // also we need this to be called when new read transaction are prevented in order to ensure
                                     // that queries won't get the searcher having 'old' state but see 'new' changes committed here
                                     // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
-                                    IndexPersistence.RecreateSearcher(tx.InnerTransaction);
-                                    IndexPersistence.RecreateSuggestionsSearchers(tx.InnerTransaction);
+                                    IndexPersistence.RecreateSearcher(llt.Transaction);
+                                    IndexPersistence.RecreateSuggestionsSearchers(llt.Transaction);
                                 }
                             };
 
