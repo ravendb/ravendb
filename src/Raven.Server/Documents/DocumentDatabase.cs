@@ -920,6 +920,7 @@ namespace Raven.Server.Documents
                 Operations?.CleanupOperations();
                 SubscriptionStorage?.CleanupSubscriptions();
 
+                Scripts?.RunIdleOperations();
                 DocumentsStorage.Environment.Cleanup();
                 ConfigurationStorage.Environment.Cleanup();
 
