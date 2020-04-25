@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Sparrow.Json;
@@ -39,7 +40,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 {
                     url += "?";
                     foreach (var indexName in _indexNames)
-                        url += $"&name={indexName}";
+                        url += $"&name={Uri.EscapeDataString(indexName)}";
                 }
 
                 return new HttpRequestMessage
@@ -48,7 +49,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 };
             }
 
-            public override bool IsReadRequest => true;
+            public override bool IsReadRequest => false;
         }
     }
 }
