@@ -127,12 +127,7 @@ namespace Raven.Server.Documents.Patch
 
         public override int GetHashCode()
         {
-            unchecked
-            {
-                int hashCode = 0;
-                hashCode = (hashCode * 397) ^ (_script != null ? _script.GetHashCode() : 0);
-                return hashCode;
-            }
+            return _script?.GetHashCode() ?? 0;
         }
     }
 }
