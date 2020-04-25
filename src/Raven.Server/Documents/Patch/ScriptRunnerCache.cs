@@ -115,11 +115,12 @@ namespace Raven.Server.Documents.Patch
 
         public void RunIdleOperations()
         {
-            foreach (var (_, lazyRunner) in _cache)
+            foreach (var (key, lazyRunner) in _cache)
             {
                 if (lazyRunner.IsValueCreated == false)
                     continue;
-                lazyRunner.Value.RunIdleOperations();
+                if (lazyRunner.Value.RunIdleOperations() == false)
+                    _cache.TryRemove(key, out _);
             }
         }
     }
