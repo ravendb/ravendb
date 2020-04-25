@@ -47,7 +47,9 @@ namespace Raven.Server.Documents.Patch
         private readonly DateTime _creationTime;
         public readonly List<string> ScriptsSource = new List<string>();
 
-        private int _strongRefs;
+        public int NumberOfCachedScripts => _cache.Count(x=>
+            x.Value != null || 
+            x.WeakValue?.TryGetTarget(out _) == true);
 
         public long Runs;
         DateTime _lastRun;
