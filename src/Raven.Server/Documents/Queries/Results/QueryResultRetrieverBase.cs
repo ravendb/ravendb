@@ -681,7 +681,7 @@ namespace Raven.Server.Documents.Queries.Results
                     int hashCode = 0;
                     foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>>())
                     {
-                        hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
+                        hashCode = (hashCode * 397) ^ (function.Value.FunctionText.GetHashCode());
                     }
                     return hashCode;
                 }
