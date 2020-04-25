@@ -1346,7 +1346,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public void RunIdleOperations()
+        public bool RunIdleOperations()
         {
             while (_cache.TryDequeue(out var holder))
             {
@@ -1369,12 +1369,13 @@ namespace Raven.Server.Documents.Patch
                 if (weak.TryGetTarget(out _))
                 {
                     _cache.Enqueue(holder);
-                    break;
+                    return true;
                 }
                 
                 // the weak ref has no value, can discard it
             }
 
+            return false;
         }
     }
 }
