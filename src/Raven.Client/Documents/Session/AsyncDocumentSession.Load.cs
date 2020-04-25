@@ -75,11 +75,12 @@ namespace Raven.Client.Documents.Session
                 includeBuilder.CountersToInclude?.ToArray(),
                 includeBuilder.AllCounters,
                 includeBuilder.TimeSeriesToInclude,
+                includeBuilder.CompareExchangeValuesToInclude?.ToArray(),
                 token);
         }
 
         /// <inheritdoc />
-        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<TimeSeriesRange> timeSeriesIncludes = null, CancellationToken token = new CancellationToken())
+        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<TimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null, CancellationToken token = default)
         {
             using (AsyncTaskHolder())
             {
@@ -100,6 +101,7 @@ namespace Raven.Client.Documents.Session
                 }
                 
                 loadOperation.WithTimeSeries(timeSeriesIncludes);
+                loadOperation.WithCompareExchange(compareExchangeValueIncludes);
 
                 var command = loadOperation.CreateRequest();
                 if (command != null)

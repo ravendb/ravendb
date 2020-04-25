@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
@@ -179,6 +180,73 @@ namespace SlowTests.Issues
                     Assert.NotEqual(value2, value3);
 
                     var values = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(employee1.Notes.ToArray());
+
+                    Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(2, values.Count);
+                    Assert.Equal(value2, values[value2.Key]);
+                    Assert.Equal(value3, values[value3.Key]);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanUseCompareExchangeValueIncludesInLoad_Async()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var employee = new Employee { Id = "employees/1", Notes = new List<string> { "companies/cf", "companies/hr" } };
+                    await session.StoreAsync(employee);
+
+                    var company = new Company { Id = "companies/1", ExternalId = "companies/cf", Name = "CF" };
+                    await session.StoreAsync(company);
+
+                    var address1 = new Address { City = "Torun" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", address1);
+
+                    var address2 = new Address { City = "Hadera" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", address2);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var company1 = await session.LoadAsync<Company>("companies/1", includes => includes.IncludeCompareExchangeValue(x => x.ExternalId));
+
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+
+                    var value1 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Address>(company1.ExternalId);
+
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+
+                    Assert.NotNull(value1);
+                    Assert.True(value1.Index > 0);
+                    Assert.Equal(company1.ExternalId, value1.Key);
+                    Assert.NotNull(value1.Value);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    var company2 = await session.LoadAsync<Company>("companies/1", includes => includes.IncludeCompareExchangeValue(x => x.ExternalId));
+
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(company1, company2);
+
+                    var employee1 = await session.LoadAsync<Employee>("employees/1", includes => includes.IncludeCompareExchangeValue(x => x.Notes));
+
+                    Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
+
+                    var value2 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Address>(employee1.Notes[0]);
+                    var value3 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Address>(employee1.Notes[1]);
+
+                    Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(value1, value2);
+                    Assert.NotEqual(value2, value3);
+
+                    var values = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<Address>(employee1.Notes.ToArray());
 
                     Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
 
@@ -434,6 +502,85 @@ select incl(c)"
                 }
             }
         }
+
+        [Fact]
+        public async Task CanUseCompareExchangeValueIncludesInQueries_Static_Async()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await new Companies_ByName().ExecuteAsync(store);
+
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var employee = new Employee { Id = "employees/1", Notes = new List<string> { "companies/cf", "companies/hr" } };
+                    await session.StoreAsync(employee);
+
+                    var company = new Company { Id = "companies/1", ExternalId = "companies/cf", Name = "CF" };
+                    await session.StoreAsync(company);
+
+                    var address1 = new Address { City = "Torun" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", address1);
+
+                    var address2 = new Address { City = "Hadera" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", address2);
+
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var companies = await session.Query<Company, Companies_ByName>()
+                        .Statistics(out var stats)
+                        .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
+                        .ToListAsync();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.True(stats.DurationInMs >= 0);
+                    var resultEtag = stats.ResultEtag;
+
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+
+                    var value1 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Address>(companies[0].ExternalId);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+
+                    companies = await session.Query<Company, Companies_ByName>()
+                        .Statistics(out stats)
+                        .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
+                        .ToListAsync();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.Equal(-1, stats.DurationInMs); // from cache
+                    Assert.Equal(resultEtag, stats.ResultEtag);
+
+                    using (var innerSession = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var value = await innerSession.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Address>(companies[0].ExternalId);
+                        value.Value.City = "Bydgoszcz";
+
+                        await innerSession.SaveChangesAsync();
+
+                        WaitForIndexing(store);
+                    }
+
+                    companies = await session.Query<Company, Companies_ByName>()
+                        .Statistics(out stats)
+                        .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
+                        .ToListAsync();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.True(stats.DurationInMs >= 0); // not from cache
+                    Assert.NotEqual(resultEtag, stats.ResultEtag);
+
+                    value1 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Address>(companies[0].ExternalId);
+                    Assert.Equal("Bydgoszcz", value1.Value.City);
+                }
+            }
+        }
+
 
         [Fact]
         public void CanUseCompareExchangeValueIncludesInQueries_Static_JavaScript()
