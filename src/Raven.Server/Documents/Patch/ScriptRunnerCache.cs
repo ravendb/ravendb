@@ -19,7 +19,6 @@ namespace Raven.Server.Documents.Patch
         private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner>> _cache =
             new ConcurrentDictionary<Key, Lazy<ScriptRunner>>();
 
-        private int _numberOfCachedScripts;
         public bool EnableClr;
         internal static string PolyfillJs;
 
@@ -40,6 +39,17 @@ namespace Raven.Server.Documents.Patch
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+        }
+
+        public int NumberOfCachedScripts
+        {
+            get
+            {
+                return _cache.Values
+                    .Select(x => x.IsValueCreated ? x.Value : null)
+                    .Where(x => x != null)
+                    .Sum(x => x.NumberOfCachedScripts);
+            }
         }
 
         public IEnumerable<DynamicJsonValue> GetDebugInfo(bool detailed = false)

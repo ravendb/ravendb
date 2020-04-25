@@ -171,7 +171,6 @@ namespace InterversionTests
                 {
                     ModifyDatabaseRecord = record =>
                     {
-                        record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "1024";
                         record.ConflictSolverConfig = new ConflictSolver
                         {
 
@@ -328,7 +327,6 @@ namespace InterversionTests
                 {
                     ModifyDatabaseRecord = record =>
                     {
-                        record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "1024";
                         record.ConflictSolverConfig = new ConflictSolver
                         {
 
