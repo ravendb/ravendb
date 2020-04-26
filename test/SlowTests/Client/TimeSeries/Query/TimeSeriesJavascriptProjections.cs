@@ -104,7 +104,7 @@ namespace SlowTests.Client.TimeSeries.Query
             public List<double> Accuracies { get; set; }
         }
 
-        private class CustomJsFunctionResult2
+        internal class CustomJsFunctionResult2
         {
             public double TotalMax { get; set; }
 
