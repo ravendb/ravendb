@@ -27,12 +27,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public enum AggregationType
     {
-        Min,
-        Max,
-        Average,
         First,
         Last,
+        Min,
+        Max,
         Sum,
-        Count
+        Count,
+        Average
     }
 }
