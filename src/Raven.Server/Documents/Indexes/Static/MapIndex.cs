@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticMapIndex = (MapIndex)index;
             var staticIndex = staticMapIndex._compiled;
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);
             return instance;
         }

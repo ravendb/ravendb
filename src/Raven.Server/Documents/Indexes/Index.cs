@@ -186,7 +186,6 @@ namespace Raven.Server.Documents.Indexes
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
-        private Func<bool> _indexValidationStalenessCheck = () => true;
 
         private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
 
@@ -255,8 +254,6 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
                 }
-
-                _indexValidationStalenessCheck = null;
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
 
@@ -403,6 +400,14 @@ namespace Raven.Server.Documents.Indexes
 
         public int MaxNumberOfOutputsPerDocument { get; private set; }
 
+        public bool IsInvalidIndex()
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                return _indexStorage.IsIndexInvalid(tx);
+            }
+        }
         public virtual IndexRunningStatus Status
         {
             get
@@ -571,18 +576,6 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
-                _indexValidationStalenessCheck = () =>
-                {
-                    if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
-                        return true;
-
-                    using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-                    using (documentsContext.OpenReadTransaction())
-                    {
-                        return IsStale(documentsContext);
-                    }
-                };
-
                 OnInitialization();
 
                 if (LastIndexingTime != null)
@@ -594,6 +587,18 @@ namespace Raven.Server.Documents.Indexes
             {
                 Dispose();
                 throw;
+            }
+        }
+
+        private bool IsStaleInternal()
+        {
+            if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
+                return true;
+
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+            using (documentsContext.OpenReadTransaction())
+            {
+                return IsStale(documentsContext);
             }
         }
 
@@ -1626,7 +1631,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
         {
-            if (failureInformation.IsInvalidIndex(_indexValidationStalenessCheck) == false)
+            if (failureInformation.IsInvalidIndex(IsStaleInternal()) == false)
                 return;
 
             var message = failureInformation.GetErrorMessage();

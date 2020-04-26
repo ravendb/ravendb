@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Errors
     {
         private readonly IndexDefinition _definition;
 
-        public FaultyIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority,
+        public FaultyIndexDefinition(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority,
             IndexField[] mapFields, IndexDefinition definition)
             : base(name, collections, lockMode, priority, mapFields)
         {

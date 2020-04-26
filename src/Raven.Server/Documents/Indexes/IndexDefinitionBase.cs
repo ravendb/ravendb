@@ -118,10 +118,10 @@ namespace Raven.Server.Documents.Indexes
 
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields)
+        protected IndexDefinitionBase(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields)
         {
             Name = name;
-            Collections = collections;
+            Collections = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
             IndexFields = new Dictionary<string, IndexField>(StringComparer.Ordinal);

@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Indexes
         /// Indicates whether this is invalid index.
         /// </summary>
         /// <value><c>true</c> if this is invalid index; otherwise, <c>false</c>.</value>
-        public bool IsInvalidIndex(Func<bool> isStale)
+        public bool IsInvalidIndex(bool isStale)
         {
             return CheckIndexInvalid(MapAttempts, MapErrors,
                 MapReferenceAttempts, MapReferenceErrors,
@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Indexes
             long mapAttempts, long mapErrors,
             long? mapReferenceAttempts, long? mapReferenceErrors,
             long? reduceAttempts, long? reduceErrors,
-            Func<bool> isStale)
+            bool isStale)
         {
             var attempts = mapAttempts;
             if (mapReferenceAttempts != null)
@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Indexes
 
             // we don't have enough attempts to make a good determination
 
-            if (isStale()) // an index hasn't complete yet, let it index more docs
+            if (isStale) // an index hasn't complete yet, let it index more docs
                 return false;
 
             if (attempts >= MinimalNumberOfAttemptsToCheckFailureRate) // enough to calculate
