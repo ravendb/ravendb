@@ -413,7 +413,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch (SubscriptionDoesNotExistException)
                 {
-                    if (options.CreateIfNotExist)
+                    if (options.CreateNew)
                     {
                         if (id == null)
                         {
