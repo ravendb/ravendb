@@ -329,7 +329,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 try
                                 {
-                                    return x.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context);
+                                    return x.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, documentsContext: context);
                                 }
                                 catch (Exception e)
                                 {
@@ -387,7 +387,7 @@ namespace Raven.Server.Documents.Handlers
                             return Task.CompletedTask;
                         }
 
-                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context) };
+                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, documentsContext: context) };
                     }
                 }
 
