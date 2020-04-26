@@ -1015,7 +1015,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Query = query,
                     Name = name,
-                    CreateIfNotExist = true
+                    CreateNew = true
                 });
 
                 var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
@@ -1028,7 +1028,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Query = query,
                     Id = id,
-                    CreateIfNotExist = true
+                    CreateNew = true
                 });
 
                 newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
@@ -1045,7 +1045,7 @@ namespace FastTests.Client.Subscriptions
                     Query = query,
                     Name = name,
                     Id = id,
-                    CreateIfNotExist = true
+                    CreateNew = true
                 });
 
                 newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
@@ -1065,7 +1065,7 @@ namespace FastTests.Client.Subscriptions
                     Query = query,
                     Name = name,
                     Id = id,
-                    CreateIfNotExist = true
+                    CreateNew = true
                 });
 
                 newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
