@@ -1343,19 +1343,18 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("from") == false)
                 ThrowParseException($"Unable to parse time series query for {name}, missing FROM");
 
-            var fromList = TimeSeriesFromExpressions(name);
+            if (Field(out var source) == false)
+                ThrowParseException($"Unable to parse time series query for {name}, missing FROM");
 
-            foreach (var source in fromList)
+            if (source.Compound.Count > 1 && source.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
             {
-                if (source.Compound.Count > 1 && source.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
-                {
-                    source.Compound.RemoveAt(0);
-                }
+                source.Compound.RemoveAt(0);
             }
 
+
             tsf.Between = Scanner.TryScan("BETWEEN")
-                ? ReadTimeSeriesBetweenExpression(fromList)
-                : new TimeSeriesBetweenExpression(fromList, null, null);
+                ? ReadTimeSeriesBetweenExpression(source)
+                : new TimeSeriesBetweenExpression(source, null, null);
 
             if (Scanner.TryScan("LOAD"))
             {
@@ -1599,36 +1598,6 @@ namespace Raven.Server.Documents.Queries.Parser
             return select;
         }
 
-        private List<FieldExpression> TimeSeriesFromExpressions(string name)
-        {
-            if (Scanner.TryScan('(') == false)
-            {
-                if (Field(out var source) == false)
-                    ThrowParseException($"Unable to parse time series query for {name}, missing FROM"); 
-                return new List<FieldExpression> { source };
-            }
-
-            var fromList = new List<FieldExpression>();
-            do
-            {
-                if (Field(out var field) == false)
-                {
-                    ThrowParseException($"Unable to parse field expression in From clause of time series query '{name}' ");
-                    return null; // never called
-                }
-
-                fromList.Add(field);
-
-                if (Scanner.TryScan(",") == false)
-                    break;
-            } while (true);
-
-            if (Scanner.TryScan(')') == false)
-                ThrowParseException("Unmatched parenthesis, expected ')'");
-
-            return fromList;
-        }
-
         private MethodExpression GetTimeSeriesExpression(Query query)
         {
             var func = SelectTimeSeries(query?.From.Alias);
@@ -1636,33 +1605,29 @@ namespace Raven.Server.Documents.Queries.Parser
             if (query?.TryAddTimeSeriesFunction(func) == false)
                 ThrowParseException($"time series function '{func.Name}' was declared multiple times");
 
-            var args = new HashSet<QueryExpression>();
+            var compound = ((FieldExpression)func.TimeSeries.Between.Source).Compound;
+            var args = new List<QueryExpression>();
 
-            foreach (var source in func.TimeSeries.Between.FromList)
+            if (compound.Count > 1)
             {
-                var compound = source.Compound;
-                if (compound.Count > 1)
+                if (query?.From.Alias != null)
                 {
-                    if (query?.From.Alias != null)
-                    {
-                        args.Add(new FieldExpression(new List<StringSegment> {query.From.Alias.Value}));
+                    args.Add(new FieldExpression(new List<StringSegment> { query.From.Alias.Value }));
 
-                        if (query.From.Alias.Value != compound[0])
-                        {
-                            args.Add(new FieldExpression(new List<StringSegment> {compound[0]}));
-                        }
-                    }
-                    else
+                    if (query.From.Alias.Value != compound[0])
                     {
-                        args.Add(new FieldExpression(new List<StringSegment> {compound[0]}));
+                        args.Add(new FieldExpression(new List<StringSegment> { compound[0] }));
                     }
-
                 }
+                else
+                {
+                    args.Add(new FieldExpression(new List<StringSegment> { compound[0] }));
+                }
+
+                func.Parameters = args;
             }
 
-            func.Parameters = args.ToList();
-
-            return new MethodExpression(func.Name, func.Parameters);
+            return new MethodExpression(func.Name, args);
         }
 
         private bool TryParseFromClause(out FromClause fromClause, out string message)
@@ -1997,7 +1962,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
                 case "BETWEEN":
                     op = _insideTimeSeriesBody
-                        ? ReadTimeSeriesBetweenExpression(new List<FieldExpression>{field})
+                        ? ReadTimeSeriesBetweenExpression(field)
                         : ReadBetweenExpression(field);
                     return true;
                 case "IN":
@@ -2100,7 +2065,7 @@ namespace Raven.Server.Documents.Queries.Parser
         }
 
 
-        private TimeSeriesBetweenExpression ReadTimeSeriesBetweenExpression(List<FieldExpression> fromList)
+        private TimeSeriesBetweenExpression ReadTimeSeriesBetweenExpression(FieldExpression field)
         {
             QueryExpression minExpression, maxExpression;
             if (Value(out var val) == false)
@@ -2134,7 +2099,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 ThrowQueryException(
                     $"Invalid Between expression, values must have the same type but got {minExpression.Type} and {maxExpression.Type}");
 
-            return new TimeSeriesBetweenExpression(fromList, minExpression, maxExpression);
+            return new TimeSeriesBetweenExpression(field, minExpression, maxExpression);
         }
 
         private bool Method(FieldExpression field, out MethodExpression op)
