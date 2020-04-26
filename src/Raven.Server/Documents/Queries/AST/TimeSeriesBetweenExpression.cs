@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-
 namespace Raven.Server.Documents.Queries.AST
 {
     public class TimeSeriesBetweenExpression : BetweenExpression
@@ -9,19 +6,15 @@ namespace Raven.Server.Documents.Queries.AST
 
         public QueryExpression MaxExpression { get; }
 
-        public  List<FieldExpression> FromList { get; }
-
-        public TimeSeriesBetweenExpression(List<FieldExpression> fromList, QueryExpression min, QueryExpression max) : base(null, null, null)
+        public TimeSeriesBetweenExpression(QueryExpression source, QueryExpression min, QueryExpression max) : base(source, null, null)
         {
             MinExpression = min;
             MaxExpression = max;
-            FromList = fromList;
         }
 
         public override string ToString()
         {
-            var fromListText = $"({string.Join(",", FromList)})";
-            return fromListText + " between " + MinExpression + " and " + MaxExpression;
+            return Source + " between " + MinExpression + " and " + MaxExpression;
         }
 
         public override string GetText(IndexQueryServerSide parent)
@@ -34,7 +27,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (!(other is TimeSeriesBetweenExpression be))
                 return false;
 
-            return FromList.SequenceEqual(be.FromList) && MaxExpression.Equals(be.MaxExpression) && MinExpression.Equals(be.MinExpression);
+            return Source.Equals(be.Source) && MaxExpression.Equals(be.MaxExpression) && MinExpression.Equals(be.MinExpression);
         }
     }
 }
