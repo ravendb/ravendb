@@ -2,11 +2,10 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Raven.Server.NotificationCenter.Notifications.Details;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -16,27 +15,54 @@ namespace Raven.Server.Documents.Handlers
         public Task GetCollectionStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
             {
-                var collections = new DynamicJsonValue();
-                var result = new DynamicJsonValue
-                {
-                    [nameof(CollectionStatistics.CountOfDocuments)] = Database.DocumentsStorage.GetNumberOfDocuments(context),
-                    [nameof(CollectionStatistics.CountOfConflicts)] = 
-                        Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
-                    [nameof(CollectionStatistics.Collections)] = collections
-                };
+                CollectionStatistics collectionStatistics = new CollectionStatistics();
 
-                foreach (var collectionStat in Database.DocumentsStorage.GetCollections(context))
-                {
-                    collections[collectionStat.Name] = collectionStat.Count;
-                }
+                FillCollectionStats(collectionStatistics, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, result);
+                    context.Write(writer, collectionStatistics.ToJson());
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/collections/stats/detailed", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetDetailedCollectionStats()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                DetailedCollectionStatistics detailedCollectionStatistics = new DetailedCollectionStatistics();
+
+                FillCollectionStats(detailedCollectionStatistics, context);
+
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var collection in detailedCollectionStatistics.Collections)
+                    {
+                        detailedCollectionStatistics.ExtendedCollectionDetails[collection.Key] = Database.DocumentsStorage.GetCollectionDetails(collection, context);
+                    }
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    context.Write(writer, detailedCollectionStatistics.ToJson());
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private void FillCollectionStats(CollectionStatistics stats, DocumentsOperationContext context)
+        {
+            using (context.OpenReadTransaction())
+            {
+                stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
+                stats.CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context);
+
+                foreach (var collectionStat in Database.DocumentsStorage.GetCollections(context))
+                {
+                    stats.Collections[collectionStat.Name] = collectionStat.Count;
+                }
+            }
         }
 
         [RavenAction("/databases/*/collections/docs", "GET", AuthorizationStatus.ValidUser)]

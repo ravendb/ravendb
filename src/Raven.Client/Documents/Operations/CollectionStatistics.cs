@@ -1,17 +1,70 @@
 ﻿using System.Collections.Generic;
+using Raven.Client.Util;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class CollectionStatistics
+    public class CollectionStatistics : IDynamicJson
     {
         public CollectionStatistics()
         {
             Collections = new Dictionary<string, long>();
         }
 
-        public int CountOfDocuments { get; set; }
-        public int CountOfConflicts { get; set; }
+        public long CountOfDocuments { get; set; }
+        public long CountOfConflicts { get; set; }
 
         public Dictionary<string, long> Collections { get; set; }
+
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(CountOfDocuments)] = CountOfDocuments,
+                [nameof(CountOfConflicts)] = CountOfConflicts,
+                [nameof(Collections)] = DynamicJsonValue.Convert(Collections)
+            };
+        }
+    }
+
+    public class DetailedCollectionStatistics : CollectionStatistics
+    {
+        public DetailedCollectionStatistics()
+        {
+            ExtendedCollectionDetails = new Dictionary<string, CollectionDetails>();
+        }
+
+        public Dictionary<string, CollectionDetails> ExtendedCollectionDetails { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(CountOfDocuments)] = CountOfDocuments,
+                [nameof(CountOfConflicts)] = CountOfConflicts,
+                [nameof(Collections)] = DynamicJsonValue.Convert(Collections),
+                [nameof(ExtendedCollectionDetails)] = DynamicJsonValue.Convert(ExtendedCollectionDetails)
+            };
+        }
+    }
+
+    public class CollectionDetails : IDynamicJson
+    {
+        public string Name { get; set; }
+        public long CountOfDocuments { get; set; }
+        public Size Size { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(CountOfDocuments)] = CountOfDocuments,
+                [nameof(Size)] = new DynamicJsonValue
+                {
+                    [nameof(Size.HumaneSize)] = Size.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = Size.SizeInBytes
+                }
+            };
+        }
     }
 }
