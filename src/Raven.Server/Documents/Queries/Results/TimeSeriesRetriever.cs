@@ -603,15 +603,30 @@ namespace Raven.Server.Documents.Queries.Results
 
                             if (index >= singleResult.Values.Length)
                                 return null;
+                            if (_currentIsRaw)
+                                return singleResult.Values.Span[index];
 
-                            return singleResult.Values.Span[index];
+                            // we are working with a rolled-up series
+                            // here an entry has 6 different values (min, max, first, last, sum, count) per each 'original' measurement 
+                            // we need to return the average value (sum / count)
+                            index *= 6;
+                            if (index + (int)AggregationType.Count >= singleResult.Values.Length)
+                                return null;
+                            return singleResult.Values.Span[index + (int)AggregationType.Sum] / singleResult.Values.Span[index + (int)AggregationType.Count];
+
                         case "VALUE":
                         case "Value":
                         case "value":
                             if (fe.Compound.Count > 1)
                                 throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
+                            if (_currentIsRaw)
+                                return singleResult.Values.Span[0];
 
-                            return singleResult.Values.Span[0];
+                            // rolled-up series
+                            if ((int)AggregationType.Count >= singleResult.Values.Length)
+                                return null;
+                            return singleResult.Values.Span[(int)AggregationType.Sum] / singleResult.Values.Span[(int)AggregationType.Count];
+
                         case "TIMESTAMP":
                         case "TimeStamp":
                         case "Timestamp":
