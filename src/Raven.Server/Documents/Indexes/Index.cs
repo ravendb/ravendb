@@ -2179,8 +2179,7 @@ namespace Raven.Server.Documents.Indexes
             return (lastDocumentEtag, lastTombstoneEtag);
         }
 
-        public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false,
-            DocumentsOperationContext documentsContext = null)
+        public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, bool calculateMemoryStats = false, DocumentsOperationContext documentsContext = null)
         {
             using (CurrentlyInUse(out var valid))
             {
@@ -2260,7 +2259,8 @@ namespace Raven.Server.Documents.Indexes
                         }
                     }
 
-                    stats.Memory = GetMemoryStats();
+                    if (calculateMemoryStats)
+                        stats.Memory = GetMemoryStats();
 
                     return stats;
                 }
@@ -3112,12 +3112,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected static unsafe void UseAllDocumentsCounterAndCmpXchgEtags(DocumentsOperationContext documentsContext, 
+        protected static unsafe void UseAllDocumentsCounterAndCmpXchgEtags(DocumentsOperationContext documentsContext,
             QueryMetadata q, int length, byte* indexEtagBytes)
         {
             if (q == null)
                 return;
-            
+
             if (q.HasIncludeOrLoad)
             {
                 Debug.Assert(length > sizeof(long) * 4);
@@ -3133,7 +3133,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
 
-                var offset = length - (sizeof(long) * (q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1)) ;
+                var offset = length - (sizeof(long) * (q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1));
 
                 *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastCountersEtag(documentsContext.Transaction.InnerTransaction);
             }
@@ -3151,7 +3151,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
             }
-        }   
+        }
 
         protected int MinimumSizeForCalculateIndexEtagLength(QueryMetadata q)
         {
@@ -3166,9 +3166,9 @@ namespace Raven.Server.Documents.Indexes
             if (q.CounterIncludes != null || q.HasCounterSelect)
                 length += sizeof(long); // last counter etag
 
-            if (q.HasCmpXchg || q.HasCmpXchgSelect)           
+            if (q.HasCmpXchg || q.HasCmpXchgSelect)
                 length += sizeof(long); //last cmpxng etag
-            
+
             return length;
         }
 
