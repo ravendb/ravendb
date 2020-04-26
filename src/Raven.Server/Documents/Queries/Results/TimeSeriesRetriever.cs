@@ -4,7 +4,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
 using Lucene.Net.Store;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
