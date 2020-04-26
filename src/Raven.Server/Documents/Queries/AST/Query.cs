@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -447,8 +448,14 @@ namespace Raven.Server.Documents.Queries.AST
             _values.Clear();
         }
 
-        public void Segment(Span<StatefulTimestampValue> values)
+        public void Segment(Span<StatefulTimestampValue> values, bool isRaw)
         {
+            if (isRaw == false)
+            {
+                SegmentOnRollup(values);
+                return;
+            }
+
             if (_count.Count < values.Length)
             {
                 for (int i = _count.Count; i < values.Length; i++)
@@ -496,8 +503,16 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public void Step(Span<double> values)
+
+
+        public void Step(Span<double> values, bool isRaw)
         {
+            if (isRaw == false)
+            {
+                StepOnRollup(values);
+                return;
+            }
+
             if (_count.Count < values.Length)
             {
                 for (int i = _count.Count; i < values.Length; i++)
@@ -542,6 +557,120 @@ namespace Raven.Server.Documents.Queries.AST
                 }
 
                 _count[i]++;
+            }
+        }
+
+        private void SegmentOnRollup(Span<StatefulTimestampValue> values)
+        {
+            Debug.Assert(values.Length % 6 == 0);
+            var originalNumOfValues = values.Length / 6;
+            if (_count.Count < originalNumOfValues)
+            {
+                for (int i = _count.Count; i < originalNumOfValues; i++)
+                {
+                    _count.Add(0L);
+                    _values.Add(0d);
+                }
+            }
+
+            for (int i = 0; i < originalNumOfValues; i++)
+            {
+                var index = i * 6;
+                StatefulTimestampValue val;
+                switch (Aggregation)
+                {
+                    case AggregationType.Min:
+                        val = values[index + 2];
+                        if ((long)_count[i] == 0)
+                            _values[i] = val.Min;
+                        else
+                            _values[i] = Math.Min((double)_values[i], val.Min);
+                        break;
+                    case AggregationType.Max:
+                        val = values[index + 3];
+                        if ((long)_count[i] == 0)
+                            _values[i] = val.Max;
+                        else
+                            _values[i] = Math.Max((double)_values[i], val.Max);
+                        break;
+                    case AggregationType.Sum:
+                    case AggregationType.Average:
+                        val = values[index + 4];
+                        _values[i] = (double)_values[i] + val.Sum;
+                        break;
+                    case AggregationType.First:
+                        val = values[index];
+                        if ((long)_count[i] == 0)
+                            _values[i] = val.First;
+                        break;
+                    case AggregationType.Last:
+                        val = values[index + 1];
+                        _values[i] = val.Last;
+                        break;
+                    case AggregationType.Count:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
+                }
+
+                _count[i] = (long)_count[i] + values[index + 5].Count;
+            }
+        }
+
+        private void StepOnRollup(Span<double> values)
+        {
+            Debug.Assert(values.Length % 6 == 0);
+            var originalNumOfValues = values.Length / 6;
+            if (_count.Count < originalNumOfValues)
+            {
+                for (int i = _count.Count; i < originalNumOfValues; i++)
+                {
+                    _count.Add(0L);
+                    _values.Add(0d);
+                }
+            }
+
+            for (int i = 0; i < originalNumOfValues; i++)
+            {
+                var index = i * 6;
+                double val;
+                switch (Aggregation)
+                {
+                    case AggregationType.Min:
+                        val = values[index + 2];
+                        if ((long)_count[i] == 0)
+                            _values[i] = val;
+                        else
+                            _values[i] = Math.Min((double)_values[i], val);
+                        break;
+                    case AggregationType.Max:
+                        val = values[index + 3];
+                        if ((long)_count[i] == 0)
+                            _values[i] = val;
+                        else
+                            _values[i] = Math.Max((double)_values[i], val);
+                        break;
+                    case AggregationType.Sum:
+                    case AggregationType.Average:
+                        val = values[index + 4];
+                        _values[i] = (double)_values[i] + val;
+                        break;
+                    case AggregationType.First:
+                        val = values[index];
+                        if ((long)_count[i] == 0)
+                            _values[i] = val;
+                        break;
+                    case AggregationType.Last:
+                        val = values[index + 1];
+                        _values[i] = val;
+                        break;
+                    case AggregationType.Count:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
+                }
+
+                _count[i] = (long)_count[i] + (long)values[index + 5];
             }
         }
 
