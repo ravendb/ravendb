@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
@@ -1948,6 +1949,30 @@ namespace Raven.Server.Documents
                     Count = collectionTable.NumberOfEntries
                 };
             }
+        }
+
+        public CollectionDetails GetCollectionDetails(KeyValuePair<string, long> collection, DocumentsOperationContext context)
+        {
+            CollectionDetails collectionDetails = new CollectionDetails() { Name = collection.Key, CountOfDocuments = collection.Value, Size = new Client.Util.Size() };
+            CollectionName collectionName = GetCollection(collection.Key, throwIfDoesNotExist: false);
+
+            if (collectionName != null)
+            {
+                Table collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+                    collectionName.GetTableName(CollectionTableType.Documents));
+
+                if (collectionTable != null)
+                {
+                    TableReport tableReport = collectionTable.GetReport(false);
+                    if (tableReport != null)
+                    {
+                        collectionDetails.Size.SizeInBytes = tableReport.DataSizeInBytes;
+                    } else { }
+                } else { }
+
+            } else { }
+
+            return collectionDetails;
         }
 
         public CollectionStats GetCollection(string collection, DocumentsOperationContext context)
