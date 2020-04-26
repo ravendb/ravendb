@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
 using Lucene.Net.Store;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
@@ -30,13 +31,17 @@ namespace Raven.Server.Documents.Queries.Results
 
         private Dictionary<string, Document> _loadedDocuments;
 
-        private readonly DocumentDatabase _database;
+        private TimeSeriesStorage _tss;
+
+        private DateTime _min, _max;
+
+        private bool _currentIsRaw;
 
         public TimeSeriesRetriever(DocumentDatabase database, DocumentsOperationContext context, 
             BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments)
         {
-            _database = database;
             _context = context;
+            _tss = database.DocumentsStorage.TimeSeriesStorage;
             _queryParameters = queryParameters;
             _loadedDocuments = loadedDocuments;
 
@@ -46,22 +51,22 @@ namespace Raven.Server.Documents.Queries.Results
 
         public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args)
         {
-            var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var timeSeriesFunction = declaredFunction.TimeSeries;
-            var source = GetSourcesAndId();
+            var source = GetSourceAndId();
 
-            var min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
-            var max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
+            _min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
+            _max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
 
             if (timeSeriesFunction.Offset.HasValue)
             {
-                min = min.Add(timeSeriesFunction.Offset.Value);
-                max = max.Add(timeSeriesFunction.Offset.Value);
+                _min = _min.Add(timeSeriesFunction.Offset.Value);
+                _max = _max.Add(timeSeriesFunction.Offset.Value);
             }
 
             long count = 0;
             var array = new DynamicJsonArray();
-            var reader = new MultiReader(tss, _context, documentId, source, min, max, timeSeriesFunction.Offset);
+            
+            var reader = new MultiReader(this, documentId, source, timeSeriesFunction.Offset);
 
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
@@ -96,7 +101,7 @@ namespace Raven.Server.Documents.Queries.Results
                     count++;
                     for (int i = 0; i < aggStates.Length; i++)
                     {
-                        aggStates[i].Step(cur.Values.Span);
+                        aggStates[i].Step(cur.Values.Span, _currentIsRaw);
                     }
                 }
             }
@@ -178,7 +183,7 @@ namespace Raven.Server.Documents.Queries.Results
                             var span = it.Segment.Summary.Span;
                             for (int i = 0; i < aggStates.Length; i++)
                             {
-                                aggStates[i].Segment(span);
+                                aggStates[i].Segment(span, _currentIsRaw);
                             }
 
                             count += span[0].Count;
@@ -642,100 +647,50 @@ namespace Raven.Server.Documents.Queries.Results
                                                     $"Unsupported expression type : '{expression.Type}'");
             }
 
-            List<string> GetSourcesAndId()
+            string GetSourceAndId()
             {
-                var sources = new  List<string>();
+                var compound = ((FieldExpression)timeSeriesFunction.Between.Source).Compound;
 
-                for (var i = 0; i < timeSeriesFunction.Between.FromList.Count; i++)
+                if (compound.Count == 1)
                 {
-                    var field = timeSeriesFunction.Between.FromList[i];
-                    var compound = field.Compound;
-
-                    if (compound.Count == 1)
-                    {
-                        var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
-                        if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) //not found
-                        {
-                            sources.Add(field.FieldValue);
-                            continue;
-                        }
-
-                        if (timeSeriesFunction.Between.FromList.Count == 1 && args[paramIndex] is BlittableJsonReaderObject bjro)
-                        {
-                            return ExtractSourcesFromListParameter(bjro, compound[0], sources);
-                        }
-
-                        if (!(args[paramIndex] is string s))
-                            throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
-                                                            $"Expected argument '{compound[0]}' to be a string, but got '{args[paramIndex].GetType()}'");
-                        sources.Add(s);
-                        continue;
-                    }
-
-                    if (args == null)
+                    var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
+                    if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) //not found
+                        return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValue;
+                    if (!(args[paramIndex] is string s))
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                                                        $"Expected argument '{compound[0]}' to be a string, but got '{args[paramIndex].GetType()}'");
+                    return s;
+                }
+
+                if (args == null)
+                    throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                         $"'{compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
 
-                    if (args.Length < declaredFunction.Parameters.Count)
-                        throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'." +
+                if (args.Length < declaredFunction.Parameters.Count)
+                    throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'." +
                                                         $"Expected '{declaredFunction.Parameters.Count}' arguments, but got '{args.Length}'");
 
-                    sources.Add(field.FieldValueWithoutAlias);
-
-                    if (i > 0)
-                        continue;
-
-                    var index = GetParameterIndex(declaredFunction, compound[0]);
-                    if (index == 0)
-                    {
-                        if (args[0] is Document document)
-                            documentId = document.Id;
-                    }
-                    else
-                    {
-                        if (index == -1 || index == declaredFunction.Parameters.Count) // not found
-                            throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                var index = GetParameterIndex(declaredFunction, compound[0]);
+                if (index == 0)
+                {
+                    if (args[0] is Document document)
+                        documentId = document.Id;
+                }
+                else
+                {
+                    if (index == -1 || index == declaredFunction.Parameters.Count) // not found
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"'{compound[0]}' is unknown, and no matching argument was provided to time series function '{declaredFunction.Name}'.");
 
-                        if (!(args[index] is Document document))
-                            throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                    if (!(args[index] is Document document))
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[index].GetType()}'");
 
-                        documentId = document.Id;
-                    }
+                    documentId = document.Id;
                 }
 
-                return sources;
+                return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
             }
-        }
-
-        private static List<string> ExtractSourcesFromListParameter(BlittableJsonReaderObject blittable, StringSegment arg, List<string> sources)
-        {
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            for (var j = 0; j < blittable.Count; j++)
-            {
-                blittable.GetPropertyByIndex(j, ref propertyDetails);
-
-                if (int.TryParse(propertyDetails.Name, out _) == false)
-                    continue;
-
-                var name = propertyDetails.Value;
-
-                if (name is LazyStringValue lsv)
-                {
-                    sources.Add(lsv.ToString());
-                    continue;
-                }
-
-                if (!(name is string str))
-                    throw new InvalidQueryException(
-                        $"Unable to parse TimeSeries names from expression '{arg}'. " +
-                        $"Expected argument '{arg}' to be an array of strings, but got element of type '{name.GetType()}' on index {j} in the array ");
-
-                sources.Add(str);
-            }
-
-            return sources;
         }
 
         private static object GetValueFromArgument(DeclaredFunction declaredFunction, object[] args, FieldExpression fe)
@@ -828,7 +783,7 @@ namespace Raven.Server.Documents.Queries.Results
                 return null;
 
             if (_loadedDocuments.TryGetValue(tag, out var document) == false)
-                _loadedDocuments[tag] = document = _database.DocumentsStorage.Get(_context, tag);
+                _loadedDocuments[tag] = document = _context.DocumentDatabase.DocumentsStorage.Get(_context, tag);
             
             if (fe.Compound.Count == 1)
                 return document;
@@ -920,44 +875,60 @@ namespace Raven.Server.Documents.Queries.Results
 
         private class MultiReader
         {
+            private readonly TimeSeriesRetriever _retriever;
             private TimeSeriesStorage.Reader _reader;
-            private readonly string _docId;
-            private readonly DocumentsOperationContext _context;
-            private readonly DateTime _min, _max;
+            private readonly string _docId, _source;
             private readonly TimeSpan? _offset;
-            private readonly SortedList<long, string> _names;
+            private SortedList<long, string> _names;
             private int _current;
 
-            public MultiReader(TimeSeriesStorage timeSeriesStorage, DocumentsOperationContext context, string documentId, 
-                List<string> names, DateTime min, DateTime max, TimeSpan? offset)
+            public MultiReader(TimeSeriesRetriever retriever, string documentId,
+                string source, TimeSpan? offset)
             {
-                if (names == null || names.Count == 0) 
-                    throw new ArgumentNullException(nameof(names));
-
+                if (string.IsNullOrEmpty(source)) 
+                    throw new ArgumentNullException(nameof(source));
+                _source = source;
                 _docId = documentId ?? throw new ArgumentNullException(nameof(documentId));
-                _context = context;
-                _min = min;
-                _max = max;
                 _offset = offset;
                 _current = 0;
-                _names = new SortedList<long, string>();
+                _retriever = retriever;
 
-                Initialize(timeSeriesStorage, names);
+                Initialize();
             }
 
-            private void Initialize(TimeSeriesStorage timeSeriesStorage, List<string> names)
+            private void Initialize()
             {
-                // we assume that all the series names are already sorted by AggregationTime
+                _names = new SortedList<long, string>();
+                _retriever._loadedDocuments ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
 
-                for (var i = 0; i < names.Count; i++)
+                if (_retriever._loadedDocuments.TryGetValue(_docId, out var doc) == false)
                 {
-                    var stats = timeSeriesStorage.Stats.GetStats(_context, _docId, names[i]);
-                    if (stats.End < _min || stats.Start > _max)
+                    _retriever._loadedDocuments[_docId] = doc = _retriever._context.DocumentDatabase.DocumentsStorage.Get(_retriever._context, _docId);
+                }
+
+                var collection = CollectionName.GetCollectionName(doc?.Data);
+                var policyRunner = _retriever._context.DocumentDatabase.TimeSeriesPolicyRunner;
+                if (policyRunner == null || 
+                    policyRunner.Configuration.Collections.TryGetValue(collection, out var config) == false ||
+                    config.Disabled || config.Policies.Count == 0)
+                {
+                    _names[0] = _source;
+                    return;
+                }
+
+                for (var i = 0; i < config.Policies.Count + 1; i++)
+                {
+                    var name = i == 0
+                        ? _source
+                        : config.Policies[i - 1].GetTimeSeriesName(_source);
+
+                    var stats = _retriever._tss.Stats.GetStats(_retriever._context, _docId, name);
+                    if (stats.End < _retriever._min || stats.Start > _retriever._max || stats.Count == 0)
                         continue;
 
-                    _names[stats.Start.Ticks] = names[i];
+                    _names[stats.Start.Ticks] = name;
 
-                    if (stats.Start.Ticks <= _min.Ticks)
+                    if (stats.Start.Ticks <= _retriever._min.Ticks)
                         break;
                 }
             }
@@ -992,13 +963,15 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 var name = _names.Values[_current];
 
-                var from = _reader?._to.AddMilliseconds(1) ?? _min;
+                _retriever._currentIsRaw = name == _source;
+
+                var from = _reader?._to.AddMilliseconds(1) ?? _retriever._min;
 
                 var to = ++_current > _names.Count - 1 
-                    ? _max 
+                    ? _retriever._max
                     : new DateTime(_names.Keys[_current]).AddMilliseconds(-1);
 
-                _reader = new TimeSeriesStorage.Reader(_context, _docId, name, from, to, _offset);
+                _reader = new TimeSeriesStorage.Reader(_retriever._context, _docId, name, from, to, _offset);
             }
         }
     }
