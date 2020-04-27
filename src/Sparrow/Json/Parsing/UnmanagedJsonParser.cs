@@ -98,16 +98,12 @@ namespace Sparrow.Json.Parsing
         public void SetBuffer(JsonOperationContext.MemoryBuffer inputBuffer)
         {
             SetBuffer(inputBuffer.Pointer + inputBuffer.Used, inputBuffer.Valid - inputBuffer.Used);
-            _memoryBuffer = inputBuffer;
         }
 
         public void SetBuffer(JsonOperationContext.MemoryBuffer inputBuffer, int offset, int size)
         {
             SetBuffer(inputBuffer.Pointer + offset, size);
-            _memoryBuffer = inputBuffer;
         }
-
-        private JsonOperationContext.MemoryBuffer _memoryBuffer;
 
         public void SetBuffer(byte* inputBuffer, int size)
         {
@@ -938,7 +934,6 @@ namespace Sparrow.Json.Parsing
         public void Dispose()
         {
             _unmanagedWriteBuffer.Dispose();
-            _memoryBuffer = null;
         }
 
         public string GenerateErrorState()
@@ -953,16 +948,6 @@ namespace Sparrow.Json.Parsing
                 .Append(_charPos)
                 .Append(") around: ")
                 .Append(s);
-
-
-#if DEBUG
-            if (_memoryBuffer != null)
-            {
-                sb
-                    .Append(" . Buffer released: ")
-                    .Append(_memoryBuffer.IsReleased);
-            }
-#endif
 
             return sb.ToString();
         }

@@ -194,11 +194,9 @@ namespace Sparrow.Json
 #endif
         }
 
-        public unsafe MemoryBuffer.ReturnBuffer GetMemoryBuffer(out MemoryBuffer buffer)
+        public MemoryBuffer.ReturnBuffer GetMemoryBuffer(out MemoryBuffer buffer)
         {
             EnsureNotDisposed();
-
-            //return MemoryBuffer.ShortTermSingleUse(out buffer);
 
             var rawMemory = GetMemory(MemoryBuffer.Size);
             buffer = new MemoryBuffer(rawMemory.MemoryManager.Memory, rawMemory.ContextGeneration, this);
@@ -331,7 +329,7 @@ namespace Sparrow.Json
                 }
             }
 
-            [Conditional("DEBUG")]
+#if DEBUG
             private void AssertState()
             {
                 if (IsReleased)
@@ -340,6 +338,7 @@ namespace Sparrow.Json
                 if (_parent != null && _parent.Generation != _generation)
                     throw new InvalidOperationException($"Buffer was created during generation '{_generation}', but current generation is '{_parent.Generation}'. Context was probably returned or reset.");
             }
+#endif
 
             public struct ReturnBuffer : IDisposable
             {
