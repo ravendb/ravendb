@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -421,6 +422,9 @@ namespace Sparrow.Json
         public JsonOperationContext Parent;
         public NativeMemory.ThreadStats AllocatingThread;
 
+        private MemoryManager<byte> _memoryManager;
+        public MemoryManager<byte> MemoryManager => _memoryManager ??= new UnmanagedMemoryManager(Address, SizeInBytes);
+
 #if MEM_GUARD_STACK || TRACK_ALLOCATED_MEMORY_DATA
         public string AllocatedBy = Environment.StackTrace;
         public string FreedBy;
@@ -463,5 +467,35 @@ namespace Sparrow.Json
         }
 
 #endif
+    }
+
+    public unsafe class UnmanagedMemoryManager : MemoryManager<byte>
+    {
+        private readonly byte* _pointer;
+        private readonly int _length;
+
+        public UnmanagedMemoryManager(byte* pointer, int length)
+        {
+            _pointer = pointer;
+            _length = length;
+        }
+
+        public override Span<byte> GetSpan() => new Span<byte>(_pointer, _length);
+
+        public override MemoryHandle Pin(int elementIndex = 0)
+        {
+            if (elementIndex < 0 || elementIndex >= _length)
+                throw new ArgumentOutOfRangeException(nameof(elementIndex));
+
+            return new MemoryHandle(_pointer + elementIndex);
+        }
+
+        public override void Unpin()
+        {
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+        }
     }
 }

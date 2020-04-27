@@ -201,40 +201,9 @@ namespace Sparrow.Json
             //return MemoryBuffer.ShortTermSingleUse(out buffer);
 
             var rawMemory = GetMemory(MemoryBuffer.Size);
-            var memoryManager = new UnmanagedMemoryManager(rawMemory.Address, rawMemory.SizeInBytes);
-            buffer = new MemoryBuffer(memoryManager.Memory, rawMemory.ContextGeneration, this);
+            buffer = new MemoryBuffer(rawMemory.MemoryManager.Memory, rawMemory.ContextGeneration, this);
 
             return new MemoryBuffer.ReturnBuffer(rawMemory, buffer, this);
-        }
-
-        public unsafe class UnmanagedMemoryManager : MemoryManager<byte>
-        {
-            private readonly byte* _pointer;
-            private readonly int _length;
-
-            public UnmanagedMemoryManager(byte* pointer, int length)
-            {
-                _pointer = pointer;
-                _length = length;
-            }
-
-            public override Span<byte> GetSpan() => new Span<byte>(_pointer, _length);
-
-            public override MemoryHandle Pin(int elementIndex = 0)
-            {
-                if (elementIndex < 0 || elementIndex >= _length)
-                    throw new ArgumentOutOfRangeException(nameof(elementIndex));
-
-                return new MemoryHandle(_pointer + elementIndex);
-            }
-
-            public override void Unpin()
-            {
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-            }
         }
 
         public unsafe class MemoryBuffer
