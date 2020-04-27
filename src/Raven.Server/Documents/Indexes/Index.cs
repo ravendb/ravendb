@@ -2342,7 +2342,7 @@ namespace Raven.Server.Documents.Indexes
             return (lastDocumentEtag, lastTombstoneEtag);
         }
 
-        public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false,
+        public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, bool calculateMemoryStats = false,
             QueryOperationContext queryContext = null)
         {
             using (CurrentlyInUse(out var valid))
@@ -2421,7 +2421,8 @@ namespace Raven.Server.Documents.Indexes
                         }
                     }
 
-                    stats.Memory = GetMemoryStats();
+                    if (calculateMemoryStats)
+                        stats.Memory = GetMemoryStats();
 
                     return stats;
                 }
