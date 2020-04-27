@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Replication
 
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
             TcpConnectionHeaderMessage.OperationTypes headerOperation,
-            JsonOperationContext.ManagedPinnedBuffer buffer)
+            JsonOperationContext.MemoryBuffer buffer)
         {
             var supportedVersions =
                 TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, tcpConnectionOptions.ProtocolVersion);
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Replication
             OutgoingReplicationAdded?.Invoke(outgoingReplication);
         }
 
-        public void RunPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer, PullReplicationAsSink destination)
+        public void RunPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationAsSink destination)
         {
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.HubDefinitionName);
             newIncoming.Failed += RetryPullReplication;
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public IncomingReplicationHandler CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
+        public IncomingReplicationHandler CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
         {
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
             newIncoming.Failed += OnIncomingReceiveFailed;
@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.Replication
 
         private IncomingReplicationHandler CreateIncomingReplicationHandler(
             TcpConnectionOptions tcpConnectionOptions,
-            JsonOperationContext.ManagedPinnedBuffer buffer,
+            JsonOperationContext.MemoryBuffer buffer,
             string pullReplicationName = null)
         {
             var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.Replication
             return newIncoming;
         }
 
-        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
             using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))

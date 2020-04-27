@@ -97,9 +97,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
 
                 DatabaseSmugglerOptionsServerSide options;
-                using (context.GetManagedBuffer(out var buffer))
+                using (context.GetMemoryBuffer(out var buffer))
                 {
-                    var firstRead = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
+                    var firstRead = await stream.ReadAsync(buffer.Memory);
                     buffer.Used = 0;
                     buffer.Valid = firstRead;
                     if (firstRead != 0)

@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    using (var buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
+                    using (context.GetMemoryBuffer(out var buffer))
                     {
                         currentCtxReset = ContextPool.AllocateOperationContext(out JsonOperationContext docsCtx);
                         var requestBodyStream = RequestBodyStream();

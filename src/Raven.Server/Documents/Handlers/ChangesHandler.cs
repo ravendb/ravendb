@@ -100,14 +100,14 @@ namespace Raven.Server.Documents.Handlers
             Database.Changes.Connect(connection);
             var sendTask = connection.StartSendingNotifications(throttleConnection);
             var debugTag = "changes/" + connection.Id;
-            using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer segment1))
-            using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer segment2))
+            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment1))
+            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment2))
             {
                 try
                 {
                     var segments = new[] { segment1, segment2 };
                     int index = 0;
-                    var receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
+                    var receiveAsync = webSocket.ReceiveAsync(segments[index].Memory, Database.DatabaseShutdown);
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                     {
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Handlers
 
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
-                        receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
+                        receiveAsync = webSocket.ReceiveAsync(segments[index].Memory, Database.DatabaseShutdown);
 
                         while (true)
                         {
@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Handlers
                                     parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)
                                         index = 0;
-                                    receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
+                                    receiveAsync = webSocket.ReceiveAsync(segments[index].Memory, Database.DatabaseShutdown);
                                 }
 
 

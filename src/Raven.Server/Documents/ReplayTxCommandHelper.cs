@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
         {
             using (var txs = new ReplayTxs())
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.GetManagedBuffer(out var buffer))
+            using (context.GetMemoryBuffer(out var buffer))
             using (var gZipStream = new GZipStream(replayStream, CompressionMode.Decompress, leaveOpen: true))
             {
                 var peepingTomStream = new PeepingTomStream(gZipStream, context);

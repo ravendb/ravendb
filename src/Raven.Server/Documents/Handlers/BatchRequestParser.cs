@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        public static async Task BuildCommandsAsync(JsonOperationContext ctx, BatchHandler.MergedBatchCommand command, Stream stream,
+        public static async Task BuildCommandsAsync(JsonOperationContext context, BatchHandler.MergedBatchCommand command, Stream stream,
             DocumentDatabase database, ServerStore serverStore)
         {
             CommandData[] cmds = Empty;
@@ -123,9 +123,9 @@ namespace Raven.Server.Documents.Handlers
 
             int index = -1;
             var state = new JsonParserState();
-            using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
-            using (var parser = new UnmanagedJsonParser(ctx, state, "bulk_docs"))
-            using (var modifier = new BlittableMetadataModifier(ctx))
+            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
+            using (var parser = new UnmanagedJsonParser(context, state, "bulk_docs"))
+            using (var modifier = new BlittableMetadataModifier(context))
             {
                 while (parser.Read() == false)
                     await RefillParserBuffer(stream, buffer, parser);
@@ -162,13 +162,13 @@ namespace Raven.Server.Documents.Handlers
                         cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
                     }
 
-                    var commandData = await ReadSingleCommand(ctx, stream, state, parser, buffer, modifier,default);
+                    var commandData = await ReadSingleCommand(context, stream, state, parser, buffer, modifier,default);
 
                     if (commandData.Type == CommandType.PATCH)
                     {
                         commandData.PatchCommand =
                             new PatchDocumentCommand(
-                                ctx,
+                                context,
                                 commandData.Id,
                                 commandData.ChangeVector,
                                 skipPatchIfChangeVectorMismatch: false,
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         commandData.PatchCommand =
                             new BatchPatchDocumentCommand(
-                                ctx,
+                                context,
                                 commandData.Ids,
                                 skipPatchIfChangeVectorMismatch: false,
                                 (commandData.Patch, commandData.PatchArgs),
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (identities != null)
                 {
-                    await GetIdentitiesValues(ctx,
+                    await GetIdentitiesValues(context,
                         database,
                         serverStore,
                         identities,
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static async Task<bool> IsClusterTransaction(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.ManagedPinnedBuffer buffer, JsonParserState state)
+        private static async Task<bool> IsClusterTransaction(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer, JsonParserState state)
         {
             while (parser.Read() == false)
                 await RefillParserBuffer(stream, buffer, parser);
@@ -284,11 +284,11 @@ namespace Raven.Server.Documents.Handlers
         {
             private readonly Stream _stream;
             private readonly UnmanagedJsonParser _parser;
-            private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
+            private readonly JsonOperationContext.MemoryBuffer _buffer;
             private readonly JsonParserState _state;
             private readonly CancellationToken _token;
 
-            public ReadMany(JsonOperationContext ctx, Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer, CancellationToken token)
+            public ReadMany(JsonOperationContext ctx, Stream stream, JsonOperationContext.MemoryBuffer buffer, CancellationToken token)
             {
                 _stream = stream;
                 _buffer = buffer;
@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.Handlers
             Stream stream,
             JsonParserState state,
             UnmanagedJsonParser parser,
-            JsonOperationContext.ManagedPinnedBuffer buffer,
+            JsonOperationContext.MemoryBuffer buffer,
             BlittableMetadataModifier modifier,
             CancellationToken token)
         {
@@ -708,7 +708,7 @@ namespace Raven.Server.Documents.Handlers
             Stream stream,
             UnmanagedJsonParser parser,
             JsonParserState state,
-            JsonOperationContext.ManagedPinnedBuffer buffer,
+            JsonOperationContext.MemoryBuffer buffer,
             CancellationToken token)
         {
             BlittableJsonReaderArray reader;
@@ -734,7 +734,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private static async Task<BlittableJsonReaderObject> ReadJsonObject(JsonOperationContext ctx, Stream stream, string id, UnmanagedJsonParser parser,
-            JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer, IBlittableDocumentModifier modifier, CancellationToken token)
+            JsonParserState state, JsonOperationContext.MemoryBuffer buffer, IBlittableDocumentModifier modifier, CancellationToken token)
         {
             if (state.CurrentTokenType == JsonParserToken.Null)
                 return null;
@@ -1099,11 +1099,11 @@ namespace Raven.Server.Documents.Handlers
             throw new InvalidOperationException("Expected " + jsonParserToken + " , but got " + state.CurrentTokenType);
         }
 
-        private static async Task RefillParserBuffer(Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer, UnmanagedJsonParser parser, CancellationToken token = default)
+        private static async Task RefillParserBuffer(Stream stream, JsonOperationContext.MemoryBuffer buffer, UnmanagedJsonParser parser, CancellationToken token = default)
         {
             // Although we using here WithCancellation and passing the token,
             // the stream will stay open even after the cancellation until the entire server will be disposed.
-            var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count, token).WithCancellation(token);
+            var read = await stream.ReadAsync(buffer.Memory, token);
             if (read == 0)
                 ThrowUnexpectedEndOfStream();
             parser.SetBuffer(buffer, 0, read);

@@ -119,7 +119,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
-            using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
             using (var peepingTomStream = new PeepingTomStream(stream, context))
             {
                 if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
@@ -154,7 +154,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             }
         }
 
-        private static IEnumerable<GetResponse> ReadResponses(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private static IEnumerable<GetResponse> ReadResponses(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
         {
             if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
                 ThrowInvalidJsonResponse(peepingTomStream);
@@ -174,7 +174,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             }
         }
 
-        private static unsafe GetResponse ReadResponse(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private static unsafe GetResponse ReadResponse(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
         {
             if (state.CurrentTokenType != JsonParserToken.StartObject)
                 ThrowInvalidJsonResponse(peepingTomStream);

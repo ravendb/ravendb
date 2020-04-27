@@ -247,7 +247,7 @@ namespace Raven.Embedded
 
             process.Exited += (sender, e) => ServerProcessExited?.Invoke(sender, new ServerProcessExitedEventArgs());
 
-            bool domainBind;
+            bool domainBind = false;
 
 #if NETSTANDARD2_0
             AssemblyLoadContext.Default.Unloading += c =>

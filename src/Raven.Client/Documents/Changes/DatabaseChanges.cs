@@ -596,7 +596,7 @@ namespace Raven.Client.Documents.Changes
                     var state = new JsonParserState();
 
                     using (var stream = new WebSocketStream(_client, _cts.Token))
-                    using (context.GetManagedBuffer(out var buffer))
+                    using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
                     using (var parser = new UnmanagedJsonParser(context, state, "changes/receive"))
                     using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
                     using (var peepingTomStream = new PeepingTomStream(stream, context))

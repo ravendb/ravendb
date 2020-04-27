@@ -454,12 +454,12 @@ namespace Raven.Server.Routing
             if (context.Response.Headers.TryGetValue("Connection", out Microsoft.Extensions.Primitives.StringValues value) && value == "close")
                 return; // don't need to drain it, the connection will close
 
-            using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+            using (ctx.GetMemoryBuffer(out var buffer))
             {
                 var requestBody = context.Request.Body;
                 while (true)
                 {
-                    var read = requestBody.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
+                    var read = requestBody.Read(buffer.Memory.Span);
                     if (read == 0)
                         break;
                 }

@@ -19,7 +19,8 @@ namespace Raven.Server.Rachis.Remote
         private string _destTag;
         private string _src;
         private readonly Stream _stream;
-        private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
+        private readonly JsonOperationContext.MemoryBuffer _buffer;
+        private readonly IDisposable _releaseBuffer;
         private Logger _log;
         private readonly Action _disconnect;
         private readonly DisposeLock _disposerLock = new DisposeLock(nameof(RemoteConnection));
@@ -40,7 +41,7 @@ namespace Raven.Server.Rachis.Remote
             _src = src;
             _stream = stream;
             _disconnect = disconnect;
-            _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
+            _releaseBuffer = JsonOperationContext.MemoryBuffer.ShortTermSingleUse(out _buffer);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{src} > {dest}");
             RegisterConnection(dest, term, caller);
@@ -398,8 +399,7 @@ namespace Raven.Server.Rachis.Remote
             {
                 RemoteConnectionsList.TryRemove(_info);
                 _stream?.Dispose();
-                if (_buffer is IDisposable s)
-                    s.Dispose();
+                _releaseBuffer?.Dispose();
             }
         }
 

@@ -217,7 +217,6 @@ namespace Raven.Server.ServerWide.Maintenance
                         using (_cts.Token.Register(tcpClient.Dispose))
                         using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
                         using (var timeoutEvent = new TimeoutEvent(receiveFromWorkerTimeout, $"Timeout event for: {_name}", singleShot: false))
-                        using (context.GetManagedBuffer(out var readBuffer))
                         {
                             timeoutEvent.Start(OnTimeout);
                             var unchangedReports = new List<DatabaseStatusReport>();
@@ -230,7 +229,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 try
                                 {
                                     // even if there is a timeout event, we will keep waiting on the same connection until the TCP timeout occurs.
-                                    rawReport = context.ParseToMemory(stream, _readStatusUpdateDebugString, BlittableJsonDocumentBuilder.UsageMode.None, readBuffer);
+                                    rawReport = context.ReadForMemory(stream, _readStatusUpdateDebugString);
                                     timeoutEvent.Defer(_parent._leaderClusterTag);
                                 }
                                 catch (Exception e)

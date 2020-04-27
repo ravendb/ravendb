@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Replication
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
-            JsonOperationContext.ManagedPinnedBuffer bufferToCopy,
+            JsonOperationContext.MemoryBuffer bufferToCopy,
             string pullReplicationName)
         {
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
@@ -473,8 +473,8 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 ReplicatedItems = null;
+                }
             }
-        }
 
         private void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
         {
@@ -506,7 +506,7 @@ namespace Raven.Server.Documents.Replication
 
                         ReadItemsFromSource(replicatedItemsCount, documentsContext, dataForReplicationCommand, reader, networkStats);
                         ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand, reader, networkStats);
-                    }
+                        }
 
                     if (_log.IsInfoEnabled)
                     {
@@ -637,9 +637,9 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpConnectionOptions _connectionOptions;
         private readonly ConflictManager _conflictManager;
         private IDisposable _connectionOptionsDisposable;
-        private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
+        private (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
-        
+
         private void ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context, DataForReplicationCommand data, Reader reader, IncomingReplicationStatsScope stats)
         {
             if (data.ReplicatedItems == null)
@@ -653,11 +653,11 @@ namespace Raven.Server.Documents.Replication
                 item.ReadChangeVectorAndMarker();
                 item.Read(context, stats);
                 data.ReplicatedItems[i] = item;
-            }
-        }
+                    }
+                }
 
         public unsafe class IncomingReplicationAllocator : IDisposable
-        {
+                    {
             private readonly DocumentsOperationContext _context;
             private readonly long _maxSizeForContextUseInBytes;
             private readonly long _minSizeToAllocateNonContextUseInBytes;
@@ -773,8 +773,8 @@ namespace Raven.Server.Documents.Replication
                 using (stats.For(ReplicationOperation.Incoming.AttachmentRead))
                 {
                     attachment.ReadStream(context, _attachmentStreamsTempFile);
-                    replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
-                }
+                replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
+            }
             }
 
             dataForReplicationCommand.ReplicatedAttachmentStreams = replicatedAttachmentStreams;
@@ -975,7 +975,7 @@ namespace Raven.Server.Documents.Replication
                         }
 
                         operationsCount++;
-                        var rcvdChangeVector = item.ChangeVector;
+                            var rcvdChangeVector = item.ChangeVector;
                         context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
 
                         TimeSeriesStorage tss;
@@ -983,7 +983,7 @@ namespace Raven.Server.Documents.Replication
                         LazyStringValue name;
 
                         switch (item)
-                        {
+                            {
                             case AttachmentReplicationItem attachment:
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name,out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
@@ -1021,7 +1021,7 @@ namespace Raven.Server.Documents.Replication
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out docId, out name);
 
                                 var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
-                                {
+                            {
                                     DocumentId = docId,
                                     Collection = deletedRange.Collection,
                                     Name = name,
@@ -1036,11 +1036,11 @@ namespace Raven.Server.Documents.Replication
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out var lowerName, out var baseline);
 
                                 if (tss.TryAppendEntireSegment(context, segment, docId, lowerName, baseline))
-                                {
+                            {
                                     var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
                                     continue;
-                                }
+                            }
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
                                 var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, lowerName, values, segment.ChangeVector);
@@ -1072,8 +1072,8 @@ namespace Raven.Server.Documents.Replication
                                             "Incoming Replication",
                                             $"Detected missing attachments for document '{doc.Id}'. Existing attachments in metadata:" +
                                             $" ({string.Join(',', GetAttachmentsNameAndHash(document).Select(x => $"name: {x.Name}, hash: {x.Hash}"))}).",
-                                            AlertType.ReplicationMissingAttachments,
-                                            NotificationSeverity.Warning));
+                                                AlertType.ReplicationMissingAttachments,
+                                                NotificationSeverity.Warning));
                                     }
                                 }
 
@@ -1189,8 +1189,8 @@ namespace Raven.Server.Documents.Replication
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException(item.GetType().ToString());
+                            }
                         }
-                    }
 
                     Debug.Assert(_replicationInfo.ReplicatedAttachmentStreams == null ||
                                  _replicationInfo.ReplicatedAttachmentStreams.Count == 0,
@@ -1281,8 +1281,8 @@ namespace Raven.Server.Documents.Replication
                     ReplicatedAttachmentStreams = replicatedAttachmentStreams
                 };
             }
+            }
         }
-    }
 
     internal class MergedUpdateDatabaseChangeVectorCommandDto : TransactionOperationsMerger.IReplayableCommandDto<IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand>
     {
@@ -1344,12 +1344,12 @@ namespace Raven.Server.Documents.Replication
         private AttachmentReplicationItem CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
         {
             var attachmentStream = new AttachmentReplicationItem
-            {
+    {
                 Type = ReplicationBatchItem.ReplicationItemType.AttachmentStream,
                 Stream = arg.Value
             };
             attachmentStream.ToDispose(Slice.From(context.Allocator, arg.Key, ByteStringType.Immutable, out attachmentStream.Base64Hash));
             return attachmentStream;
+            }
+            }
         }
-    }
-}

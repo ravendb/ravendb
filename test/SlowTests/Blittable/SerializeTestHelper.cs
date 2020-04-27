@@ -26,7 +26,7 @@ namespace SlowTests.Blittable
                 var parser = new UnmanagedJsonParser(context, state, "some tag");
                 var peepingTomStream = new PeepingTomStream(stream, context);
 
-                using (context.GetManagedBuffer(out var buffer))
+                using (context.GetMemoryBuffer(out var buffer))
                 using (var builder =
                     new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "some tag", parser, state))
                 {
