@@ -725,7 +725,7 @@ namespace Raven.Server.Documents.Queries.Results
                 query.DeclaredFunctions.TryGetValue(methodName, out var func) &&
                 func.Type == DeclaredFunction.FunctionType.TimeSeries)
             {
-                _timeSeriesRetriever ??= new TimeSeriesRetriever(_database, _includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
+                _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
                 return _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args);
             }
 
