@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class UpdateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>, IRaftCommand
+    internal class UpdateSubscriptionCommand : RavenCommand<UpdateSubscriptionResult>, IRaftCommand
     {
         private readonly SubscriptionUpdateOptions _options;
 
@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Commands
         {
             if (fromCache)
             {
-                Result = new CreateSubscriptionResult
+                Result = new UpdateSubscriptionResult
                 {
                     Name = _options.Name
                 };
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Commands
             if (response == null)
                 ThrowInvalidResponse();
 
-            Result = JsonDeserializationClient.CreateSubscriptionResult(response);
+            Result = JsonDeserializationClient.UpdateSubscriptionResult(response);
         }
 
         public override bool IsReadRequest => false;

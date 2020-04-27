@@ -112,6 +112,8 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, CreateSubscriptionResult> CreateSubscriptionResult = GenerateJsonDeserializationRoutine<CreateSubscriptionResult>();
 
+        public static readonly Func<BlittableJsonReaderObject, UpdateSubscriptionResult> UpdateSubscriptionResult = GenerateJsonDeserializationRoutine<UpdateSubscriptionResult>();
+
         public static readonly Func<BlittableJsonReaderObject, GetSubscriptionsResult> GetSubscriptionsResult = GenerateJsonDeserializationRoutine<GetSubscriptionsResult>();
 
         public static readonly Func<BlittableJsonReaderObject, TermsQueryResult> TermsQueryResult = GenerateJsonDeserializationRoutine<TermsQueryResult>();
