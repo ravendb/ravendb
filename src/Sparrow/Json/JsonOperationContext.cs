@@ -764,11 +764,8 @@ namespace Sparrow.Json
 
         private BlittableJsonReaderObject ParseToMemory(Stream stream, string debugTag, BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
-            ManagedPinnedBuffer bytes;
-            using (GetManagedBuffer(out bytes))
-            {
+            using (GetManagedBuffer(out var bytes))
                 return ParseToMemory(stream, debugTag, mode, bytes, modifier);
-            }
         }
 
         public BlittableJsonReaderObject ParseToMemory(Stream stream, string debugTag,
@@ -921,10 +918,10 @@ namespace Sparrow.Json
                 ThrowObjectDisposed();
         }
 
-        private ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, CancellationToken? token = null)
+        private async ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, CancellationToken? token = null)
         {
             using (GetManagedBuffer(out ManagedPinnedBuffer bytes))
-                return ParseToMemoryAsync(stream, documentId, mode, bytes, token);
+                return await ParseToMemoryAsync(stream, documentId, mode, bytes, token).ConfigureAwait(false);
         }
 
         public async ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, ManagedPinnedBuffer bytes,
