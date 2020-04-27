@@ -735,10 +735,7 @@ select out()
                                    + (6 * (2 * 24)); // 6 days of 'By30Minutes'
 
                     Assert.Equal(expected, result.Count);
-
-
                 }
-
             }
         }
 
@@ -794,7 +791,6 @@ select out()
 
                 using (var session = store.OpenSession())
                 {
-
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 declare timeseries out(name) 
 {
@@ -816,10 +812,7 @@ select out('Heartrate')
 
 
                     Assert.Equal(expected, result.Count);
-
-
                 }
-
             }
         }
 

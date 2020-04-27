@@ -612,7 +612,8 @@ namespace Raven.Server.Documents.Queries.AST
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
 
-                _count[i] = (long)_count[i] + values[index + (int)AggregationType.Count].Count;
+                val = values[index + (int)AggregationType.Count];
+                _count[i] = (long)_count[i] + val.Count;
             }
         }
 
