@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Replication
             AsyncManualResetEvent interrupt,
             string debugTag,
             int timeout,
-            JsonOperationContext.ManagedPinnedBuffer buffer,
+            JsonOperationContext.MemoryBuffer buffer,
             CancellationToken token)
         {
             if (_prevCall == null)
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private async Task<Result> ReadNextObject(string debugTag, JsonOperationContext.ManagedPinnedBuffer buffer, CancellationToken token)
+        private async Task<Result> ReadNextObject(string debugTag, JsonOperationContext.MemoryBuffer buffer, CancellationToken token)
         {
             var retCtx = _contextPool.AllocateOperationContext(out DocumentsOperationContext context);
             try

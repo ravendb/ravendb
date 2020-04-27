@@ -42,10 +42,10 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentDatabase _database;
         private readonly Logger _log;
 
-        private JsonOperationContext.ManagedPinnedBuffer _buffer;
-        private JsonOperationContext.ReturnBuffer _returnBuffer;
-        private JsonOperationContext.ManagedPinnedBuffer _writeBuffer;
-        private JsonOperationContext.ReturnBuffer _returnWriteBuffer;
+        private JsonOperationContext.MemoryBuffer _buffer;
+        private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
+        private JsonOperationContext.MemoryBuffer _writeBuffer;
+        private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnWriteBuffer;
         private JsonParserState _state;
         private UnmanagedJsonParser _parser;
         private DatabaseItemType? _currentType;
@@ -69,7 +69,7 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion)
         {
             _result = result;
-            _returnBuffer = _context.GetManagedBuffer(out _buffer);
+            _returnBuffer = _context.GetMemoryBuffer(out _buffer);
             _state = new JsonParserState();
             _parser = new UnmanagedJsonParser(_context, _state, "file");
 
@@ -906,7 +906,7 @@ namespace Raven.Server.Smuggler.Documents
                 var read = _parser.Skip(sizeToRead);
                 if (read.Done == false)
                 {
-                    var read2 = _peepingTomStream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
+                    var read2 = _peepingTomStream.Read(_buffer.Memory.Span);
                     if (read2 == 0)
                         throw new EndOfStreamException("Stream ended without reaching end of stream content");
 
@@ -1462,7 +1462,7 @@ namespace Raven.Server.Smuggler.Documents
                 throw new ArgumentException($"Data of attachment stream is not valid: {data}");
 
             if (_writeBuffer == null)
-                _returnWriteBuffer = _context.GetManagedBuffer(out _writeBuffer);
+                _returnWriteBuffer = _context.GetMemoryBuffer(out _writeBuffer);
 
             attachment.Data = data;
             attachment.Base64HashDispose = Slice.External(context.Allocator, hash, out attachment.Base64Hash);
@@ -1472,10 +1472,10 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var sizeToRead = (int)Math.Min(_writeBuffer.Length, size);
                 var read = _parser.Copy(_writeBuffer.Pointer, sizeToRead);
-                attachment.Stream.Write(_writeBuffer.Buffer.Array, _writeBuffer.Buffer.Offset, read.BytesRead);
+                attachment.Stream.Write(_writeBuffer.Memory.Slice(0, read.BytesRead).Span);
                 if (read.Done == false)
                 {
-                    var read2 = _peepingTomStream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
+                    var read2 = _peepingTomStream.Read(_buffer.Memory.Span);
                     if (read2 == 0)
                         throw new EndOfStreamException("Stream ended without reaching end of stream content");
 

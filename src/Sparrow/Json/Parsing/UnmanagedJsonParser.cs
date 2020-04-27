@@ -9,10 +9,12 @@ namespace Sparrow.Json.Parsing
     public unsafe class UnmanagedJsonParser : IJsonParser
     {
         private static readonly byte[] NaN = { (byte)'N', (byte)'a', (byte)'N' };
+
         private static readonly byte[] PositiveInfinity =
         {
             (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y'
         };
+
         private static readonly byte[] NegativeInfinity =
         {
             (byte)'-', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y'
@@ -93,15 +95,19 @@ namespace Sparrow.Json.Parsing
             _unmanagedWriteBuffer = ctx.GetStream(JsonOperationContext.InitialStreamSize);
         }
 
-        public void SetBuffer(JsonOperationContext.ManagedPinnedBuffer inputBuffer)
+        public void SetBuffer(JsonOperationContext.MemoryBuffer inputBuffer)
         {
             SetBuffer(inputBuffer.Pointer + inputBuffer.Used, inputBuffer.Valid - inputBuffer.Used);
+            _memoryBuffer = inputBuffer;
         }
 
-        public void SetBuffer(JsonOperationContext.ManagedPinnedBuffer inputBuffer, int offset, int size)
+        public void SetBuffer(JsonOperationContext.MemoryBuffer inputBuffer, int offset, int size)
         {
             SetBuffer(inputBuffer.Pointer + offset, size);
+            _memoryBuffer = inputBuffer;
         }
+
+        private JsonOperationContext.MemoryBuffer _memoryBuffer;
 
         public void SetBuffer(byte* inputBuffer, int size)
         {
@@ -121,7 +127,6 @@ namespace Sparrow.Json.Parsing
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return (int)_pos; }
         }
-
 
         public void NewDocument()
         {
@@ -266,7 +271,6 @@ namespace Sparrow.Json.Parsing
         ReturnFalse:
             _pos = pos;
             return false;
-
 
         ReadContinuation: // PERF: This is a "manual procedure"
             if (state.Continuation != JsonParserTokenContinuation.None) // parse normally
@@ -458,7 +462,7 @@ namespace Sparrow.Json.Parsing
             {
                 case JsonParserTokenContinuation.PartialNegativeInfinity:
                     // here we need to check if we have a negative number or negative
-                    // infinity 
+                    // infinity
                     if (_expectedTokenBufferPosition == 1 &&
                         _inputBuffer[_pos] != (byte)'I')
                     {
@@ -499,7 +503,6 @@ namespace Sparrow.Json.Parsing
                         _state.Continuation = JsonParserTokenContinuation.None;
 
                         return true;
-
                     }
                 case JsonParserTokenContinuation.PartialPreamble:
                     {
@@ -520,7 +523,6 @@ namespace Sparrow.Json.Parsing
                         _state.Continuation = JsonParserTokenContinuation.None;
 
                         return true;
-
                     }
                 case JsonParserTokenContinuation.PartialFalse:
                     {
@@ -531,7 +533,6 @@ namespace Sparrow.Json.Parsing
                         _state.Continuation = JsonParserTokenContinuation.None;
 
                         return true;
-
                     }
                 case JsonParserTokenContinuation.PartialTrue:
                     {
@@ -585,7 +586,6 @@ namespace Sparrow.Json.Parsing
                         _isOverflow = true;
 
                     value = next;
-
 
                     _unmanagedWriteBuffer.WriteByte(b);
 
@@ -826,7 +826,6 @@ namespace Sparrow.Json.Parsing
                     goto ReturnFalse;
             }
 
-
         ReturnTrue:
             return true;
 
@@ -838,7 +837,6 @@ namespace Sparrow.Json.Parsing
         {
             throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
         }
-
 
         private bool ParseUnicodeValue(ref uint pos)
         {
@@ -911,7 +909,6 @@ namespace Sparrow.Json.Parsing
             _unmanagedWriteBuffer.Write(smallBuffer, byteCount);
         }
 
-
         public void ValidateFloat()
         {
             _unmanagedWriteBuffer.EnsureSingleChunk(out var buffer, out var size);
@@ -933,7 +930,6 @@ namespace Sparrow.Json.Parsing
             }
         }
 
-
         protected void ThrowException(string message, Exception inner = null)
         {
             throw new InvalidDataException($"{message} at {GenerateErrorState()}", inner);
@@ -942,12 +938,33 @@ namespace Sparrow.Json.Parsing
         public void Dispose()
         {
             _unmanagedWriteBuffer.Dispose();
+            _memoryBuffer = null;
         }
 
         public string GenerateErrorState()
         {
             var s = Encodings.Utf8.GetString(_inputBuffer, (int)_bufSize);
-            return " (" + _line + "," + _charPos + ") around: " + s;
+
+            var sb = new StringBuilder();
+            sb
+                .Append(" (")
+                .Append(_line)
+                .Append(',')
+                .Append(_charPos)
+                .Append(") around: ")
+                .Append(s);
+
+
+#if DEBUG
+            if (_memoryBuffer != null)
+            {
+                sb
+                    .Append(" . Buffer released: ")
+                    .Append(_memoryBuffer.IsReleased);
+            }
+#endif
+
+            return sb.ToString();
         }
     }
 }

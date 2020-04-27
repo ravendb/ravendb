@@ -22,8 +22,8 @@ namespace Sparrow.Json
         private readonly Stream _stream;
         private int _sizeInBytes;
         public int Used;
-        private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
-        private JsonOperationContext.ReturnBuffer _returnBuffer;
+        private readonly JsonOperationContext.MemoryBuffer _buffer;
+        private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
         public int SizeInBytes => _sizeInBytes;
 
         public UnmanagedStreamBuffer(JsonOperationContext context, Stream stream)
@@ -31,7 +31,7 @@ namespace Sparrow.Json
             _stream = stream;
             _sizeInBytes = 0;
             Used = 0;
-            _returnBuffer = context.GetManagedBuffer(out _buffer);
+            _returnBuffer = context.GetMemoryBuffer(out _buffer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -70,7 +70,7 @@ namespace Sparrow.Json
             {
                 if (Used == _buffer.Length)
                 {
-                    _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
+                    _stream.Write(_buffer.Memory.Span.Slice(0, Used));
                     Used = 0;
                 }
 
@@ -93,7 +93,7 @@ namespace Sparrow.Json
         {
             if (Used == _buffer.Length)
             {
-                _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
+                _stream.Write(_buffer.Memory.Span.Slice(0, Used));
                 Used = 0;
             }
             _sizeInBytes++;
@@ -116,7 +116,7 @@ namespace Sparrow.Json
             using (_returnBuffer)
             {
                 if (Used != 0)
-                    _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
+                    _stream.Write(_buffer.Memory.Span.Slice(0, Used));
                 Used = 0;
             }            
         }

@@ -259,16 +259,16 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.Headers["Attachment-Size"] = attachment.Stream.Length.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
 
-                using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+                using (context.GetMemoryBuffer(out var buffer))
                 using (var stream = attachment.Stream)
                 {
                     var responseStream = ResponseBodyStream();
-                    var count = stream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length); // can never wait, so no need for async
+                    var count = stream.Read(buffer.Memory.Span); // can never wait, so no need for async
                     while (count > 0)
                     {
-                        await responseStream.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, count, Database.DatabaseShutdown);
+                        await responseStream.WriteAsync(buffer.Memory.Slice(0, count), Database.DatabaseShutdown);
                         // we know that this can never wait, so no need to do async i/o here
-                        count = stream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
+                        count = stream.Read(buffer.Memory.Span);
                     }
                 }
             }

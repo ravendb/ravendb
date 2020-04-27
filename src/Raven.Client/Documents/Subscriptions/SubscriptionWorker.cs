@@ -109,7 +109,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (Exception)
                     {
-                        // just need to wait for it to end
+                        // just need to wait for it to end                        
                     }
                 }
 
@@ -186,7 +186,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (Exception)
                     {
-                        // if we failed to talk to a node, we'll forget about it and let the topology to
+                        // if we failed to talk to a node, we'll forget about it and let the topology to 
                         // redirect us to the current node
                         _redirectNode = null;
                         throw;
@@ -390,101 +390,102 @@ namespace Raven.Client.Documents.Subscriptions
             try
             {
                 _processingCts.Token.ThrowIfCancellationRequested();
-                var contextPool = _store.GetRequestExecutor(_dbName).ContextPool;
-                using (var buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
-                {
-                    using (var tcpStream = await ConnectToServer(_processingCts.Token).ConfigureAwait(false))
-                    {
-                        _processingCts.Token.ThrowIfCancellationRequested();
-                        var tcpStreamCopy = tcpStream;
-                        using (contextPool.AllocateOperationContext(out JsonOperationContext handshakeContext))
-                        {
-                            var connectionStatus = await ReadNextObject(handshakeContext, tcpStreamCopy, buffer).ConfigureAwait(false);
-                            if (_processingCts.IsCancellationRequested)
-                                return;
 
-                            if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus ||
-                                connectionStatus.Status != SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
-                                AssertConnectionState(connectionStatus);
-                        }
-                        _lastConnectionFailure = null;
+                var contextPool = _store.GetRequestExecutor(_dbName).ContextPool;
+
+                using (contextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (context.GetMemoryBuffer(out var buffer))
+                using (var tcpStream = await ConnectToServer(_processingCts.Token).ConfigureAwait(false))
+                {
+                    _processingCts.Token.ThrowIfCancellationRequested();
+                    var tcpStreamCopy = tcpStream;
+                    using (contextPool.AllocateOperationContext(out JsonOperationContext handshakeContext))
+                    {
+                        var connectionStatus = await ReadNextObject(handshakeContext, tcpStreamCopy, buffer).ConfigureAwait(false);
                         if (_processingCts.IsCancellationRequested)
                             return;
 
-                        Task notifiedSubscriber = Task.CompletedTask;
+                        if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus ||
+                            connectionStatus.Status != SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
+                            AssertConnectionState(connectionStatus);
+                    }
+                    _lastConnectionFailure = null;
+                    if (_processingCts.IsCancellationRequested)
+                        return;
 
-                        var batch = new SubscriptionBatch<T>(_subscriptionLocalRequestExecutor, _store, _dbName, _logger);
+                    Task notifiedSubscriber = Task.CompletedTask;
 
-                        while (_processingCts.IsCancellationRequested == false)
+                    var batch = new SubscriptionBatch<T>(_subscriptionLocalRequestExecutor, _store, _dbName, _logger);
+
+                    while (_processingCts.IsCancellationRequested == false)
+                    {
+                        // start the read from the server
+                        var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer, batch);
+                        try
                         {
-                            // start the read from the server
-                            var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer, batch);
+                            // and then wait for the subscriber to complete
+                            await notifiedSubscriber.ConfigureAwait(false);
+                        }
+                        catch (Exception)
+                        {
+                            // if the subscriber errored, we shut down
                             try
                             {
-                                // and then wait for the subscriber to complete
-                                await notifiedSubscriber.ConfigureAwait(false);
+                                CloseTcpClient();
+                                using ((await readFromServer.ConfigureAwait(false)).ReturnContext)
+                                {
+                                }
                             }
                             catch (Exception)
                             {
-                                // if the subscriber errored, we shut down
-                                try
-                                {
-                                    CloseTcpClient();
-                                    using ((await readFromServer.ConfigureAwait(false)).ReturnContext)
-                                    {
-                                    }
-                                }
-                                catch (Exception)
-                                {
-                                    // nothing to be done here
-                                }
-                                throw;
+                                // nothing to be done here
                             }
-                            var incomingBatch = await readFromServer.ConfigureAwait(false);
+                            throw;
+                        }
+                        var incomingBatch = await readFromServer.ConfigureAwait(false);
 
-                            _processingCts.Token.ThrowIfCancellationRequested();
+                        _processingCts.Token.ThrowIfCancellationRequested();
 
-                            var lastReceivedChangeVector = batch.Initialize(incomingBatch);
+                        var lastReceivedChangeVector = batch.Initialize(incomingBatch);
 
-                            notifiedSubscriber = Task.Run(async () =>
+                        notifiedSubscriber = Task.Run(async () =>
+                        {
+                            // ReSharper disable once AccessToDisposedClosure
+                            using (incomingBatch.ReturnContext)
                             {
-                                // ReSharper disable once AccessToDisposedClosure
-                                using (incomingBatch.ReturnContext)
-                                {
-                                    try
-                                    {
-                                        if (_subscriber.Async != null)
-                                            await _subscriber.Async(batch).ConfigureAwait(false);
-                                        else
-                                            _subscriber.Sync(batch);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        if (_logger.IsInfoEnabled)
-                                        {
-                                            _logger.Info(
-                                                $"Subscription '{_options.SubscriptionName}'. Subscriber threw an exception on document batch", ex);
-                                        }
-
-                                        if (_options.IgnoreSubscriberErrors == false)
-                                            throw new SubscriberErrorException($"Subscriber threw an exception in subscription '{_options.SubscriptionName}'", ex);
-                                    }
-                                }
-
                                 try
                                 {
-                                    if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
-                                    {
-                                        SendAck(lastReceivedChangeVector, tcpStreamCopy);
-                                    }
+                                    if (_subscriber.Async != null)
+                                        await _subscriber.Async(batch).ConfigureAwait(false);
+                                    else
+                                        _subscriber.Sync(batch);
                                 }
-                                catch (ObjectDisposedException)
+                                catch (Exception ex)
                                 {
-                                    //if this happens, this means we are disposing, so don't care..
-                                    //(this piece of code happens asynchronously to external using(tcpStream) statement)
+                                    if (_logger.IsInfoEnabled)
+                                    {
+                                        _logger.Info(
+                                            $"Subscription '{_options.SubscriptionName}'. Subscriber threw an exception on document batch", ex);
+                                    }
+
+                                    if (_options.IgnoreSubscriberErrors == false)
+                                        throw new SubscriberErrorException($"Subscriber threw an exception in subscription '{_options.SubscriptionName}'", ex);
                                 }
-                            });
-                        }
+                            }
+
+                            try
+                            {
+                                if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
+                                {
+                                    SendAck(lastReceivedChangeVector, tcpStreamCopy);
+                                }
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                //if this happens, this means we are disposing, so don't care..
+                                //(this piece of code happens asynchronously to external using(tcpStream) statement)
+                            }
+                        });
                     }
                 }
             }
@@ -499,7 +500,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.ManagedPinnedBuffer buffer, SubscriptionBatch<T> batch)
+        private async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.MemoryBuffer buffer, SubscriptionBatch<T> batch)
         {
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
             var includes = new List<BlittableJsonReaderObject>();
@@ -567,7 +568,7 @@ namespace Raven.Client.Documents.Subscriptions
                 $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
         }
 
-        private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonOperationContext context, Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonOperationContext context, Stream stream, JsonOperationContext.MemoryBuffer buffer)
         {
             if (_processingCts.IsCancellationRequested || _tcpClient.Connected == false)
                 return null;
@@ -717,7 +718,7 @@ namespace Raven.Client.Documents.Subscriptions
                     return true;
                 case NodeIsPassiveException e:
                     {
-                        // if we failed to talk to a node, we'll forget about it and let the topology to
+                        // if we failed to talk to a node, we'll forget about it and let the topology to 
                         // redirect us to the current node
                         _redirectNode = null;
                         return true;

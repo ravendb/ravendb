@@ -1806,8 +1806,8 @@ namespace Raven.Server
 
                     (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
 
-                    using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                    using (ctx.GetManagedBuffer(out var buffer))
+                    using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
                     {
                         var tcp = new TcpConnectionOptions
                         {
@@ -1871,7 +1871,7 @@ namespace Raven.Server
 
         private async Task<TcpConnectionHeaderMessage> NegotiateOperationVersion(
             Stream stream,
-            JsonOperationContext.ManagedPinnedBuffer buffer,
+            JsonOperationContext.MemoryBuffer buffer,
             TcpClient tcpClient,
             Logger tcpAuditLog,
             X509Certificate2 cert,
@@ -2142,7 +2142,7 @@ namespace Raven.Server
             }
         }
 
-        private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, JsonOperationContext.MemoryBuffer buffer)
         {
             tcp.Operation = header.Operation;
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
@@ -2191,7 +2191,7 @@ namespace Raven.Server
             return false;
         }
 
-        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, JsonOperationContext.ManagedPinnedBuffer bufferToCopy)
+        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, JsonOperationContext.MemoryBuffer bufferToCopy)
         {
             var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
             if (databaseLoadingTask == null)

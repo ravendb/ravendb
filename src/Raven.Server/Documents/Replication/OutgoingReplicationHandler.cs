@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly AsyncManualResetEvent _connectionDisposed = new AsyncManualResetEvent();
         public bool IsConnectionDisposed => _connectionDisposed.IsSet;
-        private JsonOperationContext.ManagedPinnedBuffer _buffer;
+        private JsonOperationContext.MemoryBuffer _buffer;
 
         internal CancellationToken CancellationToken => _cts.Token;
 
@@ -153,7 +153,8 @@ namespace Raven.Server.Documents.Replication
 
             using (_stream)
             using (_interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
-            using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (context.GetMemoryBuffer(out _buffer))
             {
                 InitialHandshake();
                 Replicate();
@@ -174,47 +175,48 @@ namespace Raven.Server.Documents.Replication
                     if (rawRecord == null)
                         throw new InvalidOperationException($"The database record for {_parent.Database.Name} does not exist?!");
 
-                    if (rawRecord.IsEncrypted&& Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                    if (rawRecord.IsEncrypted && Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                         throw new InvalidOperationException(
                             $"{_parent.Database.Name} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
                 }
-            }
 
-            var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
-            task.Wait(CancellationToken);
-            TcpClient tcpClient;
-            string url;
-            (tcpClient, url) = task.Result;
-            using (Interlocked.Exchange(ref _tcpClient, tcpClient))
-            {
-                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy, _parent._server.Engine.TcpConnectionTimeout);
-                wrapSsl.Wait(CancellationToken);
 
-                _stream = wrapSsl.Result;
-                _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream);
-
-                using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
+                var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
+                task.Wait(CancellationToken);
+                TcpClient tcpClient;
+                string url;
+                (tcpClient, url) = task.Result;
+                using (Interlocked.Exchange(ref _tcpClient, tcpClient))
                 {
-                    var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
-                    if (supportedFeatures.Replication.PullReplication)
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy, _parent._server.Engine.TcpConnectionTimeout);
+                    wrapSsl.Wait(CancellationToken);
+
+                    _stream = wrapSsl.Result;
+                    _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream);
+
+                    using (context.GetMemoryBuffer(out _buffer))
                     {
-                        SendPreliminaryData();
-                        if (Destination is PullReplicationAsSink)
+                        var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
+                        if (supportedFeatures.Replication.PullReplication)
                         {
-                            InitiatePullReplicationAsSink(supportedFeatures);
-                            return;
+                            SendPreliminaryData();
+                            if (Destination is PullReplicationAsSink)
+                            {
+                                InitiatePullReplicationAsSink(supportedFeatures);
+                                return;
+                            }
                         }
-                    }
 
-                    AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Will replicate to {Destination.FromString()} via {url}");
+                        AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Will replicate to {Destination.FromString()} via {url}");
 
-                    using (_stream) // note that _stream is being disposed by the interruptible read
-                    using (_interruptibleRead)
-                    {
-                        InitialHandshake();
-                        Replicate();
+                        using (_stream) // note that _stream is being disposed by the interruptible read
+                        using (_interruptibleRead)
+                        {
+                            InitialHandshake();
+                            Replicate();
+                        }
                     }
                 }
             }
@@ -258,7 +260,7 @@ namespace Raven.Server.Documents.Replication
             };
 
             using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
-            using (ctx.GetManagedBuffer(out _buffer))
+            using (ctx.GetMemoryBuffer(out _buffer))
             {
                 _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink);
             }

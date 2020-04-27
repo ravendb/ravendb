@@ -11,33 +11,33 @@ namespace Sparrow
     {
         public const int BufferWindowSize = 4096;
 
-        private readonly JsonOperationContext.ManagedPinnedBuffer _bufferWindow;
+        private readonly JsonOperationContext.MemoryBuffer _bufferWindow;
         private int _pos;
         private readonly Stream _stream;
         private bool _firstWindow = true;
-        private JsonOperationContext.ReturnBuffer _returnedBuffer;
+        private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnedBuffer;
 
         public PeepingTomStream(Stream stream, JsonOperationContext context)
         {
             _stream = stream;
-            _returnedBuffer = context.GetManagedBuffer(out _bufferWindow);
+            _returnedBuffer = context.GetMemoryBuffer(out _bufferWindow);
         }
 
-        public int Read(byte[] buffer, int offset, int count)
+        public int Read(Span<byte> buffer)
         {
-            var read = _stream.Read(buffer, offset, count);
-            return ReadInternal(buffer, offset, read);
+            var read = _stream.Read(buffer);
+            return ReadInternal(buffer, read);
         }
 
-        private unsafe int ReadInternal(byte[] buffer, int offset, int read)
-        { 
+        private unsafe int ReadInternal(Span<byte> buffer, int read)
+        {
             var totalToRead = read < BufferWindowSize ? read : BufferWindowSize;
 
             var pDest = _bufferWindow.Pointer;
             fixed (byte* pSrc = buffer)
             {
                 var pBufferWindowStart = pDest + _pos;
-                var pBufferStart = pSrc + offset + read - totalToRead;
+                var pBufferStart = pSrc + read - totalToRead;
 
                 _pos += totalToRead;
 
@@ -66,8 +66,8 @@ namespace Sparrow
             // return the last 4K starting at the last position in the array,
             // and continue to copy from the start of the array till the last position.
             // however if the buffer wasn't overrunning its tail (_firstWindow == true) then
-            // we copy from the start to last position only. 
-            int start,  size;
+            // we copy from the start to last position only.
+            int start, size;
             if (_firstWindow)
             {
                 start = 0;
@@ -85,13 +85,13 @@ namespace Sparrow
 
             for (var p = _bufferWindow.Pointer; (*(p + start) & 0x80) != 0; p++)
             {
-                start++;                
+                start++;
                 size--;
-                
+
                 // requested size doesn't contains utf8 character
                 if (size == 0)
                     return new byte[0];
-                
+
                 // looped through the entire buffer without utf8 character found
                 if (start == originalStart)
                     return new byte[0];
@@ -106,16 +106,16 @@ namespace Sparrow
             fixed (byte* pDest = buf)
             {
                 var firstSize = size - start;
-                Memory.Copy(pDest, pSrc+ start, firstSize);
+                Memory.Copy(pDest, pSrc + start, firstSize);
                 Memory.Copy(pDest + firstSize, pSrc, start);
                 return buf;
             }
         }
 
-        public async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken token = default)
+        public async Task<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default)
         {
-            var read = await _stream.ReadAsync(buffer, offset, count, token).ConfigureAwait(false);
-            var rc = ReadInternal(buffer, offset, read);
+            var read = await _stream.ReadAsync(buffer, token).ConfigureAwait(false);
+            var rc = ReadInternal(buffer.Span, read);
 
             return rc;
         }
