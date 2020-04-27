@@ -21,5 +21,6 @@
 
     internal interface IDatabaseSmugglerImportOptions : IDatabaseSmugglerOptions
     {
+        bool SkipRevisionCreation { get; set; }
     }
 }
