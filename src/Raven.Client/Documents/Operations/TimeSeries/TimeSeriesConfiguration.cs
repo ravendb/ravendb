@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesConfiguration : IDynamicJson
     {
-        internal const char TimeSeriesRollupSeparator = '_';
+        internal const char TimeSeriesRollupSeparator = '@';
         public Dictionary<string, TimeSeriesCollectionConfiguration> Collections { get; set; }
 
         public TimeSpan PolicyCheckFrequency { get; set; } = TimeSpan.FromMinutes(10);
