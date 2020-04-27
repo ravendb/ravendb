@@ -27,12 +27,17 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public enum AggregationType
     {
-        First,
-        Last,
-        Min,
-        Max,
-        Sum,
-        Count,
-        Average
+        // The order here matters.
+        // When executing an aggregation query over rolled-up series,
+        // we take just the appropriate aggregated value from each entry, 
+        // according to the aggregation's position in this enum (e.g. AggregationType.Min => take entry.Values[2])
+
+        First = 0,
+        Last = 1,
+        Min = 2,
+        Max = 3,
+        Sum = 4,
+        Count = 5,
+        Average = 6
     }
 }

@@ -576,35 +576,34 @@ namespace Raven.Server.Documents.Queries.AST
             for (int i = 0; i < originalNumOfValues; i++)
             {
                 var index = i * 6;
-                StatefulTimestampValue val;
+                var val = values[index + (int)Aggregation];
+
                 switch (Aggregation)
                 {
                     case AggregationType.Min:
-                        val = values[index + (int)AggregationType.Min];
                         if ((long)_count[i] == 0)
                             _values[i] = val.Min;
                         else
                             _values[i] = Math.Min((double)_values[i], val.Min);
                         break;
                     case AggregationType.Max:
-                        val = values[index + (int)AggregationType.Max];
                         if ((long)_count[i] == 0)
                             _values[i] = val.Max;
                         else
                             _values[i] = Math.Max((double)_values[i], val.Max);
                         break;
-                    case AggregationType.Sum:
                     case AggregationType.Average:
                         val = values[index + (int)AggregationType.Sum];
                         _values[i] = (double)_values[i] + val.Sum;
                         break;
+                    case AggregationType.Sum:
+                        _values[i] = (double)_values[i] + val.Sum;
+                        break;
                     case AggregationType.First:
-                        val = values[index + (int)AggregationType.First];
                         if ((long)_count[i] == 0)
                             _values[i] = val.First;
                         break;
                     case AggregationType.Last:
-                        val = values[index + (int)AggregationType.Last];
                         _values[i] = val.Last;
                         break;
                     case AggregationType.Count:

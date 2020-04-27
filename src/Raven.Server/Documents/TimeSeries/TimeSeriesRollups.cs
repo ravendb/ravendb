@@ -552,13 +552,15 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-         public enum AggregationMode
+        public enum AggregationMode
         {
             FromRaw,
             FromAggregated
         }
 
-        private static readonly AggregationType[] Aggregations = {
+        private static readonly AggregationType[] Aggregations = 
+        {
+            // the order here matters, and should match TimeSeriesAggregation.AggregationType
             AggregationType.First,
             AggregationType.Last,
             AggregationType.Min,

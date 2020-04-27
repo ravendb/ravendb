@@ -30,17 +30,11 @@ namespace Raven.Server.Documents.Queries.Results
 
         private Dictionary<string, Document> _loadedDocuments;
 
-        private TimeSeriesStorage _tss;
-
         private DateTime _min, _max;
 
-        private bool _currentIsRaw;
-
-        public TimeSeriesRetriever(DocumentDatabase database, DocumentsOperationContext context, 
-            BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments)
+        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments)
         {
             _context = context;
-            _tss = database.DocumentsStorage.TimeSeriesStorage;
             _queryParameters = queryParameters;
             _loadedDocuments = loadedDocuments;
 
@@ -62,10 +56,11 @@ namespace Raven.Server.Documents.Queries.Results
                 _max = _max.Add(timeSeriesFunction.Offset.Value);
             }
 
+            var collection = GetCollection(documentId);
+            var reader = new MultiReader(_context, documentId, source, collection, _min, _max, timeSeriesFunction.Offset);
+
             long count = 0;
             var array = new DynamicJsonArray();
-            
-            var reader = new MultiReader(this, documentId, source, timeSeriesFunction.Offset);
 
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
@@ -100,7 +95,7 @@ namespace Raven.Server.Documents.Queries.Results
                     count++;
                     for (int i = 0; i < aggStates.Length; i++)
                     {
-                        aggStates[i].Step(cur.Values.Span, _currentIsRaw);
+                        aggStates[i].Step(cur.Values.Span, reader.CurrentIsRaw);
                     }
                 }
             }
@@ -182,7 +177,7 @@ namespace Raven.Server.Documents.Queries.Results
                             var span = it.Segment.Summary.Span;
                             for (int i = 0; i < aggStates.Length; i++)
                             {
-                                aggStates[i].Segment(span, _currentIsRaw);
+                                aggStates[i].Segment(span, reader.CurrentIsRaw);
                             }
 
                             count += span[0].Count;
@@ -602,7 +597,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                             if (index >= singleResult.Values.Length)
                                 return null;
-                            if (_currentIsRaw)
+                            if (reader.CurrentIsRaw)
                                 return singleResult.Values.Span[index];
 
                             // we are working with a rolled-up series
@@ -611,6 +606,8 @@ namespace Raven.Server.Documents.Queries.Results
                             index *= 6;
                             if (index + (int)AggregationType.Count >= singleResult.Values.Length)
                                 return null;
+                            if (singleResult.Values.Span[index + (int)AggregationType.Count] == 0)
+                                return double.NaN;
                             return singleResult.Values.Span[index + (int)AggregationType.Sum] / singleResult.Values.Span[index + (int)AggregationType.Count];
 
                         case "VALUE":
@@ -618,12 +615,14 @@ namespace Raven.Server.Documents.Queries.Results
                         case "value":
                             if (fe.Compound.Count > 1)
                                 throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
-                            if (_currentIsRaw)
+                            if (reader.CurrentIsRaw)
                                 return singleResult.Values.Span[0];
 
                             // rolled-up series
                             if ((int)AggregationType.Count >= singleResult.Values.Length)
                                 return null;
+                            if (singleResult.Values.Span[(int)AggregationType.Count] == 0)
+                                return double.NaN;
                             return singleResult.Values.Span[(int)AggregationType.Sum] / singleResult.Values.Span[(int)AggregationType.Count];
 
                         case "TIMESTAMP":
@@ -705,6 +704,18 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
             }
+        }
+
+        private string GetCollection(string documentId)
+        {
+            _loadedDocuments ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+
+            if (_loadedDocuments.TryGetValue(documentId, out var doc) == false)
+            {
+                _loadedDocuments[documentId] = doc = _context.DocumentDatabase.DocumentsStorage.Get(_context, documentId);
+            }
+
+            return CollectionName.GetCollectionName(doc?.Data);
         }
 
         private static object GetValueFromArgument(DeclaredFunction declaredFunction, object[] args, FieldExpression fe)
@@ -889,39 +900,37 @@ namespace Raven.Server.Documents.Queries.Results
 
         private class MultiReader
         {
-            private readonly TimeSeriesRetriever _retriever;
+            private readonly DocumentsOperationContext _context;
             private TimeSeriesStorage.Reader _reader;
             private readonly string _docId, _source;
             private readonly TimeSpan? _offset;
+            private readonly DateTime _min, _max;
             private SortedList<long, string> _names;
             private int _current;
 
-            public MultiReader(TimeSeriesRetriever retriever, string documentId,
-                string source, TimeSpan? offset)
+            public bool CurrentIsRaw { get; private set; }
+
+            public MultiReader(DocumentsOperationContext context, string documentId,
+                string source, string collection, DateTime min, DateTime max, TimeSpan? offset)
             {
                 if (string.IsNullOrEmpty(source)) 
                     throw new ArgumentNullException(nameof(source));
                 _source = source;
                 _docId = documentId ?? throw new ArgumentNullException(nameof(documentId));
+                _context = context;
+                _min = min;
+                _max = max;
                 _offset = offset;
                 _current = 0;
-                _retriever = retriever;
 
-                Initialize();
+                Initialize(collection);
             }
 
-            private void Initialize()
+            private void Initialize(string collection)
             {
                 _names = new SortedList<long, string>();
-                _retriever._loadedDocuments ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
 
-                if (_retriever._loadedDocuments.TryGetValue(_docId, out var doc) == false)
-                {
-                    _retriever._loadedDocuments[_docId] = doc = _retriever._context.DocumentDatabase.DocumentsStorage.Get(_retriever._context, _docId);
-                }
-
-                var collection = CollectionName.GetCollectionName(doc?.Data);
-                var policyRunner = _retriever._context.DocumentDatabase.TimeSeriesPolicyRunner;
+                var policyRunner = _context.DocumentDatabase.TimeSeriesPolicyRunner;
                 if (policyRunner == null || 
                     policyRunner.Configuration.Collections.TryGetValue(collection, out var config) == false ||
                     config.Disabled || config.Policies.Count == 0)
@@ -936,13 +945,13 @@ namespace Raven.Server.Documents.Queries.Results
                         ? _source
                         : config.Policies[i - 1].GetTimeSeriesName(_source);
 
-                    var stats = _retriever._tss.Stats.GetStats(_retriever._context, _docId, name);
-                    if (stats.End < _retriever._min || stats.Start > _retriever._max || stats.Count == 0)
+                    var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, _docId, name);
+                    if (stats.End < _min || stats.Start > _max || stats.Count == 0)
                         continue;
 
                     _names[stats.Start.Ticks] = name;
 
-                    if (stats.Start.Ticks <= _retriever._min.Ticks)
+                    if (stats.Start.Ticks <= _min.Ticks)
                         break;
                 }
             }
@@ -977,15 +986,15 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 var name = _names.Values[_current];
 
-                _retriever._currentIsRaw = name == _source;
+                CurrentIsRaw = name == _source;
 
-                var from = _reader?._to.AddMilliseconds(1) ?? _retriever._min;
+                var from = _reader?._to.AddMilliseconds(1) ?? _min;
 
                 var to = ++_current > _names.Count - 1 
-                    ? _retriever._max
+                    ? _max
                     : new DateTime(_names.Keys[_current]).AddMilliseconds(-1);
 
-                _reader = new TimeSeriesStorage.Reader(_retriever._context, _docId, name, from, to, _offset);
+                _reader = new TimeSeriesStorage.Reader(_context, _docId, name, from, to, _offset);
             }
         }
     }
