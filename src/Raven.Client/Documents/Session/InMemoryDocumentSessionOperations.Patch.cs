@@ -144,7 +144,9 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public void Patch<T, TKey, TValue>(T entity, Expression<Func<T, IDictionary<TKey, TValue>>> path, Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
+
+        public void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
+            Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
         {
             var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
 
@@ -152,64 +154,82 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("Unknown method");
 
             var patchRequest = new PatchRequest();
+            object key;
             switch (call.Method.Name)
             {
                 case "Add":
-                    object key = default, value = default;
-
-                    if (call.Arguments?.Count == 1)
-                    {
-                        if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out object obj) == false ||
-                            !(obj is KeyValuePair<TKey, TValue> kvp))
-                            throw new InvalidOperationException("Unknown method");
-                        
-                        key = kvp.Key;
-                        value = kvp.Value;
-                    }
-
-                    else if (call.Arguments.Count == 2)
-                    {
-                        if (call.Arguments[0] is ConstantExpression c)
-                            key = c.Value;
-                        else if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out key) == false)
-                            throw new InvalidOperationException("Unknown method");
-
-                        if (call.Arguments[1] is ConstantExpression c2)
-                            value = c2.Value;
-                        else if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[1], out value) == false)
-                            throw new InvalidOperationException("Unknown method");
-                    }
-
+                    object value;
+                    (key, value) = GetKeyAndValue<TKey, TValue>(call);
                     patchRequest.Script = $"this.{pathScript}.{key} = args.val_{_valsCount};";
                     patchRequest.Values[$"val_{_valsCount}"] = value;
-
                     _valsCount++;
-
                     break;
                 case "Remove":
+                    key = GetKey(call);
+                    patchRequest.Script = $"delete this.{pathScript}.{key};";
                     break;
                 default:
                     throw new InvalidOperationException("Unknown method");
             }
 
-            var metadata = GetMetadataFor(entity);
-            var id = metadata.GetString(Constants.Documents.Metadata.Id);
             if (TryMergePatches(id, patchRequest) == false)
             {
                 Defer(new PatchCommandData(id, null, patchRequest, null));
             }
         }
 
-        private static PatchRequest CreatePatchRequest(string pathScript, string adderScript, JavascriptConversionExtensions.CustomMethods extension)
+        private static (object Key, object Value) GetKeyAndValue<TKey, TValue>(MethodCallExpression call)
         {
-            var script = $"this.{pathScript}{adderScript}";
-
-            return new PatchRequest
+            if (call.Arguments.Count == 1)
             {
-                Script = script,
-                Values = extension.Parameters
-            };
+                if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out object obj) == false ||
+                    !(obj is KeyValuePair<TKey, TValue> kvp))
+                    throw new InvalidOperationException("Unexpected type");
+
+                return (kvp.Key, kvp.Value);
+            }
+
+            if (call.Arguments.Count == 2)
+            {
+                object key, value;
+
+                if (call.Arguments[0] is ConstantExpression c)
+                    key = c.Value;
+                else if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out key) == false)
+                    throw new InvalidOperationException("Unknown method");
+
+                if (call.Arguments[1] is ConstantExpression c2)
+                    value = c2.Value;
+                else if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[1], out value) == false)
+                    throw new InvalidOperationException("Unknown method");
+
+                return (key, value);
+            }
+
+            throw new InvalidOperationException("Unknown method");
+
         }
+
+        private static object GetKey(MethodCallExpression call)
+        {
+            if (call.Arguments[0] is ConstantExpression c)
+                return c.Value;
+
+            if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out object obj) == false)
+                throw new InvalidOperationException("Unknown method");
+
+            return obj;
+        }
+
+
+        public void Patch<T, TKey, TValue>(T entity, Expression<Func<T, IDictionary<TKey, TValue>>> path, 
+            Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
+        {
+            var metadata = GetMetadataFor(entity);
+            var id = metadata.GetString(Constants.Documents.Metadata.Id);
+            Patch(id, path, dictionaryAdder);
+        }
+
 
         private static PatchRequest CreatePatchRequest<U>(Expression<Func<JavaScriptArray<U>, object>> arrayAdder, string pathScript, string adderScript, JavascriptConversionExtensions.CustomMethods extension)
         {

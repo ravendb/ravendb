@@ -32,6 +32,8 @@ namespace Raven.Client.Documents.Session
         void Patch<T, TKey, TValue>(T entity, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder);
 
+        void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
+            Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder);
     }
 
     public class JavascriptMethodNameAttribute : Attribute
@@ -82,6 +84,10 @@ namespace Raven.Client.Documents.Session
         }
 
         public JavaScriptDictionary<TKey, TValue> Add(KeyValuePair<TKey, TValue> kvp)
+        {
+            throw new NotSupportedException("Never called");
+        }
+        public JavaScriptDictionary<TKey, TValue> Remove(TKey key)
         {
             throw new NotSupportedException("Never called");
         }
