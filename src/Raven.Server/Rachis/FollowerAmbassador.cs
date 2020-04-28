@@ -192,7 +192,7 @@ namespace Raven.Server.Rachis
 
                                     var stream = connection.Stream;
                                     var disconnect = connection.Disconnect;
-                                    var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, disconnect);
+                                    var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, disconnect, _engine.ContextPool);
                                     Interlocked.Exchange(ref _connection, con);
                                     ClusterTopology topology;
                                     using (context.OpenReadTransaction())
