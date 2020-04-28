@@ -57,7 +57,7 @@ namespace Raven.Server.Documents
             if (rc != 0)
                 throw new InvalidOperationException("Unable to hash attachment: " + rc);
 
-            return Convert.ToBase64String(buffer.Memory.Span.Slice((int)size));
+            return Convert.ToBase64String(buffer.Memory.Span.Slice(0, (int)size));
         }
 
         private static unsafe void PartialComputeHash(JsonOperationContext.MemoryBuffer cryptoState, JsonOperationContext.MemoryBuffer buffer, int bufferRead)
