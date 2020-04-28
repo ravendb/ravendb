@@ -113,17 +113,8 @@ namespace Voron.Data.Tables
                     return false;
 
                 long lastEtag = it.CurrentKey;
-                long total  = etagTree.NumberOfEntries;
 
-                if(total < 16*1024)
-                    return (lastEtag & 1024) == 0;
-                if(total < 64 * 1024)
-                    return (lastEtag & 2048) == 0;
-                if(total < 256*1024)
-                    return (lastEtag & 8192) == 0;
-                if (total < 512 * 1024)
-                    return (lastEtag & 16 * 1024) == 0;
-                return (lastEtag & 32 * 1024) == 0;
+                return (lastEtag & 1024) == 0;
             }
         }
 
@@ -166,6 +157,7 @@ namespace Voron.Data.Tables
                 int used = 0;
                 var totalSize = 0;
                 int totalSkipped = 0;
+            
                 using (var it = etagsTree.Iterate())
                 {
                     if (it.SeekToLast() == false)
