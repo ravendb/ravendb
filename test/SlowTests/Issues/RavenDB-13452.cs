@@ -34,13 +34,11 @@ namespace SlowTests.Issues
         private class Item4
         {
             public Dictionary<string, Item5> Dict5 { get; set; }
-
         }
 
         private class Item5
         {
             public Dictionary<string, string> Values { get; set; }
-
         }
 
         [Fact]
@@ -122,7 +120,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanModifyDictionaryWithPatch_AddWithVariables()
+        public void CanModifyDictionaryWithPatch_Add_WithVariables()
         {
             using (var store = GetDocumentStore())
             {
@@ -186,7 +184,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanModifyDictionaryWithPatch_AddWithComplexNestedPath()
+        public void CanModifyDictionaryWithPatch_Add_WithComplexNestedPath()
         {
             using (var store = GetDocumentStore())
             {
