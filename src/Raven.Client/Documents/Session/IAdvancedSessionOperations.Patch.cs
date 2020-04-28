@@ -29,6 +29,9 @@ namespace Raven.Client.Documents.Session
         void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder);
 
+        void Patch<T, TKey, TValue>(T entity, Expression<Func<T, IDictionary<TKey, TValue>>> path,
+            Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder);
+
     }
 
     public class JavascriptMethodNameAttribute : Attribute
@@ -66,6 +69,19 @@ namespace Raven.Client.Documents.Session
 
         [JavascriptMethodName("filter")]
         public JavaScriptArray<U> RemoveAll(Func<U, bool> predicate)
+        {
+            throw new NotSupportedException("Never called");
+        }
+    }
+
+    public class JavaScriptDictionary<TKey, TValue>
+    {
+        public JavaScriptDictionary<TKey, TValue> Add(TKey key, TValue value)
+        {
+            throw new NotSupportedException("Never called");
+        }
+
+        public JavaScriptDictionary<TKey, TValue> Add(KeyValuePair<TKey, TValue> kvp)
         {
             throw new NotSupportedException("Never called");
         }
