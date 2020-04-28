@@ -137,7 +137,7 @@ namespace Raven.Server.Web.System
                 if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
                     databaseRecord.DocumentsCompression?.Collections?.Length > 0)
                 {
-                    Server.ServerStore.LicenseManager.AssertCanUseDocumentCompression();
+                    Server.ServerStore.LicenseManager.AssertCanUseDocumentsCompression();
                 }
 
                 // the case where an explicit node was requested 
@@ -249,7 +249,7 @@ namespace Raven.Server.Web.System
                     auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
                 
-                if(ServerStore.LicenseManager.GetLicenseStatus().HasDocumentCompression &&
+                if(ServerStore.LicenseManager.GetLicenseStatus().HasDocumentsCompression &&
                    Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental &&
                    databaseRecord.DocumentsCompression == null)
                 {
@@ -264,7 +264,7 @@ namespace Raven.Server.Web.System
                 if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
                     databaseRecord.DocumentsCompression?.Collections?.Length > 0)
                 {
-                    ServerStore.LicenseManager.AssertCanUseDocumentCompression();
+                    ServerStore.LicenseManager.AssertCanUseDocumentsCompression();
                     if (Server.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
                         FeaturesAvailabilityException.Throw("Document Compression");
                 }
@@ -300,7 +300,7 @@ namespace Raven.Server.Web.System
                 if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
                     databaseRecord.DocumentsCompression?.Collections?.Length > 0)
                 {
-                    Server.ServerStore.LicenseManager.AssertCanUseDocumentCompression();
+                    Server.ServerStore.LicenseManager.AssertCanUseDocumentsCompression();
                 }
 
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&

@@ -28,8 +28,8 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Encryption")]
         Encryption,
         
-        [Description("Document Compression")]
-        DocumentCompression,
+        [Description("Documents Compression")]
+        DocumentsCompression,
 
         [Description("External Replication")]
         ExternalReplication,
