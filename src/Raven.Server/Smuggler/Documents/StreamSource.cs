@@ -1472,7 +1472,10 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var sizeToRead = (int)Math.Min(_writeBuffer.Length, size);
                 var read = _parser.Copy(_writeBuffer.Pointer, sizeToRead);
-                attachment.Stream.Write(_writeBuffer.Memory.Slice(0, read.BytesRead).Span);
+
+                if (read.BytesRead > 0)
+                    attachment.Stream.Write(_writeBuffer.Memory.Span.Slice(0, read.BytesRead));
+
                 if (read.Done == false)
                 {
                     var read2 = _peepingTomStream.Read(_buffer.Memory.Span);
