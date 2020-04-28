@@ -266,7 +266,7 @@ namespace Raven.Server.Web.System
                 {
                     ServerStore.LicenseManager.AssertCanUseDocumentsCompression();
                     if (Server.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
-                        FeaturesAvailabilityException.Throw("Document Compression");
+                        FeaturesAvailabilityException.Throw("Documents Compression");
                 }
 
 
