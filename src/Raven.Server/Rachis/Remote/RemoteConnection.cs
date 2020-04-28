@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -21,7 +20,7 @@ namespace Raven.Server.Rachis.Remote
         private string _src;
         private readonly Stream _stream;
         private readonly JsonOperationContext.MemoryBuffer _buffer;
-        private readonly IDisposable _releaseContext;
+        private readonly JsonOperationContext _context;
         private readonly IDisposable _releaseBuffer;
         private Logger _log;
         private readonly Action _disconnect;
@@ -32,19 +31,19 @@ namespace Raven.Server.Rachis.Remote
         public Stream Stream => _stream;
         public string Dest => _destTag;
 
-        public RemoteConnection(string src, long term, Stream stream, Action disconnect, TransactionContextPool contextPool, [CallerMemberName] string caller = null)
-            : this(dest: "?", src, term, stream, disconnect, contextPool, caller)
+        public RemoteConnection(string src, long term, Stream stream, Action disconnect, [CallerMemberName] string caller = null)
+            : this(dest: "?", src, term, stream, disconnect, caller)
         {
         }
 
-        public RemoteConnection(string dest, string src, long term, Stream stream, Action disconnect, TransactionContextPool contextPool, [CallerMemberName] string caller = null)
+        public RemoteConnection(string dest, string src, long term, Stream stream, Action disconnect, [CallerMemberName] string caller = null)
         {
             _destTag = dest;
             _src = src;
             _stream = stream;
             _disconnect = disconnect;
-            _releaseContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
-            _releaseBuffer = context.GetMemoryBuffer(out _buffer);
+            _context = JsonOperationContext.ShortTermSingleUse();
+            _releaseBuffer = _context.GetMemoryBuffer(out _buffer);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{src} > {dest}");
             RegisterConnection(dest, term, caller);
@@ -62,8 +61,6 @@ namespace Raven.Server.Rachis.Remote
         private RemoteConnectionInfo _info;
         private static int _connectionNumber = 0;
         public static ConcurrentSet<RemoteConnectionInfo> RemoteConnectionsList = new ConcurrentSet<RemoteConnectionInfo>();
-
-
 
         public void Send(JsonOperationContext context, RachisHello helloMsg)
         {
@@ -101,7 +98,6 @@ namespace Raven.Server.Rachis.Remote
                 context.Write(writer, msg);
             }
         }
-
 
         public void Send(JsonOperationContext context, RequestVoteResponse rvr)
         {
@@ -154,7 +150,6 @@ namespace Raven.Server.Rachis.Remote
                 [nameof(LogLengthNegotiationResponse.MidpointIndex)] = lln.MidpointIndex,
                 [nameof(LogLengthNegotiationResponse.MidpointTerm)] = lln.MidpointTerm,
                 [nameof(LogLengthNegotiationResponse.CommandsVersion)] = ClusterCommandsVersionManager.MyCommandsVersion
-
             });
         }
 
@@ -355,7 +350,6 @@ namespace Raven.Server.Rachis.Remote
             }
         }
 
-
         public void Send(JsonOperationContext context, AppendEntriesResponse aer)
         {
             if (_log.IsInfoEnabled)
@@ -382,7 +376,6 @@ namespace Raven.Server.Rachis.Remote
             Send(context, msg);
         }
 
-
         public void Dispose()
         {
             _disposeOnce.Dispose();
@@ -403,7 +396,7 @@ namespace Raven.Server.Rachis.Remote
                 RemoteConnectionsList.TryRemove(_info);
                 _stream?.Dispose();
                 _releaseBuffer?.Dispose();
-                _releaseContext?.Dispose();
+                _context?.Dispose();
             }
         }
 
@@ -430,8 +423,6 @@ namespace Raven.Server.Rachis.Remote
         {
             return $"Remote connection (cluster) : {_src} > {_destTag}";
         }
-
-
 
         private void RegisterConnection(string dest, long term, string caller)
         {
@@ -462,7 +453,6 @@ namespace Raven.Server.Rachis.Remote
                     json.TryGet("Message", out string message);
                     throw new TopologyMismatchException(message);
                 }
-
             }
             throw new InvalidDataException(
                 $"Expected to get type of \'{expectedType}\' message, but got \'{type}\' message.", new Exception(json.ToString()));

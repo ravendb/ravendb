@@ -3,36 +3,36 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
+using Raven.Client.ServerWide;
+using Raven.Server.Config;
+using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.Rachis.Remote;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Raven.Client.Http;
-using Raven.Client.ServerWide;
-using Raven.Server.Config;
-using Raven.Server.Extensions;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
-using Sparrow.Server;
-using Sparrow.Server.Utils;
-using System.Linq;
-using Raven.Server.Rachis.Remote;
-using System.Net.Security;
 
 namespace Raven.Server.Rachis
 {
@@ -107,7 +107,6 @@ namespace Raven.Server.Rachis
         {
             public void Dispose()
             {
-
             }
         }
 
@@ -298,6 +297,7 @@ namespace Raven.Server.Rachis
 
         internal static readonly TableSchema LogsTable;
         public readonly RachisLogHistory LogHistory;
+
         static RachisConsensus()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -314,7 +314,7 @@ namespace Raven.Server.Rachis
                 Slice.From(ctx, "SnapshotRequest", out SnapshotRequestSlice);
             }
             /*
-             
+
             index - int64 big endian
             term  - int64 little endian
             entry - blittable value
@@ -796,8 +796,6 @@ namespace Raven.Server.Rachis
                     }
                 }
             };
-
-
         }
 
         private void ParallelDispose(List<IDisposable> toDispose)
@@ -876,7 +874,6 @@ namespace Raven.Server.Rachis
             {
                 ClusterCommandsVersionManager.SetClusterVersion(version);
                 _currentLeader = leader;
-
             });
             leader.Start(connections);
         }
@@ -1044,7 +1041,6 @@ namespace Raven.Server.Rachis
 
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, topologyJson);
 
-
             return topologyJson;
         }
 
@@ -1077,7 +1073,7 @@ namespace Raven.Server.Rachis
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(_tag, CurrentTerm, stream, disconnect, ContextPool);
+                remoteConnection = new RemoteConnection(_tag, CurrentTerm, stream, disconnect);
                 try
                 {
                     RachisHello initialMessage;
@@ -1276,7 +1272,8 @@ namespace Raven.Server.Rachis
                 data[1] = term;
             }
         }
-        public unsafe void TruncateLogBefore(ClusterOperationContext context, long upto)
+
+        public unsafe void TruncateLogBefore(TransactionOperationContext context, long upto)
         {
             GetLastCommitIndex(context, out long lastIndex, out long lastTerm);
 
@@ -1400,7 +1397,7 @@ namespace Raven.Server.Rachis
                             // move to the next id, have to swap to little endian & back to get proper
                             // behavior
                             reversedEntryIndex = Bits.SwapBytes(Bits.SwapBytes(reversedEntryIndex) + 1);
-                            // now we'll find the next item to delete, and do so until we run out of items 
+                            // now we'll find the next item to delete, and do so until we run out of items
                             // to write
                         } while (table.ReadByKey(key, out reader));
 
@@ -1464,7 +1461,6 @@ namespace Raven.Server.Rachis
             lastTruncatedTerm = reader.ReadLittleEndianInt64();
         }
 
-
         public unsafe BlittableJsonReaderObject GetEntry(ClusterOperationContext context, long index,
             out RachisEntryFlags flags)
         {
@@ -1515,8 +1511,6 @@ namespace Raven.Server.Rachis
             index = reader.ReadLittleEndianInt64();
             term = reader.ReadLittleEndianInt64();
         }
-
-
 
         public unsafe void SetLastCommitIndex(ClusterOperationContext context, long index, long term)
         {
@@ -1585,7 +1579,7 @@ namespace Raven.Server.Rachis
             if (timeoutTask == await Task.WhenAny(task, timeoutTask))
                 ThrowTimeoutException();
 
-            await task; // propagate cancellation/exception 
+            await task; // propagate cancellation/exception
         }
 
         private static void ThrowTimeoutException()
@@ -1715,7 +1709,6 @@ namespace Raven.Server.Rachis
             {
                 *(long*)ptr = term;
             }
-
 
             if (Log.IsInfoEnabled)
                 Log.Info($"Casting vote for {votedFor ?? "<???>"} in {term:#,#;;0} because: {reason}");
@@ -1950,10 +1943,10 @@ namespace Raven.Server.Rachis
                 await task;
 
             await task;
-
         }
 
         private string _leaderTag;
+
         public string LeaderTag
         {
             get => GetLeaderTag();
@@ -2138,7 +2131,6 @@ namespace Raven.Server.Rachis
                    e is ObjectDisposedException;
         }
 
-
         internal static void DisconnectAction(Task<RachisConnection> connectionTask)
         {
             Debug.Assert(connectionTask.IsCompleted);
@@ -2155,8 +2147,14 @@ namespace Raven.Server.Rachis
 
     public class TopologyMismatchException : Exception
     {
-        public TopologyMismatchException() { }
-        public TopologyMismatchException(string message) : base(message) { }
+        public TopologyMismatchException()
+        {
+        }
+
+        public TopologyMismatchException(string message) : base(message)
+        {
+        }
+
         public TopologyMismatchException(string message, Exception inner) : base(message, inner)
         {
         }
