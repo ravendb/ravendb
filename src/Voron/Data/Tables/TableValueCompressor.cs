@@ -198,9 +198,9 @@ namespace Voron.Data.Tables
                 using (tx.Allocator.Allocate(totalSize, out var buffer))
                 {
                     var cur = buffer.Ptr;
-                    foreach (long id in dataIds)
+                    for (int i = 0; i < used; i++)
                     {
-                        var ptr = table.DirectRead(id, out var size);
+                        var ptr = table.DirectRead(dataIds[i], out var size);
                         Memory.Copy(cur, ptr, size);
                         cur += size;
                     }
