@@ -316,6 +316,7 @@ namespace Sparrow.Json
             }
 
 #if DEBUG
+
             private void AssertState()
             {
                 if (IsReleased)
@@ -324,43 +325,29 @@ namespace Sparrow.Json
                 if (_parent != null && _parent.Generation != _generation)
                     throw new InvalidOperationException($"Buffer was created during generation '{_generation}', but current generation is '{_parent.Generation}'. Context was probably returned or reset.");
             }
+
 #endif
 
             public struct ReturnBuffer : IDisposable
             {
                 private AllocatedMemoryData _allocatedMemory;
-                private byte[] _bytes;
-                private MemoryHandle _memoryHandle;
 #if DEBUG
                 private MemoryBuffer _buffer;
 #endif
                 private readonly JsonOperationContext _parent;
 
-                public ReturnBuffer(byte[] bytes, MemoryHandle memoryHandle, MemoryBuffer buffer)
-                {
-                    _bytes = bytes;
-                    _memoryHandle = memoryHandle;
-#if DEBUG
-                    _buffer = buffer;
-#endif
-                    _allocatedMemory = null;
-                    _parent = null;
-                }
-
                 public ReturnBuffer(AllocatedMemoryData allocatedMemory, MemoryBuffer buffer, JsonOperationContext parent)
                 {
-                    _bytes = null;
-                    _memoryHandle = default;
 #if DEBUG
-                    _buffer = buffer;
+                    _buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
 #endif
-                    _allocatedMemory = allocatedMemory;
-                    _parent = parent;
+                    _allocatedMemory = allocatedMemory ?? throw new ArgumentNullException(nameof(allocatedMemory));
+                    _parent = parent ?? throw new ArgumentNullException(nameof(parent));
                 }
 
                 public void Dispose()
                 {
-                    if (_allocatedMemory == null && _bytes == null)
+                    if (_allocatedMemory == null)
                         return;
 
 #if DEBUG
@@ -373,27 +360,15 @@ namespace Sparrow.Json
                     }
 #endif
 
-                    if (_parent != null)
+                    //_parent disposal sets _managedBuffers to null,
+                    //throwing ObjectDisposedException() to make it more visible
+                    if (_parent.Disposed)
+                        ThrowParentWasDisposed();
+
+                    if (_allocatedMemory != null)
                     {
-                        //_parent disposal sets _managedBuffers to null,
-                        //throwing ObjectDisposedException() to make it more visible
-                        if (_parent.Disposed)
-                            ThrowParentWasDisposed();
-
-                        if (_allocatedMemory != null)
-                        {
-                            _parent.ReturnMemory(_allocatedMemory);
-                            _allocatedMemory = null;
-                        }
-                    }
-
-                    if (_bytes != null)
-                    {
-                        _memoryHandle.Dispose();
-                        _memoryHandle = default;
-
-                        ArrayPool<byte>.Shared.Return(_bytes);
-                        _bytes = null;
+                        _parent.ReturnMemory(_allocatedMemory);
+                        _allocatedMemory = null;
                     }
                 }
 
