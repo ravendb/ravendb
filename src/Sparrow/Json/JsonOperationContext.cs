@@ -275,17 +275,6 @@ namespace Sparrow.Json
 #endif
             }
 
-            public static ReturnBuffer LongLivedInstance(out MemoryBuffer buffer)
-            {
-                var bytes = ArrayPool<byte>.Shared.Rent(Size);
-                var memory = new Memory<byte>(bytes);
-                var memoryHandle = memory.Pin();
-
-                buffer = new MemoryBuffer(memory, 0, null);
-
-                return new ReturnBuffer(bytes, memoryHandle, buffer);
-            }
-
             internal (IDisposable ReleaseBuffer, MemoryBuffer Buffer) Clone<T>(JsonContextPoolBase<T> pool)
                 where T : JsonOperationContext
             {
