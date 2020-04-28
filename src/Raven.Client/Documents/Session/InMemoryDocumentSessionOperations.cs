@@ -246,7 +246,9 @@ namespace Raven.Client.Documents.Session
             SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
             TransactionMode = options.TransactionMode;
 
-            _javascriptCompilationOptions = new JavascriptCompilationOptions
+            _javascriptCompilationOptions = new JavascriptCompilationOptions(
+                flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter, 
+                extensions: JavascriptConversionExtensions.LinqMethodsSupport.Instance)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
             };
