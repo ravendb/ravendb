@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
 
-        public static readonly Func<BlittableJsonReaderObject, CompressionConfiguration> CompressionConfiguration = GenerateJsonDeserializationRoutine<CompressionConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, DocumentsCompressionConfiguration> CompressionConfiguration = GenerateJsonDeserializationRoutine<DocumentsCompressionConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
 

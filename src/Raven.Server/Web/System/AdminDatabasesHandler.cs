@@ -134,8 +134,8 @@ namespace Raven.Server.Web.System
                 if (databaseRecord.Encrypted)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
 
-                if (databaseRecord.Compression?.CompressRevisions == true ||
-                    databaseRecord.Compression?.Collections?.Length > 0)
+                if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
+                    databaseRecord.DocumentsCompression?.Collections?.Length > 0)
                 {
                     Server.ServerStore.LicenseManager.AssertCanUseDocumentCompression();
                 }
@@ -251,9 +251,9 @@ namespace Raven.Server.Web.System
                 
                 if(ServerStore.LicenseManager.GetLicenseStatus().HasDocumentCompression &&
                    Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental &&
-                   databaseRecord.Compression == null)
+                   databaseRecord.DocumentsCompression == null)
                 {
-                    databaseRecord.Compression = new CompressionConfiguration(
+                    databaseRecord.DocumentsCompression = new DocumentsCompressionConfiguration(
                         Server.Configuration.Databases.CompressRevisionsDefault
                         );
                 }
@@ -261,8 +261,8 @@ namespace Raven.Server.Web.System
                 if (databaseRecord.Encrypted)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
 
-                if (databaseRecord.Compression?.CompressRevisions == true ||
-                    databaseRecord.Compression?.Collections?.Length > 0)
+                if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
+                    databaseRecord.DocumentsCompression?.Collections?.Length > 0)
                 {
                     ServerStore.LicenseManager.AssertCanUseDocumentCompression();
                     if (Server.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
@@ -297,8 +297,8 @@ namespace Raven.Server.Web.System
                 if (ResourceNameValidator.IsValidResourceName(databaseRecord.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                     throw new BadRequestException(errorMessage);
 
-                if (databaseRecord.Compression?.CompressRevisions == true ||
-                    databaseRecord.Compression?.Collections?.Length > 0)
+                if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
+                    databaseRecord.DocumentsCompression?.Collections?.Length > 0)
                 {
                     Server.ServerStore.LicenseManager.AssertCanUseDocumentCompression();
                 }
