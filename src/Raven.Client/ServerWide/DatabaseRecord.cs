@@ -54,7 +54,7 @@ namespace Raven.Client.ServerWide
 
         public ConflictSolver ConflictSolverConfig;
 
-        public DocumentsCompressionConfiguration DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true);
+        public DocumentsCompressionConfiguration DocumentsCompression;
 
         public Dictionary<string, SorterDefinition> Sorters = new Dictionary<string, SorterDefinition>();
 
