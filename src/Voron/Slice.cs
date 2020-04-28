@@ -234,13 +234,6 @@ namespace Voron
         {
             return new Span<byte>(Content.Ptr, Size);
         }
-
-        public static bool Equals(Slice a, Slice b)
-        {
-            if (a.Size != b.Size)
-                return false;
-            return Memory.Compare(a.Content.Ptr, b.Content.Ptr, a.Size) == 0;
-        }
     }
 
     public static class Slices

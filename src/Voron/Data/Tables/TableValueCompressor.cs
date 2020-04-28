@@ -23,11 +23,14 @@ namespace Voron.Data.Tables
         // we require a bit more because we want to ensure that we aren't wasting
         // resources by needlessly compressing data
         private const int OverheadSize = 32;
+        private const string CompressionRecoveryExtension = ".compression-recovery";
+        public  const string CompressionRecoveryExtensionGlob = "*" + CompressionRecoveryExtension;
         private readonly TableValueBuilder _builder;
 
         public bool Compressed;
         public ByteString CompressedBuffer, RawBuffer;
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope CompressedScope, RawScope;
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope _compressedScope;
+        public ByteStringContext<ByteStringMemoryCache>.InternalScope RawScope;
         public bool CompressionTried;
 
         public TableValueCompressor(TableValueBuilder builder)
@@ -60,7 +63,7 @@ namespace Voron.Data.Tables
             {
                 var tx = table._tx;
                 int maxSpace = ZstdLib.GetMaxCompression(RawBuffer.Length);
-                CompressedScope = tx.Allocator.Allocate(maxSpace + OverheadSize, out CompressedBuffer);
+                _compressedScope = tx.Allocator.Allocate(maxSpace + OverheadSize, out CompressedBuffer);
                 Compressed = false;
 
                 var compressionDictionary = tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
@@ -83,7 +86,7 @@ namespace Voron.Data.Tables
                 if (CompressedBuffer.Length >= RawBuffer.Length)
                 {
                     // we compressed too large, so we skip compression here
-                    CompressedScope.Dispose();
+                    _compressedScope.Dispose();
                     // Explicitly not disposing this, we need to have the raw buffer
                     // when we do update then insert and the size is too large
                     // RawScope.Dispose();
@@ -96,7 +99,7 @@ namespace Voron.Data.Tables
             }
             catch
             {
-                CompressedScope.Dispose();
+                _compressedScope.Dispose();
                 RawScope.Dispose();
                 throw;
             }
@@ -281,7 +284,7 @@ namespace Voron.Data.Tables
                 for (int i = 0; i < 2; i++)
                 {
                     var newPath = obj.Environment.Options.BasePath
-                        .Combine(path: $"Compression{(i == 0 ? "A" : "B")}.Recovery")
+                        .Combine(path: $"Dictionary{(i == 0 ? "A" : "B")}" + CompressionRecoveryExtension)
                         .FullPath;
 
                     using var fs = File.Open(newPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
@@ -378,9 +381,9 @@ namespace Voron.Data.Tables
 
                 Compressed = true;
                
-                CompressedScope.Dispose();
+                _compressedScope.Dispose();
                 CompressedBuffer = newCompressBuffer;
-                CompressedScope = newCompressBufferScope;
+                _compressedScope = newCompressBufferScope;
                 return true;
             }
             catch
@@ -406,7 +409,7 @@ namespace Voron.Data.Tables
             CompressionTried = false;
             Compressed = false;
             CompressedBuffer = default;
-            CompressedScope.Dispose();
+            _compressedScope.Dispose();
         }
 
         public void Reset()

@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using Sparrow;
 using Sparrow.Utils;
+using Voron.Data.Tables;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
@@ -169,7 +170,7 @@ namespace Voron.Impl.Backup
                 {
                     if (env.Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                     {
-                        foreach (var recoveryFile in Directory.GetFiles(env.Options.BasePath.FullPath, "*.Recovery"))
+                        foreach (var recoveryFile in Directory.GetFiles(env.Options.BasePath.FullPath, TableValueCompressor.CompressionRecoveryExtensionGlob))
                         {
                             FileStream src;
                             try

@@ -92,7 +92,7 @@ namespace Raven.Server.Documents
                     }
 
                     var revisionsPrefix = CollectionName.GetTablePrefix(CollectionTableType.Revisions);
-                    var compressedCollectionsTableNames = databaseRecord.Compression.Collections
+                    var compressedCollectionsTableNames = databaseRecord.DocumentsCompression.Collections
                         .Select(name => new CollectionName(name).GetTableName(CollectionTableType.Documents))
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents
                         {
                             bool isRevision = name.StartsWith(revisionsPrefix,StringComparison.OrdinalIgnoreCase);
                             schema.Compressed = 
-                                (isRevision && databaseRecord.Compression?.CompressRevisions == true) ||
+                                (isRevision && databaseRecord.DocumentsCompression?.CompressRevisions == true) ||
                                 compressedCollectionsTableNames.Contains(name);
                         },_token);
                     }

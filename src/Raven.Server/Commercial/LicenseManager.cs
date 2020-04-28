@@ -1223,8 +1223,8 @@ namespace Raven.Server.Commercial
                         databaseRecord.HubPullReplications.Count > 0)
                         pullReplicationAsHubCount++;
 
-                    if (databaseRecord.Compression?.CompressRevisions == true ||
-                        databaseRecord.Compression?.Collections?.Length > 0)
+                    if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
+                        databaseRecord.DocumentsCompression?.Collections?.Length > 0)
                         documentCompressionCount++;
 
                     if (databaseRecord.SinkPullReplications != null &&

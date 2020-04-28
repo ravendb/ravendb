@@ -513,7 +513,9 @@ namespace Voron.Data.Tables
 
                 OnDataMoved(idToMove, newId, dataPtr, dataSize);
 
-                decompressedScope.Dispose();
+                // avoiding try / finally or using here for perf reasons
+                // if we get an error, it will get cleaned up by the context anyway
+                decompressedScope.Dispose(); 
             }
 
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);

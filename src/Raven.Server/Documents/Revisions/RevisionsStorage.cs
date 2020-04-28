@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Revisions
                  };
             }
 
-            var revisionsSchema = _documentsStorage.DocumentPut.Compression.CompressRevisions ? 
+            var revisionsSchema = _documentsStorage.DocumentPut.DocumentsCompression.CompressRevisions ? 
                 CompressedRevisionsSchema : 
                 RevisionsSchema;
 
