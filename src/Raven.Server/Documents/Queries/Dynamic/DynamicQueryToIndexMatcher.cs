@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 const string notWidestMsg = "Wasn't the widest / most up to date index matching this query";
 
 
-                if (result.LastMappedEtag <= bestComplete.LastMappedEtag ||
+                if (result.LastMappedEtag <= bestComplete.LastMappedEtag &&
                     result.NumberOfMappedFields <= bestComplete.NumberOfMappedFields)
                 {
                     explanations?.Add(new Explanation(bestComplete.IndexName, notWidestMsg));
