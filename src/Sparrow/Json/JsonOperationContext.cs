@@ -275,7 +275,7 @@ namespace Sparrow.Json
 #endif
             }
 
-            public static ReturnBuffer ShortTermSingleUse(out MemoryBuffer buffer)
+            public static ReturnBuffer LongLivedInstance(out MemoryBuffer buffer)
             {
                 var bytes = ArrayPool<byte>.Shared.Rent(Size);
                 var memory = new Memory<byte>(bytes);
@@ -289,9 +289,6 @@ namespace Sparrow.Json
             internal (IDisposable ReleaseBuffer, MemoryBuffer Buffer) Clone<T>(JsonContextPoolBase<T> pool)
                 where T : JsonOperationContext
             {
-                if (Length != Size)
-                    throw new InvalidOperationException("Cloned buffer must be of the same size");
-
                 var releaseCtx = pool.AllocateOperationContext(out T ctx);
                 var returnBuffer = ctx.GetMemoryBuffer(out var buffer);
                 var clean = new Disposer(returnBuffer, releaseCtx);

@@ -41,7 +41,7 @@ namespace Raven.Server.Rachis.Remote
             _src = src;
             _stream = stream;
             _disconnect = disconnect;
-            _releaseBuffer = JsonOperationContext.MemoryBuffer.ShortTermSingleUse(out _buffer);
+            _releaseBuffer = JsonOperationContext.MemoryBuffer.LongLivedInstance(out _buffer);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{src} > {dest}");
             RegisterConnection(dest, term, caller);
