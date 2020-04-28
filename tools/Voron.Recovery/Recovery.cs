@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Operations.Attachments;
@@ -378,14 +379,34 @@ namespace Voron.Recovery
 
                                     mem += numberOfPages * _pageSize;
                                 }
-                                else if (Write((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, documentsWriter, revisionsWriter,
-                                    conflictsWriter, countersWriter, context, startOffset, ((RawDataOverflowPageHeader*)page)->TableType))
+                                else
                                 {
-                                    mem += numberOfPages * _pageSize;
-                                }
-                                else //write document failed
-                                {
-                                    mem += _pageSize;
+                                    var ptr = (byte*)pageHeader + PageHeader.SizeOf;
+                                    int sizeInBytes = pageHeader->OverflowSize;
+                                    byte* buffer = null;
+                                    try
+                                    {
+                                        if (pageHeader->Flags.HasFlag(PageFlags.Compressed))
+                                        {
+                                            buffer = Decompress(ref ptr, ref sizeInBytes);
+                                        }
+                                        if (Write((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, 
+                                            documentsWriter, revisionsWriter,
+                                            conflictsWriter, countersWriter, context, startOffset, 
+                                            ((RawDataOverflowPageHeader*)page)->TableType))
+                                        {
+                                            mem += numberOfPages * _pageSize;
+                                        }
+                                        else //write document failed 
+                                        {
+                                            mem += _pageSize;
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        if (buffer != null)
+                                            Marshal.FreeHGlobal((IntPtr)buffer);
+                                    }
                                 }
 
                                 continue;
@@ -466,9 +487,29 @@ namespace Voron.Recovery
                                 if (entry->AllocatedSize == 0 || entry->IsFreed)
                                     continue;
 
-                                if (Write(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, documentsWriter, revisionsWriter,
-                                        conflictsWriter, countersWriter, context, startOffset, ((RawDataSmallPageHeader*)page)->TableType) == false)
-                                    break;
+                                int sizeInBytes = entry->UsedSize;
+                                byte* ptr = currMem + sizeof(RawDataSection.RawDataEntrySizes);
+                                byte* buffer = null;
+                                if (entry->IsCompressed)
+                                {
+                                    buffer = Decompress(ref ptr, ref sizeInBytes);
+                                }
+
+                                try
+                                {
+
+                                    if (Write(ptr,
+                                        sizeInBytes,
+                                        documentsWriter, revisionsWriter,
+                                        conflictsWriter, countersWriter,
+                                        context, startOffset, ((RawDataSmallPageHeader*)page)->TableType) == false)
+                                        break;
+                                }
+                                finally
+                                {
+                                    if (buffer != null)
+                                        Marshal.FreeHGlobal((IntPtr)buffer);
+                                }
                             }
 
                             mem += _pageSize;
@@ -525,6 +566,146 @@ namespace Voron.Recovery
                 se?.Dispose();
                 if (_config.LoggingMode != LogMode.None)
                     LoggingSource.Instance.EndLogging();
+            }
+        }
+        
+             private Dictionary<int, ZstdLib.CompressionDictionary> _dictionaries = null;
+
+        private byte* Decompress(ref byte* ptr, ref int sizeInBytes)
+        {
+            var dicId = BlittableJsonReaderBase.ReadVariableSizeIntInReverse(ptr,
+                sizeInBytes - 1,
+                out var offset);
+
+            var data = new ReadOnlySpan<byte>(ptr, sizeInBytes-offset);
+            var outSize = ZstdLib.GetDecompressedSize(data);
+            var buffer = (byte*)Marshal.AllocHGlobal(outSize);
+            if (buffer == null)
+                throw new OutOfMemoryException();
+
+            ZstdLib.CompressionDictionary dictionary;
+            if (dicId == 0)
+            {
+                dictionary = null;
+            }
+            else
+            {
+                if (_dictionaries == null)
+                {
+                    LoadCompressionDictionaries();
+                }
+                if(_dictionaries.TryGetValue(dicId, out dictionary) == false)
+                {
+                    throw new InvalidDataException("Unable to find dictionary " + dicId + " from the recovery files, unable to handle compressed data");
+                }
+            }
+
+            var output = ZstdLib.Decompress(data, new Span<byte>(buffer, outSize), dictionary);
+            if (output != outSize)
+                throw new InvalidDataException("Bad size after decompression");
+            sizeInBytes = output;
+            ptr = buffer;
+            return buffer;
+        }
+
+        private void LoadCompressionDictionaries()
+        {
+            _dictionaries = new Dictionary<int, ZstdLib.CompressionDictionary>();
+            try
+            { 
+                var subKeyLen = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
+                var subKey = stackalloc byte[subKeyLen];
+
+                var recoveryFiles = Directory.GetFiles(_config.DataFileDirectory, "*.Recovery");
+                foreach (string recoveryFile in recoveryFiles)
+                {
+                    try
+                    {
+                        using var fs = File.OpenRead(recoveryFile);
+                        using var zip = new ZipArchive(fs);
+
+                        foreach (ZipArchiveEntry entry in zip.Entries)
+                        {
+                            if (Path.GetExtension(entry.Name) != ".dic")
+                                continue;
+
+                            if (int.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out var id) == false)
+                                continue;
+
+                            if (_dictionaries.ContainsKey(id))
+                                continue; // read from the previous file
+                            var ms = new MemoryStream();
+                            using var s = entry.Open();
+                            s.CopyTo(ms);
+
+                            fixed (byte* pKey = _config.MasterKey)
+                            fixed (byte* b = ms.ToArray())
+                            fixed (byte* ctx = TableValueCompressor.EncryptionContext)
+                            {
+
+                                var nonceEntry = zip.GetEntry(Path.GetFileNameWithoutExtension(entry.Name) + ".nonce");
+                                if (nonceEntry != null)
+                                {
+                                    if (_config.MasterKey == null)
+                                    {
+                                        throw new InvalidOperationException("The compression dictionaries are encrypted, but you didn't specify a master key for the recovery.");
+                                    }
+
+                                    var macEntry = zip.GetEntry(Path.GetFileNameWithoutExtension(entry.Name) + ".mac");
+                                    byte[] nonceBuffer = new BinaryReader(nonceEntry.Open()).ReadBytes((int)Sodium.crypto_stream_xchacha20_noncebytes());
+                                    byte[] macBuffer = new BinaryReader(macEntry.Open()).ReadBytes((int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
+
+                                    if(nonceBuffer.Length != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
+                                        throw new InvalidOperationException("Invalid nonce length");
+
+                                    if (macBuffer.Length != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes())
+                                        throw new InvalidOperationException("Invalid mac length");
+
+
+                                    if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)subKeyLen, (ulong)id, ctx, pKey) != 0)
+                                        throw new InvalidOperationException("Unable to generate derived key");
+
+                                    fixed (byte* nonce = nonceBuffer)
+                                    fixed(byte*mac = macBuffer)
+                                    {
+                                        var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
+                                            b,
+                                            null,
+                                            b,
+                                            (ulong)ms.Length,
+                                            mac,
+                                            null,
+                                            0,
+                                            nonce,
+                                            subKey
+                                        );
+
+                                        if (rc != 0)
+                                            throw new InvalidDataException("Unable to decrypt dictionary " + id);
+                                    }
+                                }
+
+                                _dictionaries[id] = new ZstdLib.CompressionDictionary(id, 
+                                    b + sizeof(CompressionDictionaryInfo), 
+                                    (int)ms.Length - sizeof(CompressionDictionaryInfo), 3);
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsOperationsEnabled)
+                        {
+                            _logger.Operations("Failed to read " + recoveryFile + " dictionary, ignoring and will continue. Some compressed data may not be recoverable", e);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations("Failed to read recovery dictionaries from " + _config.DataFileDirectory + ". Compressed data will not be recovered!", e);
+                }
             }
         }
 
