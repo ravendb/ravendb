@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using Lambda2Js;
 using Newtonsoft.Json;
@@ -81,40 +82,6 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private object AddTypeNameToValueIfNeeded(Type propertyType, object value)
-        {
-            if (value == null)
-                return null;
-            
-            var typeOfValue = value.GetType();
-            if (propertyType == typeOfValue || typeOfValue.IsClass == false)
-                return value;
-
-            using (var writer = new BlittableJsonWriter(Context))
-            {
-                // the type of the object that's being serialized 
-                // is not the same as its declared type.
-                // so we need to include $type in json
-
-                var serializer = Conventions.CreateSerializer();
-                serializer.TypeNameHandling = TypeNameHandling.Objects;
-
-                writer.WriteStartObject();
-                writer.WritePropertyName("Value");
-
-                serializer.Serialize(writer, value);
-
-                writer.WriteEndObject();
-
-                writer.FinalizeDocument();
-
-                var reader = writer.CreateReader();
-
-                return reader["Value"];
-            }
-
-        }
-
         public void Patch<T, U>(T entity, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
@@ -144,32 +111,34 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-
         public void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
         {
             var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
 
             if (!(dictionaryAdder.Body is MethodCallExpression call))
-                throw new InvalidOperationException("Unknown method");
+            {
+                ThrowUnsupportedExpression(dictionaryAdder);
+                return; // never hit
+            }
 
             var patchRequest = new PatchRequest();
             object key;
             switch (call.Method.Name)
             {
-                case "Add":
+                case nameof(JavaScriptDictionary<TKey, TValue>.Add):
                     object value;
                     (key, value) = GetKeyAndValue<TKey, TValue>(call);
                     patchRequest.Script = $"this.{pathScript}.{key} = args.val_{_valsCount};";
                     patchRequest.Values[$"val_{_valsCount}"] = value;
                     _valsCount++;
                     break;
-                case "Remove":
+                case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
                     key = GetKey(call);
                     patchRequest.Script = $"delete this.{pathScript}.{key};";
                     break;
                 default:
-                    throw new InvalidOperationException("Unknown method");
+                    throw new InvalidOperationException("Unsupported method: " + call.Method.Name);
             }
 
             if (TryMergePatches(id, patchRequest) == false)
@@ -178,51 +147,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private static (object Key, object Value) GetKeyAndValue<TKey, TValue>(MethodCallExpression call)
-        {
-            if (call.Arguments.Count == 1)
-            {
-                if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out object obj) == false ||
-                    !(obj is KeyValuePair<TKey, TValue> kvp))
-                    throw new InvalidOperationException("Unexpected type");
-
-                return (kvp.Key, kvp.Value);
-            }
-
-            if (call.Arguments.Count == 2)
-            {
-                object key, value;
-
-                if (call.Arguments[0] is ConstantExpression c)
-                    key = c.Value;
-                else if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out key) == false)
-                    throw new InvalidOperationException("Unknown method");
-
-                if (call.Arguments[1] is ConstantExpression c2)
-                    value = c2.Value;
-                else if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[1], out value) == false)
-                    throw new InvalidOperationException("Unknown method");
-
-                return (key, value);
-            }
-
-            throw new InvalidOperationException("Unknown method");
-
-        }
-
-        private static object GetKey(MethodCallExpression call)
-        {
-            if (call.Arguments[0] is ConstantExpression c)
-                return c.Value;
-
-            if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out object obj) == false)
-                throw new InvalidOperationException("Unknown method");
-
-            return obj;
-        }
-
-
-        public void Patch<T, TKey, TValue>(T entity, Expression<Func<T, IDictionary<TKey, TValue>>> path, 
+        public void Patch<T, TKey, TValue>(T entity, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
         {
             var metadata = GetMetadataFor(entity);
@@ -230,13 +155,12 @@ namespace Raven.Client.Documents.Session
             Patch(id, path, dictionaryAdder);
         }
 
-
-        private static PatchRequest CreatePatchRequest<U>(Expression<Func<JavaScriptArray<U>, object>> arrayAdder, string pathScript, string adderScript, JavascriptConversionExtensions.CustomMethods extension)
+        private static PatchRequest CreatePatchRequest<T>(Expression<Func<JavaScriptArray<T>, object>> arrayAdder, string pathScript, string adderScript, JavascriptConversionExtensions.CustomMethods extension)
         {
             var script = $"this.{pathScript}{adderScript}";
 
             if (arrayAdder.Body is MethodCallExpression mce &&
-                mce.Method.Name == nameof(JavaScriptArray<U>.RemoveAll))
+                mce.Method.Name == nameof(JavaScriptArray<T>.RemoveAll))
             {
                 script = $"this.{pathScript} = {script}";
             }
@@ -273,6 +197,83 @@ namespace Raven.Client.Documents.Session
             }, null));
 
             return true;
+        }
+
+        private object AddTypeNameToValueIfNeeded(Type propertyType, object value)
+        {
+            if (value == null)
+                return null;
+
+            var typeOfValue = value.GetType();
+            if (propertyType == typeOfValue || typeOfValue.IsClass == false)
+                return value;
+
+            using (var writer = new BlittableJsonWriter(Context))
+            {
+                // the type of the object that's being serialized 
+                // is not the same as its declared type.
+                // so we need to include $type in json
+
+                var serializer = Conventions.CreateSerializer();
+                serializer.TypeNameHandling = TypeNameHandling.Objects;
+
+                writer.WriteStartObject();
+                writer.WritePropertyName("Value");
+
+                serializer.Serialize(writer, value);
+
+                writer.WriteEndObject();
+
+                writer.FinalizeDocument();
+
+                var reader = writer.CreateReader();
+
+                return reader["Value"];
+            }
+
+        }
+
+        private static (object Key, object Value) GetKeyAndValue<TKey, TValue>(MethodCallExpression call)
+        {
+            if (call.Arguments.Count == 1)
+            {
+                if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out object obj) == false)
+                    ThrowUnsupportedExpression(call.Arguments[0]);
+                if (!(obj is KeyValuePair<TKey, TValue> kvp))
+                    throw new InvalidOperationException("Unexpected argument type: " + obj.GetType());
+                return (kvp.Key, kvp.Value);
+            }
+
+            Debug.Assert(call.Arguments.Count == 2);
+
+            object key, value;
+            if (call.Arguments[0] is ConstantExpression c)
+                key = c.Value;
+            else if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out key) == false)
+                ThrowUnsupportedExpression(call.Arguments[0]);
+
+            if (call.Arguments[1] is ConstantExpression c2)
+                value = c2.Value;
+            else if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[1], out value) == false)
+                ThrowUnsupportedExpression(call.Arguments[1]);
+
+            return (key, value);
+        }
+
+        private static object GetKey(MethodCallExpression call)
+        {
+            if (call.Arguments[0] is ConstantExpression c)
+                return c.Value;
+
+            if (LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out object obj) == false)
+                ThrowUnsupportedExpression(call.Arguments[0]);
+
+            return obj;
+        }
+
+        private static void ThrowUnsupportedExpression(Expression expression)
+        {
+            throw new InvalidOperationException("Unsupported expression: " + expression);
         }
     }
 }
