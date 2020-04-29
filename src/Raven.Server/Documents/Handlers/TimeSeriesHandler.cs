@@ -470,7 +470,8 @@ namespace Raven.Server.Documents.Handlers
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(timeSeriesConfig.Collections)] = timeSeriesCollection
+                            [nameof(timeSeriesConfig.Collections)] = timeSeriesCollection,
+                            [nameof(timeSeriesConfig.PolicyCheckFrequency)] = timeSeriesConfig.PolicyCheckFrequency
                         });
                     }
                 }

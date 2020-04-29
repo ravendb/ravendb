@@ -5,6 +5,8 @@ import moment = require("moment");
 import d3 = require("d3");
 
 class genUtils {
+    
+    static integerMaxValue = 2147483647;
 
     static entityMap: any = {
         '&': '&amp;',
