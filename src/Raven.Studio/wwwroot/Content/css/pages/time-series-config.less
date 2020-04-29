@@ -1,0 +1,95 @@
+﻿.time-series-config {
+
+    ul.properties {
+        li {
+            & > span:first-of-type {
+                width: 200px;
+            }
+        }
+    }
+    
+    .pick-item-to-edit {
+        border: 2px dashed @panel-bg;
+        background-color: lighten(@body-bg, 3%);
+        min-height: 400px;
+        position: relative;
+    }
+
+    .align-checkboxes {
+        margin-left: 17px;
+        margin-right: 0;
+    }
+
+    .toolbar-actions {
+        display: inline-block;
+        margin-left: @grid-gutter-width / 2;
+    }
+
+    .configuration-item {
+        & > .padding {
+            min-height: 65px;
+        }
+
+        .checkbox {
+            margin-top: 0;
+            margin-bottom: 3px;
+        }
+
+        .name {
+            width: 150px;
+
+            h3 {
+                margin: 0;
+            }
+        }
+
+        h5 {
+            margin: 0 0 4px;
+        }
+    }
+
+    .toggle-margin {
+        margin-left: 43px;
+    }
+
+    .edit-panel {
+        .dropdown {
+            display: block;
+
+            .caret {
+                position: absolute;
+                top: 16px;
+                right: 12px;
+            }
+        }
+    }
+    
+    .aggregation-flow {
+        
+        i {
+            position: relative;
+            top: -10px;
+        }
+        
+        .item {
+            font-size: 12px;
+            display: inline-block;
+            background-color: @gray-dark;
+            padding: 3px;
+            line-height: 1.4;
+            margin-left: 0;
+
+            .name {
+                display: block;
+            }
+
+            .aggregation {
+                display: block;
+            }
+
+            .retention {
+                display: block;
+            }
+        }
+    }
+}

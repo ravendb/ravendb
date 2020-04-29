@@ -692,6 +692,5 @@ interface timeSeriesRawItemResultDto {
     Values: number[];
 }
 
-type timeSeriesAggregationUnits = "yearly" | "monthly" | "daily" | "every minute" | "every second";
+type timeUnit = "year" | "month" | "day" | "hour" | "minute" | "second";
 
-type timeSeriesRetentionUnits = "year" | "month" | "day" | "minute" | "seconds";
