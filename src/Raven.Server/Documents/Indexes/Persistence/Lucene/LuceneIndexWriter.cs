@@ -12,8 +12,7 @@ using Lucene.Net.Store;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Logging;
-using Sparrow.LowMemory;
-using Sparrow.Server.Exceptions;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -72,6 +71,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
                     ThrowOutOfMemory(e);
+
+                if (e.InnerException is VoronUnrecoverableErrorException)
+                    throw e.InnerException;
 
                 throw;
             }
