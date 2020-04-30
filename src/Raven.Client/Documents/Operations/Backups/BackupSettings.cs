@@ -233,6 +233,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public string AccountKey { get; set; }
 
+        public string SasToken { get; set; }
+
         public override bool HasSettings()
         {
             if (base.HasSettings())
@@ -260,6 +262,7 @@ namespace Raven.Client.Documents.Operations.Backups
             djv[nameof(RemoteFolderName)] = RemoteFolderName;
             djv[nameof(AccountName)] = AccountName;
             djv[nameof(AccountKey)] = AccountKey;
+            djv[nameof(SasToken)] = SasToken;
 
             return djv;
         }
