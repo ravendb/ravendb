@@ -75,7 +75,7 @@ function zstd_lib_osx {
             CC="/osxcross/target/bin/o64-clang" \
             CFLAGS="-arch x86_64 -mmacosx-version-min=${OSX_VERSION_MIN} -march=${OSX_CPU_ARCH} -O2 -g" \
             LDFLAGS="-arch x86_64 -mmacosx-version-min=${OSX_VERSION_MIN} -march=${OSX_CPU_ARCH}" && \
-        cp zstd/lib/libzstd.dylib "${ARTIFACTS_DIR}/libzstd.osx.64.dylib"
+        cp zstd/lib/libzstd.dylib "${ARTIFACTS_DIR}/libzstd.mac.64.dylib"
 }
 
 function zstd_cross_build {
