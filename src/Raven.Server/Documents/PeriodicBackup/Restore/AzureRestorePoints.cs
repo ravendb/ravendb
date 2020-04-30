@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public override async Task FetchRestorePoints(string path)
         {
             var objects = await _client.ListBlobsAsync(path, "/", listFolders: true);
-            var folders = objects.ListBlob.ToList();
+            var folders = objects.List.ToList();
 
             if (folders.Count == 0)
             {
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var filesInfo = new List<FileInfoDetails>();
 
-            foreach (var obj in allObjects.ListBlob)
+            foreach (var obj in allObjects.List)
             {
                 if (TryExtractDateFromFileName(obj.Name, out var lastModified) == false)
                     continue;
