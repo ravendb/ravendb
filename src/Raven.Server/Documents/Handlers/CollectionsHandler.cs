@@ -6,6 +6,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -15,13 +16,12 @@ namespace Raven.Server.Documents.Handlers
         public Task GetCollectionStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                CollectionStatistics collectionStatistics = new CollectionStatistics();
-
-                FillCollectionStats(collectionStatistics, context);
+                DynamicJsonValue result = GetCollectionStats(context, false);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, collectionStatistics.ToJson());
+                    context.Write(writer, result);
             }
 
             return Task.CompletedTask;
@@ -31,38 +31,41 @@ namespace Raven.Server.Documents.Handlers
         public Task GetDetailedCollectionStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                DetailedCollectionStatistics detailedCollectionStatistics = new DetailedCollectionStatistics();
-
-                FillCollectionStats(detailedCollectionStatistics, context);
-
-                using (context.OpenReadTransaction())
-                {
-                    foreach (var collection in detailedCollectionStatistics.Collections)
-                    {
-                        detailedCollectionStatistics.ExtendedCollectionDetails[collection.Key] = Database.DocumentsStorage.GetCollectionDetails(collection, context);
-                    }
-                }
+                DynamicJsonValue result = GetCollectionStats(context, true);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, detailedCollectionStatistics.ToJson());
+                    context.Write(writer, result);
             }
 
             return Task.CompletedTask;
         }
 
-        private void FillCollectionStats(CollectionStatistics stats, DocumentsOperationContext context)
+        private DynamicJsonValue GetCollectionStats(DocumentsOperationContext context, bool blnDetailed = false)
         {
-            using (context.OpenReadTransaction())
-            {
-                stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
-                stats.CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context);
+            DynamicJsonValue collections = new DynamicJsonValue();
 
-                foreach (var collectionStat in Database.DocumentsStorage.GetCollections(context))
+            DynamicJsonValue stats = new DynamicJsonValue()
+            {
+                [nameof(CollectionStatistics.CountOfDocuments)] = Database.DocumentsStorage.GetNumberOfDocuments(context),
+                [nameof(CollectionStatistics.CountOfConflicts)] = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
+                [nameof(CollectionStatistics.Collections)] = collections
+            };
+
+            foreach (var collection in Database.DocumentsStorage.GetCollections(context))
+            {
+                if (blnDetailed)
                 {
-                    stats.Collections[collectionStat.Name] = collectionStat.Count;
+                    collections[collection.Name] = Database.DocumentsStorage.GetCollectionDetails(context, collection.Name);
+                }
+                else
+                {
+                    collections[collection.Name] = collection.Count;
                 }
             }
+
+            return stats;
         }
 
         [RavenAction("/databases/*/collections/docs", "GET", AuthorizationStatus.ValidUser)]

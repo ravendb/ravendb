@@ -1951,28 +1951,36 @@ namespace Raven.Server.Documents
             }
         }
 
-        public CollectionDetails GetCollectionDetails(KeyValuePair<string, long> collection, DocumentsOperationContext context)
+        public CollectionDetails GetCollectionDetails(DocumentsOperationContext context, string collection)
         {
-            CollectionDetails collectionDetails = new CollectionDetails() { Name = collection.Key, CountOfDocuments = collection.Value, Size = new Client.Util.Size() };
-            CollectionName collectionName = GetCollection(collection.Key, throwIfDoesNotExist: false);
+            CollectionDetails collectionDetails = new CollectionDetails() { Name = collection, CountOfDocuments = 0, Size = new Client.Util.Size() };
+            CollectionName collectionName = GetCollection(collection, throwIfDoesNotExist: false);
 
             if (collectionName != null)
             {
-                Table collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                    collectionName.GetTableName(CollectionTableType.Documents));
+                TableReport collectionTableReport = GetReportForTable(context, DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-                if (collectionTable != null)
-                {
-                    TableReport tableReport = collectionTable.GetReport(false);
-                    if (tableReport != null)
-                    {
-                        collectionDetails.Size.SizeInBytes = tableReport.DataSizeInBytes;
-                    } else { }
-                } else { }
+                collectionDetails.CountOfDocuments = collectionTableReport.NumberOfEntries;
 
-            } else { }
+                collectionDetails.Size.SizeInBytes = collectionTableReport.DataSizeInBytes
+                    + GetReportForTable(context, RevisionsStorage.RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions)).DataSizeInBytes
+                    + GetReportForTable(context, TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones)).DataSizeInBytes;
+            }
 
             return collectionDetails;
+        }
+
+        private TableReport GetReportForTable(DocumentsOperationContext context, TableSchema schema, string name, bool blnDetailed = false)
+        {
+            TableReport report = new TableReport(0, 0, false);
+            Table table = context.Transaction.InnerTransaction.OpenTable(schema, name);
+            
+            if (table != null)
+            {
+                report = table.GetReport(blnDetailed);
+            }
+            
+            return report;
         }
 
         public CollectionStats GetCollection(string collection, DocumentsOperationContext context)
