@@ -39,17 +39,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
 
                 var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Account Key cannot be null or empty", e.InnerException.Message);
+                Assert.Contains($"{nameof(AzureSettings.AccountKey)} and {nameof(AzureSettings.SasToken)} cannot be both null or empty", e.InnerException.Message);
 
                 restoreConfiguration.Settings.AccountKey = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Account Name cannot be null or empty", e.InnerException.Message);
+                Assert.Contains($"{nameof(AzureSettings.AccountName)} cannot be null or empty", e.InnerException.Message);
 
                 restoreConfiguration.Settings.AccountName = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Storage Container cannot be null or empty", e.InnerException.Message);
+                Assert.Contains($"{nameof(AzureSettings.StorageContainer)} cannot be null or empty", e.InnerException.Message);
+
+                restoreConfiguration.Settings.StorageContainer = "test";
+                restoreConfiguration.Settings.AccountKey = null;
+                restoreConfiguration.Settings.SasToken = "testSasToken";
+                restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
+                e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
+                Assert.Contains($"{nameof(AzureSettings.SasToken)} isn't in the correct format", e.InnerException.Message);
+
+                restoreConfiguration.Settings.AccountKey = "test";
+                restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
+                e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
+                Assert.Contains($"{nameof(AzureSettings.AccountKey)} and {nameof(AzureSettings.SasToken)} cannot be used simultaneously", e.InnerException.Message);
             }
         }
 
