@@ -103,9 +103,9 @@ namespace Raven.Server.Documents.Indexes.Errors
             };
         }
 
-        public override IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
+        public override IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, bool calculateMemoryStats = false, DocumentsOperationContext documentsContext = null)
         {
-            return new IndexStats()
+            return new IndexStats
             {
                 Name = Name,
                 Type = Type
