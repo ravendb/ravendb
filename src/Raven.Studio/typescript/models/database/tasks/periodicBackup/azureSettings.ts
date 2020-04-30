@@ -6,6 +6,7 @@ class azureSettings extends backupSettings {
     remoteFolderName = ko.observable<string>();
     accountName = ko.observable<string>();
     accountKey = ko.observable<string>();
+    sasToken = ko.observable<string>();
 
     constructor(dto: Raven.Client.Documents.Operations.Backups.AzureSettings) {
         super(dto, "Azure");
@@ -14,6 +15,7 @@ class azureSettings extends backupSettings {
         this.remoteFolderName(dto.RemoteFolderName);
         this.accountName(dto.AccountName);
         this.accountKey(dto.AccountKey);
+        this.sasToken(dto.SasToken);
 
         this.initValidation();
 
@@ -50,7 +52,7 @@ class azureSettings extends backupSettings {
                 {
                     validator: (storageContainer: string) => 
                         storageContainer && storageContainer[0] !== "-" && storageContainer[storageContainer.length - 1] !== "-",
-                    message: "Container name must start and end with a letter or number"
+                    message: "Container name must start and end with a letter or a number"
                 },
                 {
                     validator: (storageContainer: string) => !twoDashesRegExp.test(storageContainer),
@@ -84,6 +86,7 @@ class azureSettings extends backupSettings {
         dto.RemoteFolderName = this.remoteFolderName();
         dto.AccountName = this.accountName();
         dto.AccountKey = this.accountKey();
+        dto.SasToken = this.sasToken();
         return dto;
     }
 
@@ -94,6 +97,7 @@ class azureSettings extends backupSettings {
             RemoteFolderName: null,
             AccountName: null,
             AccountKey: null,
+            SasToken: null,
             GetBackupConfigurationScript: null
         });
     }
