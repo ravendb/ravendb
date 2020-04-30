@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public void PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
         {
-            //TestConnection();
+            TestConnection();
 
             if (stream.Length > MaxUploadPutBlobInBytes)
             {
@@ -331,8 +331,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public void TestConnection()
         {
-            if (ContainerExists())
-                return;
+            try
+            {
+                if (ContainerExists())
+                    return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // we don't have the permissions to see if the container exists
+            }
 
             throw new ContainerNotFoundException($"Container '{_containerName}' not found!");
         }
@@ -360,7 +367,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return false;
 
-            throw StorageException.FromResponseMessage(response);
+            var error = StorageException.FromResponseMessage(response);
+
+            if (response.StatusCode == HttpStatusCode.Forbidden)
+                throw new UnauthorizedAccessException(error.ResponseString);
+
+            throw error;
         }
 
         private static XmlDocument CreateXmlDocument(List<string> blockIds)
