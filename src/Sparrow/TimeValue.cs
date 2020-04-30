@@ -396,5 +396,13 @@ namespace Sparrow
 
             return date;
         }
+
+        public static DateTime EnsureUtc(this DateTime date)
+        {
+            if (date.Kind == DateTimeKind.Utc)
+                return date;
+
+            return date.ToUniversalTime();
+        }
     }
 }

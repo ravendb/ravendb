@@ -28,7 +28,8 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.Today.EnsureMilliseconds();
+             
                 const string documentId = "users/ayende";
 
                 using (var bulkInsert = store.BulkInsert())
@@ -49,7 +50,7 @@ namespace SlowTests.Client.TimeSeries
 
                     Assert.Equal(new[] { 59d }, val.Values);
                     Assert.Equal("watches/fitbit", val.Tag);
-                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp.ToLocalTime());
                 }
             }
         }
