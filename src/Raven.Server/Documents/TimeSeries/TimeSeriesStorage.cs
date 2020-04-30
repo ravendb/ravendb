@@ -711,6 +711,9 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
+                    if (baseline > _to)
+                        yield break;
+
                     if (_currentSegment.NumberOfValues != _values.Length)
                     {
                         _values = new double[_currentSegment.NumberOfValues];
