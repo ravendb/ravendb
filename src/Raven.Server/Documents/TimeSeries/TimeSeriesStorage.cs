@@ -1374,8 +1374,6 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 var next = _toAppend.Current;
-                next.Timestamp = EnsureMillisecondsPrecision(next.Timestamp);
-
                 if (currentTimestamp >= next.Timestamp)
                     throw new InvalidDataException("TimeSeries entries must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
                                                    $"Got: current '{currentTimestamp}', next '{next.Timestamp}'.");

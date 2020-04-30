@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Sparrow;
 
 namespace Raven.Client.Documents.Session
 {
@@ -63,7 +64,7 @@ namespace Raven.Client.Documents.Session
 
             var op = new TimeSeriesOperation.AppendOperation
             {
-                Timestamp = timestamp,
+                Timestamp = timestamp.EnsureUtc(),
                 Tag = tag,
                 Values = values is double[] arr
                     ? arr
@@ -98,8 +99,8 @@ namespace Raven.Client.Documents.Session
 
             var op = new TimeSeriesOperation.RemoveOperation
             {
-                From = from,
-                To = to
+                From = from.EnsureUtc(),
+                To = to.EnsureUtc()
             };
 
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))

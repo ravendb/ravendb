@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -29,7 +30,9 @@ namespace Raven.Client.Documents.Session
         public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
             TimeSeriesDetails details;
-              
+            from = from.EnsureUtc();
+            to = to.EnsureUtc();
+
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
                 cache.TryGetValue(Name, out var ranges) && 
                 ranges.Count > 0)

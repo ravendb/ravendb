@@ -20,6 +20,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Threading;
 
@@ -754,6 +755,8 @@ namespace Raven.Client.Documents.BulkInsert
                         _first = false;
 
                         _operation._currentWriter.Write('[');
+
+                        timestamp = timestamp.EnsureUtc();
                         _operation._currentWriter.Write(timestamp.Ticks);
                         _operation.WriteComma();
 

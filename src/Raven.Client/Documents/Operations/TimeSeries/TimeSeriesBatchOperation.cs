@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                     foreach (var append in _operation.Appends)
                     {
-                        append.Timestamp = append.Timestamp.EnsureMilliseconds();
+                        append.Timestamp = append.Timestamp.EnsureUtc().EnsureMilliseconds();
                         sorted[append.Timestamp.Ticks] = append; // on duplicate values the last one overrides
                     }
 
