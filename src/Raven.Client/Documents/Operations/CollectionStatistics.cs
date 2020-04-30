@@ -4,48 +4,30 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class CollectionStatistics : IDynamicJson
+    public class CollectionStatistics
     {
         public CollectionStatistics()
         {
             Collections = new Dictionary<string, long>();
         }
 
-        public long CountOfDocuments { get; set; }
-        public long CountOfConflicts { get; set; }
+        public int CountOfDocuments { get; set; }
+        public int CountOfConflicts { get; set; }
 
         public Dictionary<string, long> Collections { get; set; }
-
-        public virtual DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(CountOfDocuments)] = CountOfDocuments,
-                [nameof(CountOfConflicts)] = CountOfConflicts,
-                [nameof(Collections)] = DynamicJsonValue.Convert(Collections)
-            };
-        }
     }
 
-    public class DetailedCollectionStatistics : CollectionStatistics
+    public class DetailedCollectionStatistics
     {
         public DetailedCollectionStatistics()
         {
-            ExtendedCollectionDetails = new Dictionary<string, CollectionDetails>();
+            Collections = new Dictionary<string, CollectionDetails>();
         }
 
-        public Dictionary<string, CollectionDetails> ExtendedCollectionDetails { get; set; }
+        public int CountOfDocuments { get; set; }
+        public int CountOfConflicts { get; set; }
 
-        public override DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(CountOfDocuments)] = CountOfDocuments,
-                [nameof(CountOfConflicts)] = CountOfConflicts,
-                [nameof(Collections)] = DynamicJsonValue.Convert(Collections),
-                [nameof(ExtendedCollectionDetails)] = DynamicJsonValue.Convert(ExtendedCollectionDetails)
-            };
-        }
+        public Dictionary<string, CollectionDetails> Collections { get; set; }
     }
 
     public class CollectionDetails : IDynamicJson
