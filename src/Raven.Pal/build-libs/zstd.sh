@@ -46,7 +46,7 @@ function zstd_lib_win32 {
             CC=i686-w64-mingw32-gcc \
             OS=Windows_NT \
             CFLAGS="-Ofast -fomit-frame-pointer -m32 -march=pentium3 -mtune=westmere" && \
-        cp zstd/lib/dll/libzstd.dll "${ARTIFACTS_DIR}/libzstd.win.32.dll" >> ${ZSTD_LOG} 2>&1
+        cp zstd/lib/dll/libzstd.dll "${ARTIFACTS_DIR}/libzstd.win.x86.dll" >> ${ZSTD_LOG} 2>&1
 }
 
 function zstd_lib_win64 {
@@ -55,7 +55,7 @@ function zstd_lib_win64 {
             OS=Windows_NT \
             CC=x86_64-w64-mingw32-gcc \
             CFLAGS="-Ofast -fomit-frame-pointer -m64 -mtune=westmere" && \
-        cp zstd/lib/dll/libzstd.dll "${ARTIFACTS_DIR}/libzstd.win.64.dll" >> ${ZSTD_LOG} 2>&1
+        cp zstd/lib/dll/libzstd.dll "${ARTIFACTS_DIR}/libzstd.win.x64.dll" >> ${ZSTD_LOG} 2>&1
 }
 
 function zstd_lib_linux64 {
