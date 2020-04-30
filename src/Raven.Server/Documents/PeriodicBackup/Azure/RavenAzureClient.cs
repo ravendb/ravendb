@@ -60,11 +60,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             if (hasAccountKey && _hasSasToken)
             {
-                throw new ArgumentException($"{nameof(AzureSettings.AccountKey)} and {nameof(AzureSettings.SasToken)} can be used simultaneously");
+                throw new ArgumentException($"{nameof(AzureSettings.AccountKey)} and {nameof(AzureSettings.SasToken)} cannot be used simultaneously");
             }
 
             if (string.IsNullOrWhiteSpace(azureSettings.AccountName))
-                throw new ArgumentException($"{nameof(AzureSettings.AccountKey)} cannot be null or empty");
+                throw new ArgumentException($"{nameof(AzureSettings.AccountName)} cannot be null or empty");
 
             if (string.IsNullOrWhiteSpace(azureSettings.StorageContainer))
                 throw new ArgumentException($"{nameof(AzureSettings.StorageContainer)} cannot be null or empty");
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             if (hasAccountKey)
             {
-                _accountKey = ConvertTheAccountKey(azureSettings.AccountKey);
+                _accountKey = GetAccountKeyBytes(azureSettings.AccountKey);
             }
             else
             {
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             _serverUrlForAccountName = GetUrlForAccountName();
         }
 
-        private static byte[] ConvertTheAccountKey(string accountKey)
+        private static byte[] GetAccountKeyBytes(string accountKey)
         {
             try
             {
