@@ -64,11 +64,27 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return result;
         }
 
+        private const string TimeSeriesFormat = "TimeFormat";
+        private const string UnixTimeFormatMs = "UnixTimeFormatMs";
+        private const string UnixTimeFormatNs = "UnixTimeFormatNs";
+        private static readonly long _epochTicks = new DateTime(1970, 1, 1).Ticks;
+
+        private static long FromUnixMs(long unixMs)
+        {
+            return unixMs * 10_000 + _epochTicks;
+        }
+        private static long FromUnixNs(long unixNs)
+        {
+            return unixNs / 100 + _epochTicks;
+        }
+
         internal static TimeSeriesOperation ParseForBulkInsert(BlittableJsonReaderObject input)
         {
             if (input.TryGet(nameof(Name), out string name) == false || name == null)
                 ThrowMissingProperty(nameof(Name));
 
+            input.TryGet(TimeSeriesFormat, out string format);
+            
             var result = new TimeSeriesOperation
             {
                 Name = name
@@ -87,9 +103,21 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     return null; //never hit
                 }
 
+                long time = (long)bjro[0];
+                switch (format)
+                {
+                    case UnixTimeFormatMs:
+                        time = FromUnixMs(time);
+                        break;
+                    case UnixTimeFormatNs:
+                        time = FromUnixNs(time);
+                        break;
+                }
+                
+
                 var append = new AppendOperation
                 {
-                    Timestamp = new DateTime((long)bjro[0])
+                    Timestamp = new DateTime(time)
                 };
 
                 var numberOfValues = (long)bjro[1];
