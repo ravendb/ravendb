@@ -67,13 +67,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             catch (SystemException e)
             {
                 if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
-                    ThrowOutOfMemory(e);
+                    ThrowOutOfMemoryException(e);
 
                 if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
-                    ThrowOutOfMemory(e);
+                    ThrowOutOfMemoryException(e);
 
                 if (e.InnerException is VoronUnrecoverableErrorException)
-                    throw e.InnerException;
+                    ThrowVoronUnrecoverableErrorException(e);
 
                 throw;
             }
@@ -83,9 +83,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public static void ThrowOutOfMemory(Exception e)
+        public static void ThrowOutOfMemoryException(Exception e)
         {
             throw new OutOfMemoryException("Index writer hit OOM during commit", e);
+        }
+
+        public static void ThrowVoronUnrecoverableErrorException(Exception e)
+        {
+            VoronUnrecoverableErrorException.Raise("Index data is corrupted", e);
         }
 
         public long RamSizeInBytes()
