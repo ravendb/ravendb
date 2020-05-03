@@ -468,7 +468,21 @@ namespace Raven.Server.Documents.TimeSeries
                     // rollup from the the raw data will generate 6-value roll up of (first, last, min, max, sum, count)
                     // other rollups will aggregate each of those values by the type
                     var mode = item.Name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) ? AggregationMode.FromAggregated : AggregationMode.FromRaw;
-                    var values = GetAggregatedValues(reader, policy.AggregationTime, mode);
+                    var rangeSpec = new RangeGroup();
+                    switch (policy.AggregationTime.Unit)
+                    {
+                        case TimeValueUnit.Second:
+                            rangeSpec.Ticks = TimeSpan.FromSeconds(policy.AggregationTime.Value).Ticks;
+                            rangeSpec.TicksAlignment = RangeGroup.Alignment.Second;
+                            break;
+                        case TimeValueUnit.Month:
+                            rangeSpec.Months = policy.AggregationTime.Value;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(policy.AggregationTime.Unit), $"Not supported time value unit '{policy.AggregationTime.Unit}'");
+                    }
+                    rangeSpec.InitializeRange(rollupStart);
+                    var values = GetAggregatedValues(reader, rangeSpec, mode);
 
                     if (previouslyAggregated)
                     {
@@ -736,27 +750,14 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public static List<TimeSeriesStorage.Reader.SingleResult> GetAggregatedValues(TimeSeriesStorage.Reader reader, TimeValue rangeGroup, AggregationMode mode)
+        public static List<TimeSeriesStorage.Reader.SingleResult> GetAggregatedValues(TimeSeriesStorage.Reader reader, RangeGroup rangeSpec, AggregationMode mode)
         {
             var aggStates = new TimeSeriesAggregation(mode); // we always will aggregate here by Min, Max, First, Last, Sum, Count, Mean
             var results = new List<TimeSeriesStorage.Reader.SingleResult>();
 
                 
-            var rangeSpec = new TimeSeriesFunction.RangeGroup();
-            switch (rangeGroup.Unit)
-            {
-                case TimeValueUnit.Second:
-                    rangeSpec.Ticks = TimeSpan.FromSeconds(rangeGroup.Value).Ticks;
-                    break;
-                case TimeValueUnit.Month:
-                    rangeSpec.Months = rangeGroup.Value;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(rangeGroup.Unit), $"Not supported time value unit '{rangeGroup.Unit}'");
-            }
+            
            
-            DateTime next = default;
-
             foreach (var it in reader.SegmentsOrValues())
             {
                 if (it.IndividualValues != null)
@@ -772,7 +773,7 @@ namespace Raven.Server.Documents.TimeSeries
                     // if the range it cover needs to be broken up to multiple ranges.
                     // For example, if the segment covers 3 days, but we have group by 1 hour,
                     // we still have to deal with the individual values
-                    if (it.Segment.End > next)
+                    if (it.Segment.End > rangeSpec.End)
                     {
                         AggregateIndividualItems(it.Segment.Values);
                     }
@@ -788,7 +789,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 results.Add(new TimeSeriesStorage.Reader.SingleResult
                 {
-                    Timestamp = next.AddTicks(-1),
+                    Timestamp = rangeSpec.End.AddTicks(-1),
                     Values = new Memory<double>(aggStates.Values.ToArray()),
                     Status = TimeSeriesValuesSegment.Live,
                     // TODO: Tag = ""
@@ -799,22 +800,21 @@ namespace Raven.Server.Documents.TimeSeries
 
             void MaybeMoveToNextRange(DateTime ts)
             {
-                if (ts < next)
+                if (rangeSpec.WithinRange(ts))
                     return;
 
                 if (aggStates.Any)
                 {
                     results.Add(new TimeSeriesStorage.Reader.SingleResult
                     {
-                        Timestamp = next.AddTicks(-1),
+                        Timestamp = rangeSpec.End.AddTicks(-1),
                         Values = new Memory<double>(aggStates.Values.ToArray()),
                         Status = TimeSeriesValuesSegment.Live,
                         // TODO: Tag = ""
                     });
                 }
 
-                var start = rangeSpec.GetRangeStart(ts);
-                next = rangeSpec.GetNextRangeStart(start);
+                rangeSpec.MoveToNextRange(ts);
                 aggStates.Init();
             }
 

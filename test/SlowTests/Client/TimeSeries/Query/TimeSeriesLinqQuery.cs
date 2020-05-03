@@ -957,10 +957,10 @@ namespace SlowTests.Client.TimeSeries.Query
                             .ToList());
                     var result = await query.ToListAsync();
                     var results = result[0].Results;
-                    Assert.Equal(21, results.Length);
+                    Assert.Equal(20, results.Length);
                     Assert.Equal(3, results[0].Count.Length);
                     Assert.Equal(2, results[8].Count.Length);
-                    Assert.Equal(3, results[20].Count.Length);
+                    Assert.Equal(3, results[19].Count.Length);
                 }
             }
         }
