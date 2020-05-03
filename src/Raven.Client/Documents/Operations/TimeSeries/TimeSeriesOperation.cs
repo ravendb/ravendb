@@ -65,10 +65,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
 
         private const string TimeSeriesFormat = "TimeFormat";
-        private const string UnixTimeFormatMs = "UnixTimeFormatMs";
-        private const string UnixTimeFormatNs = "UnixTimeFormatNs";
-        private static readonly long _epochTicks = new DateTime(1970, 1, 1).Ticks;
-
+        private static readonly long _epochTicks = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
+        internal enum TimeFormat
+        {
+            DotNetTicks,
+            UnixTimeInMs,
+            UnixTimeInNs
+        }
         private static long FromUnixMs(long unixMs)
         {
             return unixMs * 10_000 + _epochTicks;
@@ -83,7 +86,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             if (input.TryGet(nameof(Name), out string name) == false || name == null)
                 ThrowMissingProperty(nameof(Name));
 
-            input.TryGet(TimeSeriesFormat, out string format);
+            if (input.TryGet(TimeSeriesFormat, out TimeFormat format) == false)
+                ThrowMissingProperty(nameof(TimeSeriesFormat));
             
             var result = new TimeSeriesOperation
             {
@@ -106,12 +110,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 long time = (long)bjro[0];
                 switch (format)
                 {
-                    case UnixTimeFormatMs:
+                    case TimeFormat.UnixTimeInMs:
                         time = FromUnixMs(time);
                         break;
-                    case UnixTimeFormatNs:
+                    case TimeFormat.UnixTimeInNs:
                         time = FromUnixNs(time);
                         break;
+                    case TimeFormat.DotNetTicks:
+                        break;
+                    default:
+                        throw new ArgumentException($"Unknown time-format {format}");
                 }
                 
 

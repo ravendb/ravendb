@@ -5,9 +5,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,6 +51,56 @@ namespace SlowTests.Client.TimeSeries
                     Assert.Equal("watches/fitbit", val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
                 }
+            }
+        }
+
+        [Fact]
+        public void CanParseUnixTimeFormat()
+        {
+            using (var ctx = new JsonOperationContext(4096,4096,32, SharedMultipleUseFlag.None))
+            {
+                var djv = new DynamicJsonValue
+                {
+                    ["Name"] = "CanParseUnixTimeFormat",
+                    ["TimeFormat"] = TimeSeriesOperation.TimeFormat.UnixTimeInMs,
+                    ["Appends"] = new DynamicJsonArray
+                    {
+                        new DynamicJsonArray
+                        {
+                            1588464000021 
+                            ,3,1,2,3,
+                            "SomeTag"
+                        }
+                    }
+                };
+                var input = ctx.ReadObject(djv, "CanParseUnixTimeFormat");
+                var op = TimeSeriesOperation.ParseForBulkInsert(input);
+                Assert.Equal("CanParseUnixTimeFormat", op.Name);
+                Assert.Equal("SomeTag", op.Appends[0].Tag);
+                Assert.Equal(new double[] {1, 2, 3}, op.Appends[0].Values);
+                Assert.Equal(new DateTime(2020, 5, 3, 0, 0, 0, 21), op.Appends[0].Timestamp);
+
+
+                djv = new DynamicJsonValue
+                {
+                    ["Name"] = "CanParseUnixTimeFormat",
+                    ["TimeFormat"] = TimeSeriesOperation.TimeFormat.UnixTimeInNs,
+                    ["Appends"] = new DynamicJsonArray
+                    {
+                        new DynamicJsonArray
+                        {
+                            1257894000000000000 
+                            ,3,3,2,1,
+                            "SomeTag2"
+                        }
+                    }
+                };
+                input = ctx.ReadObject(djv, "CanParseUnixTimeFormat");
+                op = TimeSeriesOperation.ParseForBulkInsert(input);
+                Assert.Equal("CanParseUnixTimeFormat", op.Name);
+                Assert.Equal("SomeTag2", op.Appends[0].Tag);
+                Assert.Equal(new double[] {3, 2, 1}, op.Appends[0].Values);
+                Assert.Equal(new DateTime(2009, 11, 10, 23, 0, 0), op.Appends[0].Timestamp);
             }
         }
 

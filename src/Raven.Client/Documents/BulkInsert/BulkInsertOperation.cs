@@ -795,7 +795,7 @@ namespace Raven.Client.Documents.BulkInsert
 
                 _operation._currentWriter.Write("{\"Id\":\"");
                 _operation.WriteString(_id);
-                _operation._currentWriter.Write("\",\"Type\":\"TimeSeriesBulkInsert\",\"TimeSeries\":{\"Name\":\"");
+                _operation._currentWriter.Write("\",\"Type\":\"TimeSeriesBulkInsert\",\"TimeSeries\":{\"TimeFormat\":\"DotNetTicks\",\"Name\":\"");
                 _operation.WriteString(_name);
                 _operation._currentWriter.Write("\",\"Appends\":[");
             }
