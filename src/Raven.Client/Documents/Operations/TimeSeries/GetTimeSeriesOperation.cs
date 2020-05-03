@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return new GetTimeSeriesCommand(_docId, _ranges, _start, _pageSize);
         }
 
-        private class GetTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
+        internal class GetTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
         {
             private readonly string _docId;
             private readonly IEnumerable<TimeSeriesRange> _ranges;
@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 pathBuilder.Append("/databases/")
                     .Append(node.Database)
                     .Append("/timeseries")
-                    .Append("?id=")
+                    .Append("?docId=")
                     .Append(Uri.EscapeDataString(_docId));
 
                 if (_start > 0)
