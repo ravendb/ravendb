@@ -2,30 +2,18 @@ param(
     $Repo = "ravendb/ravendb",
     $ArtifactsDir = "..\artifacts",
     $RavenDockerSettingsPath = "..\src\Raven.Server\Properties\Settings\settings.docker.posix.json",
-    $DockerfileDir = "./ravendb-ubuntu")
+    $DockerfileDir = "./ravendb-ubuntu-arm")
 
 $ErrorActionPreference = "Stop"
 
 . ".\common.ps1"
 
-function BuildUbuntuDockerImage ($version, $arch) {
-    switch ($arch) {
-        "arm32v7" { 
-            $packageFileName = "RavenDB-$version-raspberry-pi.tar.bz2"
-            break;
-        }
-        "x64" {
-            $packageFileName = "RavenDB-$version-linux-x64.tar.bz2"
-            break;
-        }
-        Default {
-            throw "Arch not supported."
-        }
-    }
-
+function BuildUbuntuArmDockerImage ($version) {
+    $packageFileName = "RavenDB-$version-raspberry-pi.tar.bz2"
     $artifactsPackagePath = Join-Path -Path $ArtifactsDir -ChildPath $packageFileName
 
-    if ([string]::IsNullOrEmpty($artifactsPackagePath)) {
+    if ([string]::IsNullOrEmpty($artifactsPackagePath))
+    {
         throw "PackagePath cannot be empty."
     }
 
@@ -38,17 +26,15 @@ function BuildUbuntuDockerImage ($version, $arch) {
     Copy-Item -Path $RavenDockerSettingsPath -Destination $(Join-Path -Path $DockerfileDir -ChildPath "settings.json") -Force
 
     write-host "Build docker image: $version"
-    write-host "Tags: $($repo):$version-ubuntu.18.04-$arch $($repo):4.2-ubuntu-$arch-latest"
+    write-host "Tags: $($repo):$version-ubuntu.18.04-arm $($repo):4.2-ubuntu-arm-latest"
 
     docker build $DockerfileDir `
-        -f "$($DockerfileDir)/Dockerfile.$($arch)" `
         -t "$($repo):latest" `
-        -t "$($repo):ubuntu-$arch-latest" `
-        -t "$($repo):$version-ubuntu.18.04-$arch" `
-        -t "$($repo):4.2-ubuntu-$arch-latest"
+        -t "$($repo):ubuntu-arm-latest" `
+        -t "$($repo):$version-ubuntu.18.04-arm" `
+        -t "$($repo):4.2-ubuntu-arm-latest"
 
     Remove-Item -Path $dockerPackagePath
 }
 
-BuildUbuntuDockerImage $(GetVersionFromArtifactName) -arch "x64"
-BuildUbuntuDockerImage $(GetVersionFromArtifactName) -arch "arm32v7"
+BuildUbuntuArmDockerImage $(GetVersionFromArtifactName)

@@ -8,11 +8,14 @@ function LayoutDockerPrerequisites($projectDir, $artifactsDir) {
     
     $assets = @(
         'ravendb-ubuntu', 
+        'ravendb-ubuntu-arm',
         'ravendb-nanoserver', 
         'build-nanoserver.ps1',
         'build-ubuntu.ps1',
+        'build-ubuntu-arm.ps1',
         'publish-nanoserver.ps1',
         'publish-ubuntu.ps1',
+        'publish-ubuntu-arm.ps1',
         'common.ps1'
     )
 
