@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
         public async Task Read()
         {
-            var documentId = GetStringQueryString("id");
+            var documentId = GetStringQueryString("docId");
             var names = GetStringValuesQueryString("name");
             var fromList = GetStringValuesQueryString("from", required: false);
             var toList = GetStringValuesQueryString("to", required: false);
@@ -423,7 +423,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+                var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
 
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "timeseries");
                 var operation = JsonDeserializationClient.TimeSeriesOperation(blittable);

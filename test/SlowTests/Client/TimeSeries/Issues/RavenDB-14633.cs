@@ -60,7 +60,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -118,7 +118,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -182,7 +182,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     for (int i = 0; i < 3; i++)
                     {
-                        var tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                        var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                         {
                             new TimeSeriesRange
                             {
@@ -221,15 +221,16 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    var command = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
-                    {
-                        new TimeSeriesRange
+                    var command = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId,
+                        new List<TimeSeriesRange>
                         {
-                            Name = "Heartrate",
-                            From = DateTime.MinValue,
-                            To = DateTime.MaxValue
-                        }
-                    });
+                            new TimeSeriesRange
+                            {
+                                Name = "Heartrate", 
+                                From = DateTime.MinValue, 
+                                To = DateTime.MaxValue
+                            }
+                        }, 0, int.MaxValue);
                     re.Execute(command, context);
 
                     Assert.Equal(HttpStatusCode.OK, command.StatusCode);
@@ -287,10 +288,10 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    GetTimeSeriesCommand tsCommand = default;
+                    GetTimeSeriesOperation.GetTimeSeriesCommand tsCommand = default;
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                        tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                         {
                             new TimeSeriesRange
                             {
@@ -330,7 +331,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -358,7 +359,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     // request with a different 'start'
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -435,7 +436,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     };
 
-                    var tsCommand = new GetTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
+                    var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
                     re.Execute(tsCommand, context);
                     var timesSeriesDetails = tsCommand.Result;
 
@@ -529,7 +530,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     };
 
-                    var tsCommand = new GetTimeSeriesCommand(documentId, ranges, 10, 150);
+                    var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 10, 150);
                     re.Execute(tsCommand, context);
                     var timesSeriesDetails = tsCommand.Result;
 
@@ -623,11 +624,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     };
 
-                    GetTimeSeriesCommand tsCommand;
+                    GetTimeSeriesOperation.GetTimeSeriesCommand tsCommand;
 
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesCommand(documentId, ranges);
+                        tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
                         re.Execute(tsCommand, context);
                         var timesSeriesDetails = tsCommand.Result;
 
@@ -681,7 +682,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, ranges);
+                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -750,11 +751,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     };
 
-                    GetTimeSeriesCommand tsCommand;
+                    GetTimeSeriesOperation.GetTimeSeriesCommand tsCommand;
 
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesCommand(documentId, ranges, 10, 150);
+                        tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 10, 150);
                         re.Execute(tsCommand, context);
                         var timesSeriesDetails = tsCommand.Result;
 
@@ -809,7 +810,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, ranges, 10, 150);
+                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 10, 150);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -822,7 +823,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     // request with a different 'start'
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange()
                         {
@@ -840,73 +841,5 @@ namespace SlowTests.Client.TimeSeries.Issues
                 }
             }
         }
-
-        private class GetTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
-        {
-            private readonly string _docId;
-            private readonly IEnumerable<TimeSeriesRange> _ranges;
-            private readonly int _start;
-            private readonly int _pageSize;
-
-            public GetTimeSeriesCommand(string docId, IEnumerable<TimeSeriesRange> ranges, int start = 0, int pageSize = int.MaxValue)
-            {
-                _docId = docId ?? throw new ArgumentNullException(nameof(docId));
-                _ranges = ranges ?? throw new ArgumentNullException(nameof(ranges));
-                _start = start;
-                _pageSize = pageSize;
-            }
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                var pathBuilder = new StringBuilder(node.Url);
-                pathBuilder.Append("/databases/")
-                    .Append(node.Database)
-                    .Append("/timeseries")
-                    .Append("?id=")
-                    .Append(Uri.EscapeDataString(_docId));
-
-                if (_start > 0)
-                {
-                    pathBuilder.Append("&start=")
-                        .Append(_start);
-                }
-
-                if (_pageSize < int.MaxValue)
-                {
-                    pathBuilder.Append("&pageSize=")
-                        .Append(_pageSize);
-                }
-
-                foreach (var range in _ranges)
-                {
-                    pathBuilder.Append("&name=")
-                        .Append(range.Name)
-                        .Append("&from=")
-                        .Append(range.From.GetDefaultRavenFormat())
-                        .Append("&to=")
-                        .Append(range.To.GetDefaultRavenFormat());
-                }
-
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
-
-                url = pathBuilder.ToString();
-
-                return request;
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    return;
-
-                Result = JsonDeserializationClient.TimeSeriesDetails(response);
-            }
-
-            public override bool IsReadRequest => true;
-        }
-
     }
 }
