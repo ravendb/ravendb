@@ -198,13 +198,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             catch (SystemException e)
             {
                 if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
-                    LuceneIndexWriter.ThrowOutOfMemory(e);
+                    LuceneIndexWriter.ThrowOutOfMemoryException(e);
 
                 if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
-                    LuceneIndexWriter.ThrowOutOfMemory(e);
+                    LuceneIndexWriter.ThrowOutOfMemoryException(e);
 
                 if (e.InnerException is VoronUnrecoverableErrorException)
-                    throw e.InnerException;
+                    LuceneIndexWriter.ThrowVoronUnrecoverableErrorException(e);
 
                 throw;
             }
