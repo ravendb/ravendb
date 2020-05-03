@@ -1,6 +1,7 @@
 param(
     $Repo = "ravendb/ravendb", 
     $ArtifactsDir = "..\artifacts",
+    $Arch = "x64",
     [switch]$DryRun = $False,
     [switch]$RemoveImages = $False)
 
@@ -27,7 +28,8 @@ function PushImagesDryRun($imageTags) {
 function PushImages($imageTags) {
     if ($DryRun -eq $False) {
         PushImagesToDockerHub $imageTags
-    } else {
+    }
+    else {
         PushImagesDryRun $imageTags
     }
 }
@@ -40,17 +42,35 @@ function RemoveImages($imageTags) {
         CheckLastExitCode
     }
 }
-function GetImageTags($repo, $version) {
-        return @(
-            "$($repo):latest",
-            "$($repo):ubuntu-latest",
-            "$($repo):4.2-ubuntu-latest",
-            "$($repo):$($version)-ubuntu.18.04-x64"
-        )
+function GetImageTags($repo, $version, $arch) {
+    switch ($arch) {
+        "x64" { 
+            return @(
+                "$($repo):latest",
+                "$($repo):ubuntu-latest",
+                "$($repo):4.2-ubuntu-latest",
+                "$($repo):$($version)-ubuntu.18.04-x64"
+            )
+            break;
+        }
+        "arm32v7" {
+            return @(
+                "$($repo):latest",
+                "$($repo):ubuntu-arm32v7-latest",
+                "$($repo):4.2-ubuntu-arm32v7-latest",
+                "$($repo):$($version)-ubuntu.18.04-arm32v7"
+            )
+            break;
+        }
+        Default {
+            throw "Arch not supported."
+        }
+    }
+        
 }
 
 $version = GetVersionFromArtifactName
-$tags = GetImageTags $Repo $version
+$tags = GetImageTags $Repo $version $Arch
 PushImages $tags
 
 if ($RemoveImages) {

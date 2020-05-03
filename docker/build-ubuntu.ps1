@@ -8,12 +8,24 @@ $ErrorActionPreference = "Stop"
 
 . ".\common.ps1"
 
-function BuildUbuntuDockerImage ($version) {
-    $packageFileName = "RavenDB-$version-linux-x64.tar.bz2"
+function BuildUbuntuDockerImage ($version, $arch) {
+    switch ($arch) {
+        "arm32v7" { 
+            $packageFileName = "RavenDB-$version-raspberry-pi.tar.bz2"
+            break;
+        }
+        "x64" {
+            $packageFileName = "RavenDB-$version-linux-x64.tar.bz2"
+            break;
+        }
+        Default {
+            throw "Arch not supported."
+        }
+    }
+
     $artifactsPackagePath = Join-Path -Path $ArtifactsDir -ChildPath $packageFileName
 
-    if ([string]::IsNullOrEmpty($artifactsPackagePath))
-    {
+    if ([string]::IsNullOrEmpty($artifactsPackagePath)) {
         throw "PackagePath cannot be empty."
     }
 
@@ -26,15 +38,17 @@ function BuildUbuntuDockerImage ($version) {
     Copy-Item -Path $RavenDockerSettingsPath -Destination $(Join-Path -Path $DockerfileDir -ChildPath "settings.json") -Force
 
     write-host "Build docker image: $version"
-    write-host "Tags: $($repo):$version-ubuntu.18.04-x64 $($repo):4.2-ubuntu-latest"
+    write-host "Tags: $($repo):$version-ubuntu.18.04-$arch $($repo):4.2-ubuntu-$arch-latest"
 
     docker build $DockerfileDir `
+        -f "$($DockerfileDir)/Dockerfile.$($arch)" `
         -t "$($repo):latest" `
-        -t "$($repo):ubuntu-latest" `
-        -t "$($repo):$version-ubuntu.18.04-x64" `
-        -t "$($repo):4.2-ubuntu-latest"
+        -t "$($repo):ubuntu-$arch-latest" `
+        -t "$($repo):$version-ubuntu.18.04-$arch" `
+        -t "$($repo):4.2-ubuntu-$arch-latest"
 
     Remove-Item -Path $dockerPackagePath
 }
 
-BuildUbuntuDockerImage $(GetVersionFromArtifactName)
+BuildUbuntuDockerImage $(GetVersionFromArtifactName) -arch "x64"
+BuildUbuntuDockerImage $(GetVersionFromArtifactName) -arch "arm32v7"
