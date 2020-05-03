@@ -25,20 +25,20 @@ namespace FastTests.Server.Documents
         [InlineData("1 month", "2019-05-05T06:03:51.1077101Z", "2019-05-01T00:00:00.0000000Z", "2019-06-01T00:00:00.0000000Z")]
         public void CanGetRangeStartAndNext(string rangeStr, string dateStr, string startStr, string nextStr)
         {
-            var rangeSpec = TimeSeriesFunction.ParseRangeFromString(rangeStr);
+            var rangeSpec = RangeGroup.ParseRangeFromString(rangeStr);
             var date = DateTime.ParseExact(dateStr, "o", CultureInfo.InvariantCulture).ToUniversalTime();
 
-            var start = rangeSpec.GetRangeStart(date);
+            rangeSpec.InitializeRange(date);
 
             Assert.Equal(
                 DateTime.ParseExact(startStr, "o", CultureInfo.InvariantCulture).ToUniversalTime(),
-                start);
+                rangeSpec.Start);
 
-            var next = rangeSpec.GetNextRangeStart(start);
+            rangeSpec.MoveToNextRange(rangeSpec.End);
 
             Assert.Equal(
                 DateTime.ParseExact(nextStr, "o", CultureInfo.InvariantCulture).ToUniversalTime(),
-                next);
+                rangeSpec.Start);
 
         }
 

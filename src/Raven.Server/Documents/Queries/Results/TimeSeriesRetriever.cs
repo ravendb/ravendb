@@ -65,17 +65,17 @@ namespace Raven.Server.Documents.Queries.Results
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
 
-            TimeSeriesFunction.RangeGroup rangeSpec = default;
-            DateTime start = default, next = default;
+            RangeGroup rangeSpec = default;
 
             var groupBy = timeSeriesFunction.GroupBy?.GetValue(_queryParameters)?.ToString();
             if (groupBy != null)
             {
-                rangeSpec = TimeSeriesFunction.ParseRangeFromString(groupBy);
+                rangeSpec = RangeGroup.ParseRangeFromString(groupBy);
             }
             else
             {
-                next = max;
+                rangeSpec = new RangeGroup();
+                rangeSpec.InitializeFullRange(min, max);
             }
 
             var aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
@@ -102,16 +102,15 @@ namespace Raven.Server.Documents.Queries.Results
 
             void MaybeMoveToNextRange(DateTime ts)
             {
-                if (ts < next)
+                if (rangeSpec.WithinRange(ts))
                     return;
 
                 if (aggStates[0].Any)
                 {
-                    array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
+                    array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, rangeSpec.Start, rangeSpec.End));
                 }
 
-                start = rangeSpec.GetRangeStart(ts);
-                next = rangeSpec.GetNextRangeStart(start);
+                rangeSpec.MoveToNextRange(ts);
 
                 for (int i = 0; i < aggStates.Length; i++)
                 {
@@ -169,7 +168,7 @@ namespace Raven.Server.Documents.Queries.Results
                         // if the range it cover needs to be broken up to multiple ranges.
                         // For example, if the segment covers 3 days, but we have group by 1 hour,
                         // we still have to deal with the individual values
-                        if (it.Segment.End > next || timeSeriesFunction.Where != null)
+                        if (it.Segment.End > rangeSpec.End || timeSeriesFunction.Where != null)
                         {
                             AggregateIndividualItems(it.Segment.Values);
                         }
@@ -188,7 +187,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (aggStates[0].Any)
                 {
-                    array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
+                    array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, rangeSpec.Start, rangeSpec.End));
                 }
 
                 _argumentValuesDictionary?.Clear();

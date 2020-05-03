@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Queries.AST
         }
     }
 
-    public unsafe class TimeSeriesFunction
+    public class TimeSeriesFunction
     {
         public TimeSeriesBetweenExpression Between;
         public QueryExpression Where;
@@ -123,49 +123,148 @@ namespace Raven.Server.Documents.Queries.AST
         public List<(QueryExpression, StringSegment?)> Select;
         public StringSegment? LoadTagAs;
         public TimeSpan? Offset;
+    }
 
-        public struct RangeGroup
+    public unsafe struct RangeGroup
+    {
+        public long Ticks;
+        public int Months;
+        public Alignment TicksAlignment;
+
+        public enum Alignment
         {
-            public long Ticks;
-            public int Months;
+            None,
+            Millisecond,
+            Second,
+            Minute,
+            Hour,
+            Day
+        }
 
-            public DateTime GetRangeStart(DateTime timestamp)
+        private const long TicksInMillisecond = 10_000;
+
+        private long AlignedTicks
+        {
+            get
             {
-                var ticks = timestamp.Ticks;
-
-                if (Ticks != 0)
+                var ticks = TicksInMillisecond;
+                switch (TicksAlignment)
                 {
-                    ticks -= (ticks % Ticks);
-                    return new DateTime(ticks,timestamp.Kind);
-                }
+                    case Alignment.Day:
+                        ticks *= 24;
+                        goto case Alignment.Hour;
 
-                if (Months != 0)
-                {
-                    var yearsPortion = Math.Max(1, Months / 12);
-                    var monthsRemaining = Months % 12;
-                    var year = timestamp.Year - (timestamp.Year % yearsPortion);
-                    int month = monthsRemaining == 0 ? 1 : ((timestamp.Month - 1) / monthsRemaining * monthsRemaining) + 1;
+                    case Alignment.Hour:
+                        ticks *= 60;
+                        goto case Alignment.Minute;
 
-                    return new DateTime(year, month, 1, 0, 0, 0, timestamp.Kind);
-                }
-                return timestamp;
-            }
+                    case Alignment.Minute:
+                        ticks *= 60;
+                        goto case Alignment.Second;
 
-            public DateTime GetNextRangeStart(DateTime timestamp)
-            {
-                if (Ticks != 0)
-                {
-                    return timestamp.AddTicks(Ticks);
-                }
+                    case Alignment.Second:
+                        ticks *= 1_000;
+                        goto case Alignment.Millisecond;
 
-                if (Months != 0)
-                {
-                    return timestamp.AddMonths(Months);
+                    case Alignment.Millisecond:
+                        return ticks;
+
+                    default:
+                        throw new ArgumentOutOfRangeException($"Unknown type {TicksAlignment}");
                 }
-                return timestamp;
             }
         }
 
+        private DateTime _origin;
+        private DateTime _start;
+        private DateTime _end;
+        private bool _init;
+
+        public DateTime Start => _start;
+        public DateTime End => _end;
+
+        private void AssertInit()
+        {
+            if (_init == false)
+                throw new InvalidOperationException("You must initialize first.");
+        }
+
+        private void AssertNotInit()
+        {
+            if (_init)
+                throw new InvalidOperationException("This range is already initialized.");
+        }
+
+        public void InitializeRange(DateTime origin)
+        {
+            AssertNotInit();
+
+            if (Ticks != 0)
+                InitByTicks(origin);
+            else if (Months != 0)
+                InitByMonth(origin);
+            else
+                throw new ArgumentException($"Either {nameof(Ticks)} or {nameof(Months)} should be set");
+            
+            _origin = _start;
+            _init = true;
+        }
+
+        public void InitializeFullRange(DateTime start, DateTime end)
+        {
+            AssertNotInit();
+
+            _start = start;
+            _end = end;
+            _init = true;
+        }
+
+        private void InitByTicks(DateTime start)
+        {
+            var ticks = start.Ticks;
+            ticks -= (ticks % AlignedTicks);
+            _start = new DateTime(ticks, start.Kind);
+            _end = _start.AddTicks(Ticks);
+        }
+
+        private void InitByMonth(DateTime start)
+        {
+            var yearsPortion = Math.Max(1, Months / 12);
+            var monthsRemaining = Months % 12;
+            var year = start.Year - (start.Year % yearsPortion);
+            int month = monthsRemaining == 0 ? 1 : ((start.Month - 1) / monthsRemaining * monthsRemaining) + 1;
+            _start = new DateTime(year, month, 1, 0, 0, 0, start.Kind);
+            _end = _start.AddMonths(Months);
+        }
+
+        public void MoveToNextRange(DateTime timestamp)
+        {
+            AssertInit();
+
+            if (timestamp < _end)
+                throw new InvalidOperationException($"The time '{timestamp}' is smaller then the end of current range");
+
+            if (Ticks != 0)
+            {
+                var distance = timestamp - _origin;
+                _start = _origin.AddTicks((distance.Ticks / Ticks) * Ticks);
+                _end = _start.AddTicks(Ticks);
+                return;
+            }
+
+            if (Months != 0)
+            {
+                InitByMonth(timestamp);
+            }
+        }
+
+        public bool WithinRange(DateTime timestamp)
+        {
+            if (_init == false)
+                InitializeRange(timestamp);
+
+            return timestamp >= _start && timestamp < _end;
+        }
 
         public static RangeGroup ParseRangeFromString(string s)
         {
@@ -179,11 +278,14 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 offset++;
             }
+
             if (offset != s.Length)
                 throw new ArgumentException("After range specification, found additional unknown data: " + s);
 
             return range;
         }
+
+        private const int TicksInOneSecond = 10_000_000;
 
         private static void ParseRange(string source, ref int offset, ref RangeGroup range, long duration)
         {
@@ -204,14 +306,16 @@ namespace Raven.Server.Documents.Queries.AST
                     if (TryConsumeMatch(source, ref offset, "seconds") == false)
                         TryConsumeMatch(source, ref offset, "second");
 
-                    range.Ticks += duration * 10_000_000;
+                    range.Ticks += duration * TicksInOneSecond;
+                    range.TicksAlignment = Alignment.Second;
                     return;
                 case 'm':
                     if (TryConsumeMatch(source, ref offset, "minutes") ||
                         TryConsumeMatch(source, ref offset, "minute") ||
                         TryConsumeMatch(source, ref offset, "min"))
                     {
-                        range.Ticks += duration * 10_000_000 * 60;
+                        range.Ticks += duration * TicksInOneSecond * 60;
+                        range.TicksAlignment = Alignment.Minute;
                         return;
                     }
 
@@ -220,28 +324,35 @@ namespace Raven.Server.Documents.Queries.AST
                         TryConsumeMatch(source, ref offset, "milliseconds"))
                     {
                         range.Ticks += duration;
+                        range.TicksAlignment = Alignment.Millisecond;
                         return;
                     }
+
                     if (TryConsumeMatch(source, ref offset, "months") ||
                         TryConsumeMatch(source, ref offset, "month") ||
                         TryConsumeMatch(source, ref offset, "mon"))
                     {
                         AssertValidDurationInMonths(duration);
-                        range.Months+= (int)duration;
+                        range.Months += (int)duration;
                         return;
                     }
-                    range.Ticks += duration * 10_000_000 * 60;
+                    range.TicksAlignment = Alignment.Minute;
+                    range.Ticks += duration * TicksInOneSecond * 60;
                     return;
                 case 'h':
                     if (TryConsumeMatch(source, ref offset, "hours") == false)
                         TryConsumeMatch(source, ref offset, "hour");
 
-                    range.Ticks += duration * 10_000_000 * 60 * 60;
+                    range.Ticks += duration * TicksInOneSecond * 60 * 60;
+                    range.TicksAlignment = Alignment.Hour;
+
                     return;
                 case 'd':
                     if (TryConsumeMatch(source, ref offset, "days") == false)
                         TryConsumeMatch(source, ref offset, "day");
-                    range.Ticks += duration * 10_000_000 * 60 * 60 * 24;
+                    range.Ticks += duration * TicksInOneSecond * 60 * 60 * 24;
+                    range.TicksAlignment = Alignment.Day;
+
                     return;
                 case 'q':
                     if (TryConsumeMatch(source, ref offset, "quarters") == false)
@@ -274,18 +385,19 @@ namespace Raven.Server.Documents.Queries.AST
             if (source.Length <= offset)
                 return false;
 
-            if (new StringSegment(source, offset-1 , source.Length - offset +1).StartsWith(additionalMatch, StringComparison.OrdinalIgnoreCase))
+            if (new StringSegment(source, offset - 1, source.Length - offset + 1).StartsWith(additionalMatch, StringComparison.OrdinalIgnoreCase))
             {
-                offset += additionalMatch.Length-1;
+                offset += additionalMatch.Length - 1;
                 return true;
             }
+
             return false;
         }
 
         private static long ParseNumber(string source, ref int offset)
         {
             int i;
-            for (i= offset; i < source.Length; i++)
+            for (i = offset; i < source.Length; i++)
             {
                 if (char.IsWhiteSpace(source[i]) == false)
                     break;
@@ -297,9 +409,9 @@ namespace Raven.Server.Documents.Queries.AST
                     break;
             }
 
-            fixed(char* s = source)
+            fixed (char* s = source)
             {
-                if (long.TryParse(new ReadOnlySpan<char>(s + offset, i), out var amount) )
+                if (long.TryParse(new ReadOnlySpan<char>(s + offset, i), out var amount))
                 {
                     offset = i;
                     return amount;
