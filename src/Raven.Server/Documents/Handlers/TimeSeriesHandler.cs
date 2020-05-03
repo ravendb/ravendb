@@ -683,7 +683,7 @@ namespace Raven.Server.Documents.Handlers
                         }
 
                         var values = item.Segment.YieldAllValues(context, context.Allocator, item.Baseline);
-                        var changeVector = tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, item.ChangeVector);
+                        var changeVector = tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, item.ChangeVector, verifyName: false);
                         context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, item.ChangeVector);
                     }
 

@@ -1410,7 +1410,8 @@ namespace Raven.Server.Documents.TimeSeries
             string collection,
             string name,
             IEnumerable<Reader.SingleResult> toAppend,
-            string changeVectorFromReplication = null
+            string changeVectorFromReplication = null,
+            bool verifyName = true
             )
         {
             if (context.Transaction == null)
@@ -1421,6 +1422,10 @@ namespace Raven.Server.Documents.TimeSeries
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var newSeries = Stats.GetStats(context, documentId, name).Count == 0;
+            if (newSeries && verifyName)
+            {
+                VerifyLegalName(name);
+            }
 
             using (var appendEnumerator = new AppendEnumerator(toAppend, changeVectorFromReplication != null))
             {
@@ -1493,6 +1498,17 @@ namespace Raven.Server.Documents.TimeSeries
             });
 
             return context.LastDatabaseChangeVector;
+        }
+
+        private static void VerifyLegalName(string name)
+        {
+            for (int i = 0; i < name.Length; i++)
+            {
+                if (name[i] == TimeSeriesConfiguration.TimeSeriesRollupSeparator)
+                    throw new InvalidOperationException($"Illegal time series name : '{name}'. " +
+                                                        $"Time series names cannot contain '{TimeSeriesConfiguration.TimeSeriesRollupSeparator}' character, " +
+                                                        "since this character is reserved for time series rollups.");
+            }
         }
 
         private bool ValueTooFar(TimeSeriesSegmentHolder segmentHolder, Reader.SingleResult current)
