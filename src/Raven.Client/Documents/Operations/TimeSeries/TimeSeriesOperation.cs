@@ -86,8 +86,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             if (input.TryGet(nameof(Name), out string name) == false || name == null)
                 ThrowMissingProperty(nameof(Name));
 
-            if (input.TryGet(TimeSeriesFormat, out TimeFormat format) == false)
-                ThrowMissingProperty(nameof(TimeSeriesFormat));
+            input.TryGet(TimeSeriesFormat, out TimeFormat format);
             
             var result = new TimeSeriesOperation
             {
@@ -107,7 +106,20 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     return null; //never hit
                 }
 
-                long time = (long)bjro[0];
+                long time;
+                switch (bjro[0])
+                {
+                    case long l:
+                        time = l;
+                        break;
+                    case LazyNumberValue lnv:
+                        time = lnv;
+                        break;
+                    default:
+                        time = (LazyNumberValue)bjro[0];
+                        break;
+                }
+
                 switch (format)
                 {
                     case TimeFormat.UnixTimeInMs:
