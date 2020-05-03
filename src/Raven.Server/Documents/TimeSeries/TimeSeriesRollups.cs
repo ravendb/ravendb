@@ -485,7 +485,7 @@ namespace Raven.Server.Documents.TimeSeries
                         tss.RemoveTimestampRange(context, removeRequest);
                     }
                     
-                    tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values);
+                    tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values, verifyName: false);
                     RolledUp++;
                     table.DeleteByKey(item.Key);
 
