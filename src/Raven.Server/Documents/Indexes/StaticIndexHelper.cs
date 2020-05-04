@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.Indexes
 
                     foreach (var collectionName in collectionNames)
                     {
-                        var etag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(tx.InnerTransaction, collection, collectionName);
+                        var etag = indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(tx.InnerTransaction, collection, collectionName);
                         if (etags.TryGetValue(collectionName.Name, out long currentEtag) == false || etag < currentEtag)
                             etags[collectionName.Name] = etag;
                     }
