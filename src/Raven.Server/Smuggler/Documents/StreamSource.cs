@@ -525,7 +525,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     offset += read.BytesRead;
 
-                    var read2 = _peepingTomStream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
+                    var read2 = _peepingTomStream.Read(_buffer.Memory.Span);
                     if (read2 == 0)
                         throw new EndOfStreamException("Stream ended without reaching end of stream content");
 

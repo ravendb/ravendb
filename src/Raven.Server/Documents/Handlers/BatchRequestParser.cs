@@ -14,7 +14,6 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
@@ -60,26 +59,27 @@ namespace Raven.Server.Documents.Handlers
             public string ContentType;
             public AttachmentType AttachmentType;
             public BatchHandler.MergedBatchCommand.AttachmentStream AttachmentStream;
-            #endregion
+
+            #endregion Attachment
 
             #region Counter
 
             public DocumentCountersOperation Counters;
 
-            #endregion
+            #endregion Counter
 
             #region Time Series
 
             public TimeSeriesOperation TimeSeries;
 
-            #endregion
+            #endregion Time Series
 
             #region ravendata
+
             public long ContentLength;
-            #endregion
 
+            #endregion ravendata
         }
-
 
         private static readonly CommandData[] Empty = new CommandData[0];
         private static readonly int MaxSizeOfCommandsInBatchToCache = 128;
@@ -95,6 +95,7 @@ namespace Raven.Server.Documents.Handlers
                 _cache = null;
             };
         }
+
         public static void ReturnBuffer(ArraySegment<CommandData> cmds)
         {
             Array.Clear(cmds.Array, cmds.Offset, cmds.Count);
@@ -112,7 +113,6 @@ namespace Raven.Server.Documents.Handlers
                 return;
             _cache.Push(cmds);
         }
-
 
         public static async Task BuildCommandsAsync(JsonOperationContext context, BatchHandler.MergedBatchCommand command, Stream stream,
             DocumentDatabase database, ServerStore serverStore)
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Handlers
                         cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
                     }
 
-                    var commandData = await ReadSingleCommand(context, stream, state, parser, buffer, modifier,default);
+                    var commandData = await ReadSingleCommand(context, stream, state, parser, buffer, modifier, default);
 
                     if (commandData.Type == CommandType.PATCH)
                     {
@@ -330,7 +330,6 @@ namespace Raven.Server.Documents.Handlers
                 do
                 {
                     await RefillParserBuffer(_stream, _buffer, _parser, _token);
-
                 } while (_parser.Read() == false);
                 if (_state.CurrentTokenType == JsonParserToken.EndArray)
                     return new CommandData { Type = CommandType.None };
@@ -342,7 +341,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 var bufferSize = _parser.BufferSize - _parser.BufferOffset;
                 var copy = ArrayPool<byte>.Shared.Rent(bufferSize);
-                Buffer.BlockCopy(_buffer.Buffer.Array ?? throw new InvalidOperationException(), _buffer.Buffer.Offset + _parser.BufferOffset, copy, 0, bufferSize);
+                var copySpan = new Span<byte>(copy);
+
+                _buffer.Memory.Span.Slice(_parser.BufferOffset, bufferSize).CopyTo(copySpan);
+
                 _parser.Skip(blobSize < bufferSize ? (int)blobSize : bufferSize);
 
                 return new LimitedStream(new ConcatStream(new ConcatStream.RentedBuffer
@@ -353,7 +355,6 @@ namespace Raven.Server.Documents.Handlers
                 }, _stream), blobSize, 0, 0);
             }
         }
-
 
         private static async Task<CommandData> ReadSingleCommand(
             JsonOperationContext ctx,
@@ -617,14 +618,14 @@ namespace Raven.Server.Documents.Handlers
                             await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         }
                         break;
-                    case CommandPropertyName.ForceRevisionCreationStrategy: 
+                    case CommandPropertyName.ForceRevisionCreationStrategy:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType != JsonParserToken.String)
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
                         }
-                        
+
                         commandData.ForceRevisionCreationStrategy = GetEnumValue(state, ctx);
                         break;
                 }
@@ -792,25 +793,25 @@ namespace Raven.Server.Documents.Handlers
             ContentType,
             AttachmentType,
 
-            #endregion
+            #endregion Attachment
 
             #region Counter
 
             Counters,
 
-            #endregion
+            #endregion Counter
 
             #region TimeSeries
 
             TimeSeries,
 
-            #endregion
+            #endregion TimeSeries
 
             #region RavenData
 
             ContentLength,
 
-            #endregion
+            #endregion RavenData
 
             FromEtl
 
@@ -940,10 +941,10 @@ namespace Raven.Server.Documents.Handlers
                     if (*(int*)state.StringBuffer == 1868981570 &&
                         *(short*)(state.StringBuffer + sizeof(int)) == 25970)
                         return ForceRevisionStrategy.Before;
-                    
+
                     ThrowInvalidProperty(state, ctx);
                     break;
-                
+
                 default:
                     ThrowInvalidProperty(state, ctx);
                     break;
@@ -951,7 +952,7 @@ namespace Raven.Server.Documents.Handlers
 
             return 0;
         }
-        
+
         private static unsafe AttachmentType GetAttachmentType(JsonParserState state, JsonOperationContext ctx)
         {
             // here we confirm that the value is matching our expectation, in order to save CPU instructions
@@ -966,7 +967,7 @@ namespace Raven.Server.Documents.Handlers
 
                     ThrowInvalidProperty(state, ctx);
                     break;
-                
+
                 default:
                     ThrowInvalidProperty(state, ctx);
                     break;
@@ -1003,7 +1004,7 @@ namespace Raven.Server.Documents.Handlers
                     if (*(long*)state.StringBuffer != 8318823012450529091)
                         ThrowInvalidProperty(state, ctx);
                     return CommandType.Counters;
-                
+
                 case 10:
                     if (*(long*)state.StringBuffer == 7598246930185808212 &&
                     *(short*)(state.StringBuffer + sizeof(long)) == 29541)
@@ -1020,7 +1021,7 @@ namespace Raven.Server.Documents.Handlers
                         state.StringBuffer[sizeof(long) + sizeof(int)] != (byte)'T')
                         ThrowInvalidProperty(state, ctx);
                     return CommandType.AttachmentPUT;
-                
+
                 case 14:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1329820782 &&
@@ -1034,7 +1035,7 @@ namespace Raven.Server.Documents.Handlers
 
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;
-                
+
                 case 16:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 4995694080542667886)
@@ -1066,16 +1067,16 @@ namespace Raven.Server.Documents.Handlers
                         *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1413827653 &&
                         state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'E')
                         return CommandType.CompareExchangeDELETE;
-                    
+
                     if (*(long*)state.StringBuffer == 8531315664536891206 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 7309979286770381673 &&
                         *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1869182049 &&
                         state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'n')
                         return CommandType.ForceRevisionCreation;
-                    
+
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;
-                
+
                 default:
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;
@@ -1113,6 +1114,5 @@ namespace Raven.Server.Documents.Handlers
         {
             throw new EndOfStreamException();
         }
-
     }
 }

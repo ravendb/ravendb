@@ -109,18 +109,18 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
 
-                using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+                using (context.GetMemoryBuffer(out var buffer))
                 {
                     var responseStream = ResponseBodyStream();
                     foreach (var stream in attachmentsStreams)
                     {
                         using (var tmpStream = stream)
                         {
-                            var count = tmpStream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
+                            var count = await tmpStream.ReadAsync(buffer.Memory);
                             while (count > 0)
                             {
-                                await responseStream.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, count, Database.DatabaseShutdown);
-                                count = tmpStream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
+                                await responseStream.WriteAsync(buffer.Memory.Slice(0, count), Database.DatabaseShutdown);
+                                count = await tmpStream.ReadAsync(buffer.Memory);
                             }
                         }
                     }
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Handlers
                         try
                         {
                             // if we failed to read the entire request body stream, we might leave
-                            // data in the pipe still, this will cause us to read and discard the 
+                            // data in the pipe still, this will cause us to read and discard the
                             // rest of the attachment stream and return the actual error to the caller
                             requestBodyStream.CopyTo(Stream.Null);
                         }

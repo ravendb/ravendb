@@ -4,8 +4,6 @@
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFrameworks>netcoreapp3.1;netcoreapp2.1;netstandard2.1;netstandard2.0</TargetFrameworks>
-    <TargetFrameworks>netcoreapp3.1;netcoreapp2.1</TargetFrameworks>
-    <TargetFrameworks>netcoreapp3.1;netcoreapp2.1;netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Client</AssemblyName>

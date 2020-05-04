@@ -97,7 +97,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                 var state = new JsonParserState();
                 Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
-                using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+                using (context.GetMemoryBuffer(out var buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "attachments/receive"))
                 using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "attachments/list", parser, state))
                 using (var peepingTomStream = new PeepingTomStream(stream, context))
@@ -123,7 +123,8 @@ namespace Raven.Client.Documents.Operations.Attachments
 
                     var bufferSize = parser.BufferSize - parser.BufferOffset;
                     var copy = ArrayPool<byte>.Shared.Rent(bufferSize);
-                    Buffer.BlockCopy(buffer.Buffer.Array ?? throw new InvalidOperationException(), buffer.Buffer.Offset + parser.BufferOffset, copy, 0, bufferSize);
+                    var copyMemory = new Memory<byte>(copy);
+                    buffer.Memory.Slice(0, bufferSize).CopyTo(copyMemory);
 
                     Result = Iterate(stream, copy, bufferSize).GetEnumerator();
                 }
