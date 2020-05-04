@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Replication;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace FastTests.Server.Replication
             public int Age { get; set; }
         }
      
-        [Fact]
+        [LicenseRequiredFact]
         public async Task Master_slave_replication_from_etag_zero_should_work()
         {
             var dbName1 = DbName + "-1";
@@ -67,7 +68,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public async Task Master_slave_replication_with_multiple_PUTS_should_work()
         {
             var dbName1 = DbName + "-1";
@@ -141,7 +142,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public async Task Master_master_replication_with_multiple_PUTS_should_work()
         {
             var dbName1 = DbName + "-1";
@@ -237,7 +238,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public async Task Master_slave_replication_with_exceptions_should_work()
         {
             var dbName1 = DbName + "-1";
@@ -286,7 +287,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public async Task Can_get_performance_stats()
         {
             var dbName1 = DbName + "-1";

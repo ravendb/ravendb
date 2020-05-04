@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Diagnostics.Contracts;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,8 +9,8 @@ namespace Sparrow.Server
     public class AsyncManualResetEvent : IDisposable
     {
         private volatile TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        private CancellationToken _token;
-        private CancellationTokenRegistration _cancellationTokenRegistration;
+        private readonly CancellationToken _token;
+        private readonly CancellationTokenRegistration _cancellationTokenRegistration;
 
         public AsyncManualResetEvent()
         {
@@ -36,27 +35,27 @@ namespace Sparrow.Server
 
             // for each wait we will create a new task, since the cancellation token is unique.
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _tcs.Task.ContinueWith((t) =>
-            {
-                if (token.IsCancellationRequested)
-                {
-                    tcs.TrySetCanceled();
-                    return;
-                }
-                if (t.IsFaulted)
-                {
-                    tcs.TrySetException(t.Exception);
-                    return;
-                }
+            _ = _tcs.Task.ContinueWith((t) =>
+              {
+                  if (token.IsCancellationRequested)
+                  {
+                      tcs.TrySetCanceled();
+                      return;
+                  }
+                  if (t.IsFaulted)
+                  {
+                      tcs.TrySetException(t.Exception);
+                      return;
+                  }
 
-                if (t.IsCanceled)
-                {
-                    tcs.TrySetCanceled();
-                    return;
-                }
-                tcs.TrySetResult(t.Result);
-            }, token);
-            
+                  if (t.IsCanceled)
+                  {
+                      tcs.TrySetCanceled();
+                      return;
+                  }
+                  tcs.TrySetResult(t.Result);
+              }, token);
+
             using (token.Register(() => tcs.TrySetCanceled(token)))
             {
                 return await tcs.Task.ConfigureAwait(false);
@@ -75,7 +74,7 @@ namespace Sparrow.Server
             return new FrozenAwaiter(_tcs, this);
         }
 
-        public struct FrozenAwaiter
+        public readonly struct FrozenAwaiter
         {
             private readonly TaskCompletionSource<bool> _tcs;
             private readonly AsyncManualResetEvent _parent;
@@ -91,7 +90,6 @@ namespace Sparrow.Server
             {
                 return _tcs.Task;
             }
-
 
             [Pure]
             public async Task<bool> WaitAsync(TimeSpan timeout)
