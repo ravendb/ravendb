@@ -6,15 +6,12 @@ using System.Text;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Collections;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
 {
-    
     public abstract class ReplicationBatchItem : IDisposable
     {
         public long Etag;
@@ -28,6 +25,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         private List<ByteStringContext.InternalScope> _garbage;
 
         public abstract long AssertChangeVectorSize();
+
         public abstract long Size { get; }
 
         public abstract void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats);
@@ -46,7 +44,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
             return item;
         }
-        
 
         public static unsafe ReplicationBatchItem ReadTypeAndInstantiate(Reader reader)
         {
@@ -56,25 +53,25 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             {
                 case ReplicationItemType.Document:
                 case ReplicationItemType.DocumentTombstone:
-                    return new DocumentReplicationItem {Type = type, Reader = reader};
+                    return new DocumentReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.Attachment:
                 case ReplicationItemType.AttachmentStream:
-                    return new AttachmentReplicationItem {Type = type, Reader = reader};
+                    return new AttachmentReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.AttachmentTombstone:
-                    return new AttachmentTombstoneReplicationItem {Type = type, Reader = reader};
+                    return new AttachmentTombstoneReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.RevisionTombstone:
-                    return new RevisionTombstoneReplicationItem {Type = type, Reader = reader};
+                    return new RevisionTombstoneReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.LegacyCounter:
 #pragma warning disable CS0618 // Type or member is obsolete
                 case ReplicationItemType.CounterTombstone:
 #pragma warning restore CS0618 // Type or member is obsolete
                     throw new InvalidOperationException($"Received an item of type '{type}'. Replication of counters and counter tombstones between 4.1.x and {ServerVersion.Version} is not supported.");
                 case ReplicationItemType.CounterGroup:
-                    return new CounterReplicationItem {Type = type, Reader = reader};
+                    return new CounterReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.TimeSeriesSegment:
-                    return new TimeSeriesReplicationItem {Type = type, Reader = reader};
+                    return new TimeSeriesReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.DeletedTimeSeriesRange:
-                    return new TimeSeriesDeletedRangeItem {Type = type, Reader = reader};
+                    return new TimeSeriesDeletedRangeItem { Type = type, Reader = reader };
                 default:
                     throw new ArgumentOutOfRangeException(type.ToString());
             }
@@ -89,7 +86,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
             TransactionMarker = *(short*)Reader.ReadExactly(sizeof(short));
         }
-       
 
         protected unsafe int WriteCommon(Slice changeVector, byte* tempBuffer)
         {
@@ -105,6 +101,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             tempBufferPos += sizeof(short);
             return tempBufferPos;
         }
+
         protected unsafe void SetLazyStringValue(DocumentsOperationContext context, ref LazyStringValue prop)
         {
             var size = *(int*)Reader.ReadExactly(sizeof(int));
@@ -135,7 +132,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             // Additionally, we are over-allocating so writing this value doesn't cause a failure (we look for the escaping after the value)
             // this also work, because we don't pass those values between contexts, if we need to do so, we convert it to string first.
 
-            // TODO: this is inefficient, can skip string allocation 
+            // TODO: this is inefficient, can skip string allocation
             prop = context.GetLazyString(Encoding.UTF8.GetString(Reader.ReadExactly(size), size));
         }
 
@@ -190,11 +187,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
     public class Reader
     {
-        private readonly (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
+        private readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         private readonly Stream _stream;
         private readonly IncomingReplicationHandler.IncomingReplicationAllocator _allocator;
 
-        public Reader(Stream stream, (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) copiedBuffer, IncomingReplicationHandler.IncomingReplicationAllocator allocator)
+        public Reader(Stream stream, (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) copiedBuffer, IncomingReplicationHandler.IncomingReplicationAllocator allocator)
         {
             _copiedBuffer = copiedBuffer;
             _stream = stream;
@@ -223,9 +220,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             _copiedBuffer.Buffer.Used = 0;
             while (diff < size)
             {
-                var read = _stream.Read(_copiedBuffer.Buffer.Buffer.Array,
-                    _copiedBuffer.Buffer.Buffer.Offset + diff,
-                    _copiedBuffer.Buffer.Buffer.Count - diff);
+                var read = _stream.Read(_copiedBuffer.Buffer.Memory.Span.Slice(diff, _copiedBuffer.Buffer.Length - diff));
                 if (read == 0)
                     throw new EndOfStreamException();
 
@@ -246,9 +241,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var available = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
                 if (available == 0)
                 {
-                    var read = _stream.Read(_copiedBuffer.Buffer.Buffer.Array,
-                        _copiedBuffer.Buffer.Buffer.Offset,
-                        _copiedBuffer.Buffer.Buffer.Count);
+                    var read = _stream.Read(_copiedBuffer.Buffer.Memory.Span);
                     if (read == 0)
                         throw new EndOfStreamException();
 
@@ -273,9 +266,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var available = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
                 if (available == 0)
                 {
-                    var read = _stream.Read(_copiedBuffer.Buffer.Buffer.Array,
-                        _copiedBuffer.Buffer.Buffer.Offset,
-                        _copiedBuffer.Buffer.Buffer.Count);
+                    var read = _stream.Read(_copiedBuffer.Buffer.Memory.Span);
                     if (read == 0)
                         throw new EndOfStreamException();
 
@@ -284,9 +275,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     continue;
                 }
                 var min = (int)Math.Min(size, available);
-                file.Write(_copiedBuffer.Buffer.Buffer.Array,
-                    _copiedBuffer.Buffer.Buffer.Offset + _copiedBuffer.Buffer.Used,
-                    min);
+                file.Write(_copiedBuffer.Buffer.Memory.Span.Slice(_copiedBuffer.Buffer.Used, min));
                 _copiedBuffer.Buffer.Used += min;
                 size -= min;
             }

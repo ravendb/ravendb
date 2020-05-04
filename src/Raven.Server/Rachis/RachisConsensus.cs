@@ -1273,7 +1273,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe void TruncateLogBefore(TransactionOperationContext context, long upto)
+        public unsafe void TruncateLogBefore(ClusterOperationContext context, long upto)
         {
             GetLastCommitIndex(context, out long lastIndex, out long lastTerm);
 
