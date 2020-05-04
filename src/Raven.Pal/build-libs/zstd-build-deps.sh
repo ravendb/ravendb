@@ -3,7 +3,7 @@
 export ZSTD_LOG=${PWD}/build_zstd.log
 
 LIBZSTD_VER="ravendb"
-LIBZSTD_REPO="https://github.com/gregolsky/zstd.git"
+LIBZSTD_REPO="https://github.com/ravendb/zstd.git"
 
 function zstd_install_build_deps {
     pushd zstd >> ${ZSTD_LOG} 2>&1
