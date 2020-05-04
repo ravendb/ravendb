@@ -30,4 +30,5 @@ jobs:
       run: dotnet test --configuration Release --no-restore
       env: # Or as an environment variable
         RAVEN_LICENSE: ${{ secrets.RAVEN_LICENSE }}
+        RAVEN_MAX_RUNNING_TESTS: 1
       working-directory: ./test/FastTests
