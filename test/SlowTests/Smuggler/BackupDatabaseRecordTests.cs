@@ -1183,8 +1183,6 @@ namespace SlowTests.Smuggler
 
                         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
-                        Assert.Equal("1024", record.Settings["Patching.MaxNumberOfCachedScripts"]);
-
                         Assert.NotNull(record.ConflictSolverConfig);
                         Assert.Equal(false, record.ConflictSolverConfig.ResolveToLatest);
                         Assert.Equal(1, record.ConflictSolverConfig.ResolveByCollection.Count);

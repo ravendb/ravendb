@@ -12,7 +12,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryMatchResult
     {
-        public static DynamicQueryMatchResult Failure = new DynamicQueryMatchResult("Failure/None", DynamicQueryMatchType.Failure);
+        public static DynamicQueryMatchResult Failure = new DynamicQueryMatchResult("Failure/None", DynamicQueryMatchType.Failure)
+        {
+            LastMappedEtag = -1,
+            NumberOfMappedFields = -1
+        };
+
         public string IndexName { get; set; }
         public DynamicQueryMatchType MatchType { get; set; }
 
