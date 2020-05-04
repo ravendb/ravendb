@@ -65,20 +65,23 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
 
         private const string TimeSeriesFormat = "TimeFormat";
-        private static readonly long _epochTicks = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
+        private static readonly long EpochTicks = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
+
         internal enum TimeFormat
         {
             DotNetTicks,
             UnixTimeInMs,
             UnixTimeInNs
         }
+
         private static long FromUnixMs(long unixMs)
         {
-            return unixMs * 10_000 + _epochTicks;
+            return unixMs * 10_000 + EpochTicks;
         }
+
         private static long FromUnixNs(long unixNs)
         {
-            return unixNs / 100 + _epochTicks;
+            return unixNs / 100 + EpochTicks;
         }
 
         internal static TimeSeriesOperation ParseForBulkInsert(BlittableJsonReaderObject input)
@@ -87,7 +90,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 ThrowMissingProperty(nameof(Name));
 
             input.TryGet(TimeSeriesFormat, out TimeFormat format);
-            
+
             var result = new TimeSeriesOperation
             {
                 Name = name
@@ -106,19 +109,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     return null; //never hit
                 }
 
-                long time;
-                switch (bjro[0])
-                {
-                    case long l:
-                        time = l;
-                        break;
-                    case LazyNumberValue lnv:
-                        time = lnv;
-                        break;
-                    default:
-                        time = (LazyNumberValue)bjro[0];
-                        break;
-                }
+                var time = GetLong(bjro[0]);
 
                 switch (format)
                 {
@@ -131,16 +122,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     case TimeFormat.DotNetTicks:
                         break;
                     default:
-                        throw new ArgumentException($"Unknown time-format {format}");
+                        throw new ArgumentException($"Unknown time-format '{format}'");
                 }
-                
 
                 var append = new AppendOperation
                 {
                     Timestamp = new DateTime(time)
                 };
 
-                var numberOfValues = (long)bjro[1];
+                var numberOfValues = GetLong(bjro[1]);
                 var doubleValues = new double[numberOfValues];
 
                 for (var i = 0; i < numberOfValues; i++)
@@ -181,6 +171,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             result.Appends = new List<AppendOperation>(sorted.Values);
 
             return result;
+
+            static long GetLong(object value)
+            {
+                return value switch
+                {
+                    long l => l,
+                    LazyNumberValue lnv => lnv,
+                    _ => throw new NotSupportedException($"Not supported type. Was expecting number, but got '{value}'."),
+                };
+            }
         }
 
         private static void ThrowNotBlittableJsonReaderObjectOperation(object op)
