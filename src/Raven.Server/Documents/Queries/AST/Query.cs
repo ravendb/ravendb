@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
-using Sparrow;
 using Raven.Server.Documents.TimeSeries;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Queries.AST
                     return;
 
                 throw new InvalidQueryException($"Allias {alias} is already in use on a diffrent 'With' clause",
-                    QueryText, null);
+                    QueryText);
             }
 
             GraphQuery.WithEdgePredicates.Add(alias, expr);
@@ -581,26 +581,26 @@ namespace Raven.Server.Documents.Queries.AST
                 switch (Aggregation)
                 {
                     case AggregationType.Min:
-                        if ((long)_count[i] == 0)
+                        if (_count[i] == 0)
                             _values[i] = val.Min;
                         else
-                            _values[i] = Math.Min((double)_values[i], val.Min);
+                            _values[i] = Math.Min(_values[i], val.Min);
                         break;
                     case AggregationType.Max:
-                        if ((long)_count[i] == 0)
+                        if (_count[i] == 0)
                             _values[i] = val.Max;
                         else
-                            _values[i] = Math.Max((double)_values[i], val.Max);
+                            _values[i] = Math.Max(_values[i], val.Max);
                         break;
                     case AggregationType.Average:
                         val = values[index + (int)AggregationType.Sum];
-                        _values[i] = (double)_values[i] + val.Sum;
+                        _values[i] = _values[i] + val.Sum;
                         break;
                     case AggregationType.Sum:
-                        _values[i] = (double)_values[i] + val.Sum;
+                        _values[i] = _values[i] + val.Sum;
                         break;
                     case AggregationType.First:
-                        if ((long)_count[i] == 0)
+                        if (_count[i] == 0)
                             _values[i] = val.First;
                         break;
                     case AggregationType.Last:
@@ -613,7 +613,7 @@ namespace Raven.Server.Documents.Queries.AST
                 }
 
                 val = values[index + (int)AggregationType.Count];
-                _count[i] = (long)_count[i] + val.Count;
+                _count[i] += val.Count;
             }
         }
 
@@ -638,26 +638,26 @@ namespace Raven.Server.Documents.Queries.AST
                 {
                     case AggregationType.Min:
                         val = values[index + (int)AggregationType.Min];
-                        if ((long)_count[i] == 0)
+                        if (_count[i] == 0)
                             _values[i] = val;
                         else
-                            _values[i] = Math.Min((double)_values[i], val);
+                            _values[i] = Math.Min(_values[i], val);
                         break;
                     case AggregationType.Max:
                         val = values[index + (int)AggregationType.Max];
-                        if ((long)_count[i] == 0)
+                        if (_count[i] == 0)
                             _values[i] = val;
                         else
-                            _values[i] = Math.Max((double)_values[i], val);
+                            _values[i] = Math.Max(_values[i], val);
                         break;
                     case AggregationType.Sum:
                     case AggregationType.Average:
                         val = values[index + (int)AggregationType.Sum];
-                        _values[i] = (double)_values[i] + val;
+                        _values[i] = _values[i] + val;
                         break;
                     case AggregationType.First:
                         val = values[index + (int)AggregationType.First];
-                        if ((long)_count[i] == 0)
+                        if (_count[i] == 0)
                             _values[i] = val;
                         break;
                     case AggregationType.Last:
@@ -670,7 +670,7 @@ namespace Raven.Server.Documents.Queries.AST
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
 
-                _count[i] = (long)_count[i] + (long)values[index + (int)AggregationType.Count];
+                _count[i] += (long)values[index + (int)AggregationType.Count];
             }
         }
 
