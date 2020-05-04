@@ -1,0 +1,33 @@
+name: FastTests
+
+on:
+  push:
+    branches:
+        - v4.2
+
+  pull_request:
+    branches:
+        - v4.2
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+          os: [ ubuntu-latest, windows-latest, macos-latest ]
+        fail-fast: false  
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.201
+
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Test - Release
+      run: dotnet test --configuration Release --no-restore
+      env: # Or as an environment variable
+        RAVEN_LICENSE: ${{ secrets.RAVEN_LICENSE }}
+      working-directory: ./test/FastTests
