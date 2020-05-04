@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                     var bufferSize = parser.BufferSize - parser.BufferOffset;
                     var copy = ArrayPool<byte>.Shared.Rent(bufferSize);
                     var copyMemory = new Memory<byte>(copy);
-                    buffer.Memory.Slice(0, bufferSize).CopyTo(copyMemory);
+                    buffer.Memory.Slice(parser.BufferOffset, bufferSize).CopyTo(copyMemory);
 
                     Result = Iterate(stream, copy, bufferSize).GetEnumerator();
                 }
