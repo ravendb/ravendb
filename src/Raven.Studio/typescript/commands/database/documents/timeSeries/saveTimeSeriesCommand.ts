@@ -10,7 +10,7 @@ class saveTimeSeriesCommand extends commandBase {
     
     execute(): JQueryPromise<void> {
         const args = {
-            id: this.documentId
+            docId: this.documentId
         };
 
         const url = endpoints.databases.timeSeries.timeseries + this.urlEncodeArgs(args);
