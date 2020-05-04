@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Raven.Server.Documents.TimeSeries
@@ -7,18 +8,45 @@ namespace Raven.Server.Documents.TimeSeries
     public unsafe struct StatefulTimestampValue
     {
         [FieldOffset(0)]
-        public double First;
-        [FieldOffset(8)]
-        public double Last;
+        public long RawFirst;
+        public double First
+        {
+            get => BitConverter.Int64BitsToDouble(RawFirst);
+            set => RawFirst = BitConverter.DoubleToInt64Bits(value);
+        }
+
+        public double Last
+        {
+            get => BitConverter.Int64BitsToDouble(PreviousValue);
+        }
+
         [FieldOffset(8)]
         public long PreviousValue; // same as Last
 
         [FieldOffset(16)]
-        public double Max;
+        public long RawMax;
+        public double Max
+        {
+            get => BitConverter.Int64BitsToDouble(RawMax);
+            set => RawMax = BitConverter.DoubleToInt64Bits(value);
+        }
+
         [FieldOffset(24)]
-        public double Min;
+        public long RawMin;
+        public double Min
+        {
+            get => BitConverter.Int64BitsToDouble(RawMin);
+            set => RawMin = BitConverter.DoubleToInt64Bits(value);
+        }
+
         [FieldOffset(32)]
-        public double Sum;
+        public long RawSum;
+        public double Sum
+        {
+            get => BitConverter.Int64BitsToDouble(RawSum);
+            set => RawSum = BitConverter.DoubleToInt64Bits(value);
+        }
+
         [FieldOffset(40)]
         public int Count;
         [FieldOffset(44)]
