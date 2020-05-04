@@ -13,11 +13,9 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
-using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
-using Raven.Server.Indexing;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -278,7 +276,7 @@ namespace Raven.Server.Documents.Indexes
                 mapReferenceErrors = statsTree.Read(IndexSchema.MapReferenceErrorsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
             }
 
-            return IndexFailureInformation.CheckIndexInvalid(mapAttempts, mapErrors, 
+            return IndexFailureInformation.CheckIndexInvalid(mapAttempts, mapErrors,
                 mapReferenceAttempts, mapReferenceErrors, reduceAttempts, reduceErrors, false);
         }
 
@@ -365,26 +363,9 @@ namespace Raven.Server.Documents.Indexes
                 _referenceCollectionPrefix = referenceCollectionPrefix ?? throw new ArgumentNullException(nameof(referenceCollectionPrefix));
             }
 
-            public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
+            public long ReadLastProcessedReferenceEtag(Transaction tx, string collection, CollectionName referencedCollection)
             {
-                var tree = tx.InnerTransaction.ReadTree(_referencePrefix + collection);
-
-        public static long ReadLastProcessedReferenceEtag(Transaction tx, string collection, CollectionName referencedCollection)
-        {
-            if (tx.IsWriteTransaction == false)
-            {
-                if (tx.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
-                {
-                    IndexTransactionCache.ReferenceCollectionEtags last = default;
-                    if (cache.Collections.TryGetValue(collection, out var val) && 
-                        val.LastReferencedEtags?.TryGetValue(referencedCollection.Name, out last) == true)
-                    {
-                        return last.LastEtag;
-                    }
-                }
-            }
-            
-            var tree = tx.ReadTree("$" + collection);
+                var tree = tx.ReadTree(_referencePrefix + collection);
 
                 var result = tree?.Read(referencedCollection.Name);
                 if (result == null)
@@ -403,9 +384,9 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
+            public long ReadLastProcessedReferenceTombstoneEtag(Transaction tx, string collection, CollectionName referencedCollection)
             {
-                var tree = tx.InnerTransaction.ReadTree(_referenceTombstonePrefix + collection);
+                var tree = tx.ReadTree(_referenceTombstonePrefix + collection);
 
                 var result = tree?.Read(referencedCollection.Name);
                 if (result == null)
@@ -543,7 +524,7 @@ namespace Raven.Server.Documents.Indexes
         {
             using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
-                return ReadLastEtag(tx, IndexSchema.EtagsTombstoneTree, collectionSlice);
+                return ReadLastEtag(tx.InnerTransaction, IndexSchema.EtagsTombstoneTree, collectionSlice);
             }
         }
 
@@ -551,7 +532,7 @@ namespace Raven.Server.Documents.Indexes
         {
             using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
-                return ReadLastEtag(tx, IndexSchema.EtagsTree, collectionSlice);
+                return ReadLastEtag(tx.InnerTransaction, IndexSchema.EtagsTree, collectionSlice);
             }
         }
 

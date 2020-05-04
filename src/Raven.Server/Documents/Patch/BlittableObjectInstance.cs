@@ -12,7 +12,6 @@ using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Results;
-using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -29,8 +28,8 @@ namespace Raven.Server.Documents.Patch
         public readonly string ChangeVector;
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
-        public HashSet<string> Deletes;
-        public Dictionary<string, BlittableObjectProperty> OwnValues;
+        public HashSet<JsValue> Deletes;
+        public Dictionary<JsValue, BlittableObjectProperty> OwnValues;
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
         public IState LuceneState;
@@ -49,16 +48,16 @@ namespace Raven.Server.Documents.Patch
         public ObjectInstance GetOrCreate(JsValue key)
         {
             BlittableObjectProperty property = default;
-            if (OwnValues?.TryGetValue(key, out property)  == true && 
-                property != null) 
+            if (OwnValues?.TryGetValue(key, out property) == true &&
+                property != null)
                 return property.Value.AsObject();
 
-                property = GenerateProperty(key.AsString());
+            property = GenerateProperty(key.AsString());
 
-            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
+            OwnValues ??= new Dictionary<JsValue, BlittableObjectProperty>(Blittable.Count);
 
-                OwnValues[key] = property;
-                Deletes?.Remove(key);
+            OwnValues[key] = property;
+            Deletes?.Remove(key);
 
             return property.Value.AsObject();
 
@@ -352,14 +351,14 @@ namespace Raven.Server.Documents.Patch
                 return true;
 
             MarkChanged();
-            Deletes.Add(propertyName);
-            return OwnValues?.Remove(propertyName) == true;
+            Deletes.Add(property);
+            return OwnValues?.Remove(property) == true;
         }
 
         public override PropertyDescriptor GetOwnProperty(JsValue property)
         {
             BlittableObjectProperty val = default;
-            if (OwnValues?.TryGetValue(propertyName, out val) == true &&
+            if (OwnValues?.TryGetValue(property, out val) == true &&
                 val != null)
                 return val;
 
@@ -374,9 +373,9 @@ namespace Raven.Server.Documents.Patch
                 return PropertyDescriptor.Undefined;
             }
 
-            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
+            OwnValues ??= new Dictionary<JsValue, BlittableObjectProperty>(Blittable.Count);
 
-            OwnValues[propertyName] = val;
+            OwnValues[property] = val;
 
             return val;
         }
@@ -398,10 +397,10 @@ namespace Raven.Server.Documents.Patch
         {
             if (OwnValues != null)
             {
-            foreach (var value in OwnValues)
-            {
-                yield return new KeyValuePair<JsValue, PropertyDescriptor>(value.Key, value.Value);
-            }
+                foreach (var value in OwnValues)
+                {
+                    yield return new KeyValuePair<JsValue, PropertyDescriptor>(value.Key, value.Value);
+                }
             }
 
             if (Blittable == null)

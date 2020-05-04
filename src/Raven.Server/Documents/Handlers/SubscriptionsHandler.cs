@@ -199,7 +199,6 @@ namespace Raven.Server.Documents.Handlers
                     .SubscriptionStorage
                     .GetSubscriptionFromServerStore(subscriptionName);
 
-
                 if (subscriptionState == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -281,7 +280,6 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-
                     writer.WriteStartObject();
 
                     var subscriptionsAsBlittable = subscriptions.Select(x => new DynamicJsonValue()
@@ -338,7 +336,7 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsDJV(x.Stats),
                 [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message,
                 ["TcpConnectionStats"] = x.TcpConnection.GetConnectionStats(),
-                [nameof(SubscriptionConnection.RecentSubscriptionStatuses)] = new DynamicJsonArray(x.RecentSubscriptionStatuses?.ToArray()??Array.Empty<string>())
+                [nameof(SubscriptionConnection.RecentSubscriptionStatuses)] = new DynamicJsonArray(x.RecentSubscriptionStatuses?.ToArray() ?? Array.Empty<string>())
             };
         }
 
@@ -378,7 +376,6 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
-
 
             return NoContent();
         }
@@ -494,7 +491,7 @@ namespace Raven.Server.Documents.Handlers
                         options.ChangeVector = null;
                         break;
                     case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                        options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, sub.Collection);
+                        options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, sub.Collection);
                         break;
                 }
             }

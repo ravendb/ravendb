@@ -435,8 +435,9 @@ namespace Raven.Server.Documents.Patch
                     obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
 
                     BlittableObjectInstance.BlittableObjectProperty modifiedValue = default;
+                    JsValue key = prop.Name.ToString();
                     var existInObject = obj.OwnValues?
-                        .TryGetValue(prop.Name, out modifiedValue) == true;
+                        .TryGetValue(key, out modifiedValue) == true;
 
                     if (existInObject == false && obj.Deletes?.Contains(key) == true)
                         continue;

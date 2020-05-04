@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using CsvHelper;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -44,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private SnapshotDeletionPolicy _snapshotter;
 
         // this is used to remember the positions of files in the database
-        // always points to the latest valid transaction and is updated by 
+        // always points to the latest valid transaction and is updated by
         // the write tx on commit, thread safety is inherited from the voron
         // transaction
         private IndexTransactionCache _streamsCache = new IndexTransactionCache();
@@ -228,7 +227,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return newCache;
         }
 
-        private void FillCollectionEtags(Transaction tx, 
+        private void FillCollectionEtags(Transaction tx,
             Dictionary<string, IndexTransactionCache.CollectionEtags> map)
         {
             foreach (string collection in _index.Collections)
@@ -254,8 +253,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var referencedCollections = _index.GetReferencedCollections();
             if (referencedCollections == null || referencedCollections.Count == 0)
                 return;
-            
-            foreach (var (src, collections)  in referencedCollections)
+
+            foreach (var (src, collections) in referencedCollections)
             {
                 var collectionEtags = map[src];
                 collectionEtags.LastReferencedEtags ??= new Dictionary<string, IndexTransactionCache.ReferenceCollectionEtags>(StringComparer.OrdinalIgnoreCase);
@@ -263,8 +262,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     collectionEtags.LastReferencedEtags[collectionName.Name] = new IndexTransactionCache.ReferenceCollectionEtags
                     {
-                        LastEtag = IndexStorage.ReadLastProcessedReferenceEtag(tx, src, collectionName),
-                        LastProcessedTombstoneEtag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, src, collectionName),
+                        LastEtag = _index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(tx, src, collectionName),
+                        LastProcessedTombstoneEtag = _index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(tx, src, collectionName),
                     };
                 }
             }

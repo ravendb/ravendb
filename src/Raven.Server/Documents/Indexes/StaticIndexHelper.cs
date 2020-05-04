@@ -79,9 +79,9 @@ namespace Raven.Server.Documents.Indexes
                     {
                         foreach (var referencedCollection in referencedCollections)
                         {
-                    var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext.Transaction.InnerTransaction, referencedCollection.Name);
-                    var lastProcessedReferenceEtag = IndexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
-                    var lastProcessedTombstoneEtag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
+                            var lastDocEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(queryContext.Documents.Transaction.InnerTransaction, referencedCollection.Name);
+                            var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
+                            var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
 
                             if (referenceCutoff == null)
                             {
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Indexes
                                                          $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
                                 }
 
-                        var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext.Transaction.InnerTransaction, referencedCollection.Name);
+                                var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(queryContext.Documents.Transaction.InnerTransaction, referencedCollection.Name);
 
                                 if (lastTombstoneEtag > lastProcessedTombstoneEtag)
                                 {
@@ -133,7 +133,6 @@ namespace Raven.Server.Documents.Indexes
                                                          $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
                                 }
 
-                                var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
                                 var hasTombstones = queryContext.Documents.DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(queryContext.Documents, referencedCollection.Name,
                                     lastProcessedTombstoneEtag,
                                     referenceCutoff.Value);
@@ -161,7 +160,7 @@ namespace Raven.Server.Documents.Indexes
                     if (lastIndexedEtag > 0)
                     {
                         var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
-                        var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
+                        var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
 
                         if (compareExchangeReferenceCutoff == null)
                         {
@@ -174,7 +173,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
-                            var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
+                            var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
 
                             if (lastTombstoneEtag > lastProcessedTombstoneEtag)
                             {
@@ -195,7 +194,7 @@ namespace Raven.Server.Documents.Indexes
                                 stalenessReasons.Add($"There are still some compare exchange references to process for collection '{collection}'. The last compare exchange etag is '{lastCompareExchangeEtag:#,#;;0}' with cutoff set to '{compareExchangeReferenceCutoff.Value}', but last processed compare exchange etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
                             }
 
-                            var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
+                            var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
                             var hasTombstones = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.HasCompareExchangeTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(queryContext.Server, queryContext.Documents.DocumentDatabase.Name,
                                     lastProcessedTombstoneEtag,
                                     compareExchangeReferenceCutoff.Value);
@@ -224,11 +223,11 @@ namespace Raven.Server.Documents.Indexes
                 {
                     foreach (var referencedCollection in referencedCollections)
                     {
-                    var lastDocEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext.Transaction.InnerTransaction, referencedCollection.Name);
-                    var lastProcessedReferenceEtag = IndexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
+                        var lastDocEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(queryContext.Documents.Transaction.InnerTransaction, referencedCollection.Name);
+                        var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
 
-                    var lastTombstoneEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext.Transaction.InnerTransaction, referencedCollection.Name);
-                    var lastProcessedTombstoneEtag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
+                        var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(queryContext.Documents.Transaction.InnerTransaction, referencedCollection.Name);
+                        var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
 
                         *(long*)writePos = lastDocEtag;
                         writePos += sizeof(long);
@@ -243,10 +242,10 @@ namespace Raven.Server.Documents.Indexes
                 if (compiled.CollectionsWithCompareExchangeReferences.Contains(collection))
                 {
                     var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
-                    var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
+                    var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
 
                     var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
-                    var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
+                    var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
 
                     *(long*)writePos = lastCompareExchangeEtag;
                     writePos += sizeof(long);
@@ -284,7 +283,7 @@ namespace Raven.Server.Documents.Indexes
 
                     foreach (var collectionName in collectionNames)
                     {
-                        var etag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(tx.InnerTransaction, collection, collectionName);
+                        var etag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(tx.InnerTransaction, collection, collectionName);
                         if (etags.TryGetValue(collectionName.Name, out long currentEtag) == false || etag < currentEtag)
                             etags[collectionName.Name] = etag;
                     }
@@ -300,12 +299,12 @@ namespace Raven.Server.Documents.Indexes
             long? lastProcessedCompareExchangeReferenceTombstoneEtag = null;
             foreach (var collection in compiled.CollectionsWithCompareExchangeReferences)
             {
-                var lastProcessedCompareExchangeReferenceEtagForCollection = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, IndexStorage.CompareExchangeReferences.CompareExchange);
+                var lastProcessedCompareExchangeReferenceEtagForCollection = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, IndexStorage.CompareExchangeReferences.CompareExchange);
                 lastProcessedCompareExchangeReferenceEtag = lastProcessedCompareExchangeReferenceEtag.HasValue
                     ? Math.Max(lastProcessedCompareExchangeReferenceEtag.Value, lastProcessedCompareExchangeReferenceEtagForCollection)
                     : lastProcessedCompareExchangeReferenceEtagForCollection;
 
-                var lastProcessedCompareExchangeReferenceTombstoneEtagForCollection = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, IndexStorage.CompareExchangeReferences.CompareExchange);
+                var lastProcessedCompareExchangeReferenceTombstoneEtagForCollection = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, IndexStorage.CompareExchangeReferences.CompareExchange);
                 lastProcessedCompareExchangeReferenceTombstoneEtag = lastProcessedCompareExchangeReferenceTombstoneEtag.HasValue
                     ? Math.Max(lastProcessedCompareExchangeReferenceTombstoneEtag.Value, lastProcessedCompareExchangeReferenceTombstoneEtagForCollection)
                     : lastProcessedCompareExchangeReferenceTombstoneEtagForCollection;

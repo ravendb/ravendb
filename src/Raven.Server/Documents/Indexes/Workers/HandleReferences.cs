@@ -163,10 +163,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                         switch (actionType)
                         {
                             case ActionType.Document:
-                                lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+                                lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
                                 break;
                             case ActionType.Tombstone:
-                                lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+                                lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
                                 break;
                             default:
                                 throw new NotSupportedException();
