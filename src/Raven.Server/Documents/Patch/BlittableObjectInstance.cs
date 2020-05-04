@@ -422,11 +422,12 @@ namespace Raven.Server.Documents.Patch
 
         public override List<JsValue> GetOwnPropertyKeys(Types types)
         {
-            var list = new List<JsValue>(Blittable != null ? Blittable.Count : OwnValues.Count);
+            var list = new List<JsValue>(Blittable?.Count ?? OwnValues?.Count ?? 0);
 
-            foreach (var value in OwnValues)
+            if (OwnValues != null)
             {
-                list.Add(value.Key);
+                foreach (var value in OwnValues)
+                    list.Add(value.Key);
             }
 
             if (Blittable == null)
@@ -437,7 +438,7 @@ namespace Raven.Server.Documents.Patch
                 JsValue key = prop;
                 if (Deletes?.Contains(key) == true)
                     continue;
-                if (OwnValues.ContainsKey(key))
+                if (OwnValues != null && OwnValues.ContainsKey(key))
                     continue;
 
                 list.Add(prop);
