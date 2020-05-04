@@ -46,19 +46,19 @@ namespace TimeSeries.Benchmark
 
                 var benchParameters = new BenchParameters
                 {
-                    IntervalMs = 10_000, 
-                    TimeSeriesPerDocument = 1, 
-                    ValuesPerTimeSeries = 1, 
+                    IntervalMs = 10_000,
+                    TimeSeriesPerDocument = 1,
+                    ValuesPerTimeSeries = 1,
                     Cleanup = false
                 };
 
-/* example usage
---url=http://172.31.9.44 --workers=8 --scale=100 --metrics=1 --start=3/20 --end=4/20 				// month span
---url=http://172.31.9.44 --workers=8 --scale=100 --metrics=10 --start=3/20 --end=4/20 				// month span
---url=http://172.31.9.44 --workers=8 --scale=4000 --metrics=10 --start=08/18/2018 --end=08/21/2018 	// 3 days span
---url=http://172.31.9.44 --workers=8 --scale=100000 --metrics=10 --start=07:22:16 --end=10:22:16 	// 3 hours span
---url=http://172.31.9.44 --workers=8 --scale=1000000 --metrics=10 --start=07:22:1 --end=07:25:16 	// 3 minutes span
- */
+                /* example usage
+                --url=http://172.31.9.44 --workers=8 --scale=100 --metrics=1 --start=3/20 --end=4/20 				// month span
+                --url=http://172.31.9.44 --workers=8 --scale=100 --metrics=10 --start=3/20 --end=4/20 				// month span
+                --url=http://172.31.9.44 --workers=8 --scale=4000 --metrics=10 --start=08/18/2018 --end=08/21/2018 	// 3 days span
+                --url=http://172.31.9.44 --workers=8 --scale=100000 --metrics=10 --start=07:22:16 --end=10:22:16 	// 3 hours span
+                --url=http://172.31.9.44 --workers=8 --scale=1000000 --metrics=10 --start=07:22:1 --end=07:25:16 	// 3 minutes span
+                 */
                 foreach (var arg in args)
                 {
                     var kvp = arg.Split('=');
@@ -122,7 +122,6 @@ namespace TimeSeries.Benchmark
                 if (benchParameters.ValuesPerTimeSeries <= 0)
                     throw new ArgumentException("--metrics must be greater than zero");
 
-
                 return benchParameters;
             }
 
@@ -182,7 +181,7 @@ namespace TimeSeries.Benchmark
                     IntervalMs = 10_000
                 };
 
-                var tests = new[] {test1, test2, test3, test4, test5};
+                var tests = new[] { test1, test2, test3, test4, test5 };
 
                 //foreach (var test in tests)
                 {
@@ -218,7 +217,6 @@ namespace TimeSeries.Benchmark
             }
         }
 
-
         private readonly string _url;
         private readonly int _workers;
 
@@ -236,7 +234,6 @@ namespace TimeSeries.Benchmark
         private int _interval;
         private DateTime _from;
         private DateTime _to;
-        private int _hash;
         private int _jitter;
 
         private int TotalTimeSeries => _timeSeriesPerDocument * _numberOfDocs;
@@ -265,14 +262,14 @@ namespace TimeSeries.Benchmark
             Log(
                 $"Initialize to run with {_numberOfDocs:N0} documents, {_timeSeriesPerDocument:N0} time-series for each, {_valuesPerMeasure} metrics per measure. Total metrics {TotalMetrics:N0}.");
 
-            var testHash = parameters.GetHashCode() ^ _workers; 
+            var testHash = parameters.GetHashCode() ^ _workers;
             _currentDir = Path.Combine(_workingDir, testHash.ToString());
 
             var databaseName = "TimeSeriesBenchmark_" + parameters.GetHashCode();
             _store = new DocumentStore
             {
-                Urls = new[] {_url},
-                Database = databaseName, 
+                Urls = new[] { _url },
+                Database = databaseName,
                 Conventions = new DocumentConventions
                 {
                     DisableTopologyUpdates = true
@@ -327,7 +324,6 @@ namespace TimeSeries.Benchmark
 
         private class DataGenerator
         {
-
             [ThreadStatic]
             private static Random _currentThreadRand;
 
@@ -374,7 +370,7 @@ namespace TimeSeries.Benchmark
 
                 var m = new Measure
                 {
-                    TimeStamp = _baseline.AddMilliseconds(_elapsedMilliseconds), 
+                    TimeStamp = _baseline.AddMilliseconds(_elapsedMilliseconds),
                     Values = new double[_numberOfValues],
                 };
 
@@ -395,7 +391,6 @@ namespace TimeSeries.Benchmark
 
             private string RandomString(int length)
             {
-
                 var str = new char[length];
                 for (int i = 0; i < length; i++)
                 {
@@ -405,8 +400,8 @@ namespace TimeSeries.Benchmark
                 return new string(str);
             }
 
-            private readonly string[] _versionChoice = {"v1.0", "v1.5", "v2.0", "v2.3"};
-            private readonly string[] _driverChoices = {"Derek", "Rodney", "Albert", "Andy", "Seth", "Trish"};
+            private readonly string[] _versionChoice = { "v1.0", "v1.5", "v2.0", "v2.3" };
+            private readonly string[] _driverChoices = { "Derek", "Rodney", "Albert", "Andy", "Seth", "Trish" };
 
             private readonly TruckModel[] _modelChoices =
             {
@@ -425,7 +420,6 @@ namespace TimeSeries.Benchmark
                     Version = _versionChoice[rand.Next(0, _versionChoice.Length - 1)]
                 };
             }
-
         }
 
         private async Task Worker(int workerIndex)
@@ -693,7 +687,7 @@ namespace TimeSeries.Benchmark
                 var name = _names.First().Value[0];
                 var query = session.Query<Driver>()
                     .Statistics(out var stats)
-                    .Select(u => 
+                    .Select(u =>
                         RavenQuery.TimeSeries(u, name, from, to)
                         .GroupBy(g => g.Hours(1))
                         .Select(g => new
@@ -717,7 +711,6 @@ namespace TimeSeries.Benchmark
         {
             var sp = Stopwatch.StartNew();
             Log($"Start preparing data for {_workers} workers.");
-
 
             if (Directory.Exists(_currentDir) == false)
             {
@@ -763,18 +756,18 @@ namespace TimeSeries.Benchmark
                 await using (var fs = new StreamWriter(gzip))
                 {
                     foreach (var names in data.Names)
-                    foreach (var timeSeries in names.Value)
-                    {
-                        generator.Reset();
-                        sb.AppendLine($"{names.Key},{timeSeries},{_measuresPerTimeSeries}");
-                        for (int i = 0; i < _measuresPerTimeSeries; i++)
+                        foreach (var timeSeries in names.Value)
                         {
-                            var measure = generator.Generate();
-                            measure.AppendToBuilder(sb);
-                            await fs.WriteLineAsync(sb);
-                            sb.Clear();
+                            generator.Reset();
+                            sb.AppendLine($"{names.Key},{timeSeries},{_measuresPerTimeSeries}");
+                            for (int i = 0; i < _measuresPerTimeSeries; i++)
+                            {
+                                var measure = generator.Generate();
+                                measure.AppendToBuilder(sb);
+                                await fs.WriteLineAsync(sb);
+                                sb.Clear();
+                            }
                         }
-                    }
                 }
             }
             catch (Exception e)
