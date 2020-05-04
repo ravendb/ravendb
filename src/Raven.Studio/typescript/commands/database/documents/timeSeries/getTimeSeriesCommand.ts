@@ -10,7 +10,7 @@ class getTimeSeriesCommand extends commandBase {
     
     execute(): JQueryPromise<Raven.Client.Documents.Operations.TimeSeries.TimeSeriesDetails> {
         const args = {
-            id: this.docId,
+            docId: this.docId,
             name: this.timeSeriesName,
             pageSize: this.pageSize,
             start: this.start
