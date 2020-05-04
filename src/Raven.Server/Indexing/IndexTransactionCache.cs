@@ -11,6 +11,7 @@ namespace Raven.Server.Indexing
             public long LastIndexedEtag;
             public long LastProcessedTombstoneEtag;
             public Dictionary<string, ReferenceCollectionEtags> LastReferencedEtags;
+            public ReferenceCollectionEtags LastReferencedEtagsForCompareExchange;
         }
 
         public class ReferenceCollectionEtags

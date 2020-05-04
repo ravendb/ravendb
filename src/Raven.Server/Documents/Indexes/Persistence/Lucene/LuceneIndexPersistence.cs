@@ -13,6 +13,8 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Utils;
@@ -230,6 +232,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private void FillCollectionEtags(Transaction tx,
             Dictionary<string, IndexTransactionCache.CollectionEtags> map)
         {
+            AbstractStaticIndexBase compiled = null;
+
+            if (_index.Type.IsStatic())
+            {
+                switch (_index)
+                {
+                    case MapIndex mapIndex:
+                        compiled = mapIndex._compiled;
+                        break;
+                    case MapReduceIndex mapReduceIndex:
+                        compiled = mapReduceIndex._compiled;
+                        break;
+                    case MapCountersIndex mapCountersIndex:
+                        compiled = mapCountersIndex._compiled;
+                        break;
+                    case MapTimeSeriesIndex mapTimeSeriesIndex:
+                        compiled = mapTimeSeriesIndex._compiled;
+                        break;
+                }
+            }
+
             foreach (string collection in _index.Collections)
             {
                 using (Slice.From(tx.LowLevelTransaction.Allocator, collection, out Slice collectionSlice))
@@ -245,6 +268,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             collectionSlice
                         )
                     };
+
+                    if (compiled?.CollectionsWithCompareExchangeReferences.Contains(collection) == true)
+                    {
+                        etags.LastReferencedEtagsForCompareExchange = new IndexTransactionCache.ReferenceCollectionEtags
+                        {
+                            LastEtag = _index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(tx, collection, IndexStorage.CompareExchangeReferences.CompareExchange),
+                            LastProcessedTombstoneEtag = _index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(tx, collection, IndexStorage.CompareExchangeReferences.CompareExchange)
+                        };
+                    }
 
                     map[collection] = etags;
                 }

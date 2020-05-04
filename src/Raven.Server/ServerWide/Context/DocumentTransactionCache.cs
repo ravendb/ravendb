@@ -8,6 +8,7 @@ namespace Raven.Server.ServerWide.Context
         public long LastDocumentEtag;
         public long LastTombstoneEtag;
         public long LastCounterEtag;
+        public long LastTimeSeriesEtag;
         public long LastConflictEtag;
         public long LastRevisionsEtag;
         public long LastAttachmentsEtag;

@@ -370,6 +370,7 @@ namespace Raven.Server.Documents
                 LastAttachmentsEtag = ReadLastAttachmentsEtag(tx),
                 LastConflictEtag = ReadLastConflictsEtag(tx),
                 LastCounterEtag = ReadLastCountersEtag(tx),
+                LastTimeSeriesEtag = ReadLastTimeSeriesEtag(tx),
                 LastEtag = ReadLastEtag(tx),
                 LastRevisionsEtag = ReadLastRevisionsEtag(tx),
                 LastTombstoneEtag = ReadLastTombstoneEtag(tx),
@@ -619,6 +620,13 @@ namespace Raven.Server.Documents
 
         public static long ReadLastTimeSeriesEtag(Transaction tx)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    return cache.LastTimeSeriesEtag;
+                }
+            }
             return ReadLastEtagFrom(tx, TimeSeriesStorage.AllTimeSeriesEtagSlice);
         }
 

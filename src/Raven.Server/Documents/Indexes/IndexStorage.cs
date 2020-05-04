@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
+using Raven.Server.Indexing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
@@ -333,7 +334,7 @@ namespace Raven.Server.Documents.Indexes
         public class DocumentReferences : ReferencesBase
         {
             public DocumentReferences()
-                : base(IndexSchema.References, Constants.DocumentReferencePrefix, Constants.DocumentReferenceTombstonePrefix, Constants.DocumentReferenceCollectionPrefix)
+                : base(IndexSchema.References, Constants.DocumentReferencePrefix, Constants.DocumentReferenceTombstonePrefix, Constants.DocumentReferenceCollectionPrefix, ReferencesType.Documents)
             {
             }
         }
@@ -343,7 +344,7 @@ namespace Raven.Server.Documents.Indexes
             public static CollectionName CompareExchange = new CollectionName(nameof(CompareExchange));
 
             public CompareExchangeReferences()
-                : base(IndexSchema.ReferencesForCompareExchange, Constants.CompareExchangeReferencePrefix, Constants.CompareExchangeReferenceTombstonePrefix, Constants.CompareExchangeReferenceCollectionPrefix)
+                : base(IndexSchema.ReferencesForCompareExchange, Constants.CompareExchangeReferencePrefix, Constants.CompareExchangeReferenceTombstonePrefix, Constants.CompareExchangeReferenceCollectionPrefix, ReferencesType.CompareExchange)
             {
             }
         }
@@ -354,17 +355,47 @@ namespace Raven.Server.Documents.Indexes
             private readonly string _referencePrefix;
             private readonly string _referenceTombstonePrefix;
             private readonly string _referenceCollectionPrefix;
+            private readonly ReferencesType _type;
 
-            protected ReferencesBase(string referencesTreeName, string referencePrefix, string referenceTombstonePrefix, string referenceCollectionPrefix)
+            public enum ReferencesType
+            {
+                Documents,
+                CompareExchange
+            }
+
+            protected ReferencesBase(string referencesTreeName, string referencePrefix, string referenceTombstonePrefix, string referenceCollectionPrefix, ReferencesType type)
             {
                 _referenceTreeName = referencesTreeName ?? throw new ArgumentNullException(nameof(referencesTreeName));
                 _referencePrefix = referencePrefix ?? throw new ArgumentNullException(nameof(referencePrefix));
                 _referenceTombstonePrefix = referenceTombstonePrefix ?? throw new ArgumentNullException(nameof(referenceTombstonePrefix));
                 _referenceCollectionPrefix = referenceCollectionPrefix ?? throw new ArgumentNullException(nameof(referenceCollectionPrefix));
+                _type = type;
             }
 
             public long ReadLastProcessedReferenceEtag(Transaction tx, string collection, CollectionName referencedCollection)
             {
+                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                {
+                    switch (_type)
+                    {
+                        case ReferencesType.Documents:
+                            IndexTransactionCache.ReferenceCollectionEtags documentEtags = default;
+                            if (cache.Collections.TryGetValue(collection, out var val) &&
+                                val.LastReferencedEtags?.TryGetValue(referencedCollection.Name, out documentEtags) == true)
+                            {
+                                return documentEtags.LastEtag;
+                            }
+                            break;
+                        case ReferencesType.CompareExchange:
+                            if (cache.Collections.TryGetValue(collection, out var compareExchangeEtags) &&
+                                compareExchangeEtags.LastReferencedEtagsForCompareExchange != null)
+                            {
+                                return compareExchangeEtags.LastReferencedEtagsForCompareExchange.LastEtag;
+                            }
+                            break;
+                    }
+                }
+
                 var tree = tx.ReadTree(_referencePrefix + collection);
 
                 var result = tree?.Read(referencedCollection.Name);
@@ -386,6 +417,28 @@ namespace Raven.Server.Documents.Indexes
 
             public long ReadLastProcessedReferenceTombstoneEtag(Transaction tx, string collection, CollectionName referencedCollection)
             {
+                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                {
+                    switch (_type)
+                    {
+                        case ReferencesType.Documents:
+                            IndexTransactionCache.ReferenceCollectionEtags documentEtags = default;
+                            if (cache.Collections.TryGetValue(collection, out var val) &&
+                                val.LastReferencedEtags?.TryGetValue(referencedCollection.Name, out documentEtags) == true)
+                            {
+                                return documentEtags.LastProcessedTombstoneEtag;
+                            }
+                            break;
+                        case ReferencesType.CompareExchange:
+                            if (cache.Collections.TryGetValue(collection, out var compareExchangeEtags) &&
+                                compareExchangeEtags.LastReferencedEtagsForCompareExchange != null)
+                            {
+                                return compareExchangeEtags.LastProcessedTombstoneEtag;
+                            }
+                            break;
+                    }
+                }
+
                 var tree = tx.ReadTree(_referenceTombstonePrefix + collection);
 
                 var result = tree?.Read(referencedCollection.Name);
@@ -522,17 +575,37 @@ namespace Raven.Server.Documents.Indexes
 
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
-            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
+            var txi = tx.InnerTransaction;
+            if (txi.IsWriteTransaction == false)
             {
-                return ReadLastEtag(tx.InnerTransaction, IndexSchema.EtagsTombstoneTree, collectionSlice);
+                if (txi.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                {
+                    if (cache.Collections.TryGetValue(collection, out var val))
+                        return val.LastProcessedTombstoneEtag;
+                }
+            }
+
+            using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
+            {
+                return ReadLastEtag(txi, IndexSchema.EtagsTombstoneTree, collectionSlice);
             }
         }
 
         public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
         {
-            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
+            var txi = tx.InnerTransaction;
+            if (txi.IsWriteTransaction == false)
             {
-                return ReadLastEtag(tx.InnerTransaction, IndexSchema.EtagsTree, collectionSlice);
+                if (txi.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                {
+                    if (cache.Collections.TryGetValue(collection, out var val))
+                        return val.LastIndexedEtag;
+                }
+            }
+
+            using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
+            {
+                return ReadLastEtag(txi, IndexSchema.EtagsTree, collectionSlice);
             }
         }
 
