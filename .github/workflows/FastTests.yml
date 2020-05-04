@@ -1,4 +1,4 @@
-name: FastTests
+name: tests/fast
 
 on:
   push:
