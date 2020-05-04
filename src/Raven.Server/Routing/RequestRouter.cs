@@ -269,9 +269,12 @@ namespace Raven.Server.Routing
                                  $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
                                  $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]";
 
-                                conLifetime.ConnectionClosed.Register(() =>
+                                CancellationTokenRegistration cancellationTokenRegistration = default;
+                                
+                                cancellationTokenRegistration = conLifetime.ConnectionClosed.Register(() =>
                                 {
                                     auditLog.Info(msg);
+                                    cancellationTokenRegistration.Dispose();
                                 });
                             }
                         }

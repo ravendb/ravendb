@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly IndexDefinition IndexDefinition;
 
-        public MapIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields, bool hasCompareExchange, long indexVersion)
+        public MapIndexDefinition(IndexDefinition definition, IEnumerable<string> collections, string[] outputFields, bool hasDynamicFields, bool hasCompareExchange, long indexVersion)
             : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, GetFields(definition, outputFields), indexVersion)
         {
             _hasDynamicFields = hasDynamicFields;

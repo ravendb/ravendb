@@ -49,6 +49,7 @@ namespace Raven.Server.Background
             Debug.Assert(_currentTask == null);
             if (Cts.IsCancellationRequested)
             {
+                Cts.Dispose();
                 Cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
             }
 

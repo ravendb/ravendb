@@ -67,18 +67,18 @@ function NpmInstall () {
 
     foreach ($i in 1..$NPM_INSTALL_RETRIES) {
         try {
-            & npm install
+            & npm ci
             CheckLastExitCode
 
             break;
         }
         catch {
-            write-host "Error doing npm install..."
+            write-host "Error doing npm ci..."
             if ($i -ge $NPM_INSTALL_RETRIES) {
                 throw $_.Exception
             }
 
-            write-host "Retrying npm install..."
+            write-host "Retrying npm ci..."
         }
     }
 

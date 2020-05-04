@@ -14,7 +14,8 @@ namespace Sparrow.Threading
         private readonly WeakReferenceCompareValue<LightWeightThreadLocal<T>> SelfReference;
         private ConcurrentDictionary<WeakReferenceCompareValue<CurrentThreadState>, T> _values = new ConcurrentDictionary<WeakReferenceCompareValue<CurrentThreadState>, T>();
         private readonly Func<T> _generator;
-        private readonly GlobalState _globalState = new GlobalState();
+        private bool _disposed;
+        private static int GlobalVersion;
 
         public LightWeightThreadLocal(Func<T> generator = null)
         {
@@ -26,7 +27,7 @@ namespace Sparrow.Threading
         {
             get
             {
-                if (_globalState.Disposed != 0)
+                if (_disposed)
                     throw new ObjectDisposedException(nameof(LightWeightThreadLocal<T>));
                 return _values.Values;
             }
@@ -36,7 +37,7 @@ namespace Sparrow.Threading
         {
             get
             {
-                if (_globalState.Disposed != 0)
+                if (_disposed)
                     throw new ObjectDisposedException(nameof(LightWeightThreadLocal<T>));
 
                 return _state != null && _values.ContainsKey(_state.SelfReference);
@@ -47,7 +48,7 @@ namespace Sparrow.Threading
         {
             get
             {
-                if (_globalState.Disposed != 0)
+                if (_disposed)
                     throw new ObjectDisposedException(nameof(LightWeightThreadLocal<T>));
                 (_state ??= new CurrentThreadState()).Register(this);
                 if (_values.TryGetValue(_state.SelfReference, out var v) == false &&
@@ -61,7 +62,7 @@ namespace Sparrow.Threading
 
             set
             {
-                if (_globalState.Disposed != 0)
+                if (_disposed)
                     throw new ObjectDisposedException(nameof(LightWeightThreadLocal<T>));
 
                 (_state ??= new CurrentThreadState()).Register(this);
@@ -79,20 +80,9 @@ namespace Sparrow.Threading
             if (copy == null)
                 return;
 
-            _globalState.Dispose();
+            Interlocked.Increment(ref GlobalVersion);
+            _disposed = true;
             _values = null;
-
-            while (copy.Count > 0)
-            {
-                foreach (var kvp in copy)
-                {
-                    if (copy.TryRemove(kvp.Key, out var item) &&
-                        item is IDisposable d)
-                    {
-                        d.Dispose();
-                    }
-                }
-            }
         }
 
         private sealed class CurrentThreadState
@@ -111,14 +101,15 @@ namespace Sparrow.Threading
 
             public void Register(LightWeightThreadLocal<T> parent)
             {
-                parent._globalState.UsedThreads.TryAdd(_localState, null);
                 _parents.Add(parent.SelfReference);
-                int parentsDisposed = _localState.ParentsDisposed;
-                if (parentsDisposed > 0)
+                int localVersion = _localState.LocalVersion;
+                var globalVersion = GlobalVersion;
+                if (localVersion != globalVersion)
                 {
+                    // a thread local instance was disposed, let's check
+                    // if we need to do cleanup here
                     RemoveDisposedParents();
-                    Interlocked.Add(ref _localState.ParentsDisposed, -parentsDisposed);
-
+                    _localState.LocalVersion = globalVersion;
                 }
             }
 
@@ -127,7 +118,7 @@ namespace Sparrow.Threading
                 var toRemove = new List<WeakReferenceCompareValue<LightWeightThreadLocal<T>>>();
                 foreach (var local in _parents)
                 {
-                    if (local.TryGetTarget(out var target) == false || target._globalState.Disposed != 0)
+                    if (local.TryGetTarget(out var target) == false || target._disposed)
                     {
                         toRemove.Add(local);
                     }
@@ -149,11 +140,7 @@ namespace Sparrow.Threading
                     var copy = liveParent._values;
                     if (copy == null)
                         continue;
-                    if (copy.TryRemove(SelfReference, out var value)
-                        && value is IDisposable d)
-                    {
-                        d.Dispose();
-                    }
+                    copy.TryRemove(SelfReference, out _);
                 }
             }
         }
@@ -215,25 +202,9 @@ namespace Sparrow.Threading
             }
         }
 
-        private sealed class GlobalState
-        {
-            public int Disposed;
-            public readonly ConcurrentDictionary<LocalState, object> UsedThreads
-                = new ConcurrentDictionary<LocalState, object>(ReferenceEqualityComparer<LocalState>.Default);
-
-            public void Dispose()
-            {
-                Interlocked.Exchange(ref Disposed, 1);
-                foreach (var localState in UsedThreads)
-                {
-                    Interlocked.Increment(ref localState.Key.ParentsDisposed);
-                }
-            }
-        }
-
         private sealed class LocalState
         {
-            public int ParentsDisposed;
+            public int LocalVersion;
         }
     }
 }

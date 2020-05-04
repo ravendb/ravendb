@@ -41,12 +41,22 @@ namespace Raven.Server.Documents.Patch
 {
     public class ScriptRunner
     {
-        private readonly ConcurrentQueue<SingleRun> _cache = new ConcurrentQueue<SingleRun>();
+        public class Holder
+        {
+            public ScriptRunner Parent;
+            public SingleRun Value;
+            public WeakReference<SingleRun> WeakValue;
+        }
+        private readonly ConcurrentQueue<Holder> _cache = new ConcurrentQueue<Holder>();
         private readonly DocumentDatabase _db;
         private readonly RavenConfiguration _configuration;
         internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
         public readonly List<string> ScriptsSource = new List<string>();
+
+        public int NumberOfCachedScripts => _cache.Count(x=>
+            x.Value != null || 
+            x.WeakValue?.TryGetTarget(out _) == true);
 
         internal readonly Dictionary<string, DeclaredFunction> TimeSeriesDeclaration = new Dictionary<string, DeclaredFunction>();
 
@@ -92,10 +102,32 @@ namespace Raven.Server.Documents.Patch
         public ReturnRun GetRunner(out SingleRun run)
         {
             _lastRun = DateTime.UtcNow;
-            if (_cache.TryDequeue(out run) == false)
-                run = new SingleRun(_db, _configuration, this, ScriptsSource);
             Interlocked.Increment(ref Runs);
-            return new ReturnRun(this, run);
+            if (_cache.TryDequeue(out var holder) == false)
+            {
+                holder = new Holder
+                {
+                    Parent = this
+                };
+        }
+
+            if (holder.Value == null)
+            {
+                if (holder.WeakValue!= null && 
+                    holder.WeakValue.TryGetTarget(out run))
+                {
+                    holder.Value = run;
+                    holder.WeakValue = null;
+                }
+                else
+                {
+                    holder.Value = new SingleRun(_db, _configuration, this, ScriptsSource);
+                }
+            }
+
+            run = holder.Value;
+
+            return new ReturnRun(run, holder);
         }
 
         public void TryCompileScript(string script)
@@ -1429,7 +1461,9 @@ namespace Raven.Server.Documents.Patch
                         var functionAst = lambda.FunctionDeclaration;
                         var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
 
-                        if (selfInstance.OwnValues.TryGetValue(propName, out var existingValue))
+                        BlittableObjectInstance.BlittableObjectProperty existingValue = default;
+                        if (selfInstance.OwnValues?.TryGetValue(propName, out existingValue) == true && 
+                            existingValue != null)
                         {
                             if (existingValue.Changed)
                             {
@@ -1545,6 +1579,7 @@ namespace Raven.Server.Documents.Patch
                     _refResolver.ExplodeArgsOn(null, null);
                     _docsCtx = null;
                     _jsonCtx = null;
+                    Array.Clear(_args, 0, _args.Length);
                 }
             }
 
@@ -1644,13 +1679,13 @@ namespace Raven.Server.Documents.Patch
 
         public struct ReturnRun : IDisposable
         {
-            private ScriptRunner _parent;
             private SingleRun _run;
+            private Holder _holder;
 
-            public ReturnRun(ScriptRunner parent, SingleRun run)
+            public ReturnRun(SingleRun run, Holder holder)
             {
-                _parent = parent;
                 _run = run;
+                _holder = holder;
             }
 
             public void Dispose()
@@ -1672,10 +1707,41 @@ namespace Raven.Server.Documents.Patch
 
                 _run.UpdatedDocumentCounterIds?.Clear();
 
-                _parent._cache.Enqueue(_run);
+                _holder.Parent._cache.Enqueue(_holder);
                 _run = null;
-                _parent = null;
             }
+        }
+
+        public bool RunIdleOperations()
+        {
+            while (_cache.TryDequeue(out var holder))
+            {
+                var val = holder.Value;
+                if (val != null)
+                {
+                    // move the cache to weak reference value
+                    holder.WeakValue = new WeakReference<SingleRun>(val);
+                    holder.Value = null;
+                    _cache.Enqueue(holder);
+                    continue;
+    }
+
+                var weak = holder.WeakValue;
+                if (weak == null)
+                    continue;// no value, can discard it
+
+                // The first item is a weak ref that wasn't clear?
+                // The CLR can free it later, and then we'll act
+                if (weak.TryGetTarget(out _))
+                {
+                    _cache.Enqueue(holder);
+                    return true;
+}
+                
+                // the weak ref has no value, can discard it
+            }
+
+            return false;
         }
     }
 }

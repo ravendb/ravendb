@@ -189,7 +189,11 @@ namespace Raven.Server.Documents.Operations
 
             _active.TryAdd(id, operation);
 
-            return operation.Task;
+            return operation.Task.ContinueWith(t =>
+            {
+                token.Dispose();
+                return t;
+            }).Unwrap();
         }
 
         private void RaiseNotifications(OperationStatusChange change, Operation operation)

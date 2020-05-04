@@ -128,7 +128,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         using var c = new RavenAzureClient(GetAzureSettings(containerName, databaseName));
                         var folders = await c.ListBlobsAsync($"{c.RemoteFolderName}/", delimiter: "/", listFolders: true);
-                        return folders.ListBlob.Count();
+                        return folders.List.Count();
                     }, timeout: 120000, checkIncremental);
             }
             finally

@@ -326,7 +326,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                         $"is located in: {bucketLocation}");
                 }
             }
-            catch (AwsForbiddenException)
+            catch (UnauthorizedAccessException)
             {
                 // we don't have the permissions to view the bucket location
             }
@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                         $"when permission is set to '{bucketPermission}'");
                 }
             }
-            catch (AwsForbiddenException)
+            catch (UnauthorizedAccessException)
             {
                 // we don't have the permissions to view the bucket permissions
             }
@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     var storageException = StorageException.FromResponseMessage(response);
 
                     if (response.StatusCode == HttpStatusCode.Forbidden)
-                        throw new AwsForbiddenException(storageException.ResponseString);
+                        throw new UnauthorizedAccessException(storageException.ResponseString);
 
                     throw storageException;
                 }
@@ -428,7 +428,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 var storageException = StorageException.FromResponseMessage(response);
                 
                 if (response.StatusCode == HttpStatusCode.Forbidden)
-                    throw new AwsForbiddenException(storageException.ResponseString);
+                    throw new UnauthorizedAccessException(storageException.ResponseString);
 
                 throw storageException;
             }

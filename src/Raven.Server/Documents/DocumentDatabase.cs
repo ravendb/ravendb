@@ -807,6 +807,10 @@ namespace Raven.Server.Documents
                         }
                     }
                 });
+                
+                exceptionAggregator.Execute(RachisLogIndexNotifications);
+                
+                exceptionAggregator.Execute(_hasClusterTransaction);
 
                 exceptionAggregator.ThrowIfNeeded();
             }
@@ -922,6 +926,7 @@ namespace Raven.Server.Documents
                 Operations?.CleanupOperations();
                 SubscriptionStorage?.CleanupSubscriptions();
 
+                Scripts?.RunIdleOperations();
                 DocumentsStorage.Environment.Cleanup();
                 ConfigurationStorage.Environment.Cleanup();
 

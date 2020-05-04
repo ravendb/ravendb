@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             reduceOutputsTree.Delete(prefix);
 
-            indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+            indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += __ =>
             {
                 // ensure that we delete it from in-memory state only after successful commit
                 _prefixesOfReduceOutputDocumentsToDelete.TryRemove(prefix, out _);

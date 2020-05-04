@@ -792,16 +792,17 @@ namespace Sparrow.Server
             if (_wholeSegments.Count == 2)
                 return;
 
-            for (int i = 0; i < _wholeSegments.Count; i++)
+            foreach (var segment in _wholeSegments)
             {
-                var segment = _wholeSegments[i];
                 if (segment == _internalCurrent || segment == _externalCurrent)
                     continue;
 
                 ReleaseSegment(segment);
-                _wholeSegments.RemoveAt(i);
-                i--;
             }
+            
+            _wholeSegments.Clear();
+            _wholeSegments.Add(_internalCurrent);
+            _wholeSegments.Add(_externalCurrent);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -38,6 +38,7 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
+using Raven.Server.Indexing;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -191,7 +192,6 @@ namespace Raven.Server.Documents.Indexes
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
-        private Func<bool> _indexValidationStalenessCheck = () => true;
 
         private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
 
@@ -281,8 +281,6 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
                 }
-
-                _indexValidationStalenessCheck = null;
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
 
@@ -492,6 +490,14 @@ namespace Raven.Server.Documents.Indexes
 
         public int MaxNumberOfOutputsPerDocument { get; private set; }
 
+        public bool IsInvalidIndex()
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                return _indexStorage.IsIndexInvalid(tx);
+            }
+        }
         public virtual IndexRunningStatus Status
         {
             get
@@ -662,18 +668,6 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
-                _indexValidationStalenessCheck = () =>
-                {
-                    if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
-                        return true;
-
-                    using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
-                    using (context.OpenReadTransaction())
-                    {
-                        return IsStale(context);
-                    }
-                };
-
                 OnInitialization();
 
                 if (LastIndexingTime != null)
@@ -685,6 +679,18 @@ namespace Raven.Server.Documents.Indexes
             {
                 Dispose();
                 throw;
+            }
+        }
+
+        private bool IsStaleInternal()
+        {
+            if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
+                return true;
+
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+            using (documentsContext.OpenReadTransaction())
+            {
+                return IsStale(documentsContext);
             }
         }
 
@@ -1753,7 +1759,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
         {
-            if (failureInformation.IsInvalidIndex(_indexValidationStalenessCheck) == false)
+            if (failureInformation.IsInvalidIndex(IsStaleInternal()) == false)
                 return;
 
             var message = failureInformation.GetErrorMessage();
@@ -1834,8 +1840,15 @@ namespace Raven.Server.Documents.Indexes
                         {
                             tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
 
-                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                            tx.InnerTransaction.LowLevelTransaction.LastChanceToReadFromWriteTransactionBeforeCommit += llt =>
                             {
+                                llt.ImmutableExternalState = IndexPersistence.BuildStreamCacheAfterTx(llt.Transaction);
+                            };
+
+                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += llt =>
+                            {
+                                IndexPersistence.PublishIndexCacheToNewTransactions((IndexTransactionCache)llt.ImmutableExternalState);
+
                                 if (writeOperation.IsValueCreated == false)
                                     return;
 
@@ -1845,8 +1858,8 @@ namespace Raven.Server.Documents.Indexes
                                     // also we need this to be called when new read transaction are prevented in order to ensure
                                     // that queries won't get the searcher having 'old' state but see 'new' changes committed here
                                     // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
-                                    IndexPersistence.RecreateSearcher(tx.InnerTransaction);
-                                    IndexPersistence.RecreateSuggestionsSearchers(tx.InnerTransaction);
+                                    IndexPersistence.RecreateSearcher(llt.Transaction);
+                                    IndexPersistence.RecreateSuggestionsSearchers(llt.Transaction);
                                 }
                             };
 
@@ -2278,8 +2291,8 @@ namespace Raven.Server.Documents.Indexes
                                 continue;
                             }
 
-                            var lastReferenceEtag = _indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection.Key, value);
-                            var lastReferenceTombstoneEtag = _indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, referencedCollection.Key, value);
+                            var lastReferenceEtag = IndexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, referencedCollection.Key, value);
+                            var lastReferenceTombstoneEtag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, referencedCollection.Key, value);
                             var lastEtags = GetLastEtags(_inMemoryReferencesIndexProgress, collectionName, lastReferenceEtag, lastReferenceTombstoneEtag);
 
                             progressStats = progress.Collections[collectionName] = new IndexProgress.CollectionStats

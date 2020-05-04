@@ -334,12 +334,12 @@ namespace SlowTests.Server.Replication
                     long etag;
                     using (ctx.OpenReadTransaction())
                     {
-                        etag = db.DocumentsStorage.GetLastDocumentEtag(ctx, CollectionName.HiLoCollection);
+                        etag = db.DocumentsStorage.GetLastDocumentEtag(ctx.Transaction.InnerTransaction, CollectionName.HiLoCollection);
                     }
                     await Task.Delay(200); // twice the minimal heartbeat
                     using (ctx.OpenReadTransaction())
                     {
-                        Assert.Equal(etag, db.DocumentsStorage.GetLastDocumentEtag(ctx, CollectionName.HiLoCollection));
+                        Assert.Equal(etag, db.DocumentsStorage.GetLastDocumentEtag(ctx.Transaction.InnerTransaction, CollectionName.HiLoCollection));
                     }
                 }
             }

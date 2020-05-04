@@ -16,6 +16,8 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Exceptions;
+using Voron.Impl;
+using Raven.Server.Indexing;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -254,6 +256,32 @@ namespace Raven.Server.Documents.Indexes
             return DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
         }
 
+        public bool IsIndexInvalid(RavenTransaction tx)
+        {
+            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
+
+            var mapAttempts = statsTree.Read(IndexSchema.MapAttemptsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+            var mapErrors = statsTree.Read(IndexSchema.MapErrorsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+
+            int? reduceAttempts = null, reduceErrors = null;
+
+            if (_index.Type.IsMapReduce())
+            {
+                reduceAttempts = statsTree.Read(IndexSchema.ReduceAttemptsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                reduceErrors = statsTree.Read(IndexSchema.ReduceErrorsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+            }
+
+            int mapReferenceAttempts = 0, mapReferenceErrors = 0;
+            if (_index.GetReferencedCollections()?.Count > 0)
+            {
+                mapReferenceAttempts = statsTree.Read(IndexSchema.MapReferencedAttemptsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                mapReferenceErrors = statsTree.Read(IndexSchema.MapReferenceErrorsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+            }
+
+            return IndexFailureInformation.CheckIndexInvalid(mapAttempts, mapErrors, 
+                mapReferenceAttempts, mapReferenceErrors, reduceAttempts, reduceErrors, false);
+        }
+
         public IndexStats ReadStats(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
@@ -340,6 +368,23 @@ namespace Raven.Server.Documents.Indexes
             public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
             {
                 var tree = tx.InnerTransaction.ReadTree(_referencePrefix + collection);
+
+        public static long ReadLastProcessedReferenceEtag(Transaction tx, string collection, CollectionName referencedCollection)
+        {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                {
+                    IndexTransactionCache.ReferenceCollectionEtags last = default;
+                    if (cache.Collections.TryGetValue(collection, out var val) && 
+                        val.LastReferencedEtags?.TryGetValue(referencedCollection.Name, out last) == true)
+                    {
+                        return last.LastEtag;
+                    }
+                }
+            }
+            
+            var tree = tx.ReadTree("$" + collection);
 
                 var result = tree?.Read(referencedCollection.Name);
                 if (result == null)
@@ -567,9 +612,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static long ReadLastEtag(RavenTransaction tx, string tree, Slice collection)
+        internal static long ReadLastEtag(Transaction tx, string tree, Slice collection)
         {
-            var statsTree = tx.InnerTransaction.CreateTree(tree);
+            var statsTree = tx.CreateTree(tree);
             var readResult = statsTree.Read(collection);
             long lastEtag = 0;
             if (readResult != null)
@@ -767,7 +812,7 @@ namespace Raven.Server.Documents.Indexes
                 fieldsTree.MultiAdd(IndexSchema.TimeSlice, fieldName);
         }
 
-        private class IndexSchema
+        internal class IndexSchema
         {
             public const string StatsTree = "Stats";
 

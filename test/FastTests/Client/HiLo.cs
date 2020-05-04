@@ -8,6 +8,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Identity;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -185,7 +186,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public async Task Should_Resolve_Conflict_With_Highest_Number()
         {
             using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo1" }))
@@ -386,7 +387,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public async Task CanReplicateHiLoTombstone()
         {
             using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo1" }))

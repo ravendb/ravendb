@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 if (_script.IsLoadedToDefaultCollection(item, collection))
                 {
-                    if (operation == OperationType.Delete || _transformation.IsAddingAttachments || _transformation.IsAddingCounters)
+                    if (operation == OperationType.Delete || _transformation.IsAddingAttachments || _transformation.IsAddingCounters || _transformation.IsEmptyScript == false)
                         _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
                 }
                 else

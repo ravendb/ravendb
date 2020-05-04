@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
             return new GetFoldersResult
             {
-                List = result.ListBlob.Select(x => x.Name).OrderBy(x => x).ToList(),
+                List = result.List.Select(x => x.Name).OrderBy(x => x).ToList(),
                 HasMore = result.NextMarker != null
             };
         }
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             {
                 var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker);
 
-                foreach (var blob in blobs.ListBlob)
+                foreach (var blob in blobs.List)
                 {
                     if (firstFileSet == false)
                     {
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 {
                     var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker);
 
-                    foreach (var blob in blobs.ListBlob)
+                    foreach (var blob in blobs.List)
                     {
                         if (blobsToDelete.Count == numberOfObjectsInBatch)
                         {

@@ -260,10 +260,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 var id = GetOutputDocumentKey(reduceKeyHash);
 
-                var deleteResult = _database.DocumentsStorage.Delete(context, id, null);
-
-                if (deleteResult != null)
+                // we could have just used 'Delete' but this method is also using the 'Get' to determine the collection name
+                var currentDocument = _database.DocumentsStorage.Get(context, id, DocumentFields.Data);
+                if (currentDocument != null)
                 {
+                    // apply this optimization only if we don't have hash collisions
+                    if (_reduceDocuments.TryGetValue(reduceKeyHash, out var newReduceDocuments) &&
+                        newReduceDocuments.Count == 1 &&
+                        DocumentsBinaryEqual(currentDocument.Data, newReduceDocuments[0].Json)) 
+                    {
+                        // same document, nothing to do
+                        _reduceDocuments.Remove(reduceKeyHash);
+                        continue;
+                    }
+
+                    _database.DocumentsStorage.Delete(context, id, null);
                     _outputToCollectionReferences?.Delete(id);
                 }
                 else
@@ -316,6 +327,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
 
             return _reduceDocuments.Count;
+        }
+
+        private static unsafe bool DocumentsBinaryEqual(BlittableJsonReaderObject oldDocument, BlittableJsonReaderObject newDocument)
+        {
+            return oldDocument.Size == newDocument.Size &&
+                   Sparrow.Memory.CompareInline(oldDocument.BasePointer, newDocument.BasePointer, oldDocument.Size) == 0;
         }
 
         private void ProcessReduceDocumentsForReplayTransaction(DocumentsOperationContext context)

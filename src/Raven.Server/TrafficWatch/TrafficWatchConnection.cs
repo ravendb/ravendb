@@ -145,6 +145,7 @@ namespace Raven.Server.TrafficWatch
 
             _webSocket.Dispose();
             _cancellationTokenSource.Dispose();
+            _manualResetEvent.Dispose();
         }
     }
 }

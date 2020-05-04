@@ -46,7 +46,9 @@ function SignFile( $projectDir, $filePath, $dryRun ) {
     $timeservers = @("http://tsa.starfieldtech.com", "http://timestamp.globalsign.com/scripts/timstamp.dll", "http://timestamp.comodoca.com/authenticode", "http://www.startssl.com/timestamp", "http://timestamp.verisign.com/scripts/timstamp.dll")
     foreach ($time in $timeservers) {
         try {
-            &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "$time" /v /debug "$filePath"
+            Write-Host "Command: $signTool sign /f `"$installerCert`" /p `"PASSWORD`" /d `"RavenDB`" /du `"https://ravendb.net`" /t `"$time`" /v /debug `"$filePath`""
+            &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "https://ravendb.net" /t "$time" /v /debug "$filePath"
+            CheckLastExitCode
             return
         }
         catch {
@@ -54,5 +56,5 @@ function SignFile( $projectDir, $filePath, $dryRun ) {
         }
     }
 
-    throw "Could not reach any of the timeservers"
+    throw "Error signing $filePath - see SignTool.exe error above."
 }
