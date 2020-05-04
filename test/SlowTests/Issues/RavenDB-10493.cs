@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
+using FastTests;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_10493 : RavenTestBase
     {
@@ -36,7 +37,7 @@ namespace FastTests.Issues
                                 let test = 1
                                 select new
                                 {
-                                    DateTime = x.DateTime,
+                                    x.DateTime,
                                     DateTimeMinValue = DateTime.MinValue,
                                     DateTimeMaxValue = DateTime.MaxValue
                                 };
@@ -53,7 +54,7 @@ namespace FastTests.Issues
                     // Only missing 0.9999 ms, but with additional timezone
                     var epsilon = 1 + Math.Abs((DateTime.UtcNow - DateTime.Now).TotalSeconds); // Lower than 1 ms
                     var val = (DateTime.MaxValue - result[0].DateTimeMaxValue).TotalSeconds;
-                    Assert.True(Math.Abs(val) < (epsilon), $"Math.Abs({val}) < ({epsilon})");
+                    Assert.True(Math.Abs(val) < epsilon, $"Math.Abs({val}) < ({epsilon})");
                 }
             }
         }
