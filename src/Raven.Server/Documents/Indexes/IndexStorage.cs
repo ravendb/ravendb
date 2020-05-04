@@ -433,7 +433,7 @@ namespace Raven.Server.Documents.Indexes
                             if (cache.Collections.TryGetValue(collection, out var compareExchangeEtags) &&
                                 compareExchangeEtags.LastReferencedEtagsForCompareExchange != null)
                             {
-                                return compareExchangeEtags.LastProcessedTombstoneEtag;
+                                return compareExchangeEtags.LastReferencedEtagsForCompareExchange.LastProcessedTombstoneEtag;
                             }
                             break;
                     }
