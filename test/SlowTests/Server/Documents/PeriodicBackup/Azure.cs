@@ -104,13 +104,38 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [AzureStorageEmulatorFact]
         public void put_blob()
         {
-            PutBlobs(5, false);
-        }
+            var containerName = Guid.NewGuid().ToString();
+            var blobKey = Guid.NewGuid().ToString();
 
-        [AzureStorageEmulatorFact(Skip = "Azure Storage Emulator doesn't support SAS tokens")]
-        public void put_blob_with_sas_token()
-        {
-            PutBlobs(5, true);
+            using (var client = new RavenAzureClient(GetAzureSettings(containerName)))
+            {
+                try
+                {
+                    client.DeleteContainer();
+                    client.PutContainer();
+
+                    client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
+                    {
+                        {"property1", "value1"},
+                        {"property2", "value2"}
+                    });
+                    var blob = client.GetBlob(blobKey);
+                    Assert.NotNull(blob);
+
+                    using (var reader = new StreamReader(blob.Data))
+                        Assert.Equal("123", reader.ReadToEnd());
+
+                    var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
+                    var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
+
+                    Assert.Equal("value1", blob.Metadata[property1]);
+                    Assert.Equal("value2", blob.Metadata[property2]);
+                }
+                finally
+                {
+                    client.DeleteContainer();
+                }
+            }
         }
 
         [AzureStorageEmulatorFact]
@@ -127,7 +152,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     client.PutContainer();
 
                     client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")),
-                        new Dictionary<string, string> {{"property1", "value1"}, {"property2", "value2"}});
+                        new Dictionary<string, string> { { "property1", "value1" }, { "property2", "value2" } });
 
                     var blob = client.GetBlob(blobKey);
                     Assert.NotNull(blob);
@@ -148,7 +173,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        private void PutBlobs(int blobsCount, bool useSasToken)
+        [AzureStorageEmulatorFact(Skip = "Azure Storage Emulator doesn't support batch delete")]
+        public void put_blob_without_sas_token()
+        {
+            PutBlobs(5, false);
+        }
+
+        [AzureStorageEmulatorFact(Skip = "Azure Storage Emulator doesn't support SAS tokens and batch delete")]
+        public void put_blob_with_sas_token()
+        {
+            PutBlobs(5, true);
+        }
+
+        private static void PutBlobs(int blobsCount, bool useSasToken)
         {
             var containerName = Guid.NewGuid().ToString();
             var blobNamesToPut = new List<string>();
@@ -248,7 +285,6 @@ New-AzStorageContainerSASToken -Name {containerName} -Permission rwdl -ExpiryTim
 
             throw new InvalidOperationException($"Failed to get the SasToken from the emulator, error: {process.StandardError.ReadToEnd()}");
         }
-
 
         public static AzureSettings GetAzureSettings(string containerName, string sasToken = null)
         {
