@@ -164,10 +164,10 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(2, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(2), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(10), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(40), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(2), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(10), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get [0, 2] and merge it into existing [2, 10] 
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
@@ -181,10 +181,10 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(5), vals[30].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     Assert.Equal(2, ranges.Count);
-                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(10), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(40), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(10), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get [10, 16] and merge it into existing [0, 10] 
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
@@ -198,10 +198,10 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(16), vals[48].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     Assert.Equal(2, ranges.Count);
-                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(16), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(40), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(16), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get range [17, 19]
                     // and add it to cache in between [10, 16] and [40, 50]
@@ -217,12 +217,12 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(19), vals[12].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     Assert.Equal(3, ranges.Count);
-                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(16), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(17), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(19), ranges[1].To);
-                    Assert.Equal(baseline.AddMinutes(40), ranges[2].From);
-                    Assert.Equal(baseline.AddMinutes(50), ranges[2].To);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(16), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(17), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(19), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[2].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[2].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get range [19, 40]
                     // and merge the result with existing ranges [17, 19] and [40, 50] 
@@ -239,10 +239,10 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(48), vals[180].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     Assert.Equal(2, ranges.Count);
-                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(16), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(17), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(16), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(17), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get range [16, 17]
                     // and merge the result with existing ranges [0, 16] and [17, 50] 
@@ -259,8 +259,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(22), vals[60].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     Assert.Equal(1, ranges.Count);
-                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(50), ranges[0].To);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
 
                 }
             }
@@ -334,10 +334,10 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(2, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(22), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(32), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(22), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(32), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get [32, 35] and merge with [22, 32]
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
@@ -352,10 +352,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(2, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(22), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(35), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(22), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(35), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get [20, 22] and [35, 40]
                     // and merge them with [22, 35] into a single range [20, 40]
@@ -371,10 +371,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(2, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(20), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(40), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(20), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get [15, 20] and merge with [20, 40]
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
@@ -389,10 +389,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(2, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(15), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(40), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(15), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server and add new cache entry for Heartrate2
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate2")
@@ -407,8 +407,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.True(cache.TryGetValue("Heartrate2", out var ranges2));
                     Assert.Equal(1, ranges2.Count);
-                    Assert.Equal(baseline, ranges2[0].From);
-                    Assert.Equal(baseline.AddHours(2), ranges2[0].To);
+                    Assert.Equal(baseline, ranges2[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddHours(2), ranges2[0].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should not go to server
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate2")
@@ -434,12 +434,12 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(3, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(15), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(40), ranges[1].To);
-                    Assert.Equal(baseline.AddMinutes(42), ranges[2].From);
-                    Assert.Equal(baseline.AddMinutes(43), ranges[2].To);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(11), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(15), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(42), ranges[2].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(43), ranges[2].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server and to get the missing parts and merge all ranges into [0, 45]
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
@@ -455,8 +455,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(cache.TryGetValue("Heartrate", out ranges));
                     Assert.Equal(1, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(45), ranges[0].To);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(45), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
 
                 }
             }
@@ -510,10 +510,10 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(2, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(2), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(5), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(6), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(2), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(5), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(6), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get [2, 3] and merge with [1, 2]
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
@@ -528,10 +528,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(2, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(3), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(5), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(6), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(3), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(5), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(6), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get [4, 5] and merge with [5, 6]
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
@@ -546,10 +546,10 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(2, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(3), ranges[0].To);
-                    Assert.Equal(baseline.AddMinutes(4), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(6), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(3), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(4), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(6), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
                     // should go to server to get [3, 4] and merge all ranges into [1, 6]
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
@@ -564,8 +564,8 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(1, ranges.Count);
 
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(6), ranges[0].To);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(6), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
 
                 }
             }
@@ -636,8 +636,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(1, ranges.Count);
 
-                    Assert.Equal(baseline.AddHours(-2), ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(1), ranges[0].To);
+                    Assert.Equal(baseline.AddHours(-2), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
 
                 }
             }

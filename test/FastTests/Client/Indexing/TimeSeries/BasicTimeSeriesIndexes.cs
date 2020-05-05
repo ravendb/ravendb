@@ -371,7 +371,7 @@ namespace FastTests.Client.Indexing.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var today = DateTime.Today;
+                var today = RavenTestHelper.UtcToday;
                 var tomorrow = today.AddDays(1);
 
                 using (var session = store.OpenSession())
@@ -577,7 +577,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             {
                 using (var store = GetDocumentStore())
                 {
-                    var today = DateTime.Today;
+                    var today = RavenTestHelper.UtcToday;
 
                     using (var session = store.OpenSession())
                     {
