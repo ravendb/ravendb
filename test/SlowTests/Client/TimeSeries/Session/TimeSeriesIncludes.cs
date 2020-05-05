@@ -145,15 +145,17 @@ namespace SlowTests.Client.TimeSeries.Session
             {
                 var baseline = DateTime.Today;
 
+                var documentId = "users/ayende";
+
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.Store(new User { Name = "Oren" }, documentId);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    var tsf = session.TimeSeriesFor(documentId, "Heartrate");
                     for (int i = 0; i < 360; i++)
                     {
                         tsf.Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
@@ -165,7 +167,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    var vals = session.TimeSeriesFor(documentId, "Heartrate")
                         .Get(baseline.AddMinutes(2), baseline.AddMinutes(10))
                         .ToList();
 
@@ -176,14 +178,14 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(10), vals[48].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     var user = session.Load<User>(
-                        "users/ayende",
+                        documentId,
                         i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(40), baseline.AddMinutes(50)));
 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    vals = session.TimeSeriesFor(documentId, "Heartrate")
                         .Get(baseline.AddMinutes(40), baseline.AddMinutes(50))
                         .ToList();
 
@@ -193,7 +195,9 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(40), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(50), vals[60].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                    Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out var cache));
+                    var sessionOperations = (InMemoryDocumentSessionOperations)session;
+
+                    Assert.True(sessionOperations.TimeSeriesByDocId.TryGetValue(documentId, out var cache));
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(2, ranges.Count);
 
@@ -202,18 +206,22 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(40), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(50), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
-                    session.Advanced.Evict(user);
+                    // we intentionally evict just the document (without it's TS data),
+                    // so that Load request will go to server
+
+                    sessionOperations.DocumentsByEntity.Evict(user);
+                    sessionOperations.DocumentsById.Remove(documentId);
 
                     // should go to server to get [0, 2] and merge it into existing [2, 10] 
                     user = session.Load<User>(
-                        "users/ayende",
+                        documentId,
                         i => i.IncludeTimeSeries("Heartrate", baseline, baseline.AddMinutes(2)));
 
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    vals = session.TimeSeriesFor(documentId, "Heartrate")
                         .Get(baseline, baseline.AddMinutes(2))
                         .ToList();
 
@@ -229,18 +237,20 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(40), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(50), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
-                    // should go to server to get [10, 16] and merge it into existing [0, 10] 
+                    // evict just the document
+                    sessionOperations.DocumentsByEntity.Evict(user);
+                    sessionOperations.DocumentsById.Remove(documentId);
 
-                    session.Advanced.Evict(user);
+                    // should go to server to get [10, 16] and merge it into existing [0, 10] 
                     user = session.Load<User>(
-                        "users/ayende",
+                        documentId,
                         i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(10), baseline.AddMinutes(16)));
 
                     Assert.Equal(4, session.Advanced.NumberOfRequests);
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    vals = session.TimeSeriesFor(documentId, "Heartrate")
                         .Get(baseline.AddMinutes(10), baseline.AddMinutes(16))
                         .ToList();
 
@@ -256,19 +266,22 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(40), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(50), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
+                    // evict just the document
+                    sessionOperations.DocumentsByEntity.Evict(user);
+                    sessionOperations.DocumentsById.Remove(documentId);
+
                     // should go to server to get range [17, 19]
                     // and add it to cache in between [10, 16] and [40, 50]
 
-                    session.Advanced.Evict(user);
                     user = session.Load<User>(
-                        "users/ayende",
+                        documentId,
                         i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(17), baseline.AddMinutes(19)));
 
                     Assert.Equal(5, session.Advanced.NumberOfRequests);
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    vals = session.TimeSeriesFor(documentId, "Heartrate")
                         .Get(baseline.AddMinutes(17), baseline.AddMinutes(19))
                         .ToList();
 
@@ -286,20 +299,23 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(40), ranges[2].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(50), ranges[2].To, RavenTestHelper.DateTimeComparer.Instance);
 
+                    // evict just the document
+                    sessionOperations.DocumentsByEntity.Evict(user);
+                    sessionOperations.DocumentsById.Remove(documentId);
+
                     // should go to server to get range [19, 40]
                     // and merge the result with existing ranges [17, 19] and [40, 50] 
                     // into single range [17, 50]
 
-                    session.Advanced.Evict(user);
                     user = session.Load<User>(
-                        "users/ayende",
+                        documentId,
                         i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(18), baseline.AddMinutes(48)));
 
                     Assert.Equal(6, session.Advanced.NumberOfRequests);
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    vals = session.TimeSeriesFor(documentId, "Heartrate")
                         .Get(baseline.AddMinutes(18), baseline.AddMinutes(48))
                         .ToList();
 
@@ -315,21 +331,23 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(17), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(50), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
 
+                    // evict just the document
+                    sessionOperations.DocumentsByEntity.Evict(user);
+                    sessionOperations.DocumentsById.Remove(documentId);
+
                     // should go to server to get range [12, 22]
                     // and merge the result with existing ranges [0, 16] and [17, 50] 
                     // into single range [0, 50]
 
-
-                    session.Advanced.Evict(user);
                     user = session.Load<User>(
-                        "users/ayende",
+                        documentId,
                         i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(12), baseline.AddMinutes(22)));
 
                     Assert.Equal(7, session.Advanced.NumberOfRequests);
 
                     // should not go to server
 
-                    vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    vals = session.TimeSeriesFor(documentId, "Heartrate")
                         .Get(baseline.AddMinutes(12), baseline.AddMinutes(22))
                         .ToList();
 
@@ -587,6 +605,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(0, vals.Count);
 
+                    Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out cache));
                     Assert.True(cache.TryGetValue("BloodPressure", out ranges));
                     Assert.Equal(1, ranges.Count);
                     Assert.Null(ranges[0].Entries);
@@ -1425,7 +1444,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
 
                     Assert.Equal(0, vals.Count);
-
+                    Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out cache));
                     Assert.True(cache.TryGetValue("BloodPressure", out ranges));
                     Assert.Equal(1, ranges.Count);
                     Assert.Null(ranges[0].Entries);
