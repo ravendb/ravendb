@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -93,9 +94,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     pathBuilder.Append("&name=")
                         .Append(range.Name)
                         .Append("&from=")
-                        .Append(range.From.GetDefaultRavenFormat())
+                        .Append(range.From.EnsureUtc().GetDefaultRavenFormat())
                         .Append("&to=")
-                        .Append(range.To.GetDefaultRavenFormat());
+                        .Append(range.To.EnsureUtc().GetDefaultRavenFormat());
                 }
 
                 var request = new HttpRequestMessage

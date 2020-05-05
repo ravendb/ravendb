@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Extensions;
+using Sparrow;
 
 namespace Raven.Client.Documents.Session.Loaders
 {
@@ -459,8 +460,8 @@ namespace Raven.Client.Documents.Session.Loaders
             hashSet.Add(new TimeSeriesRange
             {
                 Name = name,
-                From = from,
-                To = to
+                From = from.EnsureUtc(),
+                To = to.EnsureUtc()
             });
         }
     }
