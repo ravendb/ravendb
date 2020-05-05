@@ -174,7 +174,7 @@ namespace FastTests
             get
             {
                 var local = DateTime.Today;
-                return local + TimeZoneInfo.Local.GetUtcOffset(local);
+                return DateTime.SpecifyKind(local, DateTimeKind.Utc);
             }
         }
 

@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
@@ -896,8 +897,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     var end = baseline.AddHours(1);
 
                     var query = session.Advanced.RawQuery<User>("from Users include timeseries('Heartrate', $start, $end)")
-                        .AddParameter("start", start)
-                        .AddParameter("end", end);
+                        .AddParameter("start", start.EnsureUtc())
+                        .AddParameter("end", end.EnsureUtc());
 
                     var result = query.ToList();
 
