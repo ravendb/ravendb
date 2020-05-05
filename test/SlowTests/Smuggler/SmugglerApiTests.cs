@@ -1065,12 +1065,12 @@ namespace SlowTests.Smuggler
                         var values = await session.TimeSeriesFor(user1, "Heartrate")
                             .GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
-                        Assert.Empty(values);
+                        Assert.Null(values);
 
                         values = await session.TimeSeriesFor(user2, "Heartrate")
                             .GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
-                        Assert.Empty(values);
+                        Assert.Null(values);
                     }
 
                 }
@@ -1146,12 +1146,12 @@ namespace SlowTests.Smuggler
                         var values = await session.TimeSeriesFor(user1, "Heartrate")
                             .GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
-                        Assert.Empty(values);
+                        Assert.Null(values);
 
                         values = await session.TimeSeriesFor(user2, "Heartrate")
                             .GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
-                        Assert.Empty(values);
+                        Assert.Null(values);
                     }
 
                 }
