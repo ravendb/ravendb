@@ -215,12 +215,12 @@ namespace FastTests.Client.Indexing
                 Assert.Equal("Map", error.Errors[0].Action);
                 Assert.Equal("users/1", error.Errors[0].Document);
                 Assert.Equal("error/1", error.Errors[0].Error);
-                Assert.Equal(now, error.Errors[0].Timestamp);
+                Assert.Equal(now, error.Errors[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                 Assert.Equal("Analyzer", error.Errors[1].Action);
                 Assert.Null(error.Errors[1].Document);
                 Assert.True(error.Errors[1].Error.Contains("Could not create analyzer:"));
-                Assert.Equal(nowNext, error.Errors[1].Timestamp);
+                Assert.Equal(nowNext, error.Errors[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                 errors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation());
                 Assert.Equal(1, errors.Length);

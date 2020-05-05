@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
@@ -96,8 +97,8 @@ namespace StressTests.Client.TimeSeries
 
                             check = true;
 
-                            Assert.Equal(stats.Start, reader.First().Timestamp);
-                            Assert.Equal(stats.End, reader.Last().Timestamp);
+                            Assert.Equal(stats.Start, reader.First().Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                            Assert.Equal(stats.End, reader.Last().Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         }
                     }
                 }
@@ -204,15 +205,15 @@ namespace StressTests.Client.TimeSeries
                                     reader = tss.GetReader(ctx, id, name, DateTime.MinValue, DateTime.MaxValue);
 
                                     Assert.True(stats.Count > 0);
-                                    Assert.Equal(stats.Start, reader.First().Timestamp);
-                                    Assert.Equal(stats.End, reader.Last().Timestamp);
+                                    Assert.Equal(stats.Start, reader.First().Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                                    Assert.Equal(stats.End, reader.Last().Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                                     continue;
                                 }
 
                                 check = true;
                                 reader = tss.GetReader(ctx, id, "Heartrate", DateTime.MinValue, DateTime.MaxValue);
-                                Assert.Equal(stats.Start, reader.First().Timestamp);
-                                Assert.Equal(stats.End, reader.Last().Timestamp);
+                                Assert.Equal(stats.Start, reader.First().Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                                Assert.Equal(stats.End, reader.Last().Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             }
                         }
                     }

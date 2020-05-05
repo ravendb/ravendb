@@ -111,7 +111,7 @@ namespace SlowTests.Client.TimeSeries
 
                     var after1delete = ts.Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(1, after1delete.Count);
-                    Assert.Equal(oldTime, after1delete[0].Timestamp);
+                    Assert.Equal(oldTime, after1delete[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     ts.Remove(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
@@ -154,7 +154,7 @@ namespace SlowTests.Client.TimeSeries
 
                     var after1delete = ts.Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(1, after1delete.Count);
-                    Assert.Equal(now.EnsureMilliseconds(), after1delete[0].Timestamp);
+                    Assert.Equal(now.EnsureMilliseconds(), after1delete[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     ts.Remove(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
@@ -200,7 +200,7 @@ namespace SlowTests.Client.TimeSeries
 
                     var values = ts.Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(2, values.Count);
-                    Assert.Equal(now.EnsureMilliseconds(), values[1].Timestamp);
+                    Assert.Equal(now.EnsureMilliseconds(), values[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(76, values[1].Value);
                 }
             }
@@ -233,7 +233,7 @@ namespace SlowTests.Client.TimeSeries
 
                     var values = ts.Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(3, values.Count);
-                    Assert.Equal(first.EnsureMilliseconds(), values[0].Timestamp);
+                    Assert.Equal(first.EnsureMilliseconds(), values[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }

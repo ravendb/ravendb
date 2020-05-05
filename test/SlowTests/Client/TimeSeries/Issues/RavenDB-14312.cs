@@ -38,7 +38,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(1, vals.Count);
                     Assert.Null(vals[0].Tag);
-                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal(baseline, vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(new[] { 59d }, vals[0].Values);
                 }
             }

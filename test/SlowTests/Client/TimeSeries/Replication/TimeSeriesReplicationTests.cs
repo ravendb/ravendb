@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -50,7 +51,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                         .Single();
                     Assert.Equal(new[] { 59d }, val.Values);
                     Assert.Equal("watches/fitbit", val.Tag);
-                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -126,13 +127,13 @@ namespace SlowTests.Client.TimeSeries.Replication
                     offset = 0;
                     for (int i = 0; i < retries; i++)
                     {
-                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp);
+                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(offset, vals[i].Values[0]);
 
                         offset++;
                         i++;
 
-                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp);
+                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(offset, vals[i].Values[0]);
 
 
@@ -150,13 +151,13 @@ namespace SlowTests.Client.TimeSeries.Replication
                     offset = 0;
                     for (int i = 0; i < retries; i++)
                     {
-                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp);
+                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(offset, vals[i].Values[0]);
 
                         offset++;
                         i++;
 
-                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp);
+                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(offset, vals[i].Values[0]);
 
 
@@ -253,7 +254,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     for (int i = 0; i < valsA.Count; i++)
                     {
                         Assert.Equal(valsB[i].Tag, valsA[i].Tag);
-                        Assert.Equal(valsA[i].Timestamp, valsB[i].Timestamp);
+                        Assert.Equal(valsA[i].Timestamp, valsB[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         Assert.Equal(valsB[i].Values.Length, valsA[i].Values.Length);
                         for (int j = 0; j < valsA[i].Values.Length; j++)
@@ -326,7 +327,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     for (int i = 0; i < valsA.Count; i++)
                     {
                         Assert.Equal(valsB[i].Tag, valsA[i].Tag);
-                        Assert.Equal(valsB[i].Timestamp, valsA[i].Timestamp);
+                        Assert.Equal(valsB[i].Timestamp, valsA[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         
                         Assert.Equal(valsB[i].Values.Length, valsA[i].Values.Length);
                         for (int j = 0; j < valsA[i].Values.Length; j++)
@@ -407,7 +408,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     for (int i = 0; i < valsA.Count; i++)
                     {
                         Assert.Equal(valsB[i].Tag, valsA[i].Tag);
-                        Assert.Equal(valsB[i].Timestamp, valsA[i].Timestamp);
+                        Assert.Equal(valsB[i].Timestamp, valsA[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         Assert.Equal(valsB[i].Values.Length, valsA[i].Values.Length);
                         for (int j = 0; j < valsA[i].Values.Length; j++)
@@ -489,7 +490,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     for (int i = 0; i < valsA.Count; i++)
                     {
                         Assert.Equal(valsB[i].Tag, valsA[i].Tag);
-                        Assert.Equal(valsB[i].Timestamp, valsA[i].Timestamp);
+                        Assert.Equal(valsB[i].Timestamp, valsA[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         Assert.Equal(valsB[i].Values.Length, valsA[i].Values.Length);
                         for (int j = 0; j < valsA[i].Values.Length; j++)
@@ -544,12 +545,12 @@ namespace SlowTests.Client.TimeSeries.Replication
                         var val = values[0];
                         Assert.Equal(new[] { 59d }, val.Values);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = values[1];
                         Assert.Equal(new[] { 70d }, val.Values);
                         Assert.Equal("watches/fitbit2", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(2), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(2), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
             }
@@ -598,7 +599,7 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                         Assert.Equal(new[] { 70d }, val.Values);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
 

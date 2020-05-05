@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -762,7 +763,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         for (int i = 0; i < values.Count; i++)
                         {
-                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(i % 60, values[i].Values[0]);
                             Assert.Equal("watches/1", values[i].Tag);
                         }
@@ -772,7 +773,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         for (int i = 0; i < values.Count; i++)
                         {
-                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(i % 60, values[i].Values[0]);
                             Assert.Equal("watches/2", values[i].Tag);
                         }
@@ -863,7 +864,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         for (int i = 0; i < values.Count; i++)
                         {
-                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(i % 60, values[i].Values[0]);
                             Assert.Equal("watches/1", values[i].Tag);
                         }
@@ -873,7 +874,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         for (int i = 0; i < values.Count; i++)
                         {
-                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(i % 60, values[i].Values[0]);
                             Assert.Equal("watches/2", values[i].Tag);
                         }
@@ -1144,7 +1145,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         for (int i = 0; i < values.Count; i++)
                         {
-                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(i % 60, values[i].Values[0]);
                             Assert.Equal("watches/1", values[i].Tag);
                         }
@@ -1196,7 +1197,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         for (int i = 0; i < values.Count; i++)
                         {
-                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(i % 60, values[i].Values[0]);
                             Assert.Equal("watches/1", values[i].Tag);
                         }

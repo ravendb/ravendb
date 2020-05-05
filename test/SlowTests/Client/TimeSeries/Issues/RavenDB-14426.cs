@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -171,7 +172,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         var fromB = allFromB[i];
 
                         Assert.Equal(fromA.Tag,fromB.Tag);
-                        Assert.Equal(fromA.Timestamp, fromB.Timestamp);
+                        Assert.Equal(fromA.Timestamp, fromB.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(fromA.Value,fromB.Value);
                         Assert.Equal(fromA.Values,fromB.Values);
                     }
