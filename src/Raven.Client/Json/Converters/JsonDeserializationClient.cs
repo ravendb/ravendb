@@ -148,6 +148,8 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, TimeSeriesDetails> TimeSeriesDetails = GenerateJsonDeserializationRoutine<TimeSeriesDetails>();
 
+        public static readonly Func<BlittableJsonReaderObject, TimeSeriesRangeResult> TimeSeriesRangeResult = GenerateJsonDeserializationRoutine<TimeSeriesRangeResult>();
+
         internal static readonly Func<BlittableJsonReaderObject, ExceptionDispatcher.ExceptionSchema> ExceptionSchema = GenerateJsonDeserializationRoutine<ExceptionDispatcher.ExceptionSchema>();
 
         internal static readonly Func<BlittableJsonReaderObject, DeleteDatabaseResult> DeleteDatabaseResult = GenerateJsonDeserializationRoutine<DeleteDatabaseResult>();

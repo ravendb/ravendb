@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
 
         public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
-            TimeSeriesDetails details;
+            TimeSeriesRangeResult rangeResult;
             from = from.EnsureUtc();
             to = to.EnsureUtc();
 
@@ -49,17 +49,20 @@ namespace Raven.Client.Documents.Session
 
                     Session.IncrementRequestCount();
 
-                    details = await Session.Operations.SendAsync(
+                    rangeResult = await Session.Operations.SendAsync(
                             new GetTimeSeriesOperation(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
                         .ConfigureAwait(false);
+
+                    if (rangeResult == null)
+                        return null;
 
                     if (Session.NoTracking == false)
                     {
                         var index = ranges[0].From > to ? 0 : ranges.Count;
-                        ranges.Insert(index, details.Values[Name][0]);
+                        ranges.Insert(index, rangeResult);
                     }
 
-                    return details.Values[Name][0].Entries;
+                    return rangeResult.Entries;
                 }
 
                 var (servedFromCache, resultToUser, mergedValues, fromRangeIndex, toRangeIndex) = 
@@ -84,9 +87,12 @@ namespace Raven.Client.Documents.Session
 
             Session.IncrementRequestCount();
 
-            details = await Session.Operations.SendAsync(
+            rangeResult = await Session.Operations.SendAsync(
                     new GetTimeSeriesOperation(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
                 .ConfigureAwait(false);
+
+            if (rangeResult == null)
+                return null;
 
             if (Session.NoTracking == false)
             {
@@ -97,11 +103,11 @@ namespace Raven.Client.Documents.Session
 
                 cache[Name] = new List<TimeSeriesRangeResult>
                 {
-                    details.Values[Name][0]
+                    rangeResult
                 };
             }
 
-            return details.Values[Name][0].Entries;
+            return rangeResult.Entries;
         }
 
         private static IEnumerable<TimeSeriesEntry> SkipAndTrimRangeIfNeeded(
@@ -217,7 +223,7 @@ namespace Raven.Client.Documents.Session
             Session.IncrementRequestCount();
 
             var details = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize), Session.SessionInfo, token: token)
+                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize), Session.SessionInfo, token: token)
                 .ConfigureAwait(false);
 
             // merge all the missing parts we got from server
@@ -251,12 +257,15 @@ namespace Raven.Client.Documents.Session
                         // so we might need to skip a part of it when we return the 
                         // result to the user (i.e. skip [fromRange.From, from])
 
-                        foreach (var v in ranges[i].Entries)
+                        if (ranges[i].Entries != null)
                         {
-                            mergedValues.Add(v);
-                            if (v.Timestamp < from)
+                            foreach (var v in ranges[i].Entries)
                             {
-                                skip++;
+                                mergedValues.Add(v);
+                                if (v.Timestamp < from)
+                                {
+                                    skip++;
+                                }
                             }
                         }
                     }
@@ -523,6 +532,9 @@ namespace Raven.Client.Documents.Session
 
         private static IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to)
         {
+            if (range.Entries == null)
+                yield break;
+
             foreach (var value in range.Entries)
             {
                 if (value.Timestamp > to)

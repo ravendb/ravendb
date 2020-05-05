@@ -114,8 +114,8 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
-        public async Task Read()
+        [RavenAction("/databases/*/timeseries/ranges", "GET", AuthorizationStatus.ValidUser)]
+        public async Task ReadRanges()
         {
             var documentId = GetStringQueryString("docId");
             var names = GetStringValuesQueryString("name");
@@ -145,6 +145,57 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
+        public async Task Read()
+        {
+            var documentId = GetStringQueryString("docId");
+            var name = GetStringQueryString("name");
+            var fromStr = GetStringQueryString("from");
+            var toStr = GetStringQueryString("to");
+
+            var start = GetStart();
+            var pageSize = GetPageSize();
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var from = ParseDate(fromStr, name);
+                var to = ParseDate(toStr, name);
+
+                var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                if (stats == default)
+                {
+                    // non existing time series
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+
+                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize);
+
+                var etag = GetStringFromHeaders("If-None-Match");
+                if (etag == rangeResult.Hash)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return;
+                }
+
+                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + rangeResult.Hash + "\"";
+
+                long? totalCount = null;
+                if (from <= stats.Start && to >= stats.End)
+                {
+                    totalCount = stats.Count;
+                }
+
+                using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+                {
+                    WriteRange(writer, rangeResult, totalCount);
+
+                    await writer.MaybeOuterFlushAsync();
+                }
+            }
+        }
+
         private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
         {
             if (fromList.Count != toList.Count)
@@ -152,12 +203,10 @@ namespace Raven.Server.Documents.Handlers
                 throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
             }
 
-            var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
-
             if (fromList.Count == 0)
             {
                 if (names.Count == 0)
-                    return rangeResultDictionary;
+                    return null;
 
                 if (names.Count != 1)
                     throw new InvalidOperationException($"GetTimeSeriesOperation : Argument count miss match on document '{documentId}'. " +
@@ -172,6 +221,7 @@ namespace Raven.Server.Documents.Handlers
                 throw new InvalidOperationException($"GetTimeSeriesOperation : Argument count miss match on document '{documentId}'. " +
                                                     $"Received {names.Count} 'name' arguments, and {fromList.Count} 'from'/'to' arguments.");
 
+            var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, DateTime> datesDictionary = null;
             DateTime from, to;
 
@@ -226,7 +276,7 @@ namespace Raven.Server.Documents.Handlers
 
         private static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
         {
-            var values = new List<TimeSeriesEntry>();
+            List<TimeSeriesEntry> values = default;
             var reader = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetReader(context, docId, name, from, to);
 
             // init hash 
@@ -243,6 +293,8 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var singleResult in enumerable)
                 {
+                    values ??= new List<TimeSeriesEntry>();
+
                     if (start-- > 0)
                         continue;
 
@@ -264,7 +316,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 From = from,
                 To = to,
-                Entries = values.ToArray(),
+                Entries = values?.ToArray(),
                 Hash = ComputeHttpEtags.FinalizeHash(size, state)
             };
         }
@@ -323,6 +375,12 @@ namespace Raven.Server.Documents.Handlers
 
         internal static async Task WriteTimeSeriesRangeResults(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
         {
+            if (dictionary == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+
             writer.WriteStartObject();
             {
                 bool first = true;
@@ -395,6 +453,12 @@ namespace Raven.Server.Documents.Handlers
 
         private static void WriteEntries(AbstractBlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
         {
+            if (entries == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+
             writer.WriteStartArray();
 
             for (var i = 0; i < entries.Length; i++)
