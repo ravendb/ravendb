@@ -74,7 +74,7 @@ namespace Raven.Server.Documents
 
                         foreach (var rangeResult in kvp.Value)
                         {
-                            HashNumber(state, rangeResult.Entries.Length);
+                            HashNumber(state, rangeResult.Entries?.Length ?? 0);
                             HashChangeVector(state, rangeResult.Hash);
                         }
                     }
