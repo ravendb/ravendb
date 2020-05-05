@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
@@ -11,34 +10,13 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class GetTimeSeriesOperation : IOperation<TimeSeriesDetails>
+    public class GetTimeSeriesOperation : IOperation<TimeSeriesRangeResult>
     {
-        private readonly string _docId;
-        private readonly IEnumerable<TimeSeriesRange> _ranges;
-        private readonly int _start;
-        private readonly int _pageSize;
+        private readonly string _docId, _name;
+        private readonly int _start, _pageSize;
+        private readonly DateTime _from, _to;
 
         public GetTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue)
-            : this(docId, start, pageSize)
-        {
-            _ranges = new List<TimeSeriesRange>
-            {
-                new TimeSeriesRange
-                {
-                    Name = timeseries,
-                    From = from,
-                    To = to
-                }
-            };
-        }
-
-        public GetTimeSeriesOperation(string docId, IEnumerable<TimeSeriesRange> ranges, int start = 0, int pageSize = int.MaxValue) 
-            : this(docId, start, pageSize)
-        {
-            _ranges = ranges ?? throw new ArgumentNullException(nameof(ranges));
-        }
-
-        private GetTimeSeriesOperation(string docId, int start, int pageSize)
         {
             if (string.IsNullOrEmpty(docId))
                 throw new ArgumentNullException(nameof(docId));
@@ -46,26 +24,30 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             _docId = docId;
             _start = start;
             _pageSize = pageSize;
+            _name = timeseries;
+            _from = from;
+            _to = to;
         }
 
-        public RavenCommand<TimeSeriesDetails> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<TimeSeriesRangeResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetTimeSeriesCommand(_docId, _ranges, _start, _pageSize);
+            return new GetTimeSeriesCommand(_docId, _name, _from, _to, _start, _pageSize);
         }
 
-        internal class GetTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
+        internal class GetTimeSeriesCommand : RavenCommand<TimeSeriesRangeResult>
         {
-            private readonly string _docId;
-            private readonly IEnumerable<TimeSeriesRange> _ranges;
-            private readonly int _start;
-            private readonly int _pageSize;
+            private readonly string _docId, _name;
+            private readonly int _start, _pageSize;
+            private readonly DateTime _from, _to;
 
-            public GetTimeSeriesCommand(string docId, IEnumerable<TimeSeriesRange> ranges, int start, int pageSize)
+            public GetTimeSeriesCommand(string docId, string name, DateTime from, DateTime to, int start, int pageSize)
             {
-                _docId = docId ?? throw new ArgumentNullException(nameof(docId));
-                _ranges = ranges;
+                _docId = docId;
+                _name = name;
                 _start = start;
                 _pageSize = pageSize;
+                _from = from;
+                _to = to;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -89,15 +71,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                         .Append(_pageSize);
                 }
 
-                foreach (var range in _ranges)
-                {
-                    pathBuilder.Append("&name=")
-                        .Append(range.Name)
-                        .Append("&from=")
-                        .Append(range.From.EnsureUtc().GetDefaultRavenFormat())
-                        .Append("&to=")
-                        .Append(range.To.EnsureUtc().GetDefaultRavenFormat());
-                }
+                pathBuilder.Append("&name=")
+                    .Append(_name)
+                    .Append("&from=")
+                    .Append(_from.GetDefaultRavenFormat())
+                    .Append("&to=")
+                    .Append(_to.GetDefaultRavenFormat());
 
                 var request = new HttpRequestMessage
                 {
@@ -114,16 +93,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (response == null)
                     return;
 
-                Result = JsonDeserializationClient.TimeSeriesDetails(response);
+                Result = JsonDeserializationClient.TimeSeriesRangeResult(response);
+
+                if (response.TryGet(nameof(TimeSeriesRangeResult.Entries), out BlittableJsonReaderArray entries) && 
+                    entries == null)
+                {
+                    Result.Entries = null;
+                }
             }
 
             public override bool IsReadRequest => true;
         }
-    }
-
-    public class TimeSeriesDetails
-    {
-        public string Id;
-        public Dictionary<string, List<TimeSeriesRangeResult>> Values;
     }
 }
