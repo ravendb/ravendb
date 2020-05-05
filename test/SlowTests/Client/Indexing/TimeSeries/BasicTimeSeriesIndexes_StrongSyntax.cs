@@ -627,7 +627,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var today = DateTime.Today;
+                var today = RavenTestHelper.UtcToday;
                 var tomorrow = today.AddDays(1);
 
                 using (var session = store.OpenSession())
@@ -671,7 +671,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                 Assert.Equal(1, terms.Length);
-                Assert.Contains(today.Date.GetDefaultRavenFormat(), terms);
+                Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
+
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
                 Assert.Equal(1, terms.Length);
@@ -717,8 +718,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                 Assert.Equal(2, terms.Length);
-                Assert.Contains(today.Date.GetDefaultRavenFormat(), terms);
-                Assert.Contains(tomorrow.Date.GetDefaultRavenFormat(), terms);
+                Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(tomorrow.Date, DateTime.Parse(terms[1]), RavenTestHelper.DateTimeComparer.Instance);
 
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
@@ -766,7 +767,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                 Assert.Equal(1, terms.Length);
-                Assert.Contains(tomorrow.Date.GetDefaultRavenFormat(), terms);
+                Assert.Equal(tomorrow.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
+
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
                 Assert.Equal(1, terms.Length);
@@ -811,7 +813,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
             {
                 using (var store = GetDocumentStore())
                 {
-                    var today = DateTime.Today;
+                    var today = RavenTestHelper.UtcToday;
 
                     using (var session = store.OpenSession())
                     {
@@ -861,7 +863,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                     terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                     Assert.Equal(1, terms.Length);
-                    Assert.Contains(today.Date.GetDefaultRavenFormat(), terms);
+                    Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
+
 
                     terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                     Assert.Equal(1, terms.Length);

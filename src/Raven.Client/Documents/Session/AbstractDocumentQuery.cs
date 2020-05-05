@@ -332,12 +332,6 @@ namespace Raven.Client.Documents.Session
             if (QueryParameters.ContainsKey(name))
                 throw new InvalidOperationException("The parameter " + name + " was already added");
             
-            if (value is DateTime date)
-            {
-                if (date.Kind == DateTimeKind.Local)
-                    value = date.EnsureUtc();
-            }
-
             QueryParameters[name] = value;
         }
 

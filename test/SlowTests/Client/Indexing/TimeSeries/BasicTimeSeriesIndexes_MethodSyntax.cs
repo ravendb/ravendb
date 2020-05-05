@@ -434,7 +434,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                 Assert.Equal(1, terms.Length);
-                Assert.Contains(today.Date.GetDefaultRavenFormat(), terms);
+                Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
+
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
                 Assert.Equal(1, terms.Length);
@@ -481,9 +482,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                 Assert.Equal(2, terms.Length);
-                Assert.Contains(today.Date.GetDefaultRavenFormat(), terms);
-                Assert.Contains(tomorrow.Date.GetDefaultRavenFormat(), terms);
-
+                Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(tomorrow.Date, DateTime.Parse(terms[1]), RavenTestHelper.DateTimeComparer.Instance);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
                 Assert.Equal(1, terms.Length);
@@ -531,7 +531,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                 Assert.Equal(1, terms.Length);
-                Assert.Contains(tomorrow.Date.GetDefaultRavenFormat(), terms);
+                Assert.Equal(tomorrow.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
                 Assert.Equal(1, terms.Length);
@@ -655,7 +655,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                     terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                     Assert.Equal(1, terms.Length);
-                    Assert.Contains(today.Date.GetDefaultRavenFormat(), terms);
+                    Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
 
                     terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                     Assert.Equal(1, terms.Length);
