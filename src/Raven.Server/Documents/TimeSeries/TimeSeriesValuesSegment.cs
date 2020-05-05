@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -86,16 +87,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (NumberOfEntries == 0)
                 return default;
 
-            var result = new TimeSeriesSegmentSummary(NumberOfValues, SegmentValues.Span[0].Count);
-
-            for (var i = 0; i < NumberOfValues; i++)
-            {
-                result.Min[i] = SegmentValues.Span[i].Min;
-                result.Max[i] = SegmentValues.Span[i].Max;
-                result.Sum[i] = SegmentValues.Span[i].Sum;
-            }
-
-            return result;
+            return new TimeSeriesSegmentSummary(this);
         }
 
         private void InvalidCapacity()
@@ -732,20 +724,82 @@ namespace Raven.Server.Documents.TimeSeries
 
     public readonly struct TimeSeriesSegmentSummary
     {
-        public readonly double[] Min;
+        public readonly IReadOnlyList<double> Min;
 
-        public readonly double[] Max;
+        public readonly IReadOnlyList<double> Max;
 
-        public readonly double[] Sum;
+        public readonly IReadOnlyList<double> Sum;
 
         public readonly int Count;
 
-        public TimeSeriesSegmentSummary(int numberOfValues, int count)
+        public TimeSeriesSegmentSummary(TimeSeriesValuesSegment segment)
         {
-            Min = new double[numberOfValues];
-            Max = new double[numberOfValues];
-            Sum = new double[numberOfValues];
-            Count = count;
+            Min = new InnerList(segment, SummaryType.Min);
+            Max = new InnerList(segment, SummaryType.Max);
+            Sum = new InnerList(segment, SummaryType.Sum);
+            Count = segment.SegmentValues.Span[0].Count;
+        }
+
+        private enum SummaryType
+        {
+            Min,
+            Max,
+            Sum
+        }
+
+        private class InnerList : IReadOnlyList<double>
+        {
+            private readonly TimeSeriesValuesSegment _segment;
+            private readonly SummaryType _type;
+
+            public InnerList(TimeSeriesValuesSegment segment, SummaryType type)
+            {
+                _segment = segment;
+                _type = type;
+            }
+
+            double IReadOnlyList<double>.this[int index]
+            {
+                get
+                {
+                    if (index >= _segment.NumberOfValues)
+                        throw new ArgumentOutOfRangeException(nameof(index));
+
+                    return _type switch
+                    {
+                        SummaryType.Min => _segment.SegmentValues.Span[index].Min,
+                        SummaryType.Max => _segment.SegmentValues.Span[index].Max,
+                        SummaryType.Sum => _segment.SegmentValues.Span[index].Sum,
+                        _ => throw new NotSupportedException($"Unknown summary type '{_type}'."),
+                    };
+                }
+            }
+
+            int IReadOnlyCollection<double>.Count => _segment.NumberOfValues;
+
+            IEnumerator<double> IEnumerable<double>.GetEnumerator()
+            {
+                return GetEnumerable().GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerable().GetEnumerator();
+            }
+
+            private IEnumerable<double> GetEnumerable()
+            {
+                for (var index = 0; index < _segment.NumberOfValues; index++)
+                {
+                    yield return _type switch
+                    {
+                        SummaryType.Min => _segment.SegmentValues.Span[index].Min,
+                        SummaryType.Max => _segment.SegmentValues.Span[index].Max,
+                        SummaryType.Sum => _segment.SegmentValues.Span[index].Sum,
+                        _ => throw new NotSupportedException($"Unknown summary type '{_type}'."),
+                    };
+                }
+            }
         }
     }
 }
