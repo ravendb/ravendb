@@ -60,7 +60,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    var tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -118,7 +118,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    var tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -182,7 +182,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     for (int i = 0; i < 3; i++)
                     {
-                        var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                        var tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                         {
                             new TimeSeriesRange
                             {
@@ -221,7 +221,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    var command = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId,
+                    var command = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId,
                         new List<TimeSeriesRange>
                         {
                             new TimeSeriesRange
@@ -288,10 +288,10 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    GetTimeSeriesOperation.GetTimeSeriesCommand tsCommand = default;
+                    GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand tsCommand;
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                        tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                         {
                             new TimeSeriesRange
                             {
@@ -331,7 +331,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -359,7 +359,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     // request with a different 'start'
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -436,7 +436,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     };
 
-                    var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
+                    var tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
                     re.Execute(tsCommand, context);
                     var timesSeriesDetails = tsCommand.Result;
 
@@ -530,7 +530,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     };
 
-                    var tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 10, 150);
+                    var tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, ranges, 10, 150);
                     re.Execute(tsCommand, context);
                     var timesSeriesDetails = tsCommand.Result;
 
@@ -624,11 +624,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     };
 
-                    GetTimeSeriesOperation.GetTimeSeriesCommand tsCommand;
+                    GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand tsCommand;
 
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
+                        tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
                         re.Execute(tsCommand, context);
                         var timesSeriesDetails = tsCommand.Result;
 
@@ -682,7 +682,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
+                    tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, ranges, 0, int.MaxValue);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -751,11 +751,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     };
 
-                    GetTimeSeriesOperation.GetTimeSeriesCommand tsCommand;
+                    GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand tsCommand;
 
                     for (int i = 0; i < 3; i++)
                     {
-                        tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 10, 150);
+                        tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, ranges, 10, 150);
                         re.Execute(tsCommand, context);
                         var timesSeriesDetails = tsCommand.Result;
 
@@ -810,7 +810,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, ranges, 10, 150);
+                    tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, ranges, 10, 150);
                     re.Execute(tsCommand, context);
 
                     Assert.Equal(HttpStatusCode.OK, tsCommand.StatusCode);
@@ -823,7 +823,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     // request with a different 'start'
                     // verify that we don't get cached results
 
-                    tsCommand = new GetTimeSeriesOperation.GetTimeSeriesCommand(documentId, new List<TimeSeriesRange>
+                    tsCommand = new GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange()
                         {

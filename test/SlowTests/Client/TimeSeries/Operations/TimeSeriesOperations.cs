@@ -56,14 +56,12 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 store.Operations.Send(timeSeriesBatch);
 
-                var timesSeriesDetails = store.Operations.Send(
+                var timeSeriesRangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal(documentId, timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(1, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Equal(1, timeSeriesRangeResult.Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
+                var value = timeSeriesRangeResult.Entries[0];
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);
@@ -105,12 +103,10 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 store.Operations.Send(timeSeriesBatch);
 
-                var timesSeriesDetails = store.Operations.Send(
+                var timeSeriesRangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation("users/ayende", "Heartrate", baseline.AddMonths(-2), baseline.AddMonths(-1)));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(0, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Null(timeSeriesRangeResult.Entries);
 
                 using (var session = store.OpenSession())
                 {
@@ -174,26 +170,24 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 store.Operations.Send(timeSeriesBatch);
 
-                var timesSeriesDetails = store.Operations.Send(
+                var timeSeriesRangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal(documentId, timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Equal(3, timeSeriesRangeResult.Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
+                var value = timeSeriesRangeResult.Entries[0];
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);
                 Assert.Equal(baseline.AddSeconds(1), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Entries[1];
+                value = timeSeriesRangeResult.Entries[1];
 
                 Assert.Equal(61d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);
                 Assert.Equal(baseline.AddSeconds(2), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Entries[2];
+                value = timeSeriesRangeResult.Entries[2];
 
                 Assert.Equal(60d, value.Values[0]);
                 Assert.Equal("watches/apple-watch", value.Tag);
@@ -273,12 +267,10 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 store.Operations.Send(timeSeriesBatch);
 
-                var timesSeriesDetails = store.Operations.Send(
+                var timeSeriesRangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal(documentId, timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(5, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Equal(5, timeSeriesRangeResult.Entries.Length);
 
 
                 timeSeriesOp = new TimeSeriesOperation
@@ -298,22 +290,20 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 store.Operations.Send(timeSeriesBatch);
 
-                timesSeriesDetails = store.Operations.Send(
+                timeSeriesRangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal(documentId, timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Equal(3, timeSeriesRangeResult.Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
+                var value = timeSeriesRangeResult.Entries[0];
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(1), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Entries[1];
+                value = timeSeriesRangeResult.Entries[1];
                 Assert.Equal(62.5d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(4), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Entries[2];
+                value = timeSeriesRangeResult.Entries[2];
                 Assert.Equal(62d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(5), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
@@ -530,12 +520,10 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 store.Operations.Send(timeSeriesBatch);
 
-                var timesSeriesDetails = store.Operations.Send(
+                var timeSeriesRangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal(documentId, timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(3, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Equal(3, timeSeriesRangeResult.Entries.Length);
 
                 timeSeriesOp = new TimeSeriesOperation
                 {
@@ -584,26 +572,24 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 store.Operations.Send(timeSeriesBatch);
 
-                timesSeriesDetails = store.Operations.Send(
+                timeSeriesRangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal(documentId, timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(4, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Equal(4, timeSeriesRangeResult.Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
+                var value = timeSeriesRangeResult.Entries[0];
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(1), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Entries[1];
+                value = timeSeriesRangeResult.Entries[1];
                 Assert.Equal(60d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(4), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Entries[2];
+                value = timeSeriesRangeResult.Entries[2];
                 Assert.Equal(62.5d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(5), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                value = timesSeriesDetails.Values["Heartrate"][0].Entries[3];
+                value = timeSeriesRangeResult.Entries[3];
                 Assert.Equal(62d, value.Values[0]);
                 Assert.Equal(baseline.AddSeconds(6), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
@@ -717,7 +703,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 store.Operations.Send(timeSeriesBatch);
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation(documentId, new List<TimeSeriesRange>
+                    new GetMultipleTimeSeriesOperation(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -851,7 +837,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 // get ranges from multiple time series in a single request
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation(documentId, new List<TimeSeriesRange>
+                    new GetMultipleTimeSeriesOperation(documentId, new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {
@@ -986,7 +972,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 store.Operations.Send(timeSeriesBatch);
 
                 var ex = Assert.Throws<ArgumentNullException>(() => store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", null)));
+                    new GetMultipleTimeSeriesOperation("users/ayende", null)));
 
                 Assert.Contains("Value cannot be null. (Parameter 'ranges')", ex.Message);
             }
@@ -1028,7 +1014,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 store.Operations.Send(timeSeriesBatch);
 
                 var ex = Assert.Throws<RavenException>(() => store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", new List<TimeSeriesRange>
+                    new GetMultipleTimeSeriesOperation("users/ayende", new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
                         {

@@ -40,9 +40,9 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Get(DateTime.MinValue, DateTime.MaxValue)
+                        .Get(DateTime.MinValue, DateTime.MaxValue)?
                         .ToList();
-                    Assert.Equal(0, vals.Count);
+                    Assert.Null(vals);
                 }
             }
         }
