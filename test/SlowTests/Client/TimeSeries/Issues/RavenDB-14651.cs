@@ -50,14 +50,12 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 store.Operations.Send(timeSeriesBatch);
 
-                var timesSeriesDetails = store.Operations.Send(
+                var rangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation("users/ayende", "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(1, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Equal(1, rangeResult.Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
+                var value = rangeResult.Entries[0];
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Null(value.Tag);
@@ -87,15 +85,12 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-
-                var timesSeriesDetails = store.Operations.Send(
+                var rangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation("users/ayende", "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(1, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Equal(1, rangeResult.Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
+                var value = rangeResult.Entries[0];
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Null(value.Tag);
@@ -123,14 +118,12 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var timesSeriesDetails = store.Operations.Send(
+                var rangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation("users/ayende", "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
-                Assert.Equal("users/ayende", timesSeriesDetails.Id);
-                Assert.Equal(1, timesSeriesDetails.Values.Count);
-                Assert.Equal(1, timesSeriesDetails.Values["Heartrate"][0].Entries.Length);
+                Assert.Equal(1, rangeResult.Entries.Length);
 
-                var value = timesSeriesDetails.Values["Heartrate"][0].Entries[0];
+                var value = rangeResult.Entries[0];
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);

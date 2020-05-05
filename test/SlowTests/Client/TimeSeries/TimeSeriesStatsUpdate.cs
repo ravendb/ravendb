@@ -85,7 +85,9 @@ namespace SlowTests.Client.TimeSeries
 
                 store.Operations.Send(new TimeSeriesBatchOperation("users/1-A", abc));
                 var ts = store.Operations.Send(new GetTimeSeriesOperation("users/1-A", "test", DateTime.MinValue, DateTime.MaxValue));
-                Assert.Equal(0, ts.Values["test"][0].Entries.Length);
+
+                // GetTimeSeriesOperation should return null on non-existing timeseries 
+                Assert.Null(ts);
             }
         }
 
@@ -122,8 +124,8 @@ namespace SlowTests.Client.TimeSeries
                 }))
                 {
                     var ts = session.TimeSeriesFor("users/1-A", "HR");
-                    var after2delete = ts.Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(0, after2delete.Count);
+                    var after2delete = ts.Get(DateTime.MinValue, DateTime.MaxValue)?.ToList();
+                    Assert.Null(after2delete);
                 }
             }
         }
@@ -166,8 +168,8 @@ namespace SlowTests.Client.TimeSeries
                 }))
                 {
                     var ts = session.TimeSeriesFor("users/1-A", "HR");
-                    var after2delete = ts.Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(0, after2delete.Count);
+                    var after2delete = ts.Get(DateTime.MinValue, DateTime.MaxValue)?.ToList();
+                    Assert.Null(after2delete);
                 }
             }
         }

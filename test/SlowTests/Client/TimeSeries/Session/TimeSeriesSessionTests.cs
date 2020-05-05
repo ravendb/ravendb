@@ -490,16 +490,16 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Get(baseline.AddMinutes(-10), baseline.AddMinutes(-5))
+                        .Get(baseline.AddMinutes(-10), baseline.AddMinutes(-5))?
                         .ToList();
 
-                    Assert.Equal(0, vals.Count);
+                    Assert.Null(vals);
 
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Get(baseline.AddMinutes(5), baseline.AddMinutes(9))
+                        .Get(baseline.AddMinutes(5), baseline.AddMinutes(9))?
                         .ToList();
 
-                    Assert.Equal(0, vals.Count);
+                    Assert.Null(vals);
                 }
             }
         }
@@ -794,10 +794,10 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     var vals = session.TimeSeriesFor(id, "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue);
-                    Assert.Equal(0, vals.Count());
+                    Assert.Null(vals);
 
                     vals = session.TimeSeriesFor(id, "Heartrate2").Get(DateTime.MinValue, DateTime.MaxValue);
-                    Assert.Equal(0, vals.Count());
+                    Assert.Null(vals);
                 }
             }
         }

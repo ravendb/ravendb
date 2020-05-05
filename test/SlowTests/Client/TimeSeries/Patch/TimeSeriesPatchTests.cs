@@ -322,18 +322,17 @@ for(i = 0; i < args.toAppend.length; i++){
                 using (var session = store.OpenAsyncSession())
                 {
                     var entries = (await session.TimeSeriesFor(documentId, timeseries)
-                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
-                        .ToList();
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))?.ToList();
 
-                    Assert.Equal(values.Length - 1 - (toIndex - fromIndex), entries.Count);
+                    Assert.Equal(values.Length - 1 - (toIndex - fromIndex), (entries?.Count ?? 0));
                     foreach (var expected in expectedValues)
                     {
                         if (expected.Item1 >= toRemoveFrom || expected.Item1 <= toRemoveTo) 
                             continue;
                         
-                        Assert.Equal(expected.Item1, entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-                        Assert.Equal(expected.Item2, entries[0].Values[0]);
-                        Assert.Equal(tag, entries[0].Tag);
+                        Assert.Equal(expected.Item1, entries[0]?.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(expected.Item2, entries[0]?.Values[0]);
+                        Assert.Equal(tag, entries[0]?.Tag);
                     }
                 }
             }

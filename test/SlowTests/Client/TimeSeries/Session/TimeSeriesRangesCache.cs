@@ -598,10 +598,10 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Get(baseline.AddHours(-2), baseline.AddHours(-1))
+                        .Get(baseline.AddHours(-2), baseline.AddHours(-1))?
                         .ToList();
 
-                    Assert.Equal(0, vals.Count);
+                    Assert.Null(vals);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // should not go to server
