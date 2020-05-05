@@ -63,25 +63,19 @@ function BuildSparrow ( $srcDir ) {
 
 function NpmInstall () {
     write-host "Doing npm install..."
-    $NPM_INSTALL_RETRIES = 3
 
-    foreach ($i in 1..$NPM_INSTALL_RETRIES) {
+    foreach ($i in 1..3) {
         try {
-            & npm ci
+            & npm install 
             CheckLastExitCode
-
-            break;
+            return
         }
         catch {
-            write-host "Error doing npm ci..."
-            if ($i -ge $NPM_INSTALL_RETRIES) {
-                throw $_.Exception
-            }
-
-            write-host "Retrying npm ci..."
+            write-host "Error doing npm install... Retrying."
         }
     }
 
+    throw "npm install failed. Please see error above."
 }
 
 function BuildStudio ( $srcDir, $version ) {
