@@ -1739,38 +1739,44 @@ more responsive application.
                 throw new InvalidDataException($"Unable to read time series range result on document : '{id}', timeseries : '{name}'." +
                                                $"Missing '{nameof(TimeSeriesRangeResult.Entries)}' property");
 
-            var valuesArray = new TimeSeriesEntry[valuesBlittable.Length];
-
-            for (int j = 0; j < valuesBlittable.Length; j++)
-            {
-                var timeSeriesValueBlittable = valuesBlittable.GetByIndex<BlittableJsonReaderObject>(j);
-
-                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Timestamp), out DateTime timestamp) == false)
-                    throw new InvalidDataException($"Unable to read time series value on document : '{id}', timeseries : '{name}'. " +
-                                                   $"The time series value is missing '{nameof(TimeSeriesEntry.Timestamp)}' property");
-
-                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Values), out BlittableJsonReaderArray values) == false)
-                    throw new InvalidDataException($"Unable to read time series value on document: '{id}', timeseries: '{name}'. " +
-                                                   $"The time series value is missing '{nameof(TimeSeriesEntry.Values)}' property");
-
-                timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Tag), out string tag); // tag is optional
-
-                valuesArray[j] = new TimeSeriesEntry
-                {
-                    Tag = tag,
-                    Timestamp = timestamp,
-                    Values = values.Select(x => x is LazyNumberValue val
-                        ? val.ToDouble(CultureInfo.InvariantCulture)
-                        : (long)x).ToArray()
-                };
-            }
-
-            return new TimeSeriesRangeResult
+            var result = new TimeSeriesRangeResult
             {
                 From = from,
-                To = to,
-                Entries = valuesArray
+                To = to
             };
+
+            if (valuesBlittable != null)
+            {
+                var valuesArray = new TimeSeriesEntry[valuesBlittable.Length];
+
+                for (int j = 0; j < valuesBlittable.Length; j++)
+                {
+                    var timeSeriesValueBlittable = valuesBlittable.GetByIndex<BlittableJsonReaderObject>(j);
+
+                    if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Timestamp), out DateTime timestamp) == false)
+                        throw new InvalidDataException($"Unable to read time series value on document : '{id}', timeseries : '{name}'. " +
+                                                       $"The time series value is missing '{nameof(TimeSeriesEntry.Timestamp)}' property");
+
+                    if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Values), out BlittableJsonReaderArray values) == false)
+                        throw new InvalidDataException($"Unable to read time series value on document: '{id}', timeseries: '{name}'. " +
+                                                       $"The time series value is missing '{nameof(TimeSeriesEntry.Values)}' property");
+
+                    timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Tag), out string tag); // tag is optional
+
+                    valuesArray[j] = new TimeSeriesEntry
+                    {
+                        Tag = tag,
+                        Timestamp = timestamp,
+                        Values = values.Select(x => x is LazyNumberValue val
+                            ? val.ToDouble(CultureInfo.InvariantCulture)
+                            : (long)x).ToArray()
+                    };
+                }
+
+                result.Entries = valuesArray;
+            }
+
+            return result;
         }
 
         private static TimeSeriesEntry[] MergeRanges(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> localRanges, TimeSeriesRangeResult newRange)
