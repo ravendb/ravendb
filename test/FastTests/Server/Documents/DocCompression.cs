@@ -40,7 +40,7 @@ namespace FastTests.Server.Documents
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void Can_compact_from_no_compression_to_compressed()
         {
             var path = NewDataPath();
@@ -88,7 +88,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void Can_compact_from_compression_to_not_compressed()
         {
             var path = NewDataPath();
@@ -137,7 +137,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void Can_compact_db_with_compressed_collections()
         {
             var path = NewDataPath();
@@ -176,7 +176,7 @@ namespace FastTests.Server.Documents
             operation.WaitForCompletion();
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void Can_write_many_documents_without_breakage()
         {
             var random = new Random(654);
@@ -200,7 +200,7 @@ namespace FastTests.Server.Documents
 
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void Can_set_collection_compressed_when_it_has_docs()
         {
             var random = new Random(343);
@@ -287,7 +287,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void Can_update_many_documents_without_breakage()
         {
             var random = new Random(654);
@@ -331,7 +331,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void Can_update_many_documents_without_breakage_to_be_smaller()
         {
             var random = new Random(654);
