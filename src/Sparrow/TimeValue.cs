@@ -399,7 +399,7 @@ namespace Sparrow
 
         public static DateTime EnsureUtc(this DateTime date)
         {
-            if (date.Kind == DateTimeKind.Utc)
+            if (date.Kind != DateTimeKind.Local)
                 return date;
 
             return date.ToUniversalTime();

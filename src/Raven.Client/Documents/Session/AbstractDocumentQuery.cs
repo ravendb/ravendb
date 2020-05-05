@@ -331,6 +331,13 @@ namespace Raven.Client.Documents.Session
             name = name.TrimStart('$');
             if (QueryParameters.ContainsKey(name))
                 throw new InvalidOperationException("The parameter " + name + " was already added");
+            
+            if (value is DateTime date)
+            {
+                if (date.Kind == DateTimeKind.Local)
+                    value = date.EnsureUtc();
+            }
+
             QueryParameters[name] = value;
         }
 

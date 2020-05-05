@@ -859,15 +859,12 @@ namespace Raven.Server.Documents.Queries.Results
             throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + qe);
         }
 
-        private static unsafe DateTime? ParseDateTime(string valueAsStr)
+        private static DateTime? ParseDateTime(string valueAsStr)
         {
-            fixed (char* c = valueAsStr)
-            {
-                var result = LazyStringParser.TryParseDateTime(c, valueAsStr.Length, out var dt, out _);
-                if (result != LazyStringParser.Result.DateTime)
-                    throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + valueAsStr);
-                return dt;
-            }
+            if (DateTime.TryParse(valueAsStr, out var date) == false)
+                throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + valueAsStr);
+
+            return date.ToUniversalTime();
         }
     }
 }

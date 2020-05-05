@@ -169,15 +169,27 @@ namespace FastTests
             return regex.Replace(toConvert, Environment.NewLine);
         }
 
+        public static DateTime UtcToday
+        {
+            get
+            {
+                var local = DateTime.Today;
+                return local + TimeZoneInfo.Local.GetUtcOffset(local);
+            }
+        }
+
         public class DateTimeComparer : IEqualityComparer<DateTime>
         {
             public static readonly DateTimeComparer Instance = new DateTimeComparer();
             public bool Equals(DateTime x, DateTime y)
             {
-                if (x.Kind == y.Kind)
-                    return x == y;
+                if (x.Kind == DateTimeKind.Local)
+                    x = x.ToUniversalTime();
 
-                return x.ToUniversalTime() == y.ToUniversalTime();
+                if (y.Kind == DateTimeKind.Local)
+                    y = y.ToUniversalTime();
+
+                return x == y;
             }
 
             public int GetHashCode(DateTime obj)

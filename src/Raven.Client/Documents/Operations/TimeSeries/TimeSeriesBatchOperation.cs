@@ -48,6 +48,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                     _operation.Appends = new List<TimeSeriesOperation.AppendOperation>(sorted.Values);
                 }
+
+                if (_operation.Removals != null)
+                {
+                    foreach (var append in _operation.Removals)
+                    {
+                        append.To = append.To.EnsureUtc();
+                        append.From = append.From.EnsureUtc();
+                    }
+                }
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
