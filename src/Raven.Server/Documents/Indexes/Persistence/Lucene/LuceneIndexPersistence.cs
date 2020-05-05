@@ -13,6 +13,8 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Utils;
@@ -20,6 +22,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Threading;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Impl;
 
 using Version = Lucene.Net.Util.Version;
@@ -40,6 +43,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsIndexWriters;
 
         private SnapshotDeletionPolicy _snapshotter;
+
+        // this is used to remember the positions of files in the database
+        // always points to the latest valid transaction and is updated by
+        // the write tx on commit, thread safety is inherited from the voron
+        // transaction
+        private IndexTransactionCache _streamsCache = new IndexTransactionCache();
 
         private LuceneVoronDirectory _directory;
         private readonly Dictionary<string, LuceneVoronDirectory> _suggestionsDirectories;
@@ -178,10 +187,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized)
                 throw new InvalidOperationException();
 
+            environment.NewTransactionCreated += SetStreamCacheInTx;
+
             using (var tx = environment.WriteTransaction())
             {
                 InitializeMainIndexStorage(tx, environment);
                 InitializeSuggestionsIndexStorage(tx, environment);
+                BuildStreamCacheAfterTx(tx);
 
                 // force tx commit so it will bump tx counter and just created searcher holder will have valid tx id
                 tx.LowLevelTransaction.ModifyPage(0);
@@ -190,6 +202,128 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _initialized = true;
+        }
+
+        public void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
+        {
+            _streamsCache = transactionCache;
+        }
+
+        internal IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
+        {
+            var newCache = new IndexTransactionCache();
+
+            FillCollectionEtags(tx, newCache.Collections);
+
+            var directoryFiles = new IndexTransactionCache.DirectoryFiles();
+            newCache.DirectoriesByName[_directory.Name] = directoryFiles;
+            FillLuceneFilesChunks(tx, directoryFiles.ChunksByName, _directory.Name);
+
+            foreach (var (name, _) in _suggestionsDirectories)
+            {
+                directoryFiles = new IndexTransactionCache.DirectoryFiles();
+                newCache.DirectoriesByName[name] = directoryFiles;
+                FillLuceneFilesChunks(tx, directoryFiles.ChunksByName, name);
+            }
+
+            return newCache;
+        }
+
+        private void FillCollectionEtags(Transaction tx,
+            Dictionary<string, IndexTransactionCache.CollectionEtags> map)
+        {
+            AbstractStaticIndexBase compiled = null;
+
+            if (_index.Type.IsStatic())
+            {
+                switch (_index)
+                {
+                    case MapIndex mapIndex:
+                        compiled = mapIndex._compiled;
+                        break;
+                    case MapReduceIndex mapReduceIndex:
+                        compiled = mapReduceIndex._compiled;
+                        break;
+                    case MapCountersIndex mapCountersIndex:
+                        compiled = mapCountersIndex._compiled;
+                        break;
+                    case MapTimeSeriesIndex mapTimeSeriesIndex:
+                        compiled = mapTimeSeriesIndex._compiled;
+                        break;
+                }
+            }
+
+            foreach (string collection in _index.Collections)
+            {
+                using (Slice.From(tx.LowLevelTransaction.Allocator, collection, out Slice collectionSlice))
+                {
+                    var etags = new IndexTransactionCache.CollectionEtags
+                    {
+                        LastIndexedEtag = IndexStorage.ReadLastEtag(tx,
+                            IndexStorage.IndexSchema.EtagsTree,
+                            collectionSlice
+                        ),
+                        LastProcessedTombstoneEtag = IndexStorage.ReadLastEtag(tx,
+                            IndexStorage.IndexSchema.EtagsTombstoneTree,
+                            collectionSlice
+                        )
+                    };
+
+                    if (compiled?.CollectionsWithCompareExchangeReferences.Contains(collection) == true)
+                    {
+                        etags.LastReferencedEtagsForCompareExchange = new IndexTransactionCache.ReferenceCollectionEtags
+                        {
+                            LastEtag = _index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(tx, collection, IndexStorage.CompareExchangeReferences.CompareExchange),
+                            LastProcessedTombstoneEtag = _index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(tx, collection, IndexStorage.CompareExchangeReferences.CompareExchange)
+                        };
+                    }
+
+                    map[collection] = etags;
+                }
+            }
+
+            var referencedCollections = _index.GetReferencedCollections();
+            if (referencedCollections == null || referencedCollections.Count == 0)
+                return;
+
+            foreach (var (src, collections) in referencedCollections)
+            {
+                var collectionEtags = map[src];
+                collectionEtags.LastReferencedEtags ??= new Dictionary<string, IndexTransactionCache.ReferenceCollectionEtags>(StringComparer.OrdinalIgnoreCase);
+                foreach (var collectionName in collections)
+                {
+                    collectionEtags.LastReferencedEtags[collectionName.Name] = new IndexTransactionCache.ReferenceCollectionEtags
+                    {
+                        LastEtag = _index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(tx, src, collectionName),
+                        LastProcessedTombstoneEtag = _index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(tx, src, collectionName),
+                    };
+                }
+            }
+        }
+
+        private void FillLuceneFilesChunks(Transaction tx, Dictionary<string, Tree.ChunkDetails[]> cache, string name)
+        {
+            var filesTree = tx.ReadTree(name);
+            if (filesTree == null)
+                return;
+            using (var it = filesTree.Iterate(false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys))
+                {
+                    do
+                    {
+                        var chunkDetails = filesTree.ReadTreeChunks(it.CurrentKey, out _);
+                        if (chunkDetails == null)
+                            continue;
+                        cache[it.CurrentKey.ToString()] = chunkDetails;
+                    } while (it.MoveNext());
+                }
+            }
+        }
+
+        private void SetStreamCacheInTx(LowLevelTransaction tx)
+        {
+            tx.ImmutableExternalState = _streamsCache;
         }
 
         private void InitializeSuggestionsIndexStorage(Transaction tx, StorageEnvironment environment)

@@ -2017,6 +2017,7 @@ namespace Raven.Server.ServerWide
                         _clusterRequestExecutor,
                         ContextPool,
                         ByteStringMemoryCache.Cleaner,
+                        InitializationCompleted
                     };
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");

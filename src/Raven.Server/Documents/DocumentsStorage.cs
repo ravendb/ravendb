@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
@@ -197,6 +198,11 @@ namespace Raven.Server.Documents
         public DocumentPutAction DocumentPut;
         private readonly Action<string> _addToInitLog;
 
+        // this is used to remember the metadata about collections / documents for
+        // common operations. It always points to the latest valid transaction and is updated by 
+        // the write tx on commit, thread safety is inherited from the voron transaction
+        private DocumentTransactionCache _documentsMetadataCache = new DocumentTransactionCache();
+
         public void Dispose()
         {
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentsStorage)}");
@@ -289,6 +295,9 @@ namespace Raven.Server.Documents
                 ContextPool = new DocumentsContextPool(DocumentDatabase);
                 Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Documents);
 
+                Environment.NewTransactionCreated += SetTransactionCache;
+                Environment.AfterCommitWhenNewReadTransactionsPrevented += UpdateDocumentTransactionCache;
+
                 using (var tx = Environment.WriteTransaction())
                 {
                     NewPageAllocator.MaybePrefetchSections(
@@ -337,6 +346,69 @@ namespace Raven.Server.Documents
                 options.Dispose();
                 throw;
             }
+        }
+
+        private void SetTransactionCache(LowLevelTransaction tx)
+        {
+            tx.ImmutableExternalState = _documentsMetadataCache;
+
+            if (tx.Flags != TransactionFlags.ReadWrite)
+                return;
+
+            tx.LastChanceToReadFromWriteTransactionBeforeCommit += ComputeTransactionCache_BeforeCommit;
+        }
+
+        private void ComputeTransactionCache_BeforeCommit(LowLevelTransaction llt)
+        {
+            var tx = llt.Transaction;
+            if (tx == null)
+                return;
+
+            var currentCache = new DocumentTransactionCache
+            {
+                LastDocumentEtag = ReadLastDocumentEtag(tx),
+                LastAttachmentsEtag = ReadLastAttachmentsEtag(tx),
+                LastConflictEtag = ReadLastConflictsEtag(tx),
+                LastCounterEtag = ReadLastCountersEtag(tx),
+                LastTimeSeriesEtag = ReadLastTimeSeriesEtag(tx),
+                LastEtag = ReadLastEtag(tx),
+                LastRevisionsEtag = ReadLastRevisionsEtag(tx),
+                LastTombstoneEtag = ReadLastTombstoneEtag(tx),
+            };
+
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                Table.TableValueHolder holder = default;
+                foreach (var collection in IterateCollectionNames(tx, ctx))
+                {
+                    var collectionName = new CollectionName(collection);
+                    if (ReadLastDocument(tx, collectionName, CollectionTableType.Documents, ref holder) == false)
+                        continue;
+
+                    var colCache = new DocumentTransactionCache.CollectionCache
+                    {
+                        LastDocumentEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader),
+                        LastChangeVector = TableValueToChangeVector(ctx, (int)DocumentsTable.ChangeVector, ref holder.Reader),
+                    };
+
+                    if (ReadLastDocument(tx, collectionName, CollectionTableType.Tombstones, ref holder))
+                    {
+                        colCache.LastTombstoneEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader);
+                    }
+                    currentCache.LastEtagsByCollection[collection] = colCache;
+                }
+
+            }
+            // we set it on the current transaction because we aren't committed yet
+            // we'll publish this after the commit finalization
+            tx.LowLevelTransaction.ImmutableExternalState = currentCache;
+            
+
+        }
+
+        private void UpdateDocumentTransactionCache(LowLevelTransaction obj)
+        {
+            _documentsMetadataCache = obj.ImmutableExternalState as DocumentTransactionCache;
         }
 
         public void AssertFixedSizeTrees(Transaction tx)
@@ -475,36 +547,86 @@ namespace Raven.Server.Documents
 
         public static long ReadLastDocumentEtag(Transaction tx)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    return cache.LastDocumentEtag;
+                }
+            }
+
             return ReadLastEtagFrom(tx, AllDocsEtagsSlice);
         }
 
         public static long ReadLastTombstoneEtag(Transaction tx)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    return cache.LastTombstoneEtag;
+                }
+            }
             return ReadLastEtagFrom(tx, AllTombstonesEtagsSlice);
         }
 
         public static long ReadLastConflictsEtag(Transaction tx)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    return cache.LastConflictEtag;
+                }
+            }
             return ReadLastEtagFrom(tx, ConflictsStorage.AllConflictedDocsEtagsSlice);
         }
 
         public static long ReadLastRevisionsEtag(Transaction tx)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    return cache.LastRevisionsEtag;
+                }
+            }
             return ReadLastEtagFrom(tx, RevisionsStorage.AllRevisionsEtagsSlice);
         }
 
         public static long ReadLastAttachmentsEtag(Transaction tx)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    return cache.LastAttachmentsEtag;
+                }
+            }
             return AttachmentsStorage.ReadLastEtag(tx);
         }
 
         public static long ReadLastCountersEtag(Transaction tx)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    return cache.LastCounterEtag;
+                }
+            }
             return ReadLastEtagFrom(tx, CountersStorage.AllCountersEtagSlice);
         }
 
         public static long ReadLastTimeSeriesEtag(Transaction tx)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    return cache.LastTimeSeriesEtag;
+                }
+            }
             return ReadLastEtagFrom(tx, TimeSeriesStorage.AllTimeSeriesEtagSlice);
         }
 
@@ -527,6 +649,14 @@ namespace Raven.Server.Documents
 
         public static long ReadLastEtag(Transaction tx)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    return cache.LastEtag;
+                }
+            }
+
             var tree = tx.CreateTree(EtagsSlice);
             var readResult = tree.Read(LastEtagSlice);
             long lastEtag = 0;
@@ -1084,32 +1214,53 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetLastDocumentEtag(DocumentsOperationContext context, string collection)
+        public long GetLastDocumentEtag(Transaction tx, string collection)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
+                        return col.LastDocumentEtag;
+                }
+            }
             Table.TableValueHolder result = null;
-            if (LastDocument(context, collection, ref result) == false)
+            if (LastDocument(tx, collection, ref result) == false)
                 return 0;
 
             return TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
         }
 
-        public string GetLastDocumentChangeVector(DocumentsOperationContext context, string collection)
+        public string GetLastDocumentChangeVector(Transaction tx, JsonOperationContext ctx, string collection)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
+                        return col.LastChangeVector;
+                }
+            }
             Table.TableValueHolder result = null;
-            if (LastDocument(context, collection, ref result) == false)
+            if (LastDocument(tx, collection, ref result) == false)
                 return null;
 
-            return TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref result.Reader);
+            return TableValueToChangeVector(ctx, (int)DocumentsTable.ChangeVector, ref result.Reader);
         }
 
-        private bool LastDocument(DocumentsOperationContext context, string collection, ref Table.TableValueHolder result)
+        private bool LastDocument(Transaction transaction, string collection, ref Table.TableValueHolder result)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return false;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents)
+            return ReadLastDocument(transaction, collectionName, CollectionTableType.Documents, ref result);
+        }
+
+        private static bool ReadLastDocument(Transaction transaction, CollectionName collectionName, CollectionTableType collectionType, ref Table.TableValueHolder result)
+        {
+            var table = transaction.OpenTable(DocsSchema,
+                collectionName.GetTableName(collectionType)
             );
 
             // ReSharper disable once UseNullPropagation
@@ -1123,13 +1274,22 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        public long GetLastTombstoneEtag(DocumentsOperationContext context, string collection)
+        public long GetLastTombstoneEtag(Transaction tx, string collection)
         {
+            if (tx.IsWriteTransaction == false)
+            {
+                if (tx.LowLevelTransaction.ImmutableExternalState is DocumentTransactionCache cache)
+                {
+                    if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
+                        return col.LastTombstoneEtag;
+                }
+            }
+
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
+            var table = tx.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
 
             // ReSharper disable once UseNullPropagation
@@ -1835,6 +1995,38 @@ namespace Raven.Server.Documents
             }
         }
 
+        public CollectionDetails GetCollectionDetails(DocumentsOperationContext context, string collection)
+        {
+            CollectionDetails collectionDetails = new CollectionDetails() { Name = collection, CountOfDocuments = 0, Size = new Client.Util.Size() };
+            CollectionName collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+
+            if (collectionName != null)
+            {
+                TableReport collectionTableReport = GetReportForTable(context, DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+
+                collectionDetails.CountOfDocuments = collectionTableReport.NumberOfEntries;
+
+                collectionDetails.Size.SizeInBytes = collectionTableReport.DataSizeInBytes
+                    + GetReportForTable(context, RevisionsStorage.RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions)).DataSizeInBytes
+                    + GetReportForTable(context, TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones)).DataSizeInBytes;
+            }
+
+            return collectionDetails;
+        }
+
+        private TableReport GetReportForTable(DocumentsOperationContext context, TableSchema schema, string name, bool blnDetailed = false)
+        {
+            TableReport report = new TableReport(0, 0, false);
+            Table table = context.Transaction.InnerTransaction.OpenTable(schema, name);
+            
+            if (table != null)
+            {
+                report = table.GetReport(blnDetailed);
+            }
+            
+            return report;
+        }
+
         public CollectionStats GetCollection(string collection, DocumentsOperationContext context)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
@@ -2023,6 +2215,16 @@ namespace Raven.Server.Documents
         private static void ThrowNoActiveTransactionException()
         {
             throw new InvalidOperationException("This method requires active transaction, and no active transactions in the current context...");
+        }
+
+        private IEnumerable<string> IterateCollectionNames(Transaction tx, JsonOperationContext context)
+        {
+            var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
+            foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+            {
+                var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
+                yield return collection.ToString();
+            }
         }
 
         private Dictionary<string, CollectionName> ReadCollections(Transaction tx)

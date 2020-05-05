@@ -434,18 +434,17 @@ namespace Raven.Server.Documents.Patch
                     var propIndex = propertiesByInsertionOrder.Properties[i];
                     obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
 
+                    BlittableObjectInstance.BlittableObjectProperty modifiedValue = default;
                     JsValue key = prop.Name.ToString();
-                    var existInObject = obj.OwnValues.TryGetValue(key, out var modifiedValue);
+                    var existInObject = obj.OwnValues?
+                        .TryGetValue(key, out modifiedValue) == true;
 
                     if (existInObject == false && obj.Deletes?.Contains(key) == true)
                         continue;
 
                     if (existInObject)
                     {
-                        if (modifiedProperties == null)
-                        {
-                            modifiedProperties = new HashSet<string>();
-                        }
+                        modifiedProperties ??= new HashSet<string>();
 
                         modifiedProperties.Add(prop.Name);
                     }
@@ -465,6 +464,9 @@ namespace Raven.Server.Documents.Patch
                     }
                 }
             }
+
+            if (obj.OwnValues == null)
+                return;
 
             foreach (var modificationKvp in obj.OwnValues)
             {

@@ -45,7 +45,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private IndexingStatsScope _nestedValuesReductionStatsInstance;
         private readonly TreeReductionStats _treeReductionStats = new TreeReductionStats();
         private readonly NestedValuesReductionStats _nestedValuesReductionStats = new NestedValuesReductionStats();
-        private readonly Func<bool> _isStaleBecauseOfRunningReduction = () => true;
 
         protected ReduceMapResultsBase(Index index, T indexDefinition, IndexStorage indexStorage, MetricCounters metrics, MapReduceIndexingContext mapReduceContext)
         {
@@ -700,7 +699,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     ReduceAttempts = stats.ReduceAttempts
                 };
                 
-                if (failureInfo.IsInvalidIndex(_isStaleBecauseOfRunningReduction))
+                if (failureInfo.IsInvalidIndex(true))
                 {
                     throw new ExcessiveNumberOfReduceErrorsException("Excessive number of errors during the reduce phase for the current batch. Failure info: " +
                                                                      failureInfo.GetErrorMessage());

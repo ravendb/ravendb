@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Linq;
+using FastTests;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_10493: RavenTestBase
-    {        
+    public class RavenDB_10493 : RavenTestBase
+    {
         public RavenDB_10493(ITestOutputHelper output) : base(output)
         {
         }
@@ -15,12 +16,12 @@ namespace FastTests.Issues
         {
             public DateTime? DateTime;
         }
-                        
+
         [Fact]
         public void CanTranslateDateTimeMinValueMaxValue()
-        {             
+        {
             using (var store = GetDocumentStore())
-            {             
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Article
@@ -29,14 +30,14 @@ namespace FastTests.Issues
                     });
                     session.SaveChanges();
                 }
-                                
+
                 using (var session = store.OpenSession())
                 {
                     var query = from x in session.Query<Article>()
                                 let test = 1
                                 select new
                                 {
-                                    DateTime = x.DateTime,
+                                    x.DateTime,
                                     DateTimeMinValue = DateTime.MinValue,
                                     DateTimeMaxValue = DateTime.MaxValue
                                 };
@@ -47,16 +48,15 @@ namespace FastTests.Issues
                     Assert.Equal(expectedQuery, query.ToString());
 
                     var result = query.ToList();
-                    
+
                     Assert.Equal(DateTime.MinValue, result[0].DateTimeMinValue);
 
                     // Only missing 0.9999 ms, but with additional timezone
                     var epsilon = 1 + Math.Abs((DateTime.UtcNow - DateTime.Now).TotalSeconds); // Lower than 1 ms
                     var val = (DateTime.MaxValue - result[0].DateTimeMaxValue).TotalSeconds;
-                    Assert.True(Math.Abs(val) < (epsilon));
-                }                              
+                    Assert.True(Math.Abs(val) < epsilon, $"Math.Abs({val}) < ({epsilon})");
+                }
             }
         }
-                        
     }
 }

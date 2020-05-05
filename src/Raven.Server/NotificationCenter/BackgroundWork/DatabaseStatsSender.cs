@@ -7,7 +7,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork
 {
@@ -73,7 +72,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context.Documents)
                 };
                 current.Collections = _database.DocumentsStorage.GetCollections(context.Documents)
-                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentChangeVector(context.Documents, x.Name)));
+                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentChangeVector(context.Documents.Transaction.InnerTransaction, context.Documents, x.Name)));
             }
 
             if (_latest != null && _latest.Equals(current))

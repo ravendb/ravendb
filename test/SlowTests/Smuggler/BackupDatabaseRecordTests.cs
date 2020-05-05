@@ -47,7 +47,6 @@ namespace SlowTests.Smuggler
 
                     ModifyDatabaseRecord = record =>
                     {
-                        record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "1024";
                         record.ConflictSolverConfig = new ConflictSolver
                         {
 
@@ -243,7 +242,6 @@ namespace SlowTests.Smuggler
 
                     ModifyDatabaseRecord = record =>
                     {
-                        record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "1024";
                         record.ConflictSolverConfig = new ConflictSolver
                         {
 
@@ -1022,7 +1020,6 @@ namespace SlowTests.Smuggler
 
                     ModifyDatabaseRecord = record =>
                     {
-                        record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "1024";
                         record.ConflictSolverConfig = new ConflictSolver
                         {
                             ResolveToLatest = false,
@@ -1185,8 +1182,6 @@ namespace SlowTests.Smuggler
                         }
 
                         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-
-                        Assert.Equal("1024", record.Settings["Patching.MaxNumberOfCachedScripts"]);
 
                         Assert.NotNull(record.ConflictSolverConfig);
                         Assert.Equal(false, record.ConflictSolverConfig.ResolveToLatest);

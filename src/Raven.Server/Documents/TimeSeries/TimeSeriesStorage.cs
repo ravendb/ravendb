@@ -1394,7 +1394,7 @@ namespace Raven.Server.Documents.TimeSeries
                 throw new NotImplementedException();
             }
 
-            object? IEnumerator.Current => _current;
+            object IEnumerator.Current => _current;
 
             public Reader.SingleResult Current => _current;
 

@@ -119,10 +119,16 @@ namespace Raven.Client.Documents.Session.Operations
             private int _docsCountOnCachedRenewSession;
             private bool _cachedItemsRenew;
 
+#if NETSTANDARD2_0 || NETCOREAPP2_1
+            public ValueTask DisposeAsync()
+#else
+
             public async ValueTask DisposeAsync()
+#endif
             {
 #if NETSTANDARD2_0 || NETCOREAPP2_1
                 Dispose();
+                return default;
 #else
                 await _response.Stream.DisposeAsync().ConfigureAwait(false);
 

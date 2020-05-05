@@ -161,7 +161,7 @@ namespace Sparrow.LowMemory
 
                 thread.Start();
 
-                shutdownNotification.Register(() => _shutdownRequested.Set());
+                _cancellationTokenRegistration = shutdownNotification.Register(() => _shutdownRequested.Set());
             }
         }
 
@@ -171,6 +171,7 @@ namespace Sparrow.LowMemory
         private AbstractLowMemoryMonitor _lowMemoryMonitor;
         private bool _initialized;
         private bool _enableHighTemporaryDirtyMemoryUse;
+        private CancellationTokenRegistration _cancellationTokenRegistration;
 
         private LowMemoryNotification()
         {
@@ -199,6 +200,7 @@ namespace Sparrow.LowMemory
                                 timeout = 1000; // on EarlyOOM just run cleaners once (CheckMemoryStatus will run in 1000mSec and will return system to normal)
                                 break;
                             case 1: // shutdown requested
+                                _cancellationTokenRegistration.Dispose();
                                 return;
                             default:
                                 return;

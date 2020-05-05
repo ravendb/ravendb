@@ -22,6 +22,18 @@ namespace Raven.Server.Utils
             _errorMsg = errorMsg;
         }
 
+        public void Execute(IDisposable d)
+        {
+            try
+            {
+                d?.Dispose();
+            }
+            catch (Exception e)
+            {
+                _list.Add(e);
+            }
+        }
+
         public void Execute(Action action)
         {
             try

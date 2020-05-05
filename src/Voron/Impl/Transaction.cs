@@ -34,15 +34,16 @@ namespace Voron.Impl
 
         private Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree;
 
-        public IEnumerable<Tree> Trees => _trees == null ? Enumerable.Empty<Tree>() : _trees.Values;
+        public IEnumerable<Tree> Trees => _trees?.Values ?? Enumerable.Empty<Tree>();
 
-        public IEnumerable<Table> Tables => _tables == null ? Enumerable.Empty<Table>() : _tables.Values;
+        public IEnumerable<Table> Tables => _tables?.Values ?? Enumerable.Empty<Table>();
 
         public bool IsWriteTransaction => _lowLevelTransaction.Flags == TransactionFlags.ReadWrite;
 
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
             _lowLevelTransaction = lowLevelTransaction;
+            _lowLevelTransaction.Transaction = this;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

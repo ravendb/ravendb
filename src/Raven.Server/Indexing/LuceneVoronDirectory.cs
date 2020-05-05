@@ -14,6 +14,8 @@ namespace Raven.Server.Indexing
         private readonly string _name;
         private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
 
+        public string Name => _name;
+
         public long FilesAllocations => _indexOutputFilesSummary.TotalWritten;
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this(tx, environment, "Files")
@@ -175,7 +177,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexInput(name, state.Transaction, _name);
+            return new VoronIndexInput(this, name, state.Transaction, _name);
         }
 
         public override IndexOutput CreateOutput(string name, IState s)

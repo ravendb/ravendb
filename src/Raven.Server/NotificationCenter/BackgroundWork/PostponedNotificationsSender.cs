@@ -29,6 +29,12 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             _event = new AsyncManualResetEvent(CancellationToken);
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            _event?.Dispose();
+        }
+
         protected override async Task DoWork()
         {
             var notifications = GetPostponedNotifications(1, DateTime.MaxValue);

@@ -37,7 +37,7 @@ namespace Raven.Server.Web.Studio
                 }
                 else
                 {
-                    changeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
+                    changeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, collection);
                     totalResults = Database.DocumentsStorage.GetCollection(collection, context).Count;
 
                     if (changeVector != null)

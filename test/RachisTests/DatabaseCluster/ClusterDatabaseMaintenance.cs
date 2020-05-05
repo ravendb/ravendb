@@ -115,7 +115,7 @@ namespace RachisTests.DatabaseCluster
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    Assert.Equal(2, database.DocumentsStorage.GetLastTombstoneEtag(ctx, "Users"));
+                    Assert.Equal(2, database.DocumentsStorage.GetLastTombstoneEtag(ctx.Transaction.InnerTransaction, "Users"));
                 }
             }
         }

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void GetBackupTaskInfo()
         {
             var backupConfig = new PeriodicBackupConfiguration
@@ -61,7 +62,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void GetExternalReplicationTaskInfo()
         {
             var watcher = new ExternalReplication("Watcher1", "Connection")
@@ -100,7 +101,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void GetRavenEtlTaskInfo()
         {
             var etlConfiguration = new RavenEtlConfiguration()
@@ -154,7 +155,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void GetSqlEtlTaskInfo()
         {
             var sqlScript = @"

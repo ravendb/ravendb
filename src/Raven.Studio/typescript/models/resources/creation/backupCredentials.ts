@@ -159,8 +159,8 @@ export class amazonS3Credentials extends restoreSettings {
 
 // *** Azure ***
 export class azureCredentials extends restoreSettings {
-    backupStorageType: restoreSource = 'azure';
-    backupStorageTypeText: string ='Azure';
+    backupStorageType: restoreSource = "azure";
+    backupStorageTypeText = "Azure";
     mandatoryFieldsText = "required fields";
     
     remoteFolder = ko.observable<string>();
@@ -168,12 +168,14 @@ export class azureCredentials extends restoreSettings {
     
     accountName = ko.observable<string>();
     accountKey = ko.observable<string>();
+    sasToken = ko.observable<string>();
     container = ko.observable<string>();  
     
     toDto(): Raven.Client.Documents.Operations.Backups.AzureSettings
     {
         return {
             AccountKey: _.trim(this.accountKey()),
+            SasToken: _.trim(this.sasToken()),
             AccountName: _.trim(this.accountName()),
             StorageContainer: _.trim(this.container()),
             RemoteFolderName: _.trim(this.remoteFolder()),
@@ -205,6 +207,7 @@ export class azureCredentials extends restoreSettings {
     
     onCredentialsChange(onChange: () => void) {
         this.accountKey.throttle(300).subscribe((onChange));
+        this.sasToken.throttle(300).subscribe((onChange));
         this.accountName.throttle(300).subscribe(onChange);
         this.container.throttle(300).subscribe(onChange);
         this.remoteFolder.throttle(300).subscribe(onChange);
@@ -271,8 +274,8 @@ export class googleCloudCredentials extends restoreSettings {
 
 // *** RavenDB Cloud ***
 export class ravenCloudCredentials extends restoreSettings {
-    backupStorageType: restoreSource = 'cloud';
-    backupStorageTypeText: string ='RavenDB Cloud';
+    backupStorageType: restoreSource = "cloud";
+    backupStorageTypeText = "RavenDB Cloud";
     mandatoryFieldsText = "Backup Link";
     
     backupLink = ko.observable<string>();

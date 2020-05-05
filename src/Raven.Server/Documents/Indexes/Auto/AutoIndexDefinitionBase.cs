@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         public IndexState State { get; set; }
 
         protected AutoIndexDefinitionBase(string indexName, string collection, AutoIndexField[] fields, long? indexVersion = null)
-            : base(indexName, new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion)
+            : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));

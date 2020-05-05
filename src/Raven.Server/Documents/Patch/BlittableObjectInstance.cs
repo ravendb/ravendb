@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Patch
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<JsValue> Deletes;
-        public Dictionary<JsValue, BlittableObjectProperty> OwnValues = new Dictionary<JsValue, BlittableObjectProperty>();
+        public Dictionary<JsValue, BlittableObjectProperty> OwnValues;
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
         public IState LuceneState;
@@ -47,13 +47,17 @@ namespace Raven.Server.Documents.Patch
 
         public ObjectInstance GetOrCreate(JsValue key)
         {
-            if (OwnValues.TryGetValue(key, out var property) == false)
-            {
-                property = GenerateProperty(key.AsString());
+            BlittableObjectProperty property = default;
+            if (OwnValues?.TryGetValue(key, out property) == true &&
+                property != null)
+                return property.Value.AsObject();
 
-                OwnValues[key] = property;
-                Deletes?.Remove(key);
-            }
+            property = GenerateProperty(key.AsString());
+
+            OwnValues ??= new Dictionary<JsValue, BlittableObjectProperty>(Blittable.Count);
+
+            OwnValues[key] = property;
+            Deletes?.Remove(key);
 
             return property.Value.AsObject();
 
@@ -348,12 +352,14 @@ namespace Raven.Server.Documents.Patch
 
             MarkChanged();
             Deletes.Add(property);
-            return OwnValues.Remove(property);
+            return OwnValues?.Remove(property) == true;
         }
 
         public override PropertyDescriptor GetOwnProperty(JsValue property)
         {
-            if (OwnValues.TryGetValue(property, out var val))
+            BlittableObjectProperty val = default;
+            if (OwnValues?.TryGetValue(property, out val) == true &&
+                val != null)
                 return val;
 
             Deletes?.Remove(property);
@@ -366,6 +372,8 @@ namespace Raven.Server.Documents.Patch
             {
                 return PropertyDescriptor.Undefined;
             }
+
+            OwnValues ??= new Dictionary<JsValue, BlittableObjectProperty>(Blittable.Count);
 
             OwnValues[property] = val;
 
@@ -387,18 +395,23 @@ namespace Raven.Server.Documents.Patch
 
         public override IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetOwnProperties()
         {
-            foreach (var value in OwnValues)
+            if (OwnValues != null)
             {
-                yield return new KeyValuePair<JsValue, PropertyDescriptor>(value.Key, value.Value);
+                foreach (var value in OwnValues)
+                {
+                    yield return new KeyValuePair<JsValue, PropertyDescriptor>(value.Key, value.Value);
+                }
             }
+
             if (Blittable == null)
                 yield break;
+
             foreach (var prop in Blittable.GetPropertyNames())
             {
                 JsValue key = prop;
                 if (Deletes?.Contains(key) == true)
                     continue;
-                if (OwnValues.ContainsKey(key))
+                if (OwnValues?.ContainsKey(prop) == true)
                     continue;
                 yield return new KeyValuePair<JsValue, PropertyDescriptor>(
                     prop,
@@ -409,11 +422,12 @@ namespace Raven.Server.Documents.Patch
 
         public override List<JsValue> GetOwnPropertyKeys(Types types)
         {
-            var list = new List<JsValue>(Blittable != null ? Blittable.Count : OwnValues.Count);
+            var list = new List<JsValue>(Blittable?.Count ?? OwnValues?.Count ?? 0);
 
-            foreach (var value in OwnValues)
+            if (OwnValues != null)
             {
-                list.Add(value.Key);
+                foreach (var value in OwnValues)
+                    list.Add(value.Key);
             }
 
             if (Blittable == null)
@@ -424,7 +438,7 @@ namespace Raven.Server.Documents.Patch
                 JsValue key = prop;
                 if (Deletes?.Contains(key) == true)
                     continue;
-                if (OwnValues.ContainsKey(key))
+                if (OwnValues != null && OwnValues.ContainsKey(key))
                     continue;
 
                 list.Add(prop);
@@ -435,8 +449,7 @@ namespace Raven.Server.Documents.Patch
 
         private void RecordNumericFieldType(string key, BlittableJsonToken type)
         {
-            if (OriginalPropertiesTypes == null)
-                OriginalPropertiesTypes = new Dictionary<string, BlittableJsonToken>();
+            OriginalPropertiesTypes ??= new Dictionary<string, BlittableJsonToken>();
             OriginalPropertiesTypes[key] = type;
         }
     }
