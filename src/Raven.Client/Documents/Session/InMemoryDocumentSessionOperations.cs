@@ -1251,6 +1251,7 @@ more responsive application.
                 DocumentsByEntity.Evict(entity);
                 DocumentsById.Remove(documentInfo.Id);
                 _countersByDocId?.Remove(documentInfo.Id);
+                _timeSeriesByDocId?.Remove(documentInfo.Id);
             }
 
             DeletedEntities.Evict(entity);

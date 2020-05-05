@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -836,6 +837,84 @@ namespace SlowTests.Client.TimeSeries.Session
                         Assert.Equal(baseline.AddMinutes(5 + i), vals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(105d + i, vals[i].Value);
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldEvictTimeSeriesUponEntityEviction()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                var documentId = "users/ayende";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, documentId);
+
+                    var tsf = session.TimeSeriesFor(documentId, "Heartrate");
+
+                    for (int i = 0; i < 60; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), new[] { 100d + i }, "watches/fitbit");
+                    }
+
+                    tsf = session.TimeSeriesFor(documentId, "BloodPressure");
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), new[] { 120d - i, 80 + i }, "watches/apple");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(documentId);
+
+                    var tsf = session.TimeSeriesFor(user, "Heartrate");
+
+                    var vals = tsf.Get(baseline, baseline.AddMinutes(10)).ToList();
+
+                    Assert.Equal(11, vals.Count);
+
+                    vals = tsf.Get(baseline.AddMinutes(20), baseline.AddMinutes(50)).ToList();
+
+                    Assert.Equal(31, vals.Count);
+
+                    tsf = session.TimeSeriesFor(user, "BloodPressure");
+
+                    vals = tsf.Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+
+                    Assert.Equal(10, vals.Count);
+
+                    var sessionOperations = (InMemoryDocumentSessionOperations)session;
+
+                    Assert.Equal(1, sessionOperations.TimeSeriesByDocId.Count);
+                    Assert.True(sessionOperations.TimeSeriesByDocId.TryGetValue(documentId, out var cache));
+                    Assert.Equal(2, cache.Count);
+                    Assert.True(cache.TryGetValue("Heartrate", out var ranges));
+                    Assert.Equal(2, ranges.Count);
+                    Assert.Equal(baseline, ranges[0].From);
+                    Assert.Equal(baseline.AddMinutes(10), ranges[0].To);
+                    Assert.Equal(11, ranges[0].Entries.Length);
+                    Assert.Equal(baseline.AddMinutes(20), ranges[1].From);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+                    Assert.Equal(31, ranges[1].Entries.Length);
+                    Assert.True(cache.TryGetValue("BloodPressure", out ranges));
+                    Assert.Equal(1, ranges.Count);
+                    Assert.Equal(DateTime.MinValue, ranges[0].From);
+                    Assert.Equal(DateTime.MaxValue, ranges[0].To);
+                    Assert.Equal(10, ranges[0].Entries.Length);
+
+                    session.Advanced.Evict(user);
+
+                    Assert.False(sessionOperations.TimeSeriesByDocId.TryGetValue(documentId, out cache));
+                    Assert.Equal(0, sessionOperations.TimeSeriesByDocId.Count);
+
                 }
             }
         }
