@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Queries.Results
             else
             {
                 rangeSpec = new RangeGroup();
-                rangeSpec.InitializeFullRange(min, max);
+                rangeSpec.InitializeFullRange(_min, _max);
             }
 
             var aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
