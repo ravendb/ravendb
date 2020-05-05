@@ -2362,8 +2362,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     var expectedFrom = baseline.Add(offset);
                     var expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -2375,8 +2375,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     expectedFrom = baseline.AddHours(1).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -2388,8 +2388,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     expectedFrom = baseline.AddHours(2).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -2401,8 +2401,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     expectedFrom = baseline.AddMonths(1).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
                 }
@@ -2480,8 +2480,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     var expectedFrom = baseline.Add(offset);
                     var expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -2493,8 +2493,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     expectedFrom = baseline.AddMonths(1).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -2508,8 +2508,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     expectedFrom = baseline.AddMonths(6).AddHours(-3).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
                 }

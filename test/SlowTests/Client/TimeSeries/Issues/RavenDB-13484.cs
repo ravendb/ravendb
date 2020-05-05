@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
@@ -68,8 +69,8 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     var tsStats = (IMetadataDictionary)tsRevisions["temperature"];
                     Assert.Equal(2L, tsStats["Count"]);
-                    Assert.Equal(baseline.AddMinutes(10).GetDefaultRavenFormat(), tsStats["Start"]);
-                    Assert.Equal(baseline.AddMinutes(20).GetDefaultRavenFormat(), tsStats["End"]);
+                    Assert.Equal(baseline.AddMinutes(10), DateTime.Parse((string)tsStats["Start"]), RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(20), DateTime.Parse((string)tsStats["End"]), RavenTestHelper.DateTimeComparer.Instance);
 
                     Assert.Equal("HR", companiesRevisions[1].Name);
                     Assert.False(metadatas[1].TryGetValue(Constants.Documents.Metadata.RevisionTimeSeries, out _));
@@ -109,22 +110,22 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     var tsStats = (IMetadataDictionary)tsRevisions["temperature"];
                     Assert.Equal(4L, tsStats["Count"]);
-                    Assert.Equal(baseline.AddMinutes(10).GetDefaultRavenFormat(), tsStats["Start"]);
-                    Assert.Equal(baseline.AddMonths(6).GetDefaultRavenFormat(), tsStats["End"]);
+                    Assert.Equal(baseline.AddMinutes(10), DateTime.Parse((string)tsStats["Start"]), RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMonths(6), DateTime.Parse((string)tsStats["End"]), RavenTestHelper.DateTimeComparer.Instance);
 
                     tsStats = (IMetadataDictionary)tsRevisions["heartrate"];
                     Assert.Equal(2L, tsStats["Count"]);
-                    Assert.Equal(baseline.AddHours(1).GetDefaultRavenFormat(), tsStats["Start"]);
-                    Assert.Equal(baseline.AddHours(2).GetDefaultRavenFormat(), tsStats["End"]);
-
+                    Assert.Equal(baseline.AddHours(1), DateTime.Parse((string)tsStats["Start"]), RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddHours(2), DateTime.Parse((string)tsStats["End"]), RavenTestHelper.DateTimeComparer.Instance);
+                   
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
                     tsRevisions = (IMetadataDictionary)metadatas[1][Constants.Documents.Metadata.RevisionTimeSeries];
                     Assert.Equal(1, tsRevisions.Count);
                     tsStats = (IMetadataDictionary)tsRevisions["temperature"];
 
                     Assert.Equal(3L, tsStats["Count"]);
-                    Assert.Equal(baseline.AddMinutes(10).GetDefaultRavenFormat(), tsStats["Start"]);
-                    Assert.Equal(baseline.AddMinutes(30).GetDefaultRavenFormat(), tsStats["End"]);
+                    Assert.Equal(baseline.AddMinutes(10), DateTime.Parse((string)tsStats["Start"]), RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(30), DateTime.Parse((string)tsStats["End"]), RavenTestHelper.DateTimeComparer.Instance);
 
                     Assert.Equal("HR", companiesRevisions[2].Name);
                     tsRevisions = (IMetadataDictionary)metadatas[2][Constants.Documents.Metadata.RevisionTimeSeries];
@@ -132,8 +133,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     tsStats = (IMetadataDictionary)tsRevisions["temperature"];
 
                     Assert.Equal(2L, tsStats["Count"]);
-                    Assert.Equal(baseline.AddMinutes(10).GetDefaultRavenFormat(), tsStats["Start"]);
-                    Assert.Equal(baseline.AddMinutes(20).GetDefaultRavenFormat(), tsStats["End"]);
+                    Assert.Equal(baseline.AddMinutes(10), DateTime.Parse((string)tsStats["Start"]), RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(20), DateTime.Parse((string)tsStats["End"]), RavenTestHelper.DateTimeComparer.Instance);
 
                     Assert.Equal("HR", companiesRevisions[3].Name);
                     Assert.False(metadatas[3].TryGetValue(Constants.Documents.Metadata.RevisionCounters, out _));

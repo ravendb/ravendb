@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
@@ -86,7 +87,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -135,7 +136,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -180,7 +181,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -221,7 +222,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             const string timeseries = "Heartrate";
             const string documentId = "users/ayende";
 
-            var baseline = DateTime.Today;
+            var baseline = DateTime.UtcNow.EnsureMilliseconds();
             var toAppend = Enumerable.Range(0, 100)
                 .Select(i => new Tuple<DateTime, double[], string>(baseline.AddMilliseconds(i), values, tags[i % tags.Length]))
                 .ToArray();
@@ -282,7 +283,7 @@ for(i = 0; i < args.toAppend.length; i++){
             const string documentId = "users/1";
             var values = new[] {59.3d, 59.2d, 70.5555d, 72.53399393d, 71.543434d, 70.938457d, 72.53399393d, 60.1d, 59.9d, 0d};
             
-            var baseline = DateTime.Today;
+            var baseline = DateTime.UtcNow.EnsureMilliseconds();
             var toRemoveFrom = baseline.AddMinutes(fromIndex);
             var toRemoveTo = baseline.AddMinutes(toIndex);
             var expectedValues = new List<(DateTime, double)>();
@@ -366,7 +367,7 @@ for(i = 0; i < args.toAppend.length; i++){
             const string documentId = "users/1";
             var values = new[] {59.3d, 59.2d, 70.5555d, 72.53399393d, 71.543434d, 70.938457d, 72.53399393d, 60.1d, 59.9d, 0d};
             
-            var baseline = DateTime.Today;
+            var baseline = DateTime.UtcNow.EnsureMilliseconds();
             var toRemoveFrom = baseline.AddMinutes(fromIndex);
             var toRemoveTo = baseline.AddMinutes(toIndex);
             var expectedValues = new List<(DateTime, double)>();
@@ -552,7 +553,7 @@ update
             const string timeseries = "Heartrate";
             const string documentId = "users/ayende";
 
-            var baseline = DateTime.Today;
+            var baseline = DateTime.UtcNow.EnsureMilliseconds();
             var toAppend = Enumerable.Range(0, 100)
                 .Select(i => new Tuple<DateTime, double[], string>(baseline.AddMilliseconds(i), values, tags[i % tags.Length]))
                 .ToArray();

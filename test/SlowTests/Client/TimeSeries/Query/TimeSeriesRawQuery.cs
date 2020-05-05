@@ -73,9 +73,9 @@ namespace SlowTests.Client.TimeSeries.Query
 
         private class Event
         {
-            public DateTime Start { get; set; }
+            public DateTimeOffset Start { get; set; }
 
-            public DateTime End { get; set; }
+            public DateTimeOffset End { get; set; }
 
             public string Description { get; set; }
 
@@ -190,8 +190,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(69, val.Last[0]);
                     Assert.Equal(79, val.Max[0]);
 
-                    Assert.Equal(baseline.AddMinutes(60), val.From);
-                    Assert.Equal(baseline.AddMinutes(120), val.To);
+                    Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -245,8 +245,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(69, val.Last[0]);
                     Assert.Equal(79, val.Max[0]);
 
-                    Assert.Equal(baseline.AddMinutes(60), val.From);
-                    Assert.Equal(baseline.AddMinutes(120), val.To);
+                    Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -300,8 +300,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(69, val.Last[0]);
                     Assert.Equal(79, val.Max[0]);
 
-                    Assert.Equal(baseline.AddMinutes(60), val.From);
-                    Assert.Equal(baseline.AddMinutes(120), val.To);
+                    Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -359,8 +359,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(69, val.Last[0]);
                     Assert.Equal(79, val.Max[0]);
 
-                    Assert.Equal(baseline.AddMinutes(60), val.From);
-                    Assert.Equal(baseline.AddMinutes(120), val.To);
+                    Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -436,8 +436,8 @@ select out(p) as HeartRate, p.Name
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -526,8 +526,8 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                         var bloodPressure = agg.BloodPressure;
 
@@ -544,8 +544,8 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 
                         Assert.Equal(expectedAvg, val.Average[0]);
 
-                        Assert.Equal(baseline2.AddMinutes(60), val.From);
-                        Assert.Equal(baseline2.AddMinutes(120), val.To);
+                        Assert.Equal(baseline2.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline2.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -622,8 +622,8 @@ select out(Company)
                         double expectedAvg = (1259.51d + 1279.62d + 1269.73d) / 3.0;
                         Assert.Equal(expectedAvg, val.Average[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
             }
@@ -685,8 +685,8 @@ select timeseries(
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
             }
@@ -749,8 +749,8 @@ select timeseries(
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
             }
@@ -817,8 +817,8 @@ select timeseries(
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
             }
@@ -888,8 +888,8 @@ as HeartRate
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
             }
@@ -962,8 +962,8 @@ as HeartRate, Name
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -1048,8 +1048,8 @@ as BloodPressure
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                         var bloodPressure = agg.BloodPressure;
 
@@ -1066,8 +1066,8 @@ as BloodPressure
 
                         Assert.Equal(expectedAvg, val.Average[0]);
 
-                        Assert.Equal(baseline2.AddMinutes(60), val.From);
-                        Assert.Equal(baseline2.AddMinutes(120), val.To);
+                        Assert.Equal(baseline2.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline2.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -1139,8 +1139,8 @@ as HeartRate
                         Assert.Equal(59, val.Min[0]);
                         Assert.Equal(79, val.Max[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
             }
@@ -1220,8 +1220,8 @@ as Stocks
                         double expectedAvg = (1259.51d + 1279.62d + 1269.73d) / 3.0;
                         Assert.Equal(expectedAvg, val.Average[0]);
 
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                        Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
             }
@@ -1935,21 +1935,24 @@ select heart_rate(p)
                     session.SaveChanges();
                 }
 
+                var offset = TimeZoneInfo.Local.BaseUtcOffset.ToString(@"hh\:mm");
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>($@"
 declare timeseries heart_rate(doc) 
-{
+{{
     from doc.HeartRate between $start and $end
     group by '1 day'
     select min(), max(), avg(), first(), last()
-}
+    offset '{offset}'
+}}
 from People as p 
 where p.Age > 49
 select heart_rate(p)
 ")
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddMonths(3));
+
 
                     var result = query.ToList();
 
@@ -1995,8 +1998,8 @@ select heart_rate(p)
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, baseline.Day, 0, 0, 0);
                         var expectedTo = expectedFrom.AddDays(1);
 
-                        Assert.Equal(expectedFrom, val.From);
-                        Assert.Equal(expectedTo, val.To);
+                        Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[1];
 
@@ -2030,8 +2033,8 @@ select heart_rate(p)
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddDays(1);
 
-                        Assert.Equal(expectedFrom, val.From);
-                        Assert.Equal(expectedTo, val.To);
+                        Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[2];
 
@@ -2072,8 +2075,8 @@ select heart_rate(p)
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddDays(1);
 
-                        Assert.Equal(expectedFrom, val.From);
-                        Assert.Equal(expectedTo, val.To);
+                        Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -4804,8 +4807,8 @@ select out(doc, e)
                     var expectedFrom = baseline.AddMonths(1).AddHours(1);
                     var expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, val.From);
-                    Assert.Equal(expectedTo, val.To);
+                    Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                     val = agg.Results[1];
 
@@ -4816,8 +4819,8 @@ select out(doc, e)
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, val.From);
-                    Assert.Equal(expectedTo, val.To);
+                    Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                     agg = result[1];
 
@@ -4834,8 +4837,8 @@ select out(doc, e)
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, val.From);
-                    Assert.Equal(expectedTo, val.To);
+                    Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -4922,8 +4925,8 @@ select out(doc)
                     var expectedFrom = baseline.AddMonths(1).AddHours(1);
                     var expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, val.From);
-                    Assert.Equal(expectedTo, val.To);
+                    Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                     val = agg.Results[1];
 
@@ -4934,8 +4937,8 @@ select out(doc)
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, val.From);
-                    Assert.Equal(expectedTo, val.To);
+                    Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
 
                     agg = result[1];
 
@@ -4952,8 +4955,8 @@ select out(doc)
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, val.From);
-                    Assert.Equal(expectedTo, val.To);
+                    Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -5343,8 +5346,8 @@ select out(p)
                     var expectedFrom = baseline.Add(offset);
                     var expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -5356,8 +5359,8 @@ select out(p)
                     expectedFrom = baseline.AddHours(1).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -5369,8 +5372,8 @@ select out(p)
                     expectedFrom = baseline.AddHours(2).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -5382,8 +5385,8 @@ select out(p)
                     expectedFrom = baseline.AddMonths(1).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
                 }
@@ -5464,8 +5467,8 @@ select out(p)
                     var expectedFrom = baseline.Add(offset);
                     var expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -5477,8 +5480,8 @@ select out(p)
                     expectedFrom = baseline.AddMonths(1).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
 
@@ -5492,8 +5495,8 @@ select out(p)
                     expectedFrom = baseline.AddMonths(6).AddHours(-3).Add(offset);
                     expectedTo = expectedFrom.AddHours(1);
 
-                    Assert.Equal(expectedFrom, rangeAggregation.From);
-                    Assert.Equal(expectedTo, rangeAggregation.To);
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
                     Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
                 }

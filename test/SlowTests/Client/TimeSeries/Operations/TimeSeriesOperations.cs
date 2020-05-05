@@ -747,8 +747,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var range = timesSeriesDetails.Values["Heartrate"][0];
 
-                Assert.Equal(baseline.AddMinutes(5), range.From);
-                Assert.Equal(baseline.AddMinutes(10), range.To);
+                Assert.Equal(baseline.AddMinutes(5), range.From, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(10), range.To, RavenTestHelper.DateTimeComparer.Instance);
 
                 Assert.Equal(31, range.Entries.Length);
                 Assert.Equal(baseline.AddMinutes(5), range.Entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -756,8 +756,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 range = timesSeriesDetails.Values["Heartrate"][1];
 
-                Assert.Equal(baseline.AddMinutes(15), range.From);
-                Assert.Equal(baseline.AddMinutes(30), range.To);
+                Assert.Equal(baseline.AddMinutes(15), range.From, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(30), range.To, RavenTestHelper.DateTimeComparer.Instance);
 
                 Assert.Equal(91, range.Entries.Length);
                 Assert.Equal(baseline.AddMinutes(15), range.Entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -765,8 +765,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 range = timesSeriesDetails.Values["Heartrate"][2];
 
-                Assert.Equal(baseline.AddMinutes(40), range.From);
-                Assert.Equal(baseline.AddMinutes(60), range.To);
+                Assert.Equal(baseline.AddMinutes(40), range.From, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(60), range.To, RavenTestHelper.DateTimeComparer.Instance);
 
                 Assert.Equal(121, range.Entries.Length);
                 Assert.Equal(baseline.AddMinutes(40), range.Entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -892,8 +892,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var range = timesSeriesDetails.Values["Heartrate"][0];
 
-                Assert.Equal(baseline, range.From);
-                Assert.Equal(baseline.AddMinutes(15), range.To);
+                Assert.Equal(baseline, range.From, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(15), range.To, RavenTestHelper.DateTimeComparer.Instance);
 
                 Assert.Equal(2, range.Entries.Length);
                 Assert.Equal(baseline, range.Entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -903,8 +903,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 range = timesSeriesDetails.Values["Heartrate"][1];
 
-                Assert.Equal(baseline.AddMinutes(30), range.From);
-                Assert.Equal(baseline.AddMinutes(45), range.To);
+                Assert.Equal(baseline.AddMinutes(30), range.From, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(45), range.To, RavenTestHelper.DateTimeComparer.Instance);
 
                 Assert.Equal(2, range.Entries.Length);
                 Assert.Equal(baseline.AddMinutes(30), range.Entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -916,8 +916,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 range = timesSeriesDetails.Values["BloodPressure"][0];
 
-                Assert.Equal(baseline, range.From);
-                Assert.Equal(baseline.AddMinutes(30), range.To);
+                Assert.Equal(baseline, range.From, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(30), range.To, RavenTestHelper.DateTimeComparer.Instance);
 
                 Assert.Equal(4, range.Entries.Length);
                 Assert.Equal(baseline, range.Entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -927,8 +927,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 range = timesSeriesDetails.Values["BloodPressure"][1];
 
-                Assert.Equal(baseline.AddMinutes(60), range.From);
-                Assert.Equal(baseline.AddMinutes(90), range.To);
+                Assert.Equal(baseline.AddMinutes(60), range.From, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(90), range.To, RavenTestHelper.DateTimeComparer.Instance);
 
                 Assert.Equal(4, range.Entries.Length);
                 Assert.Equal(baseline.AddMinutes(60), range.Entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -940,8 +940,8 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 range = timesSeriesDetails.Values["Temperature"][0];
 
-                Assert.Equal(baseline, range.From);
-                Assert.Equal(baseline.AddDays(1), range.To);
+                Assert.Equal(baseline, range.From, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddDays(1), range.To, RavenTestHelper.DateTimeComparer.Instance);
 
                 Assert.Equal(11, range.Entries.Length);
                 Assert.Equal(baseline, range.Entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
