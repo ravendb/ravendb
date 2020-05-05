@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             switch (parentMethod)
             {
                 case "Select":
+                case "SelectMany":
                 case "Enumerable.ToDictionary":
                     return SyntaxFactory.ParseExpression($"{node}.Cast<dynamic>()");
             }
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (member != null)
                 return member.Name.Identifier.Text;
 
-            var argument = currentInvocation.Parent as ArgumentSyntax;
+            var argument = GetArgument(currentInvocation);
             if (argument == null)
                 return null;
 
@@ -63,7 +64,19 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 return null;
 
             member = invocation.Expression as MemberAccessExpressionSyntax;
-            return member?.ToString();
+            if (member == null)
+                return null;
+
+            return member.Name.Identifier.Text;
+
+            static ArgumentSyntax GetArgument(InvocationExpressionSyntax node)
+            {
+                if (node.Parent is ArgumentSyntax a)
+                    return a;
+
+                var e = node.Parent as SimpleLambdaExpressionSyntax;
+                return e?.Parent as ArgumentSyntax;
+            }
         }
     }
 }
