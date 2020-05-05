@@ -287,6 +287,7 @@ namespace Raven.Server.Documents.Handlers
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
             public long TotalSize;
+            private readonly HashSet<string> _documentsToUpdate = new HashSet<string>();
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
@@ -362,9 +363,16 @@ namespace Raven.Server.Documents.Handlers
                                     cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
                             }
 
+                            _documentsToUpdate.Add(cmd.Id);
+
                             break;
                         }
                     }
+                }
+
+                foreach (var id in _documentsToUpdate)
+                {
+                    Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, id);
                 }
 
                 if (Logger.IsInfoEnabled)
