@@ -875,7 +875,7 @@ namespace SlowTests.Smuggler
                         var count = 0;
                         foreach (var val in values)
                         {
-                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp);
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(1, val.Values.Length);
                             Assert.Equal(count++ % 60, val.Values[0]);
                         }
@@ -888,7 +888,7 @@ namespace SlowTests.Smuggler
                         count = 0;
                         foreach (var val in values)
                         {
-                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp);
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(2, val.Values.Length);
                             Assert.Equal(count % 60, val.Values[0]);
                             Assert.Equal(count++ % 60 + 5, val.Values[1]);
@@ -901,7 +901,7 @@ namespace SlowTests.Smuggler
                         count = 0;
                         foreach (var val in values)
                         {
-                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp);
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(3, val.Values.Length);
                             Assert.Equal(count % 60, val.Values[0]);
                             Assert.Equal(count % 60 + 5, val.Values[1]);
@@ -986,7 +986,7 @@ namespace SlowTests.Smuggler
                             for (var i = 0; i < 360; i++)
                             {
                                 var val = values[j * 360 + i];
-                                Assert.Equal(baseline.AddMonths(j * 3).AddSeconds(i * 10), val.Timestamp);
+                                Assert.Equal(baseline.AddMonths(j * 3).AddSeconds(i * 10), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                                 Assert.Equal(i % 60, val.Values[0]);
                             }
                         }
@@ -1286,7 +1286,7 @@ namespace SlowTests.Smuggler
                         Assert.Equal(1, values.Count);
                         Assert.Equal(1, values[0].Values.Length);
                         Assert.Equal(72d, values[0].Values[0]);
-                        Assert.Equal(baseline, values[0].Timestamp);
+                        Assert.Equal(baseline, values[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal("watches/1", values[0].Tag);
 
                         order = session.Load<Order>("orders/2");
@@ -1299,7 +1299,7 @@ namespace SlowTests.Smuggler
                         Assert.Equal(2, values[0].Values.Length);
                         Assert.Equal(70d, values[0].Values[0]);
                         Assert.Equal(67d, values[0].Values[1]);
-                        Assert.Equal(baseline, values[0].Timestamp);
+                        Assert.Equal(baseline, values[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal("watches/2", values[0].Tag);
 
                     }

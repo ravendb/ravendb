@@ -160,11 +160,6 @@ namespace FastTests
             Assert.Empty(forMonitor);
         }
 
-        public static void EqualDateTime(DateTime expected, DateTime actual)
-        {
-            Assert.Equal(expected, actual, DateTimeComparer.Instance);
-        }
-
         private static string ConvertRespectingNewLines(string toConvert)
         {
             if (string.IsNullOrEmpty(toConvert))
@@ -173,22 +168,22 @@ namespace FastTests
             var regex = new Regex("\r*\n");
             return regex.Replace(toConvert, Environment.NewLine);
         }
-    }
 
-    public class DateTimeComparer : IEqualityComparer<DateTime>
-    {
-        public static readonly DateTimeComparer Instance = new DateTimeComparer();
-        public bool Equals(DateTime x, DateTime y)
+        public class DateTimeComparer : IEqualityComparer<DateTime>
         {
-            if (x.Kind == y.Kind)
-                return x == y;
+            public static readonly DateTimeComparer Instance = new DateTimeComparer();
+            public bool Equals(DateTime x, DateTime y)
+            {
+                if (x.Kind == y.Kind)
+                    return x == y;
 
-            return x.ToUniversalTime() == y.ToUniversalTime();
-        }
+                return x.ToUniversalTime() == y.ToUniversalTime();
+            }
 
-        public int GetHashCode(DateTime obj)
-        {
-            return obj.GetHashCode();
+            public int GetHashCode(DateTime obj)
+            {
+                return obj.GetHashCode();
+            }
         }
     }
 }

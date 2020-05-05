@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                     Assert.Equal(errors[i].Error, recoveredErrors[i].Error);
                     Assert.Equal(errors[i].Action, recoveredErrors[i].Action);
                     Assert.Equal(errors[i].Document, recoveredErrors[i].Document);
-                    Assert.Equal(errors[i].Timestamp, recoveredErrors[i].Timestamp);
+                    Assert.Equal(errors[i].Timestamp, recoveredErrors[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }

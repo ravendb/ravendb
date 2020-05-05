@@ -115,7 +115,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                         .Single();
                     
                     Assert.Equal(tag, val.Tag);
-                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     var actual = values is double
                         ? val.Value
@@ -164,7 +164,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                         .Single();
                     Assert.Equal(values, val.Values);
                     Assert.Equal(tag, val.Tag);
-                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -207,7 +207,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                             .GetAsync(DateTime.MinValue, DateTime.MaxValue))
                         .Single();
                     Assert.Equal(values, val.Values);
-                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Null(val.Tag);
                 }
             }
@@ -259,7 +259,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     Assert.Equal(toAppend.Length, timeSeriesEntries.Length);
                     for (int i = 0; i < toAppend.Length; i++)
                     {
-                        Assert.Equal(toAppend[i].Item1, timeSeriesEntries[i].Timestamp);
+                        Assert.Equal(toAppend[i].Item1, timeSeriesEntries[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(toAppend[i].Item2, timeSeriesEntries[i].Values);
                         Assert.Equal(toAppend[i].Item3, timeSeriesEntries[i].Tag);
                     }
@@ -330,7 +330,7 @@ for(i = 0; i < args.toAppend.length; i++){
                         if (expected.Item1 >= toRemoveFrom || expected.Item1 <= toRemoveTo) 
                             continue;
                         
-                        Assert.Equal(expected.Item1, entries[0].Timestamp);
+                        Assert.Equal(expected.Item1, entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(expected.Item2, entries[0].Values[0]);
                         Assert.Equal(tag, entries[0].Tag);
                     }
@@ -412,7 +412,7 @@ for(i = 0; i < args.toAppend.length; i++){
                         if (expected.Item1 < toRemoveFrom || expected.Item1 > toRemoveTo) 
                             continue;
                         
-                        Assert.Equal(expected.Item1, entries[entriesIndex].Timestamp);
+                        Assert.Equal(expected.Item1, entries[entriesIndex].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(expected.Item2, entries[entriesIndex].Values[0]);
                         Assert.Equal(tag, entries[entriesIndex].Tag);
                         entriesIndex++;
@@ -535,7 +535,7 @@ update
                             if (expected.Timestamp >= deleteFrom || expected.Timestamp <= deleteTo) 
                                 continue;
                         
-                            Assert.Equal(expected.Timestamp, actual.Timestamp);
+                            Assert.Equal(expected.Timestamp, actual.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(expected.Values, actual.Values);
                             Assert.Equal(expected.Tag, actual.Tag);
                         }
@@ -590,7 +590,7 @@ for(var i = 0; i < args.toAppend.length; i++){
                     Assert.Equal(toAppend.Length, timeSeriesEntries.Length);
                     for (int i = 0; i < toAppend.Length; i++)
                     {
-                        Assert.Equal(toAppend[i].Item1, timeSeriesEntries[i].Timestamp);
+                        Assert.Equal(toAppend[i].Item1, timeSeriesEntries[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(toAppend[i].Item2, timeSeriesEntries[i].Values);
                         Assert.Equal(toAppend[i].Item3, timeSeriesEntries[i].Tag);
                     }

@@ -1546,42 +1546,42 @@ select out(doc)
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(59, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(61), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(61), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[1];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(79, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(62), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[2];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(69, val.Values[0]);
                         Assert.Equal("watches/apple", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(63), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[3];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(159, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(61), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(61), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         
                         val = agg.Results[4];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(179, val.Values[0]);
                         Assert.Equal("watches/apple", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[5];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(169, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -1651,7 +1651,7 @@ select out(doc)
                         Assert.Equal(59, val.Values[0]);
                         Assert.Equal(159, val.Values[1]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(61), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(61), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[1];
 
@@ -1659,14 +1659,14 @@ select out(doc)
                         Assert.Equal(79, val.Values[0]);
                         Assert.Equal(179, val.Values[1]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(62), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[2];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(69, val.Values[0]);
                         Assert.Equal("watches/apple", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(63), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[3];
 
@@ -1674,14 +1674,14 @@ select out(doc)
                         Assert.Equal(159, val.Values[0]);
                         Assert.Equal(259, val.Values[1]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(61), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(61), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[4];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(179, val.Values[0]);
                         Assert.Equal("watches/apple", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[5];
 
@@ -1689,7 +1689,7 @@ select out(doc)
                         Assert.Equal(169, val.Values[0]);
                         Assert.Equal(269, val.Values[1]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -2141,28 +2141,28 @@ select out(doc)
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(59, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(61), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(61), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[1];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(69, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(63), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[2];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(179, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[3];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(169, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -2230,28 +2230,28 @@ select out(doc)
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(79, val.Values[0]);
                         Assert.Equal("watches/apple", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(62), val.Timestamp);
+                        Assert.Equal(baseline.AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[1];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(159, val.Values[0]);
                         Assert.Equal("watches/apple", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(61), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(61), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[2];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(179, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[3];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(169, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -2314,14 +2314,14 @@ select timeseries(from doc.HeartRate where Tag == 'watches/fitbit' and Values[0]
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(179, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[1];
 
                         Assert.Equal(1, val.Values.Length);
                         Assert.Equal(169, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     }
                 }
@@ -5556,32 +5556,32 @@ select out(p)
                     Assert.Equal(12, result.Count);
 
                     var baselineWithOffset = baseline.Add(TimeSpan.FromHours(2));
-                    Assert.Equal(baselineWithOffset.AddMinutes(1), result.Results[0].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddMinutes(1), result.Results[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[0].Timestamp.Kind);
-                    Assert.Equal(baselineWithOffset.AddMinutes(2), result.Results[1].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddMinutes(2), result.Results[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[1].Timestamp.Kind);
-                    Assert.Equal(baselineWithOffset.AddMinutes(3), result.Results[2].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddMinutes(3), result.Results[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[2].Timestamp.Kind);
 
-                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(1), result.Results[3].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(1), result.Results[3].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[3].Timestamp.Kind);
-                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(2), result.Results[4].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(2), result.Results[4].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[4].Timestamp.Kind);
-                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(3), result.Results[5].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(3), result.Results[5].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[5].Timestamp.Kind);
 
-                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(1), result.Results[6].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(1), result.Results[6].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[6].Timestamp.Kind);
-                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(2), result.Results[7].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(2), result.Results[7].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[7].Timestamp.Kind);
-                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(3), result.Results[8].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(3), result.Results[8].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[8].Timestamp.Kind);
 
-                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(1), result.Results[9].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(1), result.Results[9].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[9].Timestamp.Kind);
-                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(2), result.Results[10].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(2), result.Results[10].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[10].Timestamp.Kind);
-                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(3), result.Results[11].Timestamp);
+                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(3), result.Results[11].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[11].Timestamp.Kind);
 
                 }

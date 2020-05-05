@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
@@ -60,7 +61,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Null(value.Tag);
-                Assert.Equal(baseline.AddSeconds(1), value.Timestamp);
+                Assert.Equal(baseline.AddSeconds(1), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
             }
         }
@@ -98,7 +99,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Null(value.Tag);
-                Assert.Equal(baseline.AddSeconds(1), value.Timestamp);
+                Assert.Equal(baseline.AddSeconds(1), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
             }
         }
 
@@ -133,7 +134,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 Assert.Equal(59d, value.Values[0]);
                 Assert.Equal("watches/fitbit", value.Tag);
-                Assert.Equal(baseline.AddSeconds(1), value.Timestamp);
+                Assert.Equal(baseline.AddSeconds(1), value.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
             }
         }
     }
