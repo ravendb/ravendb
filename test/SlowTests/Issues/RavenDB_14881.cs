@@ -1,20 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.ServerWide;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
-using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14881 : RavenTestBase
     {
         public RavenDB_14881(ITestOutputHelper output)
-            :base(output)
+            : base(output)
         {
         }
 
@@ -22,7 +20,14 @@ namespace SlowTests.Issues
         public async void can_get_detailed_collection_statistics()
         {
             string strCollectionName = "Companies";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration
+                {
+                    Collections = null,
+                    CompressRevisions = false
+                }
+            }))
             {
                 // configure revisions for the collection
                 var configuration = new RevisionsConfiguration
@@ -77,7 +82,7 @@ namespace SlowTests.Issues
                 // query the detailed collection statistics again, to check if the physical size changed after the revisions were created
                 var detailedCollectionStats_afterDataChanged = await store.Maintenance.SendAsync(new GetDetailedCollectionStatisticsOperation());
                 Assert.Equal(20, detailedCollectionStats_afterDataChanged.Collections[strCollectionName].CountOfDocuments);
-                
+
                 long sizeInBytesWithRevisions = detailedCollectionStats_afterDataChanged.Collections[strCollectionName].Size.SizeInBytes;
                 Assert.True(sizeInBytesWithRevisions > sizeInBytesWithoutRevisions);
             }
