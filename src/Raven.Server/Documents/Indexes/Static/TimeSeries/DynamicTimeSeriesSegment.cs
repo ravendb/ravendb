@@ -13,6 +13,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private TimeSeriesSegmentEntry _segmentEntry;
         private DynamicArray _entries;
+        private DynamicArray _min;
+        private DynamicArray _max;
+        private DynamicArray _sum;
+        private TimeSeriesSegmentSummary? _summary;
 
         public override dynamic GetId()
         {
@@ -29,8 +33,20 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             _segmentEntry = (TimeSeriesSegmentEntry)item;
             _entries = null;
+            _summary = null;
+            _min = null;
+            _max = null;
+            _sum = null;
             return true;
         }
+
+        public DynamicArray Min => _min ??= new DynamicArray(Summary.Min);
+
+        public DynamicArray Max => _max ??= new DynamicArray(Summary.Max);
+
+        public DynamicArray Sum => _sum ??= new DynamicArray(Summary.Sum);
+
+        public int Count => Summary.Count;
 
         public DynamicArray Entries
         {
@@ -72,6 +88,8 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             result = DynamicNullObject.Null;
             return true;
         }
+
+        private TimeSeriesSegmentSummary Summary => _summary ?? (_summary = _segmentEntry.Segment.GetSummary()).Value;
 
         private class DynamicTimeSeriesEnumerable : IEnumerable<DynamicTimeSeriesEntry>
         {

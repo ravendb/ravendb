@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
-using System.Text;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -29,6 +28,7 @@ namespace Raven.Server.Documents.TimeSeries
         private SegmentHeader* Header => (SegmentHeader*)_buffer;
 
         public byte* Ptr => _buffer;
+
         public StatefulTimestampValueSpan SegmentValues =>
             new StatefulTimestampValueSpan(
                 (StatefulTimestampValue*)(_buffer + sizeof(SegmentHeader)),
@@ -57,7 +57,6 @@ namespace Raven.Server.Documents.TimeSeries
             return bitsHeader.NumberOfBytes + GetDataStart(Header);
         }
 
-
         public TimeSeriesValuesSegment(byte* buffer, int capacity)
         {
             _buffer = buffer;
@@ -80,6 +79,23 @@ namespace Raven.Server.Documents.TimeSeries
             CopyTo(memory.Address);
             segment = new TimeSeriesValuesSegment(memory.Address, _capacity);
             return memory;
+        }
+
+        public TimeSeriesSegmentSummary GetSummary()
+        {
+            if (NumberOfEntries == 0)
+                return default;
+
+            var result = new TimeSeriesSegmentSummary(NumberOfValues, SegmentValues.Span[0].Count);
+
+            for (var i = 0; i < NumberOfValues; i++)
+            {
+                result.Min[i] = SegmentValues.Span[i].Min;
+                result.Max[i] = SegmentValues.Span[i].Max;
+                result.Sum[i] = SegmentValues.Span[i].Sum;
+            }
+
+            return result;
         }
 
         private void InvalidCapacity()
@@ -123,7 +139,6 @@ namespace Raven.Server.Documents.TimeSeries
                 throw new InvalidOperationException("Schrödinger's cat must be either 'Dead' or 'Alive'.");
         }
 
-
         public bool Append(ByteStringContext allocator, int deltaFromStart, Span<double> vals, Span<byte> tag, ulong status)
         {
             if (vals.Length != Header->NumberOfValues)
@@ -161,7 +176,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var prevs = new Span<StatefulTimestampValue>((tempBuffer.Ptr + maximumSize) + sizeof(SegmentHeader), tempHeader->NumberOfValues);
                 AddTimestamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
-                if (tempHeader->NumberOfEntries == 0 && 
+                if (tempHeader->NumberOfEntries == 0 &&
                     status == Live)
                 {
                     for (int i = 0; i < vals.Length; i++)
@@ -237,10 +252,10 @@ namespace Raven.Server.Documents.TimeSeries
 
         /*
          * Tags are stored in the following manner
-         * 
+         *
          * [raw bytes tag1], [raw bytes tag 2], etc
          * [len tag1], [len tag2], [total number of tags] : byte
-         * 
+         *
          */
 
         public int FindPreviousTag(Span<byte> tag, SegmentHeader* tempHeader)
@@ -362,7 +377,6 @@ namespace Raven.Server.Documents.TimeSeries
                 prev.Min = double.IsNaN(prev.Min)
                     ? dblVal
                     : Math.Min(prev.Min, dblVal);
-
             }
 
             if (xorWithPrevious == 0)
@@ -409,7 +423,6 @@ namespace Raven.Server.Documents.TimeSeries
 
         public Enumerator GetEnumerator(ByteStringContext allocator) => new Enumerator(this, allocator);
 
-
         public static LazyStringValue SetTimestampTag(JsonOperationContext context, TagPointer tagPointer)
         {
             if (tagPointer.Pointer == null)
@@ -447,9 +460,9 @@ namespace Raven.Server.Documents.TimeSeries
 
                     yield return new TimeSeriesStorage.Reader.SingleResult
                     {
-                        Timestamp = cur, 
-                        Tag = tag, 
-                        Values = new Memory<double>(values, 0, end), 
+                        Timestamp = cur,
+                        Tag = tag,
+                        Values = new Memory<double>(values, 0, end),
                         Status = status
                     };
                 }
@@ -701,7 +714,6 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-
         private void ThrowInvalidNumberOfValues(Span<double> vals)
         {
             throw new ArgumentOutOfRangeException("Expected to have " + Header->NumberOfValues + " values, but was provided with: " + vals.Length);
@@ -715,6 +727,25 @@ namespace Raven.Server.Documents.TimeSeries
         private static void ThrowValuesOutOfRange(int numberOfValues)
         {
             throw new ArgumentOutOfRangeException("TimeSeriesValuesSegment can handle up to 32 values, but had: " + numberOfValues);
+        }
+    }
+
+    public readonly struct TimeSeriesSegmentSummary
+    {
+        public readonly double[] Min;
+
+        public readonly double[] Max;
+
+        public readonly double[] Sum;
+
+        public readonly int Count;
+
+        public TimeSeriesSegmentSummary(int numberOfValues, int count)
+        {
+            Min = new double[numberOfValues];
+            Max = new double[numberOfValues];
+            Sum = new double[numberOfValues];
+            Count = count;
         }
     }
 }
