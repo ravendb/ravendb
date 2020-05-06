@@ -48,8 +48,13 @@ namespace SlowTests.Client.TimeSeries.Query
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -64,7 +69,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -128,8 +132,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -144,7 +153,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -210,8 +218,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -226,7 +239,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -287,8 +299,13 @@ select timeseries(
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -303,7 +320,6 @@ select timeseries(
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -366,8 +382,13 @@ select timeseries(
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -382,7 +403,6 @@ select timeseries(
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -449,8 +469,13 @@ select out(u)
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -465,7 +490,6 @@ select out(u)
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -527,8 +551,13 @@ select out(u)
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-3);
                 var total = TimeSpan.FromDays(3).TotalHours;
 
@@ -545,7 +574,6 @@ select out(u)
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -613,8 +641,13 @@ select out(u)
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -629,7 +662,7 @@ select out(u)
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -692,8 +725,13 @@ select out('Heartrate')
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -708,7 +746,6 @@ select out('Heartrate')
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -767,8 +804,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -783,7 +825,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -844,8 +885,13 @@ select out('Heartrate')
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -860,7 +906,6 @@ select out('Heartrate')
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -924,8 +969,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -940,7 +990,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -993,8 +1042,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -1009,7 +1063,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1071,8 +1124,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -1087,7 +1145,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1144,8 +1201,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -1160,7 +1222,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1258,8 +1319,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -1274,7 +1340,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1334,8 +1399,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -1350,7 +1420,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1418,8 +1487,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -1435,7 +1509,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1494,8 +1567,13 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -1511,7 +1589,6 @@ select out()
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
