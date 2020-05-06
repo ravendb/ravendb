@@ -102,9 +102,9 @@ namespace SlowTests.Issues
                         .Count();
 
                     var results = session.Query<TimeSeriesIndex.Result, TimeSeriesIndex>()
-                        .Count();
+                        .ToList();
 
-                    Assert.Equal(count, results);
+                    Assert.Equal(count, results.Count);
                 }
             }
         }
@@ -116,6 +116,10 @@ namespace SlowTests.Issues
                 public string Name { get; set; }
 
                 public double Value { get; set; }
+
+                public DateTime Start { get; set; }
+
+                public DateTime End { get; set; }
             }
 
             public TimeSeriesIndex()
@@ -125,7 +129,9 @@ namespace SlowTests.Issues
                                                       select new Result
                                                       {
                                                           Name = ts.Name,
-                                                          Value = entry.Value
+                                                          Value = entry.Value,
+                                                          Start = ts.Start,
+                                                          End = ts.End
                                                       });
 
                 AddMap<User>("Heartrate@By6Hours", segments => from ts in segments
@@ -133,7 +139,9 @@ namespace SlowTests.Issues
                                                                select new Result
                                                                {
                                                                    Name = ts.Name,
-                                                                   Value = entry.Value
+                                                                   Value = entry.Value,
+                                                                   Start = ts.Start,
+                                                                   End = ts.End
                                                                });
 
                 AddMap<User>("Heartrate@By1Day", segments => from ts in segments
@@ -141,7 +149,9 @@ namespace SlowTests.Issues
                                                              select new Result
                                                              {
                                                                  Name = ts.Name,
-                                                                 Value = entry.Value
+                                                                 Value = entry.Value,
+                                                                 Start = ts.Start,
+                                                                 End = ts.End
                                                              });
 
                 AddMap<User>("Heartrate@By30Minutes", segments => from ts in segments
@@ -149,7 +159,9 @@ namespace SlowTests.Issues
                                                                   select new Result
                                                                   {
                                                                       Name = ts.Name,
-                                                                      Value = entry.Value
+                                                                      Value = entry.Value,
+                                                                      Start = ts.Start,
+                                                                      End = ts.End
                                                                   });
 
                 AddMap<User>("Heartrate@By1Hour", segments => from ts in segments
@@ -157,7 +169,9 @@ namespace SlowTests.Issues
                                                               select new Result
                                                               {
                                                                   Name = ts.Name,
-                                                                  Value = entry.Value
+                                                                  Value = entry.Value,
+                                                                  Start = ts.Start,
+                                                                  End = ts.End
                                                               });
             }
         }

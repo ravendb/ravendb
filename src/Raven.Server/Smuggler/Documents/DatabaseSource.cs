@@ -475,7 +475,7 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             Name =  GetOriginalName(_context, ts.DocId, ts.Name),
                             DocId = ts.DocId,
-                            Baseline = ts.Baseline,
+                            Baseline = ts.Start,
                             ChangeVector = ts.ChangeVector,
                             Collection = ts.Collection,
                             SegmentSize = ts.SegmentSize,
@@ -494,7 +494,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Name = GetOriginalName(_context, ts.DocId, ts.Name),
                     DocId = ts.DocId,
-                    Baseline = ts.Baseline,
+                    Baseline = ts.Start,
                     ChangeVector = ts.ChangeVector,
                     Collection = ts.Collection,
                     SegmentSize = ts.SegmentSize,

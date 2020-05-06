@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (timeSeries == null)
                 return default;
 
-            return new TimeSeriesIndexItem(timeSeries.Key, timeSeries.DocId, timeSeries.Etag, timeSeries.Baseline, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
+            return new TimeSeriesIndexItem(timeSeries.Key, timeSeries.DocId, timeSeries.Etag, timeSeries.Start, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
