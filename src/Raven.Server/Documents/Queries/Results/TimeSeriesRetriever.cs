@@ -3,6 +3,7 @@ using System.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
+using System.Globalization;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
@@ -678,11 +679,11 @@ namespace Raven.Server.Documents.Queries.Results
                 if (args == null)
                     throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                         $"'{compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
-
+                
                 if (args.Length < declaredFunction.Parameters.Count)
                     throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'." +
                                                         $"Expected '{declaredFunction.Parameters.Count}' arguments, but got '{args.Length}'");
-
+                
                 var index = GetParameterIndex(declaredFunction, compound[0]);
                 if (index == 0)
                 {
@@ -694,7 +695,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (index == -1 || index == declaredFunction.Parameters.Count) // not found
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"'{compound[0]}' is unknown, and no matching argument was provided to time series function '{declaredFunction.Name}'.");
-
+                    
                     if (!(args[index] is Document document))
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[index].GetType()}'");
@@ -892,11 +893,25 @@ namespace Raven.Server.Documents.Queries.Results
 
         private static DateTime? ParseDateTime(string valueAsStr)
         {
-            if (DateTime.TryParse(valueAsStr, out var date) == false)
-                throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + valueAsStr);
-
-            return date.ToUniversalTime();
+            if (DateTime.TryParseExact(valueAsStr, SupportedDateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+                throw new ArgumentException($"Unable to parse timeseries from/to values. Got: {valueAsStr}{Environment.NewLine}" +
+                                            $"The supported time formats are:{Environment.NewLine}" +
+                                            $"{string.Join(Environment.NewLine, SupportedDateTimeFormats)}");
+            return DateTime.SpecifyKind(date, DateTimeKind.Utc);
         }
+
+        private static readonly string[] SupportedDateTimeFormats =
+        {
+            "yyyy", 
+            "yyyy-MM", 
+            "yyyy-MM-dd", 
+            "yyyy-MM-ddTHH:mm", 
+            "yyyy-MM-ddTHH:mm:ss", 
+            "yyyy-MM-ddTHH:mm:ss.fff", 
+            "yyyy-MM-ddTHH:mm:ss.fffffff",
+            "yyyy-MM-ddTHH:mm:ss.fffffffZ"
+        };
+    }
 
         private class MultiReader
         {
