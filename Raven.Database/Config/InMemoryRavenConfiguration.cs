@@ -11,7 +11,6 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +38,6 @@ namespace Raven.Database.Config
 
         private CompositionContainer container;
         private bool containerExternallySet;
-        private string dataDirectory;
         private string pluginsDirectory;
 
         public ReplicationConfiguration Replication { get; private set; }
