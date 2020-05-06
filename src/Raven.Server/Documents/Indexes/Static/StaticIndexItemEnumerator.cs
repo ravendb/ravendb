@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 
@@ -92,7 +93,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (_filter != null && _filter.ShouldFilter(Current))
                         continue;
 
-                    if (Current.IndexingKey == null && _singleKey)
+                    if (Current.Empty)
+                        resultsOfCurrentDocument = Enumerable.Empty<TType>();
+                    else if (Current.IndexingKey == null && _singleKey)
                         resultsOfCurrentDocument = _resultsOfCurrentDocument[_firstKey];
                     else if (_allItems)
                         resultsOfCurrentDocument = _resultsOfCurrentDocument[_allItemsKey];
@@ -140,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             public IEnumerator<TDynamicIteratorOfCurrentItemWrapperType> GetEnumerator()
             {
-                return _enumerator ?? (_enumerator = new Enumerator<TDynamicIteratorOfCurrentItemWrapperType>(_indexingEnumerator));
+                return _enumerator ??= new Enumerator<TDynamicIteratorOfCurrentItemWrapperType>(_indexingEnumerator);
             }
 
             IEnumerator IEnumerable.GetEnumerator()

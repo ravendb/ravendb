@@ -40,18 +40,52 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return true;
         }
 
-        public DynamicArray Min => _min ??= new DynamicArray(Summary.Min);
+        public DynamicArray Min
+        {
+            get
+            {
+                AssertSegment();
 
-        public DynamicArray Max => _max ??= new DynamicArray(Summary.Max);
+                return _min ??= new DynamicArray(Summary.Min);
+            }
+        }
 
-        public DynamicArray Sum => _sum ??= new DynamicArray(Summary.Sum);
+        public DynamicArray Max
+        {
+            get
+            {
+                AssertSegment();
 
-        public dynamic Count => Summary.Count;
+                return _max ??= new DynamicArray(Summary.Max);
+            }
+        }
+
+        public DynamicArray Sum
+        {
+            get
+            {
+                AssertSegment();
+
+                return _sum ??= new DynamicArray(Summary.Sum);
+            }
+        }
+
+        public int Count
+        {
+            get
+            {
+                AssertSegment();
+
+                return Summary.Count;
+            }
+        }
 
         public DynamicArray Entries
         {
             get
             {
+                AssertSegment();
+
                 if (_entries == null)
                 {
                     var context = CurrentIndexingScope.Current.IndexContext;
@@ -69,17 +103,35 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             get
             {
+                AssertSegment();
+
                 return _segmentEntry.Name;
             }
         }
 
-        public dynamic Start => TypeConverter.ToDynamicType(_segmentEntry.Start);
+        public DateTime Start
+        {
+            get
+            {
+                AssertSegment();
 
-        public dynamic End => TypeConverter.ToDynamicType(_segmentEntry.Segment.GetLastTimestamp(_segmentEntry.Start));
+                return _segmentEntry.Start;
+            }
+        }
+
+        public DateTime End
+        {
+            get
+            {
+                AssertSegment();
+
+                return _segmentEntry.Segment.GetLastTimestamp(_segmentEntry.Start);
+            }
+        }
 
         protected override bool TryGetByName(string name, out object result)
         {
-            Debug.Assert(_segmentEntry != null, "Item cannot be null");
+            AssertSegment();
 
             if (string.Equals(nameof(TimeSeriesSegment.DocumentId), name))
             {
@@ -92,6 +144,16 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         }
 
         private TimeSeriesSegmentSummary Summary => _summary ?? (_summary = _segmentEntry.Segment.GetSummary()).Value;
+
+        [Conditional("DEBUG")]
+        private void AssertSegment()
+        {
+            if (_segmentEntry == null)
+                throw new ArgumentNullException(nameof(_segmentEntry));
+
+            if (_segmentEntry.Segment.NumberOfLiveEntries == 0)
+                throw new InvalidOperationException("Indexing empty time series segment. Should not happen.");
+        }
 
         private class DynamicTimeSeriesEnumerable : IEnumerable<DynamicTimeSeriesEntry>
         {
@@ -114,7 +176,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             private class Enumerator : IEnumerator<DynamicTimeSeriesEntry>
             {
-                private IEnumerator<TimeSeriesStorage.Reader.SingleResult> _inner;
+                private readonly IEnumerator<TimeSeriesStorage.Reader.SingleResult> _inner;
 
                 public Enumerator(IEnumerator<TimeSeriesStorage.Reader.SingleResult> inner)
                 {
