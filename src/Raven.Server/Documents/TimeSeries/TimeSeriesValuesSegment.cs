@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public TimeSeriesSegmentSummary GetSummary()
         {
-            if (NumberOfEntries == 0)
+            if (NumberOfLiveEntries == 0)
                 return default;
 
             return new TimeSeriesSegmentSummary(this);
