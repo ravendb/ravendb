@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 using System.Text;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
@@ -395,7 +396,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (!(value is DateTime d))
                 throw new InvalidOperationException("Invalid from/to arguments" + exp);
 
-            return d.GetDefaultRavenFormat();
+            return d.EnsureUtc().GetDefaultRavenFormat();
         }
 
         private void AssertNoMissingSelect()

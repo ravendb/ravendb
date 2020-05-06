@@ -7,6 +7,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -176,8 +177,8 @@ select {
     Series2: out(Company),
     Series3: out(Company).Results.map(x=>x.Values[0]),
 }")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddYears(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddYears(1).EnsureUtc());
 
                     var result = rawQuery.First();
 
@@ -278,8 +279,8 @@ select {
     Series: out(p, 'tags/2'),
     Series2: out(Company, 'tags/3')
 }")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddYears(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddYears(1).EnsureUtc());
 
                     var result = rawQuery.First();
 
@@ -370,8 +371,8 @@ from People as p
 select {
     Heartrate: out('Heartrate')
 }")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddYears(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddYears(1).EnsureUtc());
 
                     var result = rawQuery.First();
 
@@ -449,8 +450,8 @@ select {
     Heartrate: out('Heartrate'),
     Stocks: out('Stocks')
 }")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddYears(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddYears(1).EnsureUtc());
 
                     var result = rawQuery.First();
 
@@ -552,8 +553,8 @@ declare function out(d)
 from People as p
 where p.Age > 49
 select out(p)")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddYears(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddYears(1).EnsureUtc());
 
                     var result = rawQuery.First();
 
@@ -667,18 +668,18 @@ select out(p)")
                         {
                             new 
                             {
-                                Start = baseline,
-                                End = baseline.AddMonths(2)
+                                Start = baseline.EnsureUtc(),
+                                End = baseline.AddMonths(2).EnsureUtc()
                             },
                             new
                             {
-                                Start = baseline.AddMonths(1),
-                                End = baseline.AddMonths(6)
+                                Start = baseline.AddMonths(1).EnsureUtc(),
+                                End = baseline.AddMonths(6).EnsureUtc()
                             },
                             new
                             {
-                                Start = baseline,
-                                End = baseline.AddYears(1)
+                                Start = baseline.EnsureUtc(),
+                                End = baseline.AddYears(1).EnsureUtc()
                             }
                         });
 
@@ -761,8 +762,8 @@ where p.Age > 49
 select {
     Series: out(p)
 }")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddYears(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddYears(1).EnsureUtc());
 
                     var result = rawQuery.First();
 
@@ -832,8 +833,8 @@ from People as p
 where p.Age > 21
 select foo(heartrate(p))
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddYears(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddYears(1).EnsureUtc());
 
                     var result = rawQuery.First();
 
@@ -908,8 +909,8 @@ from People as p
 where p.Age > 21
 select foo(heartrate(p))
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddYears(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddYears(1).EnsureUtc());
 
                     var result = rawQuery.First();
 
@@ -1654,7 +1655,7 @@ select foo(heartrate(p))
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.Today.EnsureUtc();
 
                 using (var session = store.OpenSession())
                 {

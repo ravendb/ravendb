@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -54,8 +55,8 @@ select min(), max(), avg()
                     var query = session.Advanced.DocumentQuery<User>()
                         .WhereGreaterThan(u => u.Age, 21)
                         .SelectTimeSeries(builder => builder.Raw<TimeSeriesAggregationResult>(tsQueryText))
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(3));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(3).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -115,8 +116,8 @@ where Tag = 'watches/fitbit'
                     var query = session.Advanced.DocumentQuery<User>()
                         .WhereGreaterThan(u => u.Age, 21)
                         .SelectTimeSeries(builder => builder.Raw<TimeSeriesRawResult>(tsQueryText))
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(3));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(3).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -182,8 +183,8 @@ select min(), max(), avg()
                     var query = session.Advanced.AsyncDocumentQuery<User>()
                         .WhereGreaterThan(u => u.Age, 21)
                         .SelectTimeSeries(builder => builder.Raw<TimeSeriesAggregationResult>(tsQueryText))
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(3));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(3).EnsureUtc());
 
                     var result = await query.ToListAsync();
 
@@ -243,8 +244,8 @@ where Tag = 'watches/fitbit'
                     var query = session.Advanced.AsyncDocumentQuery<User>()
                         .WhereGreaterThan(u => u.Age, 21)
                         .SelectTimeSeries(builder => builder.Raw<TimeSeriesRawResult>(tsQueryText))
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(3));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(3).EnsureUtc());
 
                     var result = await query.ToListAsync();
 

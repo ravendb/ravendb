@@ -9,6 +9,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Query;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -388,8 +389,8 @@ namespace SlowTests.Client.TimeSeries.Operations
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesRawQuery.RawQueryResult>(rawQuery)
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -428,8 +429,8 @@ namespace SlowTests.Client.TimeSeries.Operations
                 }))
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesRawQuery.RawQueryResult>(rawQuery)
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 

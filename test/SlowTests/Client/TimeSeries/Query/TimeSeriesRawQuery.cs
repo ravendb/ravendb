@@ -7,6 +7,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -72,9 +73,9 @@ namespace SlowTests.Client.TimeSeries.Query
 
         private class Event
         {
-            public DateTimeOffset Start { get; set; }
+            public DateTime Start { get; set; }
 
-            public DateTimeOffset End { get; set; }
+            public DateTime End { get; set; }
 
             public string Description { get; set; }
 
@@ -143,8 +144,8 @@ namespace SlowTests.Client.TimeSeries.Query
     where id() == 'users/ayende'
     select out(u)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var agg = query.First();
 
@@ -227,8 +228,8 @@ namespace SlowTests.Client.TimeSeries.Query
     where id() == 'users/ayende'
     select out(u)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var agg = query.First();
 
@@ -282,8 +283,8 @@ namespace SlowTests.Client.TimeSeries.Query
     where u.Age > 49
     select out(u)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var agg = query.First();
 
@@ -341,8 +342,8 @@ namespace SlowTests.Client.TimeSeries.Query
     where u.Age > 49
     select out(u)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var agg = query.First();
 
@@ -411,8 +412,8 @@ from index 'People' as p
 where p.Age > 49
 select out(p) as HeartRate, p.Name 
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -501,10 +502,10 @@ from index 'People' as p
 where p.Age > 49
 select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1))
-                        .AddParameter("start2", baseline2)
-                        .AddParameter("end2", baseline2.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc())
+                        .AddParameter("start2", baseline2.EnsureUtc())
+                        .AddParameter("end2", baseline2.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -598,8 +599,8 @@ where p.Age > 49
 load p.WorksAt as Company
 select out(Company)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -665,8 +666,8 @@ select timeseries(
     group by 1h 
     select min(), max())
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -729,8 +730,8 @@ select timeseries(
     group by 1h 
     select min(), max())
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -797,8 +798,8 @@ select timeseries(
     group by 1h 
     select min(), max())
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -866,8 +867,8 @@ select timeseries(
     select min(), max())
 as HeartRate
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -937,8 +938,8 @@ select timeseries(
     select min(), max())
 as HeartRate, Name 
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -1023,10 +1024,10 @@ as HeartRate, timeseries(
     select min(), max(), avg())
 as BloodPressure
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1))
-                        .AddParameter("start2", baseline2)
-                        .AddParameter("end2", baseline2.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc())
+                        .AddParameter("start2", baseline2.EnsureUtc())
+                        .AddParameter("end2", baseline2.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -1116,8 +1117,8 @@ select timeseries(
     select min(), max())
 as HeartRate
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -1194,8 +1195,8 @@ select timeseries(
     select min(), max(), avg())
 as Stocks
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -1269,8 +1270,8 @@ select timeseries(from doc.HeartRate between $start and $end
     group by '1 month' 
     select min(), max(), avg())
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
                     var result = query.ToList();
 
                     Assert.Equal(2, result.Count);
@@ -1357,8 +1358,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -1527,8 +1528,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -1631,8 +1632,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -1750,8 +1751,8 @@ where doc.Age > 49
 load doc.Event as e
 select out(doc, e)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -1837,8 +1838,8 @@ from People as p
 where p.Age > 49
 select heart_rate(p)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(3));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(3).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -1949,8 +1950,8 @@ from People as p
 where p.Age > 49
 select heart_rate(p)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(3));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(3).EnsureUtc());
 
 
                     var result = query.ToList();
@@ -2377,8 +2378,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
                     var result = query.ToList();
 
                     Assert.Equal(2, result.Count);
@@ -2466,8 +2467,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
                     var result = query.ToList();
 
                     Assert.Equal(2, result.Count);
@@ -2555,8 +2556,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
                     var result = query.ToList();
 
                     Assert.Equal(2, result.Count);
@@ -2644,8 +2645,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
                     var result = query.ToList();
 
                     Assert.Equal(2, result.Count);
@@ -2741,8 +2742,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
                     var result = query.ToList();
 
                     Assert.Equal(2, result.Count);
@@ -2842,8 +2843,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
                     var result = query.ToList();
 
                     Assert.Equal(2, result.Count);
@@ -2943,8 +2944,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2))
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc())
                         .AddParameter("val", 70);
 
                     var result = query.ToList();
@@ -3041,8 +3042,8 @@ where doc.Age > 49
 load doc.WorksAt as c
 select out(doc, c.AccountsReceivable)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -3138,8 +3139,8 @@ where doc.Age > 49
 load doc.WorksAt as c
 select out(doc, c)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -3228,8 +3229,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -3318,8 +3319,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -3427,8 +3428,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -3547,8 +3548,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -3664,8 +3665,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -3781,8 +3782,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -3898,8 +3899,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -4012,8 +4013,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -4126,8 +4127,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -4217,8 +4218,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -4331,8 +4332,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -4445,8 +4446,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2))
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc())
                         .AddParameter("minVal", 2.2)
                         .AddParameter("maxVal", 2.8);
 
@@ -4564,8 +4565,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -4684,8 +4685,8 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2))
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc().EnsureUtc())
                         .AddParameter("val", 100d);
 
                     var result = query.ToList();
@@ -4743,8 +4744,8 @@ select out(doc)
 
                         session.Store(new Event
                         {
-                            Start = baseline.AddMonths(i - 1),
-                            End = baseline.AddMonths(3)
+                            Start = baseline.AddMonths(i - 1).EnsureUtc(),
+                            End = baseline.AddMonths(3).EnsureUtc()
                         }, $"events/{i}");
 
                         session.Store(new Person
@@ -4857,7 +4858,8 @@ select out(doc, e)
 
                         var e = new Event
                         {
-                            Start = baseline.AddMonths(i - 1), End = baseline.AddMonths(3)
+                            Start = baseline.AddMonths(i - 1).EnsureUtc(), 
+                            End = baseline.AddMonths(3).EnsureUtc()
                         };
 
                         session.Store(new Person
@@ -4908,7 +4910,6 @@ select out(doc)
                     var result = query.ToList();
 
                     Assert.Equal(2, result.Count);
-
                     var agg = result[0];
 
                     Assert.Equal(6, agg.Count);
@@ -5014,8 +5015,8 @@ where doc.Age > 49
 load doc.WorksAt as c
 select out(doc, c)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var result = query.ToList();
 
@@ -5126,8 +5127,8 @@ declare timeseries out(x)
 from People as p
 select out(p)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
 
                     var agg = query.First();
@@ -5202,8 +5203,8 @@ declare timeseries out(x)
 from People as p
 select out(p)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
                     Assert.Contains("Operator '>' cannot be applied to operands of type 'double' and 'Sparrow.Json.LazyStringValue'", ex.Message);
@@ -5254,8 +5255,8 @@ declare timeseries out(x)
 from People as p
 select out(p)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(2));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
 
                     var agg = query.First();
 
@@ -5326,8 +5327,8 @@ declare timeseries out(x)
 from People as p
 select out(p)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(6));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(6).EnsureUtc());
 
                     var agg = query.First();
 
@@ -5447,8 +5448,8 @@ declare timeseries out(x)
 from People as p
 select out(p)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(6));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(6).EnsureUtc());
 
                     var agg = query.First();
 
@@ -5550,8 +5551,8 @@ declare timeseries out(x)
 from People as p
 select out(p)
 ")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddYears(1));
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddYears(1).EnsureUtc());
 
                     var result = query.First();
 
