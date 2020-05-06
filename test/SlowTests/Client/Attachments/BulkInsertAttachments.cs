@@ -7,6 +7,7 @@ using FastTests;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -256,6 +257,82 @@ namespace SlowTests.Client.Attachments
                 });
 
                 Assert.Equal("Document id cannot be null or empty (Parameter 'id')", argumentError.Message);
+            }
+        }
+
+        // RavenDB-14934
+        [Fact]
+        public async Task ShouldUpdateDocumentChangeAfterInsertingAttachment()
+        {
+            int count = 10;
+            int attachments = 10;
+            int size = 16 * 1024;
+            using (var store = GetDocumentStore())
+            {
+                var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
+                var changeVectorsBefore = new Dictionary<string, string>();
+                for (int i = 0; i < count; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var id = $"user/{i}";
+                        var u = new User { Name = $"EGR_{i}" };
+                        await session.StoreAsync(u, id);
+                        await session.SaveChangesAsync();
+                        var changeVector = session.Advanced.GetChangeVectorFor(u);
+                        changeVectorsBefore.Add(id, changeVector);
+                        streams[id] = new Dictionary<string, MemoryStream>();
+                    }
+                }
+
+                var changeVectorsAfter = new Dictionary<string, string>();
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    foreach (var id in streams.Keys)
+                    {
+                        var attachmentsBulkInsert = bulkInsert.AttachmentsFor(id);
+                        for (int j = 0; j < attachments; j++)
+                        {
+                            var rnd = new Random(DateTime.Now.Millisecond);
+                            var bArr = new byte[size];
+                            rnd.NextBytes(bArr);
+                            var name = j.ToString();
+                            var stream = new MemoryStream(bArr);
+                            await attachmentsBulkInsert.StoreAsync(name, stream);
+
+                            stream.Position = 0;
+                            streams[id][name] = stream;
+                        }
+                    }
+                }
+
+                foreach (var id in streams.Keys)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var attachmentsNames = streams.Select(x => new AttachmentRequest(id, x.Key));
+                        var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
+
+                        while (attachmentsEnumerator.MoveNext())
+                        {
+                            Assert.NotNull(attachmentsEnumerator.Current != null);
+                            Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
+                        }
+
+                        var u = session.Load<User>(id);
+                        var changeVector = session.Advanced.GetChangeVectorFor(u);
+                        changeVectorsAfter.Add(id, changeVector);
+                    }
+                }
+
+                Assert.All(changeVectorsBefore, x => changeVectorsAfter.ContainsKey(x.Key));
+
+                foreach (var kvp in changeVectorsBefore)
+                {
+                    Assert.Contains(kvp.Key, changeVectorsAfter.Keys);
+                    var cvStatus = ChangeVectorUtils.GetConflictStatus(changeVectorsAfter[kvp.Key], kvp.Value);
+                    Assert.Equal(ConflictStatus.Update, cvStatus);
+                }
             }
         }
     }
