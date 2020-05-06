@@ -1221,6 +1221,11 @@ namespace Raven.Database.Config
         public bool EnableResponseLoggingForEmbeddedDatabases { get; set; }
 
         /// <summary>
+        /// Maximum number of blocks that are cached in embedded mode in the response stream. Default: 0 (Unlimited)
+        /// </summary>
+        public int EmbeddedResponseStreamMaxCachedBlocks { get; set; }
+
+        /// <summary>
         /// How long can we keep the new index in memory before we have to flush it
         /// </summary>
         public TimeSpan NewIndexInMemoryMaxTime { get; set; }
@@ -1244,7 +1249,7 @@ namespace Raven.Database.Config
         /// Default: Current user's temporary directory
         /// </summary>
         public string TempPath { get; set; }
-
+        
         [Browsable(false)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public void SetSystemDatabase()

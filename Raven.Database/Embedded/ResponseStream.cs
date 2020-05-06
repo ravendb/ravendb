@@ -17,7 +17,7 @@ namespace Raven.Database.Embedded
 
         private readonly SemaphoreSlim tryTakeDataLock = new SemaphoreSlim(1, 1);
         private readonly CancellationTokenSource abort = new CancellationTokenSource();
-        private readonly BlockingCollection<byte[]> blocks = new BlockingCollection<byte[]>();
+        private readonly BlockingCollection<byte[]> blocks;
         private readonly Guid id = Guid.NewGuid();
 
         private volatile bool disposed;
@@ -28,13 +28,23 @@ namespace Raven.Database.Embedded
         private int currentBlockIndex;
         private Exception abortException;
 
-        internal ResponseStream(Action onFirstWrite, bool enableLogging)
+        internal ResponseStream(Action onFirstWrite, bool enableLogging, int responseStreamMaxCachedBlocks)
         {
             if (onFirstWrite == null)
                 throw new ArgumentNullException("onFirstWrite");
             
             this.onFirstWrite = onFirstWrite;
             this.enableLogging = enableLogging;
+
+            if (responseStreamMaxCachedBlocks > 0)
+            {
+                blocks = new BlockingCollection<byte[]>(responseStreamMaxCachedBlocks);
+            }
+            else
+            {
+                blocks = new BlockingCollection<byte[]>();
+            }
+
         }
 
         public override bool CanRead

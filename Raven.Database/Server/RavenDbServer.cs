@@ -132,7 +132,7 @@ namespace Raven.Server
             options = owinHttpServer.Options;
 
             serverThingsForTests = new ServerThingsForTests(options);
-            Func<HttpMessageHandler> httpMessageHandlerFactory = () => new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
+            Func<HttpMessageHandler> httpMessageHandlerFactory = () => new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases, options.SystemDatabase.Configuration.EmbeddedResponseStreamMaxCachedBlocks);
             documentStore.HttpMessageHandlerFactory = httpMessageHandlerFactory;
             documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
             documentStore.Initialize();

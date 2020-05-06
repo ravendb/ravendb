@@ -22,13 +22,15 @@ namespace Raven.Database.Embedded
         private readonly Func<IDictionary<string, object>, Task> _next;
 
         private readonly bool _enableLogging;
+        private readonly int _responseStreamMaxCachedBlocks;
 
         /// <summary>
         /// Create a new handler.
         /// </summary>
         /// <param name="next">The OWIN pipeline entry point.</param>
         /// <param name="enableLogging"></param>
-        public OwinClientHandler(Func<IDictionary<string, object>, Task> next, bool enableLogging)
+        /// <param name="responseStreamMaxCachedBlocks">Max number of blocks cached in the response stream (0 = unlimited)</param>
+        public OwinClientHandler(Func<IDictionary<string, object>, Task> next, bool enableLogging, int responseStreamMaxCachedBlocks)
         {
             if (next == null)
             {
@@ -37,6 +39,7 @@ namespace Raven.Database.Embedded
 
             _next = next;
             _enableLogging = enableLogging;
+            _responseStreamMaxCachedBlocks = responseStreamMaxCachedBlocks;
         }
 
         /// <summary>
@@ -55,7 +58,7 @@ namespace Raven.Database.Embedded
                 throw new ArgumentNullException("request");
             }
 
-            var state = new RequestState(request, cancellationToken, _enableLogging && request.Headers.AcceptEncoding.Any(x => x.Value == "gzip") == false);
+            var state = new RequestState(request, cancellationToken, _enableLogging && request.Headers.AcceptEncoding.Any(x => x.Value == "gzip") == false, _responseStreamMaxCachedBlocks);
             HttpContent requestContent = request.Content ?? new StreamContent(Stream.Null);
             Stream body = await requestContent.ReadAsStreamAsync().ConfigureAwait(false);
             if (body.CanSeek)
@@ -96,7 +99,7 @@ namespace Raven.Database.Embedded
             private ResponseStream _responseStream;
             private volatile bool _responseCompletionTaskRunning;
 
-            internal RequestState(HttpRequestMessage request, CancellationToken cancellationToken, bool enableLogging)
+            internal RequestState(HttpRequestMessage request, CancellationToken cancellationToken, bool enableLogging, int responseStreamMaxCachedBlocks)
             {
                 _request = request;
                 _responseTcs = new TaskCompletionSource<HttpResponseMessage>();
@@ -144,7 +147,7 @@ namespace Raven.Database.Embedded
                     }
                 }
 
-                _responseStream = new ResponseStream(CompleteResponse, enableLogging);
+                _responseStream = new ResponseStream(CompleteResponse, enableLogging, responseStreamMaxCachedBlocks);
                 OwinContext.Response.Body = _responseStream;
                 OwinContext.Response.StatusCode = 500;
             }
