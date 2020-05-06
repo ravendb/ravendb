@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Raven.Client;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
 {
