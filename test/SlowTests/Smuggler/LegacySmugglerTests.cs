@@ -24,7 +24,7 @@ namespace SlowTests.Smuggler
         }
 
         [Theory]
-        [InlineData("SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump")]
+        [InlineData("SlowTests.Smuggler.Data.Northwind_3.5.35168.ravendbdump")]
         public async Task CanImportNorthwind(string file)
         {
             using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
@@ -66,10 +66,11 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
-        public async Task CanImportIndexesAndTransformers()
+        [Theory]
+        [InlineData("SlowTests.Smuggler.Data.Indexes_And_Transformers_3.5.ravendbdump")]
+        public async Task CanImportIndexesAndTransformers(string file)
         {
-            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream("SlowTests.Smuggler.Indexes_And_Transformers_3.5.ravendbdump"))
+            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
             using (var store = GetDocumentStore())
             {
                 Assert.NotNull(stream);
@@ -148,7 +149,7 @@ namespace SlowTests.Smuggler
         }
 
         [Theory]
-        [InlineData("SlowTests.Smuggler.Revisions_3.5.35220.ravendbdump")]
+        [InlineData("SlowTests.Smuggler.Data.Revisions_3.5.35220.ravendbdump")]
         public async Task CanImportRevisions(string file)
         {
             using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
@@ -202,9 +203,44 @@ namespace SlowTests.Smuggler
             }
         }
 
+        [Theory]
+        [InlineData("SlowTests.Smuggler.Data.Identities_3.5.35288.ravendbdump")]
+        public async Task CanImportIdentities(string file)
+        {
+            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
+            using (var store = GetDocumentStore())
+            {
+                Assert.NotNull(stream);
+
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(2, stats.CountOfDocuments);
+
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(2, collectionStats.Collections["Users"]);
+
+                using (var session = store.OpenSession())
+                {
+                    var user = new User();
+                    session.Store(user, "users|");
+                    session.SaveChanges();
+
+                    Assert.Equal("users/3", user.Id);
+                }
+
+                collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(3, collectionStats.Collections["Users"]);
+            }
+        }
+
         private class User
         {
+            public string Id { get; set; }
+
             public string Name { get; set; }
+
             public string Version { get; set; }
         }
     }
