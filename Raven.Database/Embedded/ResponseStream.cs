@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -234,7 +235,7 @@ namespace Raven.Database.Embedded
             Buffer.BlockCopy(buffer, offset, newBuf, 0, count);
 
             if (enableLogging)
-                log.Info("ResponseStream ({0}). Write. Content: {1}", id, Encoding.UTF8.GetString(newBuf));
+                log.Info("ResponseStream ({0}). Write. Cached blocks ({1} bytes): {2}/{3} . Content ({4} bytes): {5}", id, blocks.Sum(x => x.Length), blocks.Count, blocks.BoundedCapacity, newBuf.Length, Encoding.UTF8.GetString(newBuf));
 
             blocks.Add(newBuf);
 
