@@ -735,6 +735,12 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    if (_buildVersionType == BuildVersionType.V3)
+                    {
+                        // ends with a "/"
+                        identityKey = identityKey.Substring(0, identityKey.Length - 1) + "|";
+                    }
+
                     yield return (identityKey, identityValue, 0);
                 }
             }
