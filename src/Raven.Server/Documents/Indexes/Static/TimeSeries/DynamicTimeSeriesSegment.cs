@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 return DynamicNullObject.Null;
 
             Debug.Assert(_segmentEntry.Key != null, "_segmentEntry.Key != null");
-            Debug.Assert(nameof(Baseline) == nameof(_segmentEntry.Baseline), "nameof(Baseline) == nameof(_segmentEntry.Baseline)");
+            Debug.Assert(nameof(Start) == nameof(_segmentEntry.Start), "nameof(Start) == nameof(_segmentEntry.Start)");
 
             return _segmentEntry.Key;
         }
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public DynamicArray Sum => _sum ??= new DynamicArray(Summary.Sum);
 
-        public int Count => Summary.Count;
+        public dynamic Count => Summary.Count;
 
         public DynamicArray Entries
         {
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 if (_entries == null)
                 {
                     var context = CurrentIndexingScope.Current.IndexContext;
-                    var entries = _segmentEntry.Segment.YieldAllValues(context, context.Allocator, _segmentEntry.Baseline, includeDead: false);
+                    var entries = _segmentEntry.Segment.YieldAllValues(context, context.Allocator, _segmentEntry.Start, includeDead: false);
                     var enumerable = new DynamicTimeSeriesEnumerable(entries);
 
                     _entries = new DynamicArray(enumerable);
@@ -73,7 +73,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             }
         }
 
-        public dynamic Baseline => TypeConverter.ToDynamicType(_segmentEntry.Baseline);
+        public dynamic Start => TypeConverter.ToDynamicType(_segmentEntry.Start);
+
+        public dynamic End => TypeConverter.ToDynamicType(_segmentEntry.Segment.GetLastTimestamp(_segmentEntry.Start));
 
         protected override bool TryGetByName(string name, out object result)
         {

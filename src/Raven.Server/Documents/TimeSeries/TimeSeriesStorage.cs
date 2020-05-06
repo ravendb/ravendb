@@ -2053,7 +2053,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
                 SegmentSize = segmentSize,
                 Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
-                Baseline = baseline,
+                Start = baseline,
                 Etag = Bits.SwapBytes(etag),
             };
         }

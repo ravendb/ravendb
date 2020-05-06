@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public LazyStringValue Collection;
 
-        public DateTime Baseline;
+        public DateTime Start;
 
         public long Etag;
     }

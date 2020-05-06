@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Session.TimeSeries;
+﻿using System;
+using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Indexes.TimeSeries
 {
@@ -15,6 +16,10 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
         public double[] Sum { get; set; }
 
         public int Count { get; set; }
+
+        public DateTime Start { get; set; }
+
+        public DateTime End { get; set; }
 
         public TimeSeriesEntry[] Entries { get; set; }
     }
