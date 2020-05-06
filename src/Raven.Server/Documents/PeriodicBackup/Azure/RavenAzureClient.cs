@@ -594,6 +594,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             if (_hasSasToken)
             {
+                // Multi-Delete isn't supported when using a SAS token
+                // https://issues.hibernatingrhinos.com/issue/RavenDB-14936
+                // https://github.com/Azure/azure-sdk-for-net/issues/11762
                 DeleteBlobsWithSasToken(blobs);
                 return;
             }
