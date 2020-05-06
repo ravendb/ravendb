@@ -226,3 +226,4 @@ artifacts/
 /.idea/*
 /Raven.Server/Raven.Server_TemporaryKey.pfx
 /Raven.Studio.Html5/package-lock.json
+*.props

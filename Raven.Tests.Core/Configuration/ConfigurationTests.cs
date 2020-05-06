@@ -188,6 +188,7 @@ namespace Raven.Tests.Core.Configuration
             var configurationComparer = new ConfigurationComparer(inMemoryConfiguration, stronglyTypedConfiguration, propertyPathsToIgnore);
             configurationComparer.Ignore(x => x.EnableResponseLoggingForEmbeddedDatabases);
             configurationComparer.Ignore(x => x.DynamicMemoryLimitForProcessing);
+            configurationComparer.Ignore(x => x.EmbeddedResponseStreamMaxCachedBlocks);
             configurationComparer.Assert(expected => expected.MaxPrecomputedBatchSizeForNewIndex.Value, actual => actual.MaxPrecomputedBatchSizeForNewIndex);
             configurationComparer.Assert(expected => expected.MaxPrecomputedBatchTotalDocumentSizeInBytes.Value, actual => actual.MaxPrecomputedBatchTotalDocumentSizeInBytes);			
             configurationComparer.Assert(expected => expected.RejectClientsModeEnabled.Value, actual => actual.RejectClientsMode);
