@@ -506,7 +506,7 @@ namespace Raven.Server.Documents.Replication
 
                         ReadItemsFromSource(replicatedItemsCount, documentsContext, dataForReplicationCommand, reader, networkStats);
                         ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand, reader, networkStats);
-                        }
+                    }
 
                     if (_log.IsInfoEnabled)
                     {
@@ -1029,21 +1029,23 @@ namespace Raven.Server.Documents.Replication
                                     To = deletedRange.To
                                 };
                                 var removedChangeVector = tss.RemoveTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
-                                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
+                                if (removedChangeVector != null)
+                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
+
                                 break;
                             case TimeSeriesReplicationItem segment:
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out var lowerName, out var baseline);
 
                                 if (tss.TryAppendEntireSegment(context, segment, docId, lowerName, baseline))
-                            {
+                                {
                                     var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
                                     continue;
-                            }
+                                }
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
-                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, lowerName, values, segment.ChangeVector);
+                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, lowerName, values, segment.ChangeVector, verifyName: false);
                                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
 
                                 break;
