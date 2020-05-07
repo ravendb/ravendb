@@ -25,7 +25,94 @@ namespace SlowTests.SparrowTests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public async Task LoggingSource_WhileRetentionByTimeOn_ShouldKeepRetentionPolicy(bool compressing)
+        public async Task LoggingSource_WhileRetentionByTimeInHours_ShouldKeepRetentionPolicy(bool compressing)
+        {
+            const int fileSize = Constants.Size.Kilobyte;
+
+            var name = GetTestName();
+            var path = NewDataPath(forceCreateDir: true);
+            path = Path.Combine(path, Guid.NewGuid().ToString());
+            Directory.CreateDirectory(path);
+            var retentionTimeConfiguration = TimeSpan.FromHours(3);
+
+            var now = DateTime.Now;
+            var retentionTime = now - retentionTimeConfiguration;
+            var toCheckLogFiles = new List<(string fileName, bool shouldExist)>();
+
+            const int artificialLogsCount = 9;
+            for (int i = 0; i < artificialLogsCount; i++)
+            {
+                var lastModified = now - TimeSpan.FromHours(i);
+                var fileName = Path.Combine(path, $"{LoggingSource.LogInfo.GetFileName(lastModified)}.00{artificialLogsCount-i}.log");
+                toCheckLogFiles.Add((fileName, lastModified > retentionTime));
+                await using (File.Create(fileName)) { }
+                File.SetLastWriteTime(fileName, lastModified);
+            }
+
+            const long retentionSize = long.MaxValue;
+            var loggingSource = new LoggingSource(
+                LogMode.Information,
+                path,
+                "LoggingSource" + name,
+                retentionTimeConfiguration,
+                retentionSize,
+                compressing) {MaxFileSizeInBytes = fileSize};
+            //This is just to make sure the MaxFileSizeInBytes is get action for the first file
+            loggingSource.SetupLogMode(LogMode.Operations, path, retentionTimeConfiguration, retentionSize, compressing);
+
+            var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
+
+            for (var j = 0; j < 50; j++)
+            {
+                for (var i = 0; i < 5; i++)
+                {
+                    await logger.OperationsAsync("Some message");
+                }
+                Thread.Sleep(10);
+            }
+
+            string[] afterEndFiles = null;
+            await WaitForValueAsync(async () =>
+            {
+                for (var i = 0; i < 10; i++)
+                {
+                    await logger.OperationsAsync("Some message");
+                }
+                afterEndFiles = Directory.GetFiles(path);
+                return afterEndFiles.Any(f => toCheckLogFiles.Any(tc => tc.fileName.Equals(f) && tc.shouldExist == false));
+            }, false, 10_000, 1_000);
+
+            loggingSource.EndLogging();
+
+            AssertNoFileMissing(afterEndFiles);
+
+            try
+            {
+                Assert.All(toCheckLogFiles, toCheck =>
+                {
+                    (string fileName, bool shouldExist) = toCheck;
+                    fileName = $"{fileName}{(compressing ? ".gz" : string.Empty)}";
+                    var fileInfo = new FileInfo(fileName);
+                    if (shouldExist)
+                    {
+                        Assert.True(fileInfo.Exists, $"The log file \"{fileInfo.Name}\" should be exist");
+                    }
+                    else
+                    {
+                        Assert.False(fileInfo.Exists, $"The log file \"{fileInfo.Name}\" last modified {fileInfo.LastWriteTime} should not be exist. retentionTime({retentionTime})");
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Logs after end - {JustFileNamesAsString(afterEndFiles)}", e);
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task LoggingSource_WhileRetentionByTimeInDays_ShouldKeepRetentionPolicy(bool compressing)
         {
             const int fileSize = Constants.Size.Kilobyte;
 
@@ -36,13 +123,13 @@ namespace SlowTests.SparrowTests
             var retentionTime = TimeSpan.FromDays(3);
 
             var retentionDate = DateTime.Now.Date - retentionTime;
-            var toCheckLogFiles = new List<(string, bool)>();
-            for (var date = retentionDate - TimeSpan.FromDays(1); date <= retentionDate + TimeSpan.FromDays(1); date += TimeSpan.FromDays(1))
+            var toCheckLogFiles = new List<(string fileName, bool shouldExist)>();
+            for (var date = retentionDate - TimeSpan.FromDays(2); date <= retentionDate + TimeSpan.FromDays(2); date += TimeSpan.FromDays(1))
             {
-                var fileName = Path.Combine(path, LoggingSource.LogInfo.GetFileName(date) + ".001.log");
-                toCheckLogFiles.Add((fileName, date >= retentionDate));
-                var file = File.Create(fileName);
-                file.Dispose();
+                var fileName = Path.Combine(path, $"{LoggingSource.LogInfo.GetFileName(date)}.001.log");
+                toCheckLogFiles.Add((fileName, date > retentionDate));
+                await using (File.Create(fileName)) { }
+                File.SetLastWriteTime(fileName, date);
             }
 
             const long retentionSize = long.MaxValue;
@@ -52,8 +139,7 @@ namespace SlowTests.SparrowTests
                 "LoggingSource" + name,
                 retentionTime,
                 retentionSize,
-                compressing);
-            loggingSource.MaxFileSizeInBytes = fileSize;
+                compressing) {MaxFileSizeInBytes = fileSize};
             //This is just to make sure the MaxFileSizeInBytes is get action for the first file
             loggingSource.SetupLogMode(LogMode.Operations, path, retentionTime, retentionSize, compressing);
 
@@ -69,10 +155,14 @@ namespace SlowTests.SparrowTests
             }
 
             string[] afterEndFiles = null;
-            WaitForValue(() =>
+            await WaitForValueAsync(async () =>
             {
+                for (var i = 0; i < 10; i++)
+                {
+                    await logger.OperationsAsync("Some message");
+                }
                 afterEndFiles = Directory.GetFiles(path);
-                return afterEndFiles.Any(f => toCheckLogFiles.Any(tc => tc.Item1.Equals(f) && tc.Item2 == false));
+                return afterEndFiles.Any(f => toCheckLogFiles.Any(tc => tc.fileName.Equals(f) && tc.shouldExist == false));
             }, false, 10_000, 1_000);
 
             loggingSource.EndLogging();
@@ -81,24 +171,20 @@ namespace SlowTests.SparrowTests
 
             try
             {
-                foreach (var (fileName, shouldExist) in toCheckLogFiles)
+                Assert.All(toCheckLogFiles, toCheck =>
                 {
-                    var compressedFileName = fileName + ".gz";
+                    (string fileName, bool shouldExist) = toCheck;
+                    fileName = $"{fileName}{(compressing ? ".gz" : string.Empty)}";
+                    var fileInfo = new FileInfo(fileName);
                     if (shouldExist)
                     {
-                        Assert.True(afterEndFiles.Contains(fileName) || afterEndFiles.Contains(compressedFileName),
-                            $"The log file \"{Path.GetFileNameWithoutExtension(fileName)}\" and all log files from and after {retentionDate} " +
-                            "should be deleted due to time retention");
+                        Assert.True(fileInfo.Exists, $"The log file \"{fileInfo.Name}\" should be exist");
                     }
                     else
                     {
-                        Assert.False(afterEndFiles.Contains(fileName),
-                            $"The file \"{fileName}\" and all log files from before {retentionDate} should be deleted due to time retention");
-
-                        Assert.False(afterEndFiles.Contains(compressedFileName),
-                            $"The file \"{compressedFileName}\" and all log files from before {retentionDate} should be deleted due to time retention");
+                        Assert.False(fileInfo.Exists, $"The log file \"{fileInfo.Name}\" last modified {fileInfo.LastWriteTime} should not be exist. retentionTime({retentionTime})");
                     }
-                }
+                });
             }
             catch (Exception e)
             {
@@ -144,15 +230,15 @@ namespace SlowTests.SparrowTests
             long size = 0;
             string[] afterEndFiles = null;
             var isRetentionPolicyApplied = WaitForValue(() =>
-           {
-               Task.Delay(TimeSpan.FromSeconds(1));
+            {
+                Task.Delay(TimeSpan.FromSeconds(1));
 
-               afterEndFiles = Directory.GetFiles(path);
-               AssertNoFileMissing(afterEndFiles);
-               size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
+                afterEndFiles = Directory.GetFiles(path);
+                AssertNoFileMissing(afterEndFiles);
+                size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
 
-               return Math.Abs(size - retentionSize) <= threshold;
-           }, true, 10_000, 1_000);
+                return Math.Abs(size - retentionSize) <= threshold;
+            }, true, 10_000, 1_000);
 
             Assert.True(isRetentionPolicyApplied,
                 $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +

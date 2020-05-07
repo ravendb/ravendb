@@ -580,7 +580,7 @@ namespace FastTests
             throw new TimeoutException("Got no index error for more than " + timeout.Value);
         }
 
-        protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000)
+        protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -607,7 +607,7 @@ namespace FastTests
                         throw;
                     }
                 }
-                await Task.Delay(100);
+                await Task.Delay(interval);
             } while (true);
         }
 
