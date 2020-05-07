@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
@@ -16,10 +17,13 @@ namespace Raven.Server.Documents.Indexes.Auto
             _itemsEnumerator = items.GetEnumerator();
         }
 
-        public bool MoveNext(out IEnumerable resultsOfCurrentDocument, out long? etag)
+        public bool MoveNext(DocumentsOperationContext ctx, out IEnumerable resultsOfCurrentDocument, out long? etag)
         {
             using (_documentReadStats.Start())
             {
+                ctx.Transaction.ForgetAbout(_results[0]);
+                _results[0]?.Dispose();
+
                 var moveNext = _itemsEnumerator.MoveNext();
 
                 var document = (Document)_itemsEnumerator.Current?.Item;

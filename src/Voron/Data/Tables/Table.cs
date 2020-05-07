@@ -28,7 +28,6 @@ namespace Voron.Data.Tables
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
 
-        private Dictionary<long, ByteString> _cachedDecompressedBuffersByStorageId;
         private readonly Dictionary<Slice, Tree> _treesBySliceCache = new Dictionary<Slice, Tree>(SliceStructComparer.Instance);
         private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceStructComparer.Instance);
 
@@ -222,11 +221,17 @@ namespace Voron.Data.Tables
             return DirectReadDecompress(id, result, ref size);
         }
 
+        public void ForgetAboutCompressed(long id)
+        {
+            if (_tx.CachedDecompressedBuffersByStorageId.Remove(id, out var t))
+            {
+               _tx.Allocator.Release(ref t);
+            }
+        }
+
         private byte* DirectReadDecompress(long id, byte* directRead, ref int size)
         {
-            _cachedDecompressedBuffersByStorageId ??= new Dictionary<long, ByteString>();
-
-            if (_cachedDecompressedBuffersByStorageId.TryGetValue(id, out var t))
+            if (_tx.CachedDecompressedBuffersByStorageId.TryGetValue(id, out var t))
             {
                 size = t.Length;
                 return t.Ptr;
@@ -236,7 +241,7 @@ namespace Voron.Data.Tables
             var _ = DecompressValue(_tx, directRead, size, out ByteString buffer);
             _tx.LowLevelTransaction.DecompressedBufferBytes += buffer.Length;
 
-            _cachedDecompressedBuffersByStorageId[id] = buffer;
+            _tx.CachedDecompressedBuffersByStorageId[id] = buffer;
 
             size = buffer.Length;
             return buffer.Ptr;
@@ -301,7 +306,7 @@ namespace Voron.Data.Tables
 
             if (_schema.Compressed)
             {
-                _cachedDecompressedBuffersByStorageId?.Remove(id);
+                _tx.CachedDecompressedBuffersByStorageId?.Remove(id);
             }
 
             // first, try to fit in place, either in small or large sections
@@ -418,7 +423,7 @@ namespace Voron.Data.Tables
             var ptr = DirectReadRaw(id, out int size, out bool compressed);
 
             if (_schema.Compressed)
-                _cachedDecompressedBuffersByStorageId?.Remove(id);
+                _tx.CachedDecompressedBuffersByStorageId?.Remove(id);
 
             ByteStringContext<ByteStringMemoryCache>.InternalScope decompressValue = default;
 

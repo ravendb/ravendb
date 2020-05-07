@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                     {
-                                        while (itemsEnumerator.MoveNext(out IEnumerable mapResults, out var etag))
+                                        while (itemsEnumerator.MoveNext(queryContext.Documents, out IEnumerable mapResults, out var etag))
                                         {
                                             token.ThrowIfCancellationRequested();
 
