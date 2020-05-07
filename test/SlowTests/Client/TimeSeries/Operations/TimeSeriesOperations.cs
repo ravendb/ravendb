@@ -938,7 +938,7 @@ namespace SlowTests.Client.TimeSeries.Operations
         }
 
         [Fact]
-        public void ShouldThrowOnNullRanges()
+        public void ShouldThrowOnNullOrEmptyRanges()
         {
             using (var store = GetDocumentStore())
             {
@@ -975,11 +975,16 @@ namespace SlowTests.Client.TimeSeries.Operations
                     new GetMultipleTimeSeriesOperation("users/ayende", null)));
 
                 Assert.Contains("Value cannot be null. (Parameter 'ranges')", ex.Message);
+
+                var ex2 = Assert.Throws<InvalidOperationException>(() => store.Operations.Send(
+                    new GetMultipleTimeSeriesOperation("users/ayende", new List<TimeSeriesRange>())));
+
+                Assert.Contains("'ranges' cannot be null or empty", ex2.Message);
             }
         }
 
         [Fact]
-        public void ShouldThrowOnMissingName()
+        public void GetMultipleTimeSeriesShouldThrowOnMissingNameFromRange()
         {
             using (var store = GetDocumentStore())
             {
@@ -1013,7 +1018,7 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 store.Operations.Send(timeSeriesBatch);
 
-                var ex = Assert.Throws<RavenException>(() => store.Operations.Send(
+                var ex = Assert.Throws<InvalidOperationException>(() => store.Operations.Send(
                     new GetMultipleTimeSeriesOperation("users/ayende", new List<TimeSeriesRange>
                     {
                         new TimeSeriesRange
@@ -1024,6 +1029,48 @@ namespace SlowTests.Client.TimeSeries.Operations
                     })));
 
                 Assert.Contains("'Name' cannot be null or empty", ex.Message);
+            }
+        }
+
+        [Fact]
+        public void GetTimeSeriesShouldThrowOnMissingName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var documentId = "users/ayende";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), documentId);
+                    session.SaveChanges();
+                }
+
+                var baseline = DateTime.Today;
+
+                var timeSeriesOp = new TimeSeriesOperation
+                {
+                    Name = "Heartrate",
+                    Appends = new List<TimeSeriesOperation.AppendOperation>()
+                };
+
+                for (int i = 0; i <= 10; i++)
+                {
+                    timeSeriesOp.Appends.Add(new TimeSeriesOperation.AppendOperation
+                    {
+                        Tag = "watches/fitbit",
+                        Timestamp = baseline.AddMinutes(i * 10),
+                        Values = new[] { 72d }
+                    });
+                }
+
+                var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
+
+                store.Operations.Send(timeSeriesBatch);
+
+                var ex = Assert.Throws<ArgumentNullException>(() => store.Operations.Send(
+                    new GetTimeSeriesOperation("users/ayende", string.Empty, baseline, DateTime.MaxValue)));
+
+                Assert.Contains("Value cannot be null", ex.Message);
             }
         }
     }
