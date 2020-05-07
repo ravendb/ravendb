@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
@@ -896,20 +897,20 @@ namespace Raven.Server.Documents.Queries.Results
             if (DateTime.TryParseExact(valueAsStr, SupportedDateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
                 throw new ArgumentException($"Unable to parse timeseries from/to values. Got: {valueAsStr}{Environment.NewLine}" +
                                             $"The supported time formats are:{Environment.NewLine}" +
-                                            $"{string.Join(Environment.NewLine, SupportedDateTimeFormats)}");
+                                            $"{string.Join(Environment.NewLine, SupportedDateTimeFormats.OrderBy(f => f.Length))}");
             return DateTime.SpecifyKind(date, DateTimeKind.Utc);
         }
 
         private static readonly string[] SupportedDateTimeFormats =
         {
+            "yyyy-MM-ddTHH:mm:ss.fffffffZ",
+            "yyyy-MM-ddTHH:mm:ss.fffffff",
+            "yyyy-MM-ddTHH:mm:ss", 
+            "yyyy-MM-dd", 
             "yyyy", 
             "yyyy-MM", 
-            "yyyy-MM-dd", 
             "yyyy-MM-ddTHH:mm", 
-            "yyyy-MM-ddTHH:mm:ss", 
-            "yyyy-MM-ddTHH:mm:ss.fff", 
-            "yyyy-MM-ddTHH:mm:ss.fffffff",
-            "yyyy-MM-ddTHH:mm:ss.fffffffZ"
+            "yyyy-MM-ddTHH:mm:ss.fff"
         };
     }
 
