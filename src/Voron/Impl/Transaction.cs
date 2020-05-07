@@ -17,8 +17,12 @@ namespace Voron.Impl
     public unsafe class Transaction : IDisposable
     {
         private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
+        private Dictionary<long, ByteString> _cachedDecompressedBuffersByStorageId;
 
-        private  LowLevelTransaction _lowLevelTransaction;
+        internal Dictionary<long, ByteString> CachedDecompressedBuffersByStorageId =>
+            _cachedDecompressedBuffersByStorageId ??= new Dictionary<long, ByteString>();
+
+        private LowLevelTransaction _lowLevelTransaction;
 
         public LowLevelTransaction LowLevelTransaction
         {
@@ -591,6 +595,15 @@ namespace Voron.Impl
             {
                 _tables.Remove(nameSlice);
             }
+        }
+
+        public void ForgetAbout(in long storageId)
+        {
+            if (_cachedDecompressedBuffersByStorageId == null)
+                return;
+
+            if (_cachedDecompressedBuffersByStorageId.Remove(storageId, out var t))
+                Allocator.Release(ref t);
         }
     }
 }

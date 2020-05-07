@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Documents.Changes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -143,6 +144,13 @@ namespace Raven.Server.Documents
                 _collectionCache = new Dictionary<string, CollectionName>(OrdinalIgnoreCaseStringStructComparer.Instance);
 
             _collectionCache.Add(collectionName, name);
+        }
+
+        public void ForgetAbout(Document doc)
+        {
+            if (doc == null)
+                return;
+            InnerTransaction.ForgetAbout(doc.StorageId);
         }
     }
 }

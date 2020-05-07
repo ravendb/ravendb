@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -78,10 +79,13 @@ namespace Raven.Server.Documents.Indexes.Static
             _filter = filter;
         }
 
-        public bool MoveNext(out IEnumerable resultsOfCurrentDocument, out long? etag)
+        public bool MoveNext(DocumentsOperationContext ctx, out IEnumerable resultsOfCurrentDocument, out long? etag)
         {
             using (_documentReadStats?.Start())
             {
+                if(Current is DocumentIndexItem di && di.Item is Document d)
+                    ctx.Transaction.ForgetAbout(d);
+
                 Current?.Dispose();
                 etag = null;
 
