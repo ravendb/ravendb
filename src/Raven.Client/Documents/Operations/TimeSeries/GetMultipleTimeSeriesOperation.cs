@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -88,15 +89,23 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                         .Append(_pageSize);
                 }
 
+                bool any = false;
                 foreach (var range in _ranges)
                 {
+                    if (string.IsNullOrEmpty(range.Name))
+                        throw new InvalidOperationException($"Missing '{nameof(TimeSeriesRange.Name)}' argument in '{nameof(TimeSeriesRange)}'. " +
+                                                            $"'{nameof(TimeSeriesRange.Name)}' cannot be null or empty");
+                    any = true;
                     pathBuilder.Append("&name=")
-                        .Append(range.Name)
+                        .Append(Uri.EscapeDataString(range.Name))
                         .Append("&from=")
-                        .Append(range.From.GetDefaultRavenFormat())
+                        .Append(range.From.EnsureUtc().GetDefaultRavenFormat())
                         .Append("&to=")
-                        .Append(range.To.GetDefaultRavenFormat());
+                        .Append(range.To.EnsureUtc().GetDefaultRavenFormat());
                 }
+
+                if (any == false)
+                    throw new InvalidOperationException("Argument 'ranges' cannot be null or empty");
 
                 var request = new HttpRequestMessage
                 {
