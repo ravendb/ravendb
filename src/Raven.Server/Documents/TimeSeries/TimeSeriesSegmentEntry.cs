@@ -7,6 +7,8 @@ namespace Raven.Server.Documents.TimeSeries
     {
         public LazyStringValue Key;
 
+        public LazyStringValue LuceneKey;
+
         public LazyStringValue DocId;
 
         public LazyStringValue Name;

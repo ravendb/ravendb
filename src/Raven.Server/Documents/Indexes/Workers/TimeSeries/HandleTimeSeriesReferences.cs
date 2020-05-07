@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             if (timeSeries == null)
                 yield break;
 
-            yield return new TimeSeriesIndexItem(timeSeries.Key, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
+            yield return new TimeSeriesIndexItem(timeSeries.LuceneKey, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
