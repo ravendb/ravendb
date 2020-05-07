@@ -14,9 +14,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     {
         private readonly string _docId, _name;
         private readonly int _start, _pageSize;
-        private readonly DateTime _from, _to;
+        private readonly DateTime? _from, _to;
 
-        public GetTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue)
+        public GetTimeSeriesOperation(string docId, string timeseries, DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue)
         {
             if (string.IsNullOrEmpty(docId))
                 throw new ArgumentNullException(nameof(docId));
@@ -41,9 +41,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             private readonly string _docId, _name;
             private readonly int _start, _pageSize;
-            private readonly DateTime _from, _to;
+            private readonly DateTime? _from, _to;
 
-            public GetTimeSeriesCommand(string docId, string name, DateTime from, DateTime to, int start, int pageSize)
+            public GetTimeSeriesCommand(string docId, string name, DateTime? from, DateTime? to, int start, int pageSize)
             {
                 _docId = docId;
                 _name = name;
@@ -77,9 +77,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 pathBuilder.Append("&name=")
                     .Append(Uri.EscapeDataString(_name))
                     .Append("&from=")
-                    .Append(_from.EnsureUtc().GetDefaultRavenFormat())
+                    .Append(_from?.EnsureUtc().GetDefaultRavenFormat())
                     .Append("&to=")
-                    .Append(_to.EnsureUtc().GetDefaultRavenFormat());
+                    .Append(_to?.EnsureUtc().GetDefaultRavenFormat());
+
 
                 var request = new HttpRequestMessage
                 {
