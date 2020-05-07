@@ -971,7 +971,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 var timeSeriesBatch = new TimeSeriesBatchOperation("users/ayende", timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
-
+                IEnumerable<TimeSeriesRange> ranges = null;
                 var ex = Assert.Throws<ArgumentNullException>(() => store.Operations.Send(
                     new GetMultipleTimeSeriesOperation("users/ayende", null)));
 

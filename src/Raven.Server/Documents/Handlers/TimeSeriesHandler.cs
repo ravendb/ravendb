@@ -213,8 +213,6 @@ namespace Raven.Server.Documents.Handlers
                 return null;
             
             var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
-            Dictionary<string, DateTime> datesDictionary = null;
-            DateTime from, to;
 
             for (int i = 0; i < fromList.Count; i++)
             {
@@ -224,21 +222,8 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.Name)}' argument in 'TimeSeriesRange' on document '{documentId}'. " +
                                                         $"'{nameof(TimeSeriesRange.Name)}' cannot be null or empty");
 
-                if (string.IsNullOrEmpty(fromList[i]) || string.IsNullOrEmpty(toList[i]))
-                    throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.From)}' / '{nameof(TimeSeriesRange.To)}' arguments in 'TimeSeriesRange' on document '{documentId}'. " +
-                                                        $"'{nameof(TimeSeriesRange.From)}' and '{nameof(TimeSeriesRange.To)}' cannot be null or empty");
-                
-                datesDictionary ??= new Dictionary<string, DateTime>();
-
-                if (datesDictionary.TryGetValue(fromList[i], out from) == false)
-                {
-                    datesDictionary[fromList[i]] = from = ParseDate(fromList[i], name);
-                }
-
-                if (datesDictionary.TryGetValue(toList[i], out to) == false)
-                {
-                    datesDictionary[toList[i]] = to = ParseDate(toList[i], name);
-                }
+                var from = string.IsNullOrEmpty(fromList[i]) ? DateTime.MinValue : ParseDate(fromList[i], name);
+                var to = string.IsNullOrEmpty(toList[i]) ? DateTime.MaxValue : ParseDate(toList[i], name);
 
                 var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize);
                 if (rangeResultDictionary.TryGetValue(name, out var list) == false)
@@ -254,10 +239,10 @@ namespace Raven.Server.Documents.Handlers
             return rangeResultDictionary;
         }
 
-        internal static TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to)
+        internal static TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime? from, DateTime? to)
         {
             int start = 0, pageSize = int.MaxValue;
-            return GetTimeSeriesRange(context, docId, name, from, to, ref start, ref pageSize);
+            return GetTimeSeriesRange(context, docId, name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, ref start, ref pageSize);
         }
 
         private static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)

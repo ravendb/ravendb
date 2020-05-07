@@ -113,7 +113,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     // should not go to server
                     var values = (await session.TimeSeriesFor(order, "Heartrate")
-                        .GetAsync(DateTime.MinValue, DateTime.MaxValue))
+                        .GetAsync())
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);

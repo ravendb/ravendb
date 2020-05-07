@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -501,6 +503,91 @@ namespace SlowTests.Client.TimeSeries.Session
                         .ToList();
 
                     Assert.Null(vals);
+                }
+            }
+        }
+
+        class CanGetTimeSeriesRangeCases : IEnumerable<object[]>
+        {
+            private readonly List<object[]> _data = new List<object[]>
+            {
+                new object[] {null, null, 4},
+                new object[] {new DateTime(2020, 1, 1), null, 3},
+                new object[] {null, new DateTime(2020, 2, 1), 3},
+                new object[] {new DateTime(2020, 1, 1), new DateTime(2020, 2, 1), 2},
+            };
+
+            public IEnumerator<object[]> GetEnumerator() => _data.GetEnumerator();
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        [Theory]
+        [ClassData(typeof(CanGetTimeSeriesRangeCases))]
+        public void CanGetTimeSeriesRange(DateTime? from, DateTime? to, int expectedValue)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = new DateTime(2019, 12, 1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    tsf.Append(baseline, new[] { 58d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1), new[] { 60d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(2), new[] { 60d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(3), new[] { 60d }, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(from, to)
+                        .ToList();
+
+                    Assert.Equal(expectedValue, vals.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanGetMultipleTimeSeriesRange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = new DateTime(2019, 12, 1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    tsf.Append(baseline, new[] { 58d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1), new[] { 60d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(2), new[] { 60d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(3), new[] { 60d }, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                var ranges = new CanGetTimeSeriesRangeCases().Select(c=> new TimeSeriesRange
+                {
+                    From = (DateTime?)c[0],
+                    To = (DateTime?)c[1],
+                    Name = "Heartrate"
+                });
+
+                var results = store.Operations.Send(new GetMultipleTimeSeriesOperation("users/ayende", ranges));
+                var param = new CanGetTimeSeriesRangeCases().ToList();
+                for (var index = 0; index < param.Count; index++)
+                {
+                    var range = param[index];
+                    var rangeResult = results.Values["Heartrate"][index];
+                    Assert.Equal(range[0] ?? DateTime.MinValue, rangeResult.From);
+                    Assert.Equal(range[1] ?? DateTime.MaxValue, rangeResult.To);
+                    Assert.Equal(range[2], rangeResult.Entries.Length);
                 }
             }
         }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Sparrow.Extensions;
 
@@ -43,12 +44,12 @@ namespace Raven.Client.Documents.Session.Tokens
                 .Append(", ");
 
             writer.Append("'")
-                .Append(_range.From.GetDefaultRavenFormat())
+                .Append((_range.From ?? DateTime.MinValue).GetDefaultRavenFormat())
                 .Append("'")
                 .Append(", ");
 
             writer.Append("'")
-                .Append(_range.To.GetDefaultRavenFormat())
+                .Append((_range.To ?? DateTime.MaxValue).GetDefaultRavenFormat())
                 .Append("'");
 
             writer.Append(")");

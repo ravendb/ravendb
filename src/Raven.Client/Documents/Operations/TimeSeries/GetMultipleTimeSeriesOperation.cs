@@ -85,9 +85,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     pathBuilder.Append("&name=")
                         .Append(Uri.EscapeDataString(range.Name))
                         .Append("&from=")
-                        .Append(range.From.EnsureUtc().GetDefaultRavenFormat())
+                        .Append(range.From?.EnsureUtc().GetDefaultRavenFormat())
                         .Append("&to=")
-                        .Append(range.To.EnsureUtc().GetDefaultRavenFormat());
+                        .Append(range.To?.EnsureUtc().GetDefaultRavenFormat());
                 }
 
                 if (any == false)

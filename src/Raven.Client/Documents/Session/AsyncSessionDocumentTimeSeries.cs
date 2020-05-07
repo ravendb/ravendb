@@ -27,11 +27,11 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
+        public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
             TimeSeriesRangeResult rangeResult;
-            from = from.EnsureUtc();
-            to = to.EnsureUtc();
+            from = from?.EnsureUtc();
+            to = to?.EnsureUtc();
 
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
                 cache.TryGetValue(Name, out var ranges) && 
@@ -66,12 +66,12 @@ namespace Raven.Client.Documents.Session
                 }
 
                 var (servedFromCache, resultToUser, mergedValues, fromRangeIndex, toRangeIndex) = 
-                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(from, to, ranges, start, pageSize, token)
+                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, ranges, start, pageSize, token)
                         .ConfigureAwait(false);
 
                 if (servedFromCache == false && Session.NoTracking == false)
                 {
-                    AddToCache(Name, from, to, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
+                    AddToCache(Name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
                 }
 
                 return resultToUser;

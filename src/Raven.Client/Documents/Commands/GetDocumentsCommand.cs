@@ -135,8 +135,8 @@ namespace Raven.Client.Documents.Commands
                 foreach (var range in _timeSeriesIncludes)
                 {
                     pathBuilder.Append("&timeseries=").Append(Uri.EscapeDataString(range.Name))
-                        .Append("&from=").Append(range.From.GetDefaultRavenFormat())
-                        .Append("&to=").Append(range.To.GetDefaultRavenFormat());
+                        .Append("&from=").Append(range.From?.GetDefaultRavenFormat())
+                        .Append("&to=").Append(range.To?.GetDefaultRavenFormat());
                 }
             }
 
