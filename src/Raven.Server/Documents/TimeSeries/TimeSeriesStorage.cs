@@ -2042,11 +2042,12 @@ namespace Raven.Server.Documents.TimeSeries
 
             TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, context, out var docId, out var lowerName, out var baseline);
 
-            var key = ToKey(context, docId, lowerName, baseline);
+            var luceneKey = ToLuceneKey(context, docId, lowerName, baseline);
 
             return new TimeSeriesSegmentEntry
             {
-                Key = key,
+                Key = new LazyStringValue(null, keyPtr, keySize, context),
+                LuceneKey = luceneKey,
                 DocId = docId,
                 Name = lowerName,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
@@ -2057,7 +2058,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Etag = Bits.SwapBytes(etag),
             };
 
-            static LazyStringValue ToKey(DocumentsOperationContext context, LazyStringValue documentId, LazyStringValue name, DateTime baseline)
+            static LazyStringValue ToLuceneKey(DocumentsOperationContext context, LazyStringValue documentId, LazyStringValue name, DateTime baseline)
             {
                 var ticksSpan = Encoding.UTF8.GetBytes(baseline.Ticks.ToString()).AsSpan();
 
