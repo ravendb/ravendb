@@ -2,15 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Text;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Http;
-using Raven.Client.Json.Converters;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Extensions;
-using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 

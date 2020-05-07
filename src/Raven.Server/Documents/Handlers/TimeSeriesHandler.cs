@@ -119,8 +119,8 @@ namespace Raven.Server.Documents.Handlers
         {
             var documentId = GetStringQueryString("docId");
             var names = GetStringValuesQueryString("name");
-            var fromList = GetStringValuesQueryString("from", required: false);
-            var toList = GetStringValuesQueryString("to", required: false);
+            var fromList = GetStringValuesQueryString("from");
+            var toList = GetStringValuesQueryString("to");
 
             var start = GetStart();
             var pageSize = GetPageSize();
@@ -150,8 +150,8 @@ namespace Raven.Server.Documents.Handlers
         {
             var documentId = GetStringQueryString("docId");
             var name = GetStringQueryString("name");
-            var fromStr = GetStringQueryString("from");
-            var toStr = GetStringQueryString("to");
+            var fromStr = GetStringQueryString("from", required: false);
+            var toStr = GetStringQueryString("to", required: false);
 
             var start = GetStart();
             var pageSize = GetPageSize();
@@ -159,8 +159,13 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var from = ParseDate(fromStr, name);
-                var to = ParseDate(toStr, name);
+                var from = string.IsNullOrEmpty(fromStr) 
+                    ? DateTime.MinValue 
+                    : ParseDate(fromStr, name);
+
+                var to = string.IsNullOrEmpty(toStr)
+                    ? DateTime.MaxValue
+                    : ParseDate(toStr, name);
 
                 var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
                 if (stats == default)
@@ -196,31 +201,17 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
+        private Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
         {
             if (fromList.Count != toList.Count)
-            {
                 throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
-            }
 
-            if (fromList.Count == 0)
-            {
-                if (names.Count == 0)
-                    return null;
-
-                if (names.Count != 1)
-                    throw new InvalidOperationException($"GetTimeSeriesOperation : Argument count miss match on document '{documentId}'. " +
-                                                        $"Received {names.Count} 'name' arguments, but no 'from'/'to' arguments were provided.");
-
-                // support for the case where we get a single name and no from/to dates are provided
-
-                fromList = toList = new string[] { null };
-            }
-
-            else if (names.Count != fromList.Count)
-                throw new InvalidOperationException($"GetTimeSeriesOperation : Argument count miss match on document '{documentId}'. " +
+            if (fromList.Count != names.Count)
+                throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Argument count miss match on document '{documentId}'. " +
                                                     $"Received {names.Count} 'name' arguments, and {fromList.Count} 'from'/'to' arguments.");
-
+            if (fromList.Count == 0)
+                return null;
+            
             var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, DateTime> datesDictionary = null;
             DateTime from, to;
@@ -230,28 +221,23 @@ namespace Raven.Server.Documents.Handlers
                 var name = names[i];
 
                 if (string.IsNullOrEmpty(name))
-                    throw new InvalidOperationException($"GetTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.Name)}' argument in 'TimeSeriesRange' on document '{documentId}'. " +
+                    throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.Name)}' argument in 'TimeSeriesRange' on document '{documentId}'. " +
                                                         $"'{nameof(TimeSeriesRange.Name)}' cannot be null or empty");
 
-                if (string.IsNullOrEmpty(fromList[i]))
+                if (string.IsNullOrEmpty(fromList[i]) || string.IsNullOrEmpty(toList[i]))
+                    throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.From)}' / '{nameof(TimeSeriesRange.To)}' arguments in 'TimeSeriesRange' on document '{documentId}'. " +
+                                                        $"'{nameof(TimeSeriesRange.From)}' and '{nameof(TimeSeriesRange.To)}' cannot be null or empty");
+                
+                datesDictionary ??= new Dictionary<string, DateTime>();
+
+                if (datesDictionary.TryGetValue(fromList[i], out from) == false)
                 {
-                    Debug.Assert(toList[i] == null, $"Non matching from/to dates. got 'from' = null, expected to have to = null as well, bot got 'to' = '{toList[i]}'");
-                    from = DateTime.MinValue;
-                    to = DateTime.MaxValue;
+                    datesDictionary[fromList[i]] = from = ParseDate(fromList[i], name);
                 }
-                else
+
+                if (datesDictionary.TryGetValue(toList[i], out to) == false)
                 {
-                    datesDictionary ??= new Dictionary<string, DateTime>();
-
-                    if (datesDictionary.TryGetValue(fromList[i], out from) == false)
-                    {
-                        datesDictionary[fromList[i]] = from = ParseDate(fromList[i], name);
-                    }
-
-                    if (datesDictionary.TryGetValue(toList[i], out to) == false)
-                    {
-                        datesDictionary[toList[i]] = to = ParseDate(toList[i], name);
-                    }
+                    datesDictionary[toList[i]] = to = ParseDate(toList[i], name);
                 }
 
                 var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize);
