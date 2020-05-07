@@ -18,20 +18,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly int _start;
         private readonly int _pageSize;
 
-        public GetMultipleTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to, int start = 0, int pageSize = int.MaxValue)
-            : this(docId, start, pageSize)
-        {
-            _ranges = new List<TimeSeriesRange>
-            {
-                new TimeSeriesRange
-                {
-                    Name = timeseries,
-                    From = from,
-                    To = to
-                }
-            };
-        }
-
         public GetMultipleTimeSeriesOperation(string docId, IEnumerable<TimeSeriesRange> ranges, int start = 0, int pageSize = int.MaxValue)
             : this(docId, start, pageSize)
         {
