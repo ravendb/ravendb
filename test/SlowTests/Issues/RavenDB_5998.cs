@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData("SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump")]
+        [InlineData("SlowTests.Smuggler.Data.Northwind_3.5.35168.ravendbdump")]
         public void CanImportNorthwind(string file)
         {
             using (var inputStream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
