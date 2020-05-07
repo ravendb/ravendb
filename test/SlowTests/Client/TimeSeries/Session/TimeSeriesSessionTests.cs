@@ -898,11 +898,11 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(2, cache.Count);
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(2, ranges.Count);
-                    Assert.Equal(baseline, ranges[0].From);
-                    Assert.Equal(baseline.AddMinutes(10), ranges[0].To);
+                    Assert.Equal(baseline, ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(10), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(11, ranges[0].Entries.Length);
-                    Assert.Equal(baseline.AddMinutes(20), ranges[1].From);
-                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(20), ranges[1].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(31, ranges[1].Entries.Length);
                     Assert.True(cache.TryGetValue("BloodPressure", out ranges));
                     Assert.Equal(1, ranges.Count);

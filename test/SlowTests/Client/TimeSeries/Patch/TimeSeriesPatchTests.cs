@@ -330,9 +330,9 @@ for(i = 0; i < args.toAppend.length; i++){
                         if (expected.Item1 >= toRemoveFrom || expected.Item1 <= toRemoveTo) 
                             continue;
                         
-                        Assert.Equal(expected.Item1, entries[0]?.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-                        Assert.Equal(expected.Item2, entries[0]?.Values[0]);
-                        Assert.Equal(tag, entries[0]?.Tag);
+                        Assert.Equal(expected.Item1, entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(expected.Item2, entries[0].Values[0]);
+                        Assert.Equal(tag, entries[0].Tag);
                     }
                 }
             }
