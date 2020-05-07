@@ -21,6 +21,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             if (string.IsNullOrEmpty(docId))
                 throw new ArgumentNullException(nameof(docId));
 
+            if (string.IsNullOrEmpty(timeseries))
+                throw new ArgumentNullException(nameof(timeseries));
+
             _docId = docId;
             _start = start;
             _pageSize = pageSize;
@@ -72,11 +75,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 }
 
                 pathBuilder.Append("&name=")
-                    .Append(_name)
+                    .Append(Uri.EscapeDataString(_name))
                     .Append("&from=")
-                    .Append(_from.GetDefaultRavenFormat())
+                    .Append(_from.EnsureUtc().GetDefaultRavenFormat())
                     .Append("&to=")
-                    .Append(_to.GetDefaultRavenFormat());
+                    .Append(_to.EnsureUtc().GetDefaultRavenFormat());
 
                 var request = new HttpRequestMessage
                 {
