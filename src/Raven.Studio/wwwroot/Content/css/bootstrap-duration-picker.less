@@ -8,7 +8,13 @@
     display: inline-block;
     line-height: 1;
     text-align: center;
-    padding: 5px 3px;
+    padding: 0;
+    margin-right: @gutter-xxs;
+
+    & > input {
+        height: @input-height-base; 
+        padding: @padding-base-vertical @padding-base-horizontal;
+    }
 
     & > div {
         .small-label;

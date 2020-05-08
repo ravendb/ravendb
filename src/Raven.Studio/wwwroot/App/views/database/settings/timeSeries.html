@@ -124,7 +124,7 @@
                                 <label class="control-label">Aggregation Time</label>
                                 <div class="flex-grow" data-bind="with: aggregation">
                                     <div class="flex-horizontal flex-stretch-items" data-bind="visible: unit() === 'custom'">
-                                        <div class="flex-grow">
+                                        <div>
                                             <input type="text" class="form-control" data-bind="durationPicker: customSeconds, durationPickerOptions: { showDays: true, showSeconds: true }" />
                                         </div>
                                         <div>
@@ -140,7 +140,7 @@
                                     </div>
                                     <div class="input-group" data-bind="visible: unit() !== 'custom', validationOptions: { insertMessages: false }">
                                         <span class="input-group-addon"><span class="small-label text-muted">Group every:</span></span>
-                                        <input type="number" class="form-control" data-bind="numericInput: amount" />
+                                        <input type="number" class="form-control small" data-bind="numericInput: amount" />
                                         <button class="btn btn-default dropdown-toggle input-group-addon" data-toggle="dropdown">
                                             <span data-bind="text: $parent.aggregationLabel"></span> <i class="caret"></i>
                                         </button>
@@ -287,7 +287,7 @@
         <label class="control-label">Retention Time</label>
         <div class="flex-grow" data-bind="validationElement: $parent.retention">
             <div class="flex-horizontal flex-stretch-items" data-bind="visible: unit() === 'custom'">
-                <div class="flex-grow">
+                <div>
                     <input type="text" class="form-control" data-bind="durationPicker: customSeconds, durationPickerOptions: { showDays: true, showSeconds: true }" />
                 </div>
                 <div>
@@ -303,7 +303,7 @@
             </div>
             <div class="input-group" data-bind="visible: unit() !== 'custom', validationOptions: { insertMessages: false }">
                 <span class="input-group-addon"><span class="small-label text-muted">keep data for:</span></span>
-                <input type="number" class="form-control" data-bind="numericInput: amount" />
+                <input type="number" class="form-control small" data-bind="numericInput: amount" />
                 <button class="btn btn-default dropdown-toggle input-group-addon" data-toggle="dropdown">
                     <span data-bind="text: $parent.retentionLabel"></span> <i class="caret"></i>
                 </button>
