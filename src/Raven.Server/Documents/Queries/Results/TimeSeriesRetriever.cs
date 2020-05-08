@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections;
-using Sparrow.Json.Parsing;
-using Sparrow.Json;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -10,13 +8,13 @@ using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
-using Raven.Server.Documents.Queries.AST;
-using Raven.Server.ServerWide.Context;
-using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage.Reader;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
-using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -85,7 +83,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             return GetAggregatedValues();
 
-            void AggregateIndividualItems(IEnumerable<SingleResult> items)
+            void AggregateIndividualItems(IEnumerable<TimeSeriesStorage.Reader.SingleResult> items)
             {
                 foreach (var cur in items)
                 {
@@ -93,7 +91,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                     if (ShouldFilter(cur, timeSeriesFunction.Where))
                         continue;
-                    
+
                     count++;
                     for (int i = 0; i < aggStates.Length; i++)
                     {
@@ -166,7 +164,7 @@ namespace Raven.Server.Documents.Queries.Results
                         //We might need to close the old aggregation range and start a new one
                         MaybeMoveToNextRange(it.Segment.Start);
 
-                        // now we need to see if we can consume the whole segment, or 
+                        // now we need to see if we can consume the whole segment, or
                         // if the range it cover needs to be broken up to multiple ranges.
                         // For example, if the segment covers 3 days, but we have group by 1 hour,
                         // we still have to deal with the individual values
@@ -201,7 +199,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }, "timeseries/value");
             }
 
-            bool ShouldFilter(SingleResult singleResult, QueryExpression filter)
+            bool ShouldFilter(TimeSeriesStorage.Reader.SingleResult singleResult, QueryExpression filter)
             {
                 if (filter == null)
                     return false;
@@ -252,7 +250,6 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         throw new InvalidQueryException($"Time series function '{declaredFunction.Name}' failed to execute expression '{be}', got : left '{left}', right '{right}'", e);
                     }
-
                 }
 
                 if (filter is NegatedExpression ne)
@@ -282,7 +279,7 @@ namespace Raven.Server.Documents.Queries.Results
                         var result = CompareLazyNumbers(lnv, d);
                         if (be.Operator == OperatorType.Equal || be.Operator == OperatorType.NotEqual)
                             return result;
-                        
+
                         return result == false;
                     }
 
@@ -410,10 +407,9 @@ namespace Raven.Server.Documents.Queries.Results
                     string rightAsString;
                     if (right is string rs)
                         rightAsString = rs;
-                    
                     else
                         rightAsString = right?.ToString();
-                    
+
                     switch (be.Operator)
                     {
                         case OperatorType.Equal:
@@ -507,7 +503,6 @@ namespace Raven.Server.Documents.Queries.Results
                                 }
                             }
                         }
-
                         else
                         {
                             for (int i = 0; i < inExpression.Values.Count; i++)
@@ -555,7 +550,6 @@ namespace Raven.Server.Documents.Queries.Results
                                 result = lnv.CompareTo(value) <= 0;
                             }
                         }
-
                         else if (src >= value)
                         {
                             value = GetValue(betweenExpression.MaxExpression, singleResult);
@@ -568,12 +562,10 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         throw new InvalidQueryException($"Time series function '{declaredFunction.Name}' failed to execute BetweenExpression '{betweenExpression}'", e);
                     }
-
                 }
             }
 
-
-            object GetValue(QueryExpression expression, SingleResult singleResult)
+            object GetValue(QueryExpression expression, TimeSeriesStorage.Reader.SingleResult singleResult)
             {
                 if (expression is FieldExpression fe)
                 {
@@ -603,7 +595,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 return singleResult.Values.Span[index];
 
                             // we are working with a rolled-up series
-                            // here an entry has 6 different values (min, max, first, last, sum, count) per each 'original' measurement 
+                            // here an entry has 6 different values (min, max, first, last, sum, count) per each 'original' measurement
                             // we need to return the average value (sum / count)
                             index *= 6;
                             if (index + (int)AggregationType.Count >= singleResult.Values.Length)
@@ -637,10 +629,10 @@ namespace Raven.Server.Documents.Queries.Results
                         default:
                             if (fe.Compound[0].Value == timeSeriesFunction.LoadTagAs?.Value)
                                 return GetValueFromLoadedTag(fe, singleResult);
-                            
+
                             if (_argumentValuesDictionary.TryGetValue(fe, out var val) == false)
                                 _argumentValuesDictionary[fe] = val = GetValueFromArgument(declaredFunction, args, fe);
-                            
+
                             return val;
                     }
                 }
@@ -657,7 +649,7 @@ namespace Raven.Server.Documents.Queries.Results
                     return val;
                 }
 
-                // shouldn't happen - query parser should have caught this 
+                // shouldn't happen - query parser should have caught this
                 throw new InvalidQueryException($"Failed to invoke time series function '{declaredFunction.Name}'. Unable to get the value of expression '{expression}'. " +
                                                     $"Unsupported expression type : '{expression.Type}'");
             }
@@ -680,11 +672,11 @@ namespace Raven.Server.Documents.Queries.Results
                 if (args == null)
                     throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                         $"'{compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
-                
+
                 if (args.Length < declaredFunction.Parameters.Count)
                     throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'." +
                                                         $"Expected '{declaredFunction.Parameters.Count}' arguments, but got '{args.Length}'");
-                
+
                 var index = GetParameterIndex(declaredFunction, compound[0]);
                 if (index == 0)
                 {
@@ -696,7 +688,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (index == -1 || index == declaredFunction.Parameters.Count) // not found
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"'{compound[0]}' is unknown, and no matching argument was provided to time series function '{declaredFunction.Name}'.");
-                    
+
                     if (!(args[index] is Document document))
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
                                                             $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[index].GetType()}'");
@@ -724,11 +716,11 @@ namespace Raven.Server.Documents.Queries.Results
         {
             if (args == null || declaredFunction.Parameters == null)
                 throw new InvalidQueryException($"Unable to get the value of '{fe}'. '{fe.Compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
-            
+
             if (args.Length < declaredFunction.Parameters.Count)
                 throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'. " +
                                                     $"Expected '{declaredFunction.Parameters.Count}', but got '{args.Length}.'");
-            
+
             var index = GetParameterIndex(declaredFunction, fe.Compound[0]);
 
             if (index == declaredFunction.Parameters.Count) // not found
@@ -737,7 +729,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (args[index] == null)
                 return null;
-            
+
             if (!(args[index] is Document doc))
             {
                 if (index == 0 && args[0] is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?> tuple)
@@ -748,7 +740,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (fe.Compound.Count == 1)
                 return doc;
-            
+
             return GetFieldFromDocument(fe, doc);
         }
 
@@ -783,7 +775,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     var id = currentPart == 1
                         ? document.Id
-                        : data.TryGetId(out var nestedId) 
+                        : data.TryGetId(out var nestedId)
                             ? nestedId : null;
 
                     throw new InvalidQueryException($"Unable to get the value of '{fe.FieldValueWithoutAlias}' from document '{document.Id}'. " +
@@ -800,7 +792,7 @@ namespace Raven.Server.Documents.Queries.Results
             return val;
         }
 
-        private object GetValueFromLoadedTag(FieldExpression fe, SingleResult singleResult)
+        private object GetValueFromLoadedTag(FieldExpression fe, TimeSeriesStorage.Reader.SingleResult singleResult)
         {
             if (_loadedDocuments == null)
                 _loadedDocuments = new Dictionary<string, Document>();
@@ -811,7 +803,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (_loadedDocuments.TryGetValue(tag, out var document) == false)
                 _loadedDocuments[tag] = document = _context.DocumentDatabase.DocumentsStorage.Get(_context, tag);
-            
+
             if (fe.Compound.Count == 1)
                 return document;
 
@@ -875,7 +867,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 var val = ve.GetValue(_queryParameters);
                 if (val == null)
-                    throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value"); 
+                    throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
 
                 DateTime? result;
                 _valuesDictionary[ve] = result = ParseDateTime(val.ToString());
@@ -905,14 +897,13 @@ namespace Raven.Server.Documents.Queries.Results
         {
             "yyyy-MM-ddTHH:mm:ss.fffffffZ",
             "yyyy-MM-ddTHH:mm:ss.fffffff",
-            "yyyy-MM-ddTHH:mm:ss", 
-            "yyyy-MM-dd", 
-            "yyyy", 
-            "yyyy-MM", 
-            "yyyy-MM-ddTHH:mm", 
+            "yyyy-MM-ddTHH:mm:ss",
+            "yyyy-MM-dd",
+            "yyyy",
+            "yyyy-MM",
+            "yyyy-MM-ddTHH:mm",
             "yyyy-MM-ddTHH:mm:ss.fff"
         };
-    }
 
         private class MultiReader
         {
@@ -929,7 +920,7 @@ namespace Raven.Server.Documents.Queries.Results
             public MultiReader(DocumentsOperationContext context, string documentId,
                 string source, string collection, DateTime min, DateTime max, TimeSpan? offset)
             {
-                if (string.IsNullOrEmpty(source)) 
+                if (string.IsNullOrEmpty(source))
                     throw new ArgumentNullException(nameof(source));
                 _source = source;
                 _docId = documentId ?? throw new ArgumentNullException(nameof(documentId));
@@ -947,7 +938,7 @@ namespace Raven.Server.Documents.Queries.Results
                 _names = new SortedList<long, string>();
 
                 var policyRunner = _context.DocumentDatabase.TimeSeriesPolicyRunner;
-                if (policyRunner == null || 
+                if (policyRunner == null ||
                     policyRunner.Configuration.Collections.TryGetValue(collection, out var config) == false ||
                     config.Disabled || config.Policies.Count == 0)
                 {
@@ -972,7 +963,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            public IEnumerable<(IEnumerable<SingleResult> IndividualValues, SegmentResult Segment)> SegmentsOrValues()
+            public IEnumerable<(IEnumerable<TimeSeriesStorage.Reader.SingleResult> IndividualValues, TimeSeriesStorage.Reader.SegmentResult Segment)> SegmentsOrValues()
             {
                 while (_current < _names.Count)
                 {
@@ -985,7 +976,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            public IEnumerable<SingleResult> AllValues()
+            public IEnumerable<TimeSeriesStorage.Reader.SingleResult> AllValues()
             {
                 while (_current < _names.Count)
                 {
@@ -1006,7 +997,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 var from = _reader?._to.AddMilliseconds(1) ?? _min;
 
-                var to = ++_current > _names.Count - 1 
+                var to = ++_current > _names.Count - 1
                     ? _max
                     : new DateTime(_names.Keys[_current]).AddMilliseconds(-1);
 
