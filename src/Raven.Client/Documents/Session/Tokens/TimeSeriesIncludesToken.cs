@@ -43,14 +43,29 @@ namespace Raven.Client.Documents.Session.Tokens
                 .Append("'")
                 .Append(", ");
 
-            writer.Append("'")
-                .Append((_range.From ?? DateTime.MinValue).GetDefaultRavenFormat())
-                .Append("'")
-                .Append(", ");
+            if (_range.From.HasValue)
+            {
+                writer.Append("'")
+                    .Append(_range.From.Value.GetDefaultRavenFormat())
+                    .Append("'")
+                    .Append(", ");
+            }
+            else
+            {
+                writer.Append("null,");
+            }
 
-            writer.Append("'")
-                .Append((_range.To ?? DateTime.MaxValue).GetDefaultRavenFormat())
-                .Append("'");
+            if (_range.To.HasValue)
+            {
+                
+                writer.Append("'")
+                    .Append(_range.To.Value.GetDefaultRavenFormat())
+                    .Append("'");
+            }
+            else
+            {
+                writer.Append("null");
+            }
 
             writer.Append(")");
         }

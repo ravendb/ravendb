@@ -507,7 +507,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        class CanGetTimeSeriesRangeCases : IEnumerable<object[]>
+        internal class CanGetTimeSeriesRangeCases : IEnumerable<object[]>
         {
             private readonly List<object[]> _data = new List<object[]>
             {

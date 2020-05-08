@@ -5,7 +5,7 @@ using Raven.Client.Documents.Session.Loaders;
 using Raven.Server.Documents.Handlers;
 
 
-namespace Raven.Server.Documents.Queries.Counters
+namespace Raven.Server.Documents.Queries.TimeSeries
 {
     public class TimeSeriesIncludesField
     {
@@ -27,8 +27,8 @@ namespace Raven.Server.Documents.Queries.Counters
             hashSet.Add(new TimeSeriesRange
             {
                 Name = timeseries,
-                From = TimeSeriesHandler.ParseDate(fromStr, timeseries),
-                To = TimeSeriesHandler.ParseDate(toStr, timeseries)
+                From = string.IsNullOrEmpty(fromStr) ? DateTime.MinValue : TimeSeriesHandler.ParseDate(fromStr, timeseries),
+                To = string.IsNullOrEmpty(toStr) ? DateTime.MaxValue : TimeSeriesHandler.ParseDate(toStr, timeseries)
             });
         }
     }

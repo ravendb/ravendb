@@ -75,12 +75,19 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 }
 
                 pathBuilder.Append("&name=")
-                    .Append(Uri.EscapeDataString(_name))
-                    .Append("&from=")
-                    .Append(_from?.EnsureUtc().GetDefaultRavenFormat())
-                    .Append("&to=")
-                    .Append(_to?.EnsureUtc().GetDefaultRavenFormat());
+                    .Append(Uri.EscapeDataString(_name));
 
+                if (_from.HasValue)
+                {
+                    pathBuilder.Append("&from=")
+                        .Append(_from.Value.EnsureUtc().GetDefaultRavenFormat());
+                }
+                
+                if (_to.HasValue)
+                {
+                    pathBuilder.Append("&to=")
+                        .Append(_to.Value.EnsureUtc().GetDefaultRavenFormat());
+                }
 
                 var request = new HttpRequestMessage
                 {

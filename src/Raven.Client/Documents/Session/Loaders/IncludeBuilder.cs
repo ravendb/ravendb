@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session.Loaders
 
     public interface ITimeSeriesIncludeBuilder<T, out TBuilder>
     {
-        TBuilder IncludeTimeSeries(string name, DateTime from, DateTime to);
+        TBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null);
     }
 
     public interface ICompareExchangeValueIncludeBuilder<T, out TBuilder>
@@ -286,13 +286,13 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        IIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime from, DateTime to)
+        IIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime? from, DateTime? to)
         {
             IncludeTimeSeries(string.Empty, name, from, to);
             return this;
         }
 
-        IQueryIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime from, DateTime to)
+        IQueryIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime? from, DateTime? to)
         {
             IncludeTimeSeries(string.Empty, name, from, to);
             return this;
@@ -442,7 +442,7 @@ namespace Raven.Client.Documents.Session.Loaders
                 Alias = path.Parameters[0].Name;
         }
 
-        private void IncludeTimeSeries(string alias, string name, DateTime from, DateTime to)
+        private void IncludeTimeSeries(string alias, string name, DateTime? from, DateTime? to)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
@@ -460,8 +460,8 @@ namespace Raven.Client.Documents.Session.Loaders
             hashSet.Add(new TimeSeriesRange
             {
                 Name = name,
-                From = from.EnsureUtc(),
-                To = to.EnsureUtc()
+                From = from?.EnsureUtc(),
+                To = to?.EnsureUtc()
             });
         }
     }
