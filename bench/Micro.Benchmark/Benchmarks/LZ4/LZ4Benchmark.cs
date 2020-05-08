@@ -23,7 +23,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
         {
             public Config()
             {
-                Add(new Job(RunMode.Dry)
+                AddJob(new Job(RunMode.Dry)
                 {
                     Environment =
                     {
@@ -34,16 +34,16 @@ namespace Micro.Benchmark.Benchmarks.LZ4
                 });
 
                 // Exporters for data
-                Add(GetExporters().ToArray());
+                AddExporter(GetExporters().ToArray());
                 // Generate plots using R if %R_HOME% is correctly set
-                Add(RPlotExporter.Default);
+                AddExporter(RPlotExporter.Default);
 
-                Add(StatisticColumn.AllStatistics);
+                AddColumn(StatisticColumn.AllStatistics);
 
-                Add(BaselineValidator.FailOnError);
-                Add(JitOptimizationsValidator.FailOnError);
+                AddValidator(BaselineValidator.FailOnError);
+                AddValidator(JitOptimizationsValidator.FailOnError);
 
-                Add(EnvironmentAnalyser.Default);
+                AddAnalyser(EnvironmentAnalyser.Default);
             }
         }
 
