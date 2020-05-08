@@ -76,7 +76,7 @@ namespace SlowTests.Tests.Indexes
                     using (var lazyStringValue = context.GetLazyString("docs/1"))
                     {
                         bool shouldSkip;
-                        converter.SetDocument(lazyStringValue, result, context, out shouldSkip);
+                        converter.SetDocument(lazyStringValue, result, context, FastTests.Server.Documents.Indexing.Lucene.LuceneDocumentConverterTests.FakeWriteOperationBuffer.Create(), out shouldSkip);
                         Assert.Equal("docs/1", converter.Document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, null));
                     }
                 }

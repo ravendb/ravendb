@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private const string CreatedFieldOptionsPropertyName = "$options";
         private const string CreatedFieldNamePropertyName = "$name";
 
-        protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
+        protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
         {
             if (!(document is ObjectInstance documentToProcess))
                 return 0;
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     documentToProcess.Engine,
                     documentToProcess);
 
-                instance.Add(GetReduceResultValueField(reduceResult));
+                instance.Add(GetReduceResultValueField(reduceResult, writeBuffer));
                 newFields++;
             }
 
