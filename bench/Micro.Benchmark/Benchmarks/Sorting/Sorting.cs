@@ -19,7 +19,7 @@ namespace Micro.Benchmark.Benchmarks.Sorting
         {
             public Config()
             {
-                Add(new Job
+                AddJob(new Job
                 {
                     Environment =
                     {
@@ -35,13 +35,14 @@ namespace Micro.Benchmark.Benchmarks.Sorting
                 });
 
                 // Exporters for data
-                Add(GetExporters().ToArray());
+                AddExporter(GetExporters().ToArray());
                 // Generate plots using R if %R_HOME% is correctly set
-                Add(RPlotExporter.Default);
+                AddExporter(RPlotExporter.Default);
 
-                Add(BaselineValidator.FailOnError);
-                Add(JitOptimizationsValidator.FailOnError);
-                Add(EnvironmentAnalyser.Default);
+                AddValidator(BaselineValidator.FailOnError);
+                AddValidator(JitOptimizationsValidator.FailOnError);
+
+                AddAnalyser(EnvironmentAnalyser.Default);
             }
         }
 
