@@ -885,6 +885,56 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
+        [Theory]
+        [ClassData(typeof(TimeSeriesSessionTests.CanGetTimeSeriesRangeCases))]
+        public async Task AsyncQueryWithIncludeTimeSeries2(DateTime? from, DateTime? to, int expectedValue)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = new DateTime(2019, 12, 1);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
+                    await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 58d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(1), new[] { 60d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(2), new[] { 60d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMonths(3), new[] { 60d }, "watches/fitbit");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.Query<Order>()
+                        .Include(i => i
+                            .IncludeDocuments("Company")
+                            .IncludeTimeSeries("Heartrate", from, to))
+                        .FirstAsync();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    var company = await session.LoadAsync<Company>(order.Company);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+                    var values = (await session.TimeSeriesFor(order, "Heartrate")
+                        .GetAsync(from, to))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(expectedValue, values.Count);
+                }
+            }
+        }
+
         [Fact]
         public void RawQueryIncludeTimeSeriesWithParameter()
         {

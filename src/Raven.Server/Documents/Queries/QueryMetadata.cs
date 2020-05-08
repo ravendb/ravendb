@@ -22,6 +22,7 @@ using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Json;
@@ -780,16 +781,32 @@ namespace Raven.Server.Documents.Queries
             {
                 if (!(expression.Arguments[index] is ValueExpression vt))
                     continue;
-
+                var argIndex = index - start;
                 var arg = QueryBuilder.GetValue(Query, this, parameters, vt);
 
-                if (arg.Type != ValueTokenType.String)
-                    throw new InvalidQueryException("Parameters of method `timeseries` must be of type `string``, " +
-                                                    $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
+                // name arg
+                if (argIndex == 0)
+                {
+                    if (arg.Type != ValueTokenType.String)
+                        throw new InvalidQueryException("Name parameters of method `timeseries` must be of type `string``, " +
+                                                       $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
+                    args[argIndex] = arg.Value.ToString();
+                    continue;
+                }
 
-                args[index - start] = arg.Value.ToString();
-
-
+                // from/to args
+                switch (arg.Type)
+                {
+                    case ValueTokenType.String:
+                        args[argIndex] = arg.Value.ToString();
+                        break;
+                    case ValueTokenType.Null:
+                        args[argIndex] = null;
+                        break;
+                    default:
+                        throw new InvalidQueryException("From/To parameters of method of `timeseries` must be of type `string` or `null`, " +
+                                                        $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters); 
+                }
             }
 
             timeSeriesIncludes.AddTimeSeries(args[0], args[1], args[2], alias);
