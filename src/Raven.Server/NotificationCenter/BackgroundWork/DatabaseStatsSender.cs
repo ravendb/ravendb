@@ -71,7 +71,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context)
                 };
                 current.Collections = _database.DocumentsStorage.GetCollections(context)
-                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentChangeVector(context, x.Name)));
+                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, x.Name)));
             }
 
             if (_latest != null && _latest.Equals(current))

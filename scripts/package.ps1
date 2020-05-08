@@ -86,9 +86,12 @@ function CopyStudioPackageToServerOutputDirectory ( $packOpts ) {
 
     $studioZipPath = [io.path]::combine($packOpts.OutDirs.Studio, "Raven.Studio.zip")
     $dst = $packOpts.OutDirs.Server
+    if (-not (Test-Path $studioZipPath)) {
+        throw "Studio ZIP package does not exist at $studioZipPath."
+    }
+
     write-host "Copying Studio $studioZipPath -> $dst"
     Copy-Item "$studioZipPath" -Destination $dst
-    CheckLastExitCode
 }
 
 function CopyDaemonScripts ( $projectDir, $packageDir ) {

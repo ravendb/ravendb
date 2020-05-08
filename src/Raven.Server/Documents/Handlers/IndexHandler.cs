@@ -811,7 +811,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         foreach (var collection in index.Collections)
                         {
-                            var etag = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
+                            var etag = Database.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, collection);
                             var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, 1, DocumentFields.LastModified).FirstOrDefault();
                             if (document != null)
                             {

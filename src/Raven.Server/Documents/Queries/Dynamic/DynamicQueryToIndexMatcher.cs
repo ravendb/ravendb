@@ -12,6 +12,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryMatchResult
     {
+        public static DynamicQueryMatchResult Failure = new DynamicQueryMatchResult("Failure/None", DynamicQueryMatchType.Failure)
+        {
+            LastMappedEtag = -1,
+            NumberOfMappedFields = -1
+        };
+
         public string IndexName { get; set; }
         public DynamicQueryMatchType MatchType { get; set; }
 
@@ -30,8 +36,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
     {
         Failure,
         Partial,
+        CompleteButIdle,
         Complete,
-        CompleteButIdle
     }
 
     public class DynamicQueryToIndexMatcher
@@ -57,35 +63,47 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
-            var definitions = _indexStore.GetIndexesForCollection(query.ForCollection)
-                .Where(x => x.Type.IsAuto() && (query.IsGroupBy ? x.Type.IsMapReduce() : x.Type.IsMap()))
-                .Select(x => x.Definition as AutoIndexDefinitionBase)
-                .ToList();
+            var bestComplete = DynamicQueryMatchResult.Failure;
 
-            if (definitions.Count == 0)
-                return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
-
-            var results = definitions.Select(definition => ConsiderUsageOfIndex(query, definition, explanations))
-                    .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
-                    .GroupBy(x => x.MatchType)
-                    .ToDictionary(x => x.Key, x => x.ToArray());
-
-            if (results.TryGetValue(DynamicQueryMatchType.Complete, out DynamicQueryMatchResult[] matchResults) && matchResults.Length > 0)
+            foreach (var index in _indexStore.GetIndexesForCollection(query.ForCollection))
             {
-                return SelectIndexMatchingCompletely(explanations, matchResults);
+                if (query.IsGroupBy)
+                {
+                    if (index.Type != IndexType.AutoMapReduce)
+                        continue;
+                }
+                else if (index.Type != IndexType.AutoMap)
+                    continue;
+
+                var auto = (AutoIndexDefinitionBase)index.Definition;
+
+                var result = ConsiderUsageOfIndex(query, auto, explanations);
+
+                if (result.MatchType < bestComplete.MatchType)
+                {
+                    explanations?.Add(new Explanation(result.IndexName, "A better match was available"));
+                    continue;
+                }
+
+                const string notWidestMsg = "Wasn't the widest / most up to date index matching this query";
+
+
+                if (result.LastMappedEtag <= bestComplete.LastMappedEtag &&
+                    result.NumberOfMappedFields <= bestComplete.NumberOfMappedFields)
+                {
+                    explanations?.Add(new Explanation(bestComplete.IndexName, notWidestMsg));
+                    continue;
+                }
+
+                if (explanations != null && 
+                    bestComplete.MatchType != DynamicQueryMatchType.Failure)
+                {
+                    explanations.Add(new Explanation(bestComplete.IndexName, notWidestMsg));
+                }
+                bestComplete = result;
             }
 
-            if (results.TryGetValue(DynamicQueryMatchType.CompleteButIdle, out matchResults) && matchResults.Length > 0)
-            {
-                return SelectIndexMatchingCompletely(explanations, matchResults);
-            }
-
-            if (results.TryGetValue(DynamicQueryMatchType.Partial, out matchResults) && matchResults.Length > 0)
-            {
-                return matchResults.OrderByDescending(x => x.NumberOfMappedFields).First();
-            }
-
-            return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
+            return bestComplete;
         }
 
         private static DynamicQueryMatchResult SelectIndexMatchingCompletely(List<Explanation> explanations, DynamicQueryMatchResult[] matchResults)
@@ -111,12 +129,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var collection = query.ForCollection;
             var indexName = definition.Name;
 
-            if (definition.Collections.Contains(collection, StringComparer.OrdinalIgnoreCase) == false)
+            if (definition.Collections.Contains(collection) == false)
             {
-                if (definition.Collections.Count == 0)
-                    explanations?.Add(new Explanation(indexName, "Query is specific for collection, but the index searches across all of them, may result in a different type being returned."));
-                else
-                    explanations?.Add(new Explanation(indexName, $"Index does not apply to collection '{collection}'"));
+                explanations?.Add(new Explanation(indexName,
+                    definition.Collections.Count == 0
+                        ? "Query is specific for collection, but the index searches across all of them, may result in a different type being returned."
+                        : $"Index does not apply to collection '{collection}'"));
 
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
             }
@@ -132,17 +150,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 return new DynamicQueryMatchResult(definition.Name, DynamicQueryMatchType.Failure);
 
             var state = index.State;
-            IndexStats stats;
+            bool isInvalidStats;
             try
             {
-                stats = index.GetStats();
-
+                isInvalidStats = index.IsInvalidIndex();
             }
             catch (OperationCanceledException)
             {
                 return new DynamicQueryMatchResult(definition.Name, DynamicQueryMatchType.Failure);
             }
-            if (state == IndexState.Error || state == IndexState.Disabled || stats.IsInvalidIndex)
+            if (state == IndexState.Error || state == IndexState.Disabled || isInvalidStats)
             {
                 explanations?.Add(new Explanation(indexName, $"Cannot do dynamic queries on disabled index or index with errors (index name = {indexName})"));
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);

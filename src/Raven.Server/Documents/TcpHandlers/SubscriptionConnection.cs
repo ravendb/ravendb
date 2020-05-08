@@ -554,7 +554,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
                                     var globalEtag = useRevisions ?
                                         TcpConnection.DocumentDatabase.DocumentsStorage.RevisionsStorage.GetLastRevisionEtag(docsContext, Subscription.Collection) :
-                                        TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Subscription.Collection);
+                                        TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext.Transaction.InnerTransaction, Subscription.Collection);
 
                                     if (globalEtag > _startEtag)
                                         continue;
@@ -908,6 +908,15 @@ namespace Raven.Server.Documents.TcpHandlers
                     // ignored
                 }
 
+                try
+                {
+                    _waitForMoreDocuments.Dispose();
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+                
                 try
                 {
                     CancellationTokenSource.Dispose();

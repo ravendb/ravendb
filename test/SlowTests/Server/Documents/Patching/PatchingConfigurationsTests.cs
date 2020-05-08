@@ -20,65 +20,10 @@ namespace SlowTests.Server.Documents.Patching
         }
 
         [Fact]
-        public async Task CanReduceCacheSizeButKeepMostUsedScripts()
-        {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "20"
-            }))
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User() { Name = "Jeroboam" }, "users/1");
-                }
-
-                await store.Operations.SendAsync(new PatchOperation<User>("doc", null, new PatchRequest
-                {
-                    Script = "this.Name = 'Jeroboam0'"
-                }));
-
-                for (int i = 1; i < 20; i++)
-                {
-
-                    var result = await store.Operations.SendAsync(new PatchOperation<User>("doc", null, new PatchRequest
-                    {
-                        Script = "this.Name = 'Jeroboam" + i + "';"
-                    }));
-                }
-
-                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                var cacheType = typeof(ScriptRunnerCache);
-                var numberOfCahcedScriptsField = cacheType.GetField("_numberOfCachedScripts", BindingFlags.Instance | BindingFlags.NonPublic);
-                var numberOfCachedScripts = numberOfCahcedScriptsField.GetValue(db.Scripts);
-
-                Assert.Equal(20, numberOfCachedScripts);
-
-                await store.Operations.SendAsync(new PatchOperation<User>("doc", null, new PatchRequest
-                {
-                    Script = "this.Name = 'Jeroboam" + 21 + "';"
-                }));
-
-                numberOfCachedScripts = numberOfCahcedScriptsField.GetValue(db.Scripts);
-                Assert.Equal(16, numberOfCachedScripts);
-
-                await store.Operations.SendAsync(new PatchOperation<User>("doc", null, new PatchRequest
-                {
-                    Script = "this.Name = 'Jeroboam0'"
-                }));
-
-                Assert.Equal(16, numberOfCachedScripts);
-
-
-            }
-        }
-
-
-        [Fact]
         public async Task CanReuseCachedItem()
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "20"
             }))
             {
                 using (var session = store.OpenSession())
@@ -95,11 +40,8 @@ namespace SlowTests.Server.Documents.Patching
                 }
 
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                var cacheType = typeof(ScriptRunnerCache);
-                var numberOfCahcedScriptsField = cacheType.GetField("_numberOfCachedScripts", BindingFlags.Instance | BindingFlags.NonPublic);
-                var numberOfCachedScripts = numberOfCahcedScriptsField.GetValue(db.Scripts);
-
-                Assert.Equal(1, numberOfCachedScripts);
+                
+                Assert.Equal(1, db.Scripts.NumberOfCachedScripts);
             }
         }
 

@@ -30,7 +30,6 @@ using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
@@ -105,22 +104,27 @@ namespace FastTests
                 ThreadPool.SetMinThreads(250, 250);
             }
 
-            var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
-
             RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => true;
 
-            var fileInfo = new FileInfo(XunitConfigurationFile);
-            if (fileInfo.Exists)
-            {
-                using (var file = File.OpenRead(XunitConfigurationFile))
-                using (var sr = new StreamReader(file))
-                {
-                    var json = JObject.Parse(sr.ReadToEnd());
+            var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
-                    if (json.TryGetValue("maxRunningTests", out var testsToken))
-                        maxNumberOfConcurrentTests = testsToken.Value<int>();
-                    else if (json.TryGetValue("maxParallelThreads", out var threadsToken))
-                        maxNumberOfConcurrentTests = threadsToken.Value<int>();
+            if (int.TryParse(Environment.GetEnvironmentVariable("RAVEN_MAX_RUNNING_TESTS"), out var maxRunningTests))
+                maxNumberOfConcurrentTests = maxRunningTests;
+            else
+            {
+                var fileInfo = new FileInfo(XunitConfigurationFile);
+                if (fileInfo.Exists)
+                {
+                    using (var file = File.OpenRead(XunitConfigurationFile))
+                    using (var sr = new StreamReader(file))
+                    {
+                        var json = JObject.Parse(sr.ReadToEnd());
+
+                        if (json.TryGetValue("maxRunningTests", out var testsToken))
+                            maxNumberOfConcurrentTests = testsToken.Value<int>();
+                        else if (json.TryGetValue("maxParallelThreads", out var threadsToken))
+                            maxNumberOfConcurrentTests = threadsToken.Value<int>();
+                    }
                 }
             }
 

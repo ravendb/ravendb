@@ -187,7 +187,7 @@ namespace Raven.Server.Documents
             if (isAllDocs)
                 return DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
 
-            return Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
+            return Database.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, collection);
         }
 
         private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query)

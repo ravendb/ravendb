@@ -29,59 +29,135 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
     public class RavenAzureClient : RavenStorageClient
     {
+        private readonly bool _hasSasToken;
         private readonly string _accountName;
         private readonly byte[] _accountKey;
+        private readonly string _sasToken;
         private readonly string _containerName;
         private readonly string _serverUrlForContainer;
+        private readonly string _serverUrlForAccountName;
         private const string AzureStorageVersion = "2019-02-02";
         private const int MaxUploadPutBlobInBytes = 256 * 1024 * 1024; // 256MB
         private const int OnePutBlockSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
         private const long TotalBlocksSizeLimitInBytes = 475L * 1024 * 1024 * 1024 * 1024L / 100; // 4.75TB
         private readonly Logger _logger;
+
         public static bool TestMode;
+
+
         public string RemoteFolderName { get; }
 
         public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(azureSettings.AccountKey))
-                throw new ArgumentException("Account Key cannot be null or empty");
+            var hasAccountKey = string.IsNullOrWhiteSpace(azureSettings.AccountKey) == false;
+            _hasSasToken = string.IsNullOrWhiteSpace(azureSettings.SasToken) == false;
+
+            if (hasAccountKey == false && _hasSasToken == false)
+            {
+                throw new ArgumentException($"{nameof(AzureSettings.AccountKey)} and {nameof(AzureSettings.SasToken)} cannot be both null or empty");
+            }
+
+            if (hasAccountKey && _hasSasToken)
+            {
+                throw new ArgumentException($"{nameof(AzureSettings.AccountKey)} and {nameof(AzureSettings.SasToken)} cannot be used simultaneously");
+            }
 
             if (string.IsNullOrWhiteSpace(azureSettings.AccountName))
-                throw new ArgumentException("Account Name cannot be null or empty");
+                throw new ArgumentException($"{nameof(AzureSettings.AccountName)} cannot be null or empty");
 
             if (string.IsNullOrWhiteSpace(azureSettings.StorageContainer))
-                throw new ArgumentException("Storage Container cannot be null or empty");
+                throw new ArgumentException($"{nameof(AzureSettings.StorageContainer)} cannot be null or empty");
 
-            _accountName = azureSettings.AccountName;
 
-            try
+            if (hasAccountKey)
             {
-                _accountKey = Convert.FromBase64String(azureSettings.AccountKey);
+                _accountKey = GetAccountKeyBytes(azureSettings.AccountKey);
             }
-            catch (Exception e)
+            else
             {
-                throw new ArgumentException("Wrong format for Account Key", e);
+                VerifySasToken(azureSettings.SasToken);
+                _sasToken = azureSettings.SasToken;
             }
 
             RemoteFolderName = azureSettings.RemoteFolderName;
 
+            _accountName = azureSettings.AccountName;
             _containerName = azureSettings.StorageContainer;
 
             _logger = logger;
-            _serverUrlForContainer = GetUrlForContainer(azureSettings.StorageContainer.ToLower());
+            _serverUrlForContainer = GetUrlForContainer();
+            _serverUrlForAccountName = GetUrlForAccountName();
         }
 
-        private string GetUrlForContainer(string containerName)
+        private static byte[] GetAccountKeyBytes(string accountKey)
+        {
+            try
+            {
+                return Convert.FromBase64String(accountKey);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException($"Wrong format for {nameof(AzureSettings.AccountKey)}", e);
+            }
+        }
+
+        private static void VerifySasToken(string sasToken)
+        {
+            try
+            {
+                var splitted = sasToken.Split('&');
+                if (splitted.Length == 0)
+                    throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format");
+
+                foreach (var keyValueString in splitted)
+                {
+                    var keyValue = keyValueString.Split('=');
+                    if (string.IsNullOrEmpty(keyValue[0]) || string.IsNullOrEmpty(keyValue[1]))
+                        throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format");
+                }
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format", e);
+            }
+        }
+
+        private string GetUrlForContainer()
         {
             var template = TestMode == false ? "https://{0}.blob.core.windows.net/{1}" : "http://localhost:10000/{0}/{1}";
-            return string.Format(template, _accountName, containerName);
+            return string.Format(template, _accountName, _containerName.ToLower());
         }
 
-        private string GetBaseServerUrl()
+        private string GetUrlForAccountName()
         {
             var template = TestMode == false ? "https://{0}.blob.core.windows.net" : "http://localhost:10000/{0}";
             return string.Format(template, _accountName);
+        }
+
+        private string GetUrl(string baseUrl, string parameters = null)
+        {
+            var url = baseUrl;
+
+            var hasParameters = string.IsNullOrEmpty(parameters) == false;
+            if (hasParameters)
+                url += $"?{parameters}";
+
+            if (_hasSasToken)
+            {
+                if (hasParameters)
+                {
+                    url += "&";
+                }
+                else
+                {
+                    url += "?";
+                }
+
+                url += _sasToken;
+            }
+
+            return url;
         }
 
         public void PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
@@ -95,7 +171,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 return;
             }
 
-            var url = _serverUrlForContainer + "/" + key;
+            var url = GetUrl($"{_serverUrlForContainer}/{key}");
 
             Progress?.UploadProgress.SetTotal(stream.Length);
 
@@ -116,7 +192,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
             var client = GetClient(TimeSpan.FromHours(3));
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
+            SetAuthorizationHeader(client, HttpMethods.Put, url, content.Headers);
 
             var response = client.PutAsync(url, content, CancellationToken).Result;
             Progress?.UploadProgress.ChangeState(UploadState.Done);
@@ -150,8 +226,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     blockIds.Add(blockIdString);
 
                     var length = Math.Min(OnePutBlockSizeLimitInBytes, streamLength - stream.Position);
-                    var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
-                    var url = baseUrlForUpload + WebUtility.UrlEncode(blockIdString);
+                    var parameters = $"comp=block&blockid={WebUtility.UrlEncode(blockIdString)}";
+                    var url = GetUrl(baseUrl, parameters);
 
                     PutBlock(stream, client, url, length, retryCount: 0);
                 }
@@ -183,7 +259,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     }
                 };
 
-                client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
+                SetAuthorizationHeader(client, HttpMethods.Put, url, content.Headers);
 
                 try
                 {
@@ -224,10 +300,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             PutBlock(baseStream, client, url, length, retryCount);
         }
 
-        private void PutBlockList(string baseUrl, HttpClient client,
-            List<string> blockIds, Dictionary<string, string> metadata)
+        private void PutBlockList(string baseUrl, HttpClient client, List<string> blockIds, Dictionary<string, string> metadata)
         {
-            var url = baseUrl + "?comp=blocklist";
+            var url = GetUrl(baseUrl, "comp=blocklist");
             var now = SystemTime.UtcNow;
             var doc = CreateXmlDocument(blockIds);
             var xmlString = doc.OuterXml;
@@ -245,7 +320,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             foreach (var metadataKey in metadata.Keys)
                 content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
+            SetAuthorizationHeader(client, HttpMethods.Put, url, content.Headers);
 
             var response = client.PutAsync(url, content, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
@@ -256,15 +331,22 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public void TestConnection()
         {
-            if (ContainerExists())
-                return;
+            try
+            {
+                if (ContainerExists())
+                    return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // we don't have the permissions to see if the container exists
+            }
 
             throw new ContainerNotFoundException($"Container '{_containerName}' not found!");
         }
 
         private bool ContainerExists()
         {
-            var url = _serverUrlForContainer + "?restype=container";
+            var url = GetUrl(_serverUrlForContainer, "restype=container");
             var now = SystemTime.UtcNow;
             var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
             {
@@ -276,7 +358,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
+            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
 
             var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
@@ -285,7 +367,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return false;
 
-            throw StorageException.FromResponseMessage(response);
+            var error = StorageException.FromResponseMessage(response);
+
+            if (response.StatusCode == HttpStatusCode.Forbidden)
+                throw new UnauthorizedAccessException(error.ResponseString);
+
+            throw error;
         }
 
         private static XmlDocument CreateXmlDocument(List<string> blockIds)
@@ -309,7 +396,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public void PutContainer()
         {
-            var url = _serverUrlForContainer + "?restype=container";
+            var url = GetUrl(_serverUrlForContainer, "restype=container");
 
             var now = SystemTime.UtcNow;
             var content = new EmptyContent
@@ -322,7 +409,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
+            SetAuthorizationHeader(client, HttpMethods.Put, url, content.Headers);
 
             var response = client.PutAsync(url, content, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
@@ -336,7 +423,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public Blob GetBlob(string key)
         {
-            var url = _serverUrlForContainer + "/" + key;
+            var url = GetUrl($"{_serverUrlForContainer}/{key}");
 
             var now = SystemTime.UtcNow;
 
@@ -350,7 +437,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
+            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
 
             var response = client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, CancellationToken).Result;
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -367,7 +454,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public async Task<Blob> GetBlobAsync(string key)
         {
-            var url = _serverUrlForContainer + "/" + key;
+            var url = GetUrl($"{_serverUrlForContainer}/{key}");
 
             var now = SystemTime.UtcNow;
 
@@ -381,7 +468,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
+            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
 
             var response = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, CancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -398,7 +485,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public void DeleteContainer()
         {
-            var url = _serverUrlForContainer + "?restype=container";
+            var url = GetUrl(_serverUrlForContainer, "restype=container");
 
             var now = SystemTime.UtcNow;
             var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
@@ -411,7 +498,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, requestMessage.Headers);
+            SetAuthorizationHeader(client, HttpMethods.Delete, url, requestMessage.Headers);
 
             var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
@@ -430,7 +517,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public async Task<ListBlobResult> ListBlobsAsync(string prefix, string delimiter, bool listFolders, int? maxResult = null, string marker = null)
         {
-            var url = GetBaseServerUrl() + $"/{_containerName}?restype=container&comp=list";
+            var url = GetUrl(_serverUrlForContainer, "restype=container&comp=list");
             if (prefix != null)
                 url += $"&prefix={Uri.EscapeDataString(prefix)}";
 
@@ -452,13 +539,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 }
             };
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
+            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
 
             var response = await client.SendAsync(requestMessage, CancellationToken).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return new ListBlobResult
                 {
-                    ListBlob = new List<BlobProperties>()
+                    List = new List<BlobProperties>()
                 };
 
             if (response.IsSuccessStatusCode == false)
@@ -472,7 +559,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             return new ListBlobResult
             {
-                ListBlob = result,
+                List = result,
                 NextMarker = nextMarker == "true" ? listBlobsResult.Root.Element("NextMarker")?.Value : null
             };
 
@@ -505,12 +592,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             if (blobs.Count == 0)
                 return;
 
+            if (_hasSasToken)
+            {
+                // Multi-Delete isn't supported when using a SAS token
+                // https://issues.hibernatingrhinos.com/issue/RavenDB-14936
+                // https://github.com/Azure/azure-sdk-for-net/issues/11762
+                DeleteBlobsWithSasToken(blobs);
+                return;
+            }
+
             const string xMsDate = "x-ms-date";
             const string xMsClientRequestId = "x-ms-client-request-id";
             const string xMsReturnClientRequestId = "x-ms-return-client-request-id";
 
             var now = SystemTime.UtcNow.ToString("R");
-            var url = $"{GetBaseServerUrl()}/?comp=batch";
+            var url = GetUrl(_serverUrlForAccountName, "comp=batch");
 
             var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
             {
@@ -538,8 +634,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
                 using (var hash = new HMACSHA256(_accountKey))
                 {
-                    var uri = new Uri($"{GetBaseServerUrl()}/{_containerName}/{blobs[i]}", UriKind.Absolute);
-                    var hashStr = $"{HttpMethods.Delete}\n\n\n\n\n\n\n\n\n\n\n\n{xMsClientRequestId}:{clientRequestId}\n{xMsDate}:{now}\n{xMsReturnClientRequestId}:true\n/{_accountName}{uri.AbsolutePath}";
+                    var uri = new Uri($"{_serverUrlForContainer}/{blobs[i]}", UriKind.Absolute);
+                    var hashStr =
+                        $"{HttpMethods.Delete}\n\n\n\n\n\n\n\n\n\n\n\n{xMsClientRequestId}:{clientRequestId}\n{xMsDate}:{now}\n{xMsReturnClientRequestId}:true\n/{_accountName}{uri.AbsolutePath}";
                     writer.WriteLine($"Authorization: SharedKey {_accountName}:{Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(hashStr)))}");
                 }
 
@@ -565,7 +662,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 // the ContentLength is calculated on the fly, it gets added to Headers only when we try to access it.
                 throw new ArgumentException($"{nameof(MultipartContent)} should have content length");
             }
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, requestMessage.Headers, batchContent.Headers);
+
+            SetAuthorizationHeader(client, HttpMethods.Post, url, requestMessage.Headers, batchContent.Headers);
 
             var response = client.SendAsync(requestMessage).Result;
             if (response.IsSuccessStatusCode == false)
@@ -667,9 +765,38 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             throw new InvalidOperationException(message);
         }
 
+        private void DeleteBlobsWithSasToken(List<string> blobs)
+        {
+            foreach (var blob in blobs)
+            {
+                var url = GetUrl($"{_serverUrlForContainer}/{blob}");
+
+                var now = SystemTime.UtcNow;
+
+                var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
+                {
+                    Headers =
+                    {
+                        {"x-ms-date", now.ToString("R")},
+                        {"x-ms-version", AzureStorageVersion}
+                    }
+                };
+
+                var client = GetClient();
+                var response = client.SendAsync(requestMessage, CancellationToken).Result;
+                if (response.IsSuccessStatusCode)
+                    continue;
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                    continue;
+
+                throw StorageException.FromResponseMessage(response);
+            }
+        }
+
         public List<string> GetContainerNames(int maxResults)
         {
-            var url = GetBaseServerUrl() + $"?comp=list&maxresults={maxResults}";
+            var url = GetUrl(_serverUrlForAccountName, $"comp=list&maxresults={maxResults}");
 
             var now = SystemTime.UtcNow;
 
@@ -683,7 +810,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
+            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
 
             var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode == false)
@@ -709,8 +836,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return containersList;
         }
 
-        private AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, HttpHeaders httpHeaders, HttpHeaders httpContentHeaders = null)
+        private void SetAuthorizationHeader(HttpClient httpClient, HttpMethod httpMethod, string url, HttpHeaders httpHeaders, HttpHeaders httpContentHeaders = null)
         {
+            if (_hasSasToken)
+            {
+                // we pass the sas token in the url
+                return;
+            }
+
             var stringToHash = ComputeCanonicalizedHeaders(httpMethod, httpHeaders, httpContentHeaders);
             stringToHash += ComputeCanonicalizedResource(url);
 
@@ -722,7 +855,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 var hashedString = hash.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
                 var base64String = Convert.ToBase64String(hashedString);
 
-                return new AuthenticationHeaderValue("SharedKey", $"{_accountName}:{base64String}");
+                httpClient.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("SharedKey", $"{_accountName}:{base64String}");
             }
         }
 

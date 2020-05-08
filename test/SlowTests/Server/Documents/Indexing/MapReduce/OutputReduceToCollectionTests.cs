@@ -485,6 +485,68 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
+        [Fact]
+        public async Task UnchangedResultDoesntWriteDocuments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var date = new DateTime(1985, 8, 13);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        await session.StoreAsync(new Invoice
+                        {
+                            Amount = 1,
+                            IssuedAt = date.AddDays(i * 1)
+                        });
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
+
+                WaitForIndexing(store);
+                await AssertNumberOfResults();
+                string lastChangeVector;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // the reduce result shouldn't change
+                    Invoice invoice = null;
+                    for (var i = 0; i < 10; i++)
+                    {
+                        invoice = new Invoice
+                        {
+                            Amount = 0,
+                            IssuedAt = date
+                        };
+                        await session.StoreAsync(invoice);
+                    }
+
+                    await session.SaveChangesAsync();
+
+                    lastChangeVector = session.Advanced.GetChangeVectorFor(invoice);
+                }
+
+                WaitForIndexing(store);
+                await AssertNumberOfResults();
+
+                var newChangeVector = store.Maintenance.Send(new GetStatisticsOperation()).DatabaseChangeVector;
+                Assert.Equal(lastChangeVector, newChangeVector);
+
+                async Task AssertNumberOfResults()
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        Assert.Equal(10, await session.Query<DailyInvoice, DailyInvoicesIndex>().CountAsync());
+                    }
+                }
+            }
+        }
+
         private static Stream GetDump(string name)
         {
             var assembly = typeof(OutputReduceToCollectionTests).Assembly;

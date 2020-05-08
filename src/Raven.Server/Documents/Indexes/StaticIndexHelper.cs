@@ -52,9 +52,9 @@ namespace Raven.Server.Documents.Indexes
 
                 foreach (var referencedCollection in referencedCollections)
                 {
-                    var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
-                    var lastProcessedReferenceEtag = index._indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
-                    var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+                    var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext.Transaction.InnerTransaction, referencedCollection.Name);
+                    var lastProcessedReferenceEtag = IndexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
+                    var lastProcessedTombstoneEtag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
 
                     if (referenceCutoff == null)
                     {
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes
                                                  $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
                         }
 
-                        var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
+                        var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext.Transaction.InnerTransaction, referencedCollection.Name);
 
                         if (lastTombstoneEtag > lastProcessedTombstoneEtag)
                         {
@@ -133,11 +133,11 @@ namespace Raven.Server.Documents.Indexes
 
                 foreach (var referencedCollection in referencedCollections)
                 {
-                    var lastDocEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection.Name);
-                    var lastProcessedReferenceEtag = index._indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+                    var lastDocEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext.Transaction.InnerTransaction, referencedCollection.Name);
+                    var lastProcessedReferenceEtag = IndexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
 
-                    var lastTombstoneEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, referencedCollection.Name);
-                    var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+                    var lastTombstoneEtag = documentsContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext.Transaction.InnerTransaction, referencedCollection.Name);
+                    var lastProcessedTombstoneEtag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
 
                     *(long*)writePos = lastDocEtag;
                     writePos += sizeof(long);
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes
 
                     foreach (var collectionName in collectionNames)
                     {
-                        var etag = indexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, collection, collectionName);
+                        var etag = IndexStorage.ReadLastProcessedReferenceTombstoneEtag(tx.InnerTransaction, collection, collectionName);
                         if (etags.TryGetValue(collectionName.Name, out long currentEtag) == false || etag < currentEtag)
                             etags[collectionName.Name] = etag;
                     }

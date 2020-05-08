@@ -34,6 +34,8 @@ namespace Voron.Impl
         private bool _disposeAllocator;
         internal TestingStuff _forTestingPurposes;
 
+        public object ImmutableExternalState;
+
         private Tree _root;
         public Tree RootObjects => _root;
 
@@ -88,6 +90,8 @@ namespace Voron.Impl
 
         public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
 
+        public event Action<LowLevelTransaction> LastChanceToReadFromWriteTransactionBeforeCommit;
+
         public Size TotalEncryptionBufferSize
         {
             get
@@ -108,7 +112,7 @@ namespace Voron.Impl
             }
         }
         public event Action<IPagerLevelTransactionState> OnDispose;
-        public event Action AfterCommitWhenNewReadTransactionsPrevented;
+        public event Action<LowLevelTransaction> AfterCommitWhenNewReadTransactionsPrevented;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         internal FixedSizeTree _freeSpaceTree;
@@ -176,6 +180,7 @@ namespace Voron.Impl
             _disposeAllocator = allocator == null;
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
             Flags = TransactionFlags.Read;
+            ImmutableExternalState = previous.ImmutableExternalState;
 
             foreach (var scratchPagerState in previous._pagerStates)
             {
@@ -815,6 +820,8 @@ namespace Voron.Impl
                     _allocator.Dispose();
 
                 OnDispose?.Invoke(this);
+
+                ImmutableExternalState = null;
             }
         }
 
@@ -1086,6 +1093,8 @@ namespace Voron.Impl
             _state.Root.CopyTo(&_txHeader->Root);
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
+
+            LastChanceToReadFromWriteTransactionBeforeCommit?.Invoke(this);
         }
 
         private static void ThrowNextPageNumberCannotBeSmallerOrEqualThanOne([CallerMemberName] string caller = null)
@@ -1197,6 +1206,7 @@ namespace Voron.Impl
         public DateTime TxStartTime;
         internal long? LocalPossibleOldestReadTransaction;
         internal RacyConcurrentBag.Node ActiveTransactionNode;
+        public Transaction Transaction;
 
         public void EnsurePagerStateReference(PagerState state)
         {
@@ -1223,7 +1233,7 @@ namespace Voron.Impl
         {
             // the event cannot be called outside this class while we need to call it in 
             // StorageEnvironment.TransactionAfterCommit
-            AfterCommitWhenNewReadTransactionsPrevented?.Invoke();
+            AfterCommitWhenNewReadTransactionsPrevented?.Invoke(this);
         }
 
 

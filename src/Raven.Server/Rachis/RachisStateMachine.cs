@@ -67,7 +67,7 @@ namespace Raven.Server.Rachis
 
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
 
         }

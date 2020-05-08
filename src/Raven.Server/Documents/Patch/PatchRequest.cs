@@ -120,14 +120,13 @@ function resolve(docs, hasTombstone, resolveToTombstone){{
         {
             unchecked
             {
-                int hashCode = 0;
-                hashCode = (hashCode * 397) ^ (Script != null ? Script.GetHashCode() : 0);
+                int hashCode = Script?.GetHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ (int)Type;
                 if (_functions != null)
                 {
                     foreach (var function in _functions)
                     {
-                        hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
+                        hashCode = (hashCode * 397) ^ (function.Value.FunctionText.GetHashCode());
                     }
                 }
                 return hashCode;

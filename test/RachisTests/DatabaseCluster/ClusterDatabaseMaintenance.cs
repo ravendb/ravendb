@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -115,7 +117,7 @@ namespace RachisTests.DatabaseCluster
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    Assert.Equal(2, database.DocumentsStorage.GetLastTombstoneEtag(ctx, "Users"));
+                    Assert.Equal(2, database.DocumentsStorage.GetLastTombstoneEtag(ctx.Transaction.InnerTransaction, "Users"));
                 }
             }
         }
@@ -226,7 +228,6 @@ namespace RachisTests.DatabaseCluster
         public async Task ReshuffleAfterPromotion()
         {
             var numberOfDatabases = 25;
-
             var clusterSize = 3;
             var settings = new Dictionary<string,string>()
             {
@@ -269,9 +270,10 @@ namespace RachisTests.DatabaseCluster
                 var preferredCount = new Dictionary<string, int> { ["A"] = 0, ["B"] = 0, ["C"] = 0 };
 
                 // wait for recovery of all of the nodes back to member
+                var timeout = cluster.Leader.Configuration.Cluster.SupervisorSamplePeriod.AsTimeSpan * numberOfDatabases * 5;
                 foreach (string name in names)
                 {
-                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize);
+                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize, (int)timeout.TotalMilliseconds);
                     Assert.Equal(clusterSize, val);
 
                     var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(name));

@@ -436,7 +436,7 @@ namespace Raven.Server.Utils.Cli
             foreach (var cmd in commandDescription)
             {
                 WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                WriteText(new string(' ', 25 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                WriteText(new string(' ', Math.Max(25 - cmd[0].Length,0)) + cmd[1], ConsoleColor.DarkYellow, cli);
             }
             return true;
         }
@@ -1188,7 +1188,7 @@ namespace Raven.Server.Utils.Cli
             foreach (var cmd in commandDescription)
             {
                 WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                WriteText(new string(' ', 73 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                WriteText(new string(' ', Math.Max(73 - cmd[0].Length, 0)) + cmd[1], ConsoleColor.DarkYellow, cli);
             }
             WriteText("", TextColor, cli);
 
@@ -1198,7 +1198,7 @@ namespace Raven.Server.Utils.Cli
                 foreach (var cmd in commandExperimentalDescription)
                 {
                     WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                    WriteText(new string(' ', 74 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                    WriteText(new string(' ', Math.Max(74 - cmd[0].Length,0)) + cmd[1], ConsoleColor.DarkYellow, cli);
                 }
                 WriteText("", TextColor, cli);
             }

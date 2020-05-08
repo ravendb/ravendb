@@ -144,7 +144,7 @@ namespace Raven.Server
             MetricCacher.Initialize();
 
             if (Logger.IsInfoEnabled)
-                Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
+                Logger.Info($"Server store started took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
             sp.Restart();
             ListenToPipes().IgnoreUnobservedExceptions();
@@ -237,7 +237,7 @@ namespace Raven.Server
             }
 
             if (Logger.IsInfoEnabled)
-                Logger.Info(string.Format("Configuring HTTP server took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
+                Logger.Info($"Configuring HTTP server took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
             try
             {

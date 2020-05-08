@@ -87,10 +87,11 @@
     <EmbeddedResource Include="Data\data.txt" />
     <EmbeddedResource Include="Data\data2.txt" />
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
-    <EmbeddedResource Include="Smuggler\Document_Without_Attachment_Stream.ravendbdump" />
-    <EmbeddedResource Include="Smuggler\Indexes_And_Transformers_3.5.ravendbdump" />
-    <EmbeddedResource Include="Smuggler\Northwind_3.5.35168.ravendbdump" />
-    <EmbeddedResource Include="Smuggler\Revisions_3.5.35220.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Data\Document_Without_Attachment_Stream.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Data\Identities_3.5.35288.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Data\Indexes_And_Transformers_3.5.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Data\Northwind_3.5.35168.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Data\Revisions_3.5.35220.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
@@ -103,7 +104,7 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.6.1" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="4.7.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1">
       <PrivateAssets>all</PrivateAssets>

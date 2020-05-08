@@ -363,25 +363,21 @@ namespace Sparrow.Logging
 
             public static bool TryGetDate(string fileName, out DateTime dateTime)
             {
-                var logPosition = fileName.LastIndexOf(".log", StringComparison.Ordinal);
-                if (logPosition <= 0)
+                try
                 {
-                    dateTime = default;
-                    return false;
+                    if (File.Exists(fileName))
+                    {
+                        dateTime = File.GetLastWriteTime(fileName);
+                        return true;
+                    }
+                }
+                catch
+                {
+                    // ignored
                 }
 
-                var start = fileName.LastIndexOf(".", logPosition - 1, StringComparison.Ordinal) - DateFormatLength;
-
-                // if we are scanning C:\Users\UserName\AppData\Local\Temp\  
-                // there could be other apps .log files, we should skip them
-                if (start < 0)
-                {
-                    dateTime = DateTime.MinValue;
-                    return false;
-                }
-
-                var date = fileName.Substring(start, DateFormatLength);
-                return DateTime.TryParse(date, out dateTime);
+                dateTime = default;
+                return false;
             }
 
             public static string GetFileName(DateTime dateTime)
@@ -432,11 +428,10 @@ namespace Sparrow.Logging
             if (RetentionTime == TimeSpan.MaxValue)
                 return;
 
-            var retentionDate = DateTime.Now.Date - RetentionTime;
             foreach (var logFile in logFiles)
             {
                 if (LogInfo.TryGetDate(logFile, out var logDateTime) == false
-                    || logDateTime >= retentionDate)
+                    || DateTime.Now - logDateTime <= RetentionTime)
                     continue;
 
                 try
@@ -762,9 +757,9 @@ namespace Sparrow.Logging
 
                         try
                         {
+                            var newZippedFile = Path.Combine(_path, Path.GetFileNameWithoutExtension(logFile) + ".log.gz");
                             using (var logStream = SafeFileStream.Create(logFile, FileMode.Open, FileAccess.Read))
                             {
-                                var newZippedFile = Path.Combine(_path, Path.GetFileNameWithoutExtension(logFile) + ".log.gz");
                                 //If there is compressed file with the same name (probably due to a failure) it will be overwritten
                                 using (var newFileStream = SafeFileStream.Create(newZippedFile, FileMode.Create, FileAccess.Write))
                                 using (var compressionStream = new GZipStream(newFileStream, CompressionMode.Compress))
@@ -772,6 +767,7 @@ namespace Sparrow.Logging
                                     logStream.CopyTo(compressionStream);
                                 }
                             }
+                            File.SetLastWriteTime(newZippedFile, File.GetLastWriteTime(logFile));
                         }
                         catch (Exception)
                         {

@@ -208,14 +208,14 @@ namespace SlowTests.Core.AdminConsole
             DoNotReuseServer();
             var result = ExecuteScript(null, @"
                             return { 
-                                MaxNumberOfCachedScripts: server.ServerStore.Configuration.Patching.MaxNumberOfCachedScripts,
+                                StrictMode: server.ServerStore.Configuration.Patching.StrictMode,
                                 MaxConcurrentFlushes: server.ServerStore.Configuration.Storage.MaxConcurrentFlushes
                             };"
             );
 
             try
             {
-                Assert.Equal(2048, result["MaxNumberOfCachedScripts"]);
+                Assert.Equal(true, result["StrictMode"]);
                 Assert.Equal(10, result["MaxConcurrentFlushes"]);
             }
             catch (Exception e)

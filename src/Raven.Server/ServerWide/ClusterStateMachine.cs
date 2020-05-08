@@ -261,6 +261,12 @@ namespace Raven.Server.ServerWide
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            _rachisLogIndexNotifications.Dispose();
+        }
+
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet("Type", out string type) == false)
@@ -1044,7 +1050,7 @@ namespace Raven.Server.ServerWide
 
         private void ExecuteManyOnDispose(TransactionOperationContext context, long index, string type, List<Func<Task>> tasks)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
             {
                 _rachisLogIndexNotifications.AddTask(index);
                 var count = tasks.Count;
@@ -1751,7 +1757,7 @@ namespace Raven.Server.ServerWide
 
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
             {
                 // we do this under the write tx lock before we update the last applied index
                 _rachisLogIndexNotifications.AddTask(index);
@@ -1765,7 +1771,7 @@ namespace Raven.Server.ServerWide
 
         private void NotifyDatabaseAboutChanged(TransactionOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
             {
                 // we do this under the write tx lock before we update the last applied index
                 _rachisLogIndexNotifications.AddTask(index);
@@ -2275,7 +2281,7 @@ namespace Raven.Server.ServerWide
 
         private void OnTransactionDispose(TransactionOperationContext context, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
             {
                 _rachisLogIndexNotifications.AddTask(index);
                 NotifyAndSetCompleted(index);
@@ -3234,7 +3240,7 @@ namespace Raven.Server.ServerWide
         }
     }
 
-    public class RachisLogIndexNotifications
+    public class RachisLogIndexNotifications : IDisposable
     {
         public long LastModifiedIndex;
         private readonly AsyncManualResetEvent _notifiedListeners;
@@ -3254,6 +3260,11 @@ namespace Raven.Server.ServerWide
         public RachisLogIndexNotifications(CancellationToken token)
         {
             _notifiedListeners = new AsyncManualResetEvent(token);
+        }
+
+        public void Dispose()
+        {
+            _notifiedListeners.Dispose();
         }
 
         public async Task WaitForIndexNotification(long index, CancellationToken token)

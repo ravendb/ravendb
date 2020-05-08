@@ -221,7 +221,6 @@ namespace Raven.Server.Smuggler.Documents
                             if (_log.IsInfoEnabled)
                                 _log.Info("Wasn't able to import the External Replication configuration from smuggler file. Skipping.", e);
                         }
-
                     }
                 }
 
@@ -268,7 +267,6 @@ namespace Raven.Server.Smuggler.Documents
                             if (_log.IsInfoEnabled)
                                 _log.Info("Wasn't able to import sink pull replication configuration from smuggler file. Skipping.", e);
                         }
-
                     }
                 }
 
@@ -288,7 +286,6 @@ namespace Raven.Server.Smuggler.Documents
                             if (_log.IsInfoEnabled)
                                 _log.Info($"Wasn't able to import the pull replication configuration from smuggler file. Skipping.", e);
                         }
-
                     }
                 }
 
@@ -325,7 +322,6 @@ namespace Raven.Server.Smuggler.Documents
                             if (_log.IsInfoEnabled)
                                 _log.Info("Wasn't able to import the Raven SQL Etls configuration from smuggler file. Skipping.", e);
                         }
-
                     }
                 }
 
@@ -497,7 +493,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     using (reader)
                     {
-
                         if (reader.TryGet("Key", out string key) == false ||
                             reader.TryGet("Value", out LazyStringValue value) == false)
                         {
@@ -539,7 +534,6 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-
         private IEnumerable<CounterGroupDetail> InternalGetCounterValues(ICounterActions actions)
         {
             foreach (var reader in ReadArray(actions))
@@ -564,8 +558,6 @@ namespace Raven.Server.Smuggler.Documents
                     ChangeVector = cv,
                     Values = values
                 };
-
-                
             }
         }
 
@@ -811,7 +803,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     token.ThrowIfCancellationRequested();
                     additionalSkip?.Invoke(reader);
-                    
+
                     count++; //skipping
                     onSkipped?.Invoke(count);
                 }
@@ -822,10 +814,10 @@ namespace Raven.Server.Smuggler.Documents
 
         private void MaySkipBlob(BlittableJsonReaderObject reader)
         {
-            if(reader.TryGet(Constants.Documents.Blob.Size, out int size))
+            if (reader.TryGet(Constants.Documents.Blob.Size, out int size))
                 Skip(size);
         }
-        
+
         private void SkipAttachmentStream(BlittableJsonReaderObject data)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue _) == false ||
@@ -1038,7 +1030,6 @@ namespace Raven.Server.Smuggler.Documents
             var djv = new DynamicJsonValue
             {
                 [Constants.Documents.Metadata.Key] = metadata,
-
             };
 
             return context.ReadObject(djv, details.Id);

@@ -155,7 +155,7 @@ namespace Raven.Server.Web.Studio
                         {
                             var folders = (await client.ListBlobsAsync(azureSettings.RemoteFolderName, "/", true));
 
-                            foreach (var folder in folders.ListBlob)
+                            foreach (var folder in folders.List)
                             {
                                 var fullPath = folder.Name;
                                 if (string.IsNullOrWhiteSpace(fullPath))
