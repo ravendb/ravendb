@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _isMultiMap = isMultiMap;
         }
 
-        protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
+        protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
         {
             int newFields = 0;
             if (key != null)
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (_reduceOutput)
             {
-                instance.Add(GetReduceResultValueField(Scope.CreateJson(reduceResult, indexContext)));
+                instance.Add(GetReduceResultValueField(Scope.CreateJson(reduceResult, indexContext), writeBuffer));
                 newFields++;
             }
 
