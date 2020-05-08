@@ -62,10 +62,10 @@ namespace Raven.Server.Smuggler.Documents
             if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
                 _patcher = new SmugglerPatcher(_options, database);
 
-            Debug.Assert((source is DatabaseSource && destination is DatabaseDestination) == false, 
+            Debug.Assert((source is DatabaseSource && destination is DatabaseDestination) == false,
                 "When both source and destination are database, we might get into a delayed write for the dest while the " +
                 "source already pulsed its' read transaction, resulting in bad memory read.");
-            
+
             _time = time;
             _onProgress = onProgress ?? (progress => { });
         }
@@ -202,7 +202,7 @@ namespace Raven.Server.Smuggler.Documents
                     counts = ProcessIndexes(result);
                     break;
                 case DatabaseItemType.Identities:
-                    counts = ProcessIdentities(result);
+                    counts = ProcessIdentities(result, buildType);
                     break;
                 case DatabaseItemType.LegacyAttachments:
                     counts = ProcessLegacyAttachments(result);
@@ -339,7 +339,7 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress.Invoke(result.Progress);
         }
 
-        private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result)
+        private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result, BuildVersionType buildType)
         {
             result.Identities.Start();
             
@@ -358,7 +358,14 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        actions.WriteKeyValue(identity.Prefix, identity.Value);
+                        string identityPrefix = identity.Prefix;
+                        if (buildType == BuildVersionType.V3)
+                        {
+                            // ends with a "/"
+                            identityPrefix = identityPrefix.Substring(0, identityPrefix.Length - 1) + "|";
+                        }
+
+                        actions.WriteKeyValue(identityPrefix, identity.Value);
                         result.Identities.LastEtag = identity.Index;
                     }
                     catch (Exception e)
@@ -1012,7 +1019,6 @@ namespace Raven.Server.Smuggler.Documents
                         AddInfoToSmugglerResult(result, $"Read {result.Subscriptions.ReadCount:#,#;;0} subscription.");
 
                     actions.WriteSubscription(subscription);
-
                 }
             }
 
@@ -1067,12 +1073,12 @@ namespace Raven.Server.Smuggler.Documents
             if (buildType != BuildVersionType.V3)
                 return false;
 
-            // skipping 
+            // skipping
             // "Raven/Replication/DatabaseIdsCache" and
             // "Raven/Replication/Sources/{GUID}" and
             // "Raven/Replication/Destinations" and
             // "Raven/Backup/Periodic/Setup" and
-            // "Raven/Backup/Status" and 
+            // "Raven/Backup/Status" and
             // "Raven/Backup/Periodic/Status"
             if (document.Id.Size != 34 && document.Id.Size != 62 &&
                 document.Id.Size != 30 && document.Id.Size != 27 &&

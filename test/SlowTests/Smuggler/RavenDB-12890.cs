@@ -17,7 +17,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task CanImportDumpWithoutAttachment()
         {
-            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream("SlowTests.Smuggler.Document_Without_Attachment_Stream.ravendbdump"))
+            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream("SlowTests.Smuggler.Data.Document_Without_Attachment_Stream.ravendbdump"))
             using (var store = GetDocumentStore())
             {
                 Assert.NotNull(stream);
