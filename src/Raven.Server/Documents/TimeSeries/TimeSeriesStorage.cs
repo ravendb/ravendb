@@ -912,11 +912,6 @@ namespace Raven.Server.Documents.TimeSeries
             return TryAppendEntireSegment(context, item.Key, docId, name, collectionName, item.ChangeVector, item.Segment, baseline);
         }
 
-        public bool TryAppendEntireSegment(DocumentsOperationContext context, Slice key, CollectionName collectionName, TimeSeriesItem item)
-        {
-            return TryAppendEntireSegment(context, key, item.DocId, context.GetLazyStringForFieldWithCaching(item.Name), collectionName, item.ChangeVector, item.Segment, item.Baseline);
-        }
-
         private bool TryAppendEntireSegment(
             DocumentsOperationContext context,
             Slice key,
@@ -925,8 +920,7 @@ namespace Raven.Server.Documents.TimeSeries
             CollectionName collectionName,
             string changeVector,
             TimeSeriesValuesSegment segment,
-            DateTime baseline
-            )
+            DateTime baseline)
         {
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
@@ -961,58 +955,87 @@ namespace Raven.Server.Documents.TimeSeries
                 return false;
             }
 
+            return TryPutSegmentDirectly(context, key, documentId, name, collectionName, changeVector, segment, baseline);
+        }
+
+        public bool TryAppendEntireSegmentFromSmuggler(DocumentsOperationContext context, Slice key, CollectionName collectionName, TimeSeriesItem item)
+        {
+            // we will generate new change vector, so we pass null here
+            return TryPutSegmentDirectly(context, key, item.DocId, context.GetLazyStringForFieldWithCaching(item.Name), collectionName, null, item.Segment, item.Baseline);
+        }
+
+        private bool TryPutSegmentDirectly(
+            DocumentsOperationContext context,
+            Slice key,
+            string documentId,
+            string name,
+            CollectionName collectionName,
+            string changeVector,
+            TimeSeriesValuesSegment segment,
+            DateTime baseline)
+        {
+
+            if (IsOverlapping(context, key, collectionName, segment, baseline))
+                return false;
+
             // if this segment isn't overlap with any other we can put it directly
-            using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
+            ValidateSegment(segment);
+            var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+
+            using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
             {
-                if (IsOverlapWithHigherSegment(prefix) || IsOverlapWithLowerSegment(prefix))
-                    return false;
+                Stats.UpdateStats(context, slicer, collectionName, segment, baseline);
+                var newEtag = _documentsStorage.GenerateNextEtag();
+                changeVector ??= _documentsStorage.GetNewChangeVector(context, newEtag);
 
-                AppendEntireSegment();
-                return true;
-            }
+                _documentDatabase.TimeSeriesPolicyRunner?.MarkSegmentForPolicy(context, slicer, baseline, changeVector, segment.NumberOfLiveEntries);
 
-            void AppendEntireSegment()
-            {
-                ValidateSegment(segment);
-
-                using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
+                if (segment.NumberOfLiveEntries == 0)
                 {
-                    Stats.UpdateStats(context, slicer, collectionName, segment, baseline);
-
-                    _documentDatabase.TimeSeriesPolicyRunner?.MarkSegmentForPolicy(context, slicer, baseline, changeVector, segment.NumberOfLiveEntries);
-
-                    var newEtag = _documentsStorage.GenerateNextEtag();
-                    if (segment.NumberOfLiveEntries == 0)
-                    {
-                        MarkSegmentAsPendingDeletion(context, collectionName.Name, newEtag);
-                    }
-
-                    using (Slice.From(context.Allocator, changeVector, out Slice cv))
-                    using (table.Allocate(out TableValueBuilder tvb))
-                    {
-                        tvb.Add(key);
-                        tvb.Add(Bits.SwapBytes(newEtag));
-                        tvb.Add(cv);
-                        tvb.Add(segment.Ptr, segment.NumberOfBytes);
-                        tvb.Add(slicer.CollectionSlice);
-                        tvb.Add(context.GetTransactionMarker());
-
-                        table.Set(tvb);
-                    }
-
-                    context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-                    {
-                        CollectionName = collectionName.Name,
-                        ChangeVector = changeVector,
-                        DocumentId = documentId,
-                        Name = name,
-                        Type = TimeSeriesChangeTypes.Put,
-                        From = DateTime.MinValue,
-                        To = DateTime.MaxValue
-                    });
+                    MarkSegmentAsPendingDeletion(context, collectionName.Name, newEtag);
                 }
 
-                EnsureStatsAndDataIntegrity(context, documentId, name);
+                using (Slice.From(context.Allocator, changeVector, out Slice cv))
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(key);
+                    tvb.Add(Bits.SwapBytes(newEtag));
+                    tvb.Add(cv);
+                    tvb.Add(segment.Ptr, segment.NumberOfBytes);
+                    tvb.Add(slicer.CollectionSlice);
+                    tvb.Add(context.GetTransactionMarker());
+
+                    table.Set(tvb);
+                }
+
+                context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
+                {
+                    CollectionName = collectionName.Name,
+                    ChangeVector = changeVector,
+                    DocumentId = documentId,
+                    Name = name,
+                    Type = TimeSeriesChangeTypes.Put,
+                    From = DateTime.MinValue,
+                    To = DateTime.MaxValue
+                });
+            }
+
+            EnsureStatsAndDataIntegrity(context, documentId, name);
+
+            return true;
+        }
+
+        private bool IsOverlapping(
+            DocumentsOperationContext context,
+            Slice key,
+            CollectionName collectionName,
+            TimeSeriesValuesSegment segment,
+            DateTime baseline)
+        {
+            var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+            using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
+            {
+                return IsOverlapWithHigherSegment(prefix) || IsOverlapWithLowerSegment(prefix);
             }
 
             bool IsOverlapWithHigherSegment(Slice prefix)
@@ -1025,6 +1048,7 @@ namespace Raven.Server.Documents.TimeSeries
             bool IsOverlapWithLowerSegment(Slice prefix)
             {
                 var myLastTimestamp = segment.GetLastTimestamp(baseline);
+                TableValueReader tvr;
                 using (Slice.From(context.Allocator, key.Content.Ptr, key.Size, ByteStringType.Immutable, out var lastKey))
                 {
                     *(long*)(lastKey.Content.Ptr + lastKey.Size - sizeof(long)) = Bits.SwapBytes(myLastTimestamp.Ticks / 10_000);
