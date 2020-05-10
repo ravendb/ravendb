@@ -33,7 +33,7 @@ namespace FastTests.Client.Queries.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var now1 = DateTime.Now;
+                var now1 = RavenTestHelper.UtcToday;
                 var now2 = now1.AddSeconds(1);
 
                 using (var session = store.OpenSession())
@@ -83,7 +83,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.False(stats.IsStale);
                     Assert.Equal(1, results.Count);
                     Assert.Equal(7, results[0].HeartBeat);
-                    Assert.Equal(now1.Date, results[0].Date);
+                    Assert.Equal(now1.Date, results[0].Date, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal("companies/1", results[0].User);
 
                     // check if we are tracking the results
