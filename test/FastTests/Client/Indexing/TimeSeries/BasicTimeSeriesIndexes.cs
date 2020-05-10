@@ -26,7 +26,7 @@ namespace FastTests.Client.Indexing.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var now1 = DateTime.Now;
+                var now1 = RavenTestHelper.UtcToday;
                 var now2 = now1.AddSeconds(1);
 
                 using (var session = store.OpenSession())
@@ -99,7 +99,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Date", null));
                 Assert.Equal(1, terms.Length);
-                Assert.Contains(now1.Date.GetDefaultRavenFormat(), terms);
+                Assert.Equal(now1.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "User", null));
                 Assert.Equal(1, terms.Length);
