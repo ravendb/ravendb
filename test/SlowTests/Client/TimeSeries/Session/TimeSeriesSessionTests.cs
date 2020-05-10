@@ -918,5 +918,45 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
             }
         }
+
+        [Fact]
+        public void GetAllTimeSeriesNamesWhenNoTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/karmel");
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/karmel");
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(0, tsNames.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public void GetSingleTimeSeriesWhenNoTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/karmel");
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/karmel");
+                    var ts = session.TimeSeriesFor(user, "unicorns").Get(DateTime.MinValue, DateTime.MaxValue);
+                    Assert.Null(ts);
+                }
+            }
+        }
     }
 }
