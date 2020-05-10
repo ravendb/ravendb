@@ -30,8 +30,6 @@ namespace Raven.Server.Documents.Queries.Results
 
         private Dictionary<string, Document> _loadedDocuments;
 
-        private DateTime _min, _max;
-
         public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments)
         {
             _context = context;
@@ -47,17 +45,7 @@ namespace Raven.Server.Documents.Queries.Results
             var timeSeriesFunction = declaredFunction.TimeSeries;
             var source = GetSourceAndId();
 
-            _min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
-            _max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
-
-            TimeSpan? offset = null;
-            if (timeSeriesFunction.Offset != null)
-            {
-                offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
-
-                _min = _min.Add(offset.Value);
-                _max = _max.Add(offset.Value);
-            }
+            var (min, max) = GetMinAndMax(declaredFunction, documentId, args, timeSeriesFunction, source);
 
             var collection = GetCollection(documentId);
             var reader = new MultiReader(_context, documentId, source, collection, _min, _max, offset);
@@ -68,8 +56,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
 
-            RangeGroup rangeSpec = default;
-
+            RangeGroup rangeSpec;
             var groupBy = timeSeriesFunction.GroupBy?.GetValue(_queryParameters)?.ToString();
             if (groupBy != null)
             {
@@ -78,7 +65,7 @@ namespace Raven.Server.Documents.Queries.Results
             else
             {
                 rangeSpec = new RangeGroup();
-                rangeSpec.InitializeFullRange(_min, _max);
+                rangeSpec.InitializeFullRange(min, max);
             }
 
             var aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
@@ -659,7 +646,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             string GetSourceAndId()
             {
-                var compound = ((FieldExpression)timeSeriesFunction.Between.Source).Compound;
+                var compound = timeSeriesFunction.Source.Compound;
 
                 if (compound.Count == 1)
                 {
@@ -699,7 +686,7 @@ namespace Raven.Server.Documents.Queries.Results
                     documentId = document.Id;
                 }
 
-                return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
+                return timeSeriesFunction.Source.FieldValueWithoutAlias;
             }
         }
 
@@ -717,6 +704,45 @@ namespace Raven.Server.Documents.Queries.Results
                 throw new InvalidOperationException($"Failed to parse object '{val}' as TimeSpan, in OFFSET clause of time series function '{name}'");
 
             return timeSpan;
+        }
+
+        private (DateTime Min, DateTime Max) GetMinAndMax(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source)
+        {
+            DateTime min, max;
+            if (timeSeriesFunction.Last == null)
+            {
+                min = GetDateValue(timeSeriesFunction.Between?.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
+                max = GetDateValue(timeSeriesFunction.Between?.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
+            }
+            else
+            {
+                var last = timeSeriesFunction.Last.GetValue(_queryParameters)?.ToString();
+                if (last == null)
+                {
+                    throw new InvalidQueryException($"Time series function '{declaredFunction.Name}' on document '{documentId}' " +
+                                                    $"was unable to read 'Last' expression '{timeSeriesFunction.Last}'");
+                }
+
+                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
+                max = stats.End == default
+                    ? DateTime.MaxValue
+                    : stats.End;
+
+                var timeFromLast = RangeGroup.ParseLastFromString(last);
+                min = max.Add(-timeFromLast);
+            }
+
+            TimeSpan? offset = null;
+            if (timeSeriesFunction.Offset != null)
+            {
+                offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
+
+                min = min.Add(offset.Value);
+                max = max.Add(offset.Value);
+            }
+
+
+            return (min, max);
         }
 
         private string GetCollection(string documentId)

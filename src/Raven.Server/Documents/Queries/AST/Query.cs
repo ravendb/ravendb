@@ -120,11 +120,13 @@ namespace Raven.Server.Documents.Queries.AST
     public class TimeSeriesFunction
     {
         public TimeSeriesBetweenExpression Between;
+        public FieldExpression Source;
         public QueryExpression Where;
         public ValueExpression GroupBy;
         public List<(QueryExpression, StringSegment?)> Select;
         public StringSegment? LoadTagAs;
         public ValueExpression Offset;
+        public ValueExpression Last;
     }
 
     public unsafe struct RangeGroup
@@ -376,7 +378,109 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        private static void AssertValidDurationInMonths(long duration)
+        public static TimeValue ParseLastFromString(string source)
+        {
+            TimeValue result;
+            var offset = 0;
+
+            double duration = ParseNumber(source, ref offset);
+            if (offset >= source.Length)
+                throw new ArgumentException("Unable to find range specification in: " + source);
+
+            var pos = offset;
+            if (char.ToLower(source[pos]) == '.')
+            {
+                var remainder = ParseNumber(source, ref offset);
+                duration += (remainder / 10 * (offset - pos));
+            }
+
+            while (char.IsWhiteSpace(source[offset]) && offset < source.Length)
+            {
+                offset++;
+            }
+
+            if (offset >= source.Length)
+                throw new ArgumentException("Unable to find range specification in: " + source);
+
+            switch (char.ToLower(source[offset++]))
+            {
+                case 's':
+                    if (TryConsumeMatch(source, ref offset, "seconds") == false)
+                        TryConsumeMatch(source, ref offset, "second");
+
+                    result = TimeSpan.FromSeconds(duration);
+                    break;
+                case 'm':
+                    if (TryConsumeMatch(source, ref offset, "minutes") ||
+                        TryConsumeMatch(source, ref offset, "minute") ||
+                        TryConsumeMatch(source, ref offset, "min"))
+                    {
+                        result = TimeSpan.FromMinutes(duration);
+                        break;
+                    }
+
+                    if (TryConsumeMatch(source, ref offset, "ms") ||
+                        TryConsumeMatch(source, ref offset, "milli") ||
+                        TryConsumeMatch(source, ref offset, "milliseconds"))
+                    {
+                        result = TimeSpan.FromMilliseconds(duration);
+                        break;
+
+                    }
+
+                    if (TryConsumeMatch(source, ref offset, "months") ||
+                        TryConsumeMatch(source, ref offset, "month") ||
+                        TryConsumeMatch(source, ref offset, "mon"))
+                    {
+                        result = TimeValue.FromMonths((int)duration);
+                        break;
+                    }
+                    goto default;
+                case 'h':
+                    if (TryConsumeMatch(source, ref offset, "hours") == false)
+                        TryConsumeMatch(source, ref offset, "hour");
+
+                    result = TimeSpan.FromHours(duration);
+                    break;
+
+                case 'd':
+                    if (TryConsumeMatch(source, ref offset, "days") == false)
+                        TryConsumeMatch(source, ref offset, "day");
+                    result = TimeSpan.FromDays(duration);
+                    break;
+
+                case 'q':
+                    if (TryConsumeMatch(source, ref offset, "quarters") == false)
+                        TryConsumeMatch(source, ref offset, "quarter");
+                    
+                    duration = (int)duration * 3;
+                    AssertValidDurationInMonths(duration);
+                    result = TimeValue.FromMonths((int)duration);
+                    break;
+
+                case 'y':
+                    if (TryConsumeMatch(source, ref offset, "years") == false)
+                        TryConsumeMatch(source, ref offset, "year");
+                    duration *= 12;
+                    AssertValidDurationInMonths(duration);
+                    result = TimeValue.FromMonths((int)duration);
+                    break;
+                default:
+                    throw new ArgumentException($"Unable to understand time range: '{source}'");
+            }
+
+            while (offset < source.Length && char.IsWhiteSpace(source[offset]))
+            {
+                offset++;
+            }
+
+            if (offset != source.Length)
+                throw new ArgumentException("After range specification, found additional unknown data: " + source);
+
+            return result;
+        }
+
+        private static void AssertValidDurationInMonths(double duration)
         {
             if (duration > 120_000)
                 throw new ArgumentException("The specified range results in invalid range, cannot have: " + duration + " months");

@@ -1351,9 +1351,40 @@ namespace Raven.Server.Documents.Queries.Parser
                 source.Compound.RemoveAt(0);
             }
 
-            tsf.Between = Scanner.TryScan("BETWEEN")
-                ? ReadTimeSeriesBetweenExpression(source)
-                : new TimeSeriesBetweenExpression(source, null, null);
+            tsf.Source = source;
+
+
+
+            if (Scanner.TryScan("BETWEEN"))
+            {
+                ReadTimeSeriesBetweenExpression(source);
+            }
+
+            if (Scanner.TryScan("LAST"))
+            {
+
+                if (Value(out var lsatTimeSpan) == false)
+                    ThrowParseException($"Could not parse LAST argument for {name}");
+
+                if (lsatTimeSpan.Value == ValueTokenType.Long)
+                {
+                    // we need to check 1h, 1d
+                    if (Scanner.Identifier(skipWhitespace: false))
+                    {
+                        lsatTimeSpan.Token = new StringSegment(
+                            lsatTimeSpan.Token.Buffer,
+                            lsatTimeSpan.Token.Offset,
+                            lsatTimeSpan.Token.Length + Scanner.Token.Length);
+                        lsatTimeSpan.Value = ValueTokenType.String;
+                    }
+                }
+
+                tsf.Last = lsatTimeSpan;
+            }
+
+            if (tsf.Last != null && tsf.Between != null)
+                ThrowInvalidQueryException($"Cannot have both 'Last' and 'Between' in the same Time Series query function '{name}'"); //todo
+
 
             if (Scanner.TryScan("LOAD"))
             {
