@@ -11,13 +11,13 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesStats
+    public class TimeSeriesStatistics
     {
         public string DocumentId { get; set; }
         
         public List<TimeSeriesItemDetail> TimeSeries { get; set; }
 
-        public TimeSeriesStats()
+        public TimeSeriesStatistics()
         {
             TimeSeries = new List<TimeSeriesItemDetail>();
         }

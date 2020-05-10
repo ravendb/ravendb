@@ -8,14 +8,14 @@ class getTimeSeriesStatsCommand extends commandBase {
         super();
     }
     
-    execute(): JQueryPromise<Raven.Client.Documents.Operations.TimeSeries.TimeSeriesStats> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.TimeSeries.TimeSeriesStatistics> {
         const args = {
             docId: this.docId
         };
         
         const url = endpoints.databases.timeSeries.timeseriesStats;
         
-        return this.query<Raven.Client.Documents.Operations.TimeSeries.TimeSeriesStats>(url + this.urlEncodeArgs(args), null, this.db)
+        return this.query<Raven.Client.Documents.Operations.TimeSeries.TimeSeriesStatistics>(url + this.urlEncodeArgs(args), null, this.db)
             .fail((result: JQueryXHR) => this.reportError("Failed to get time series details", result.responseText, result.statusText));
     }
 }

@@ -475,7 +475,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LatestVersionCheck.VersionInfo));
             
             // time series
-            scripter.AddType(typeof(TimeSeriesStats));
+            scripter.AddType(typeof(TimeSeriesStatistics));
             scripter.AddType(typeof(TimeSeriesDetails));
             scripter.AddType(typeof(TimeSeriesOperation));
             scripter.AddType(typeof(TimeSeriesOperation.AppendOperation));
