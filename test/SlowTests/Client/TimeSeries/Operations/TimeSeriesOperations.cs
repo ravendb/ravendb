@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
@@ -1072,6 +1073,53 @@ namespace SlowTests.Client.TimeSeries.Operations
                     new GetTimeSeriesOperation("users/ayende", string.Empty, baseline, DateTime.MaxValue)));
 
                 Assert.Contains("Value cannot be null", ex.Message);
+            }
+        }
+
+        [Fact]
+        public async Task GetTimeSeriesStatistics()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var documentId = "users/ayende";
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), documentId);
+                    var ts = session.TimeSeriesFor(documentId, "heartrate");
+                    for (int i = 0; i <= 10; i++)
+                    {
+                        ts.Append(baseline.AddMinutes(i * 10), 72d, "watches/fitbit");
+                    }
+                    
+                    ts = session.TimeSeriesFor(documentId, "pressure");
+                    for (int i = 10; i <= 20; i++)
+                    {
+                        ts.Append(baseline.AddMinutes(i * 10), 72d, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var op = await store.Operations.SendAsync(new GetTimeSeriesStatisticsOperation(documentId));
+                Assert.Equal(documentId, op.DocumentId);
+                Assert.Equal(2, op.TimeSeries.Count);
+                var ts1 = op.TimeSeries[0];
+                var ts2 = op.TimeSeries[1];
+
+                Assert.Equal("heartrate", ts1.Name);
+                Assert.Equal("pressure", ts2.Name);
+
+                Assert.Equal(11, ts1.NumberOfEntries);
+                Assert.Equal(11, ts2.NumberOfEntries);
+
+                Assert.Equal(baseline, ts1.StartDate, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(10 * 10), ts1.EndDate, RavenTestHelper.DateTimeComparer.Instance);
+
+                Assert.Equal(baseline.AddMinutes(10 * 10), ts2.StartDate, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(20 * 10), ts2.EndDate, RavenTestHelper.DateTimeComparer.Instance);
+
             }
         }
     }
