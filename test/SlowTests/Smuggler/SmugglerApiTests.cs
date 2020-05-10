@@ -1057,10 +1057,10 @@ namespace SlowTests.Smuggler
                         // timeseries names in their metadata
 
                         var tsNames = session.Advanced.GetTimeSeriesFor(user1);
-                        Assert.Null(tsNames);
+                        Assert.Empty(tsNames);
 
                         tsNames = session.Advanced.GetTimeSeriesFor(user2);
-                        Assert.Null(tsNames);
+                        Assert.Empty(tsNames);
 
                         var values = await session.TimeSeriesFor(user1, "Heartrate")
                             .GetAsync(DateTime.MinValue, DateTime.MaxValue);
@@ -1138,10 +1138,10 @@ namespace SlowTests.Smuggler
                         Assert.Equal("Name2", user2.Name);
 
                         var tsNames = session.Advanced.GetTimeSeriesFor(user1);
-                        Assert.Null(tsNames);
+                        Assert.Empty(tsNames);
 
                         tsNames = session.Advanced.GetTimeSeriesFor(user2);
-                        Assert.Null(tsNames);
+                        Assert.Empty(tsNames);
 
                         var values = await session.TimeSeriesFor(user1, "Heartrate")
                             .GetAsync(DateTime.MinValue, DateTime.MaxValue);

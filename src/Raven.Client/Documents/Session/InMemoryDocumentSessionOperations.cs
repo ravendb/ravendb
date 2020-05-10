@@ -314,8 +314,8 @@ namespace Raven.Client.Documents.Session
             var documentInfo = GetDocumentInfo(instance);
 
             if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.TimeSeries,
-                    out BlittableJsonReaderArray bjra) == false)
-                return null;
+                out BlittableJsonReaderArray bjra) == false)
+                return new List<string>();
 
             var tsList = new List<string>(bjra.Length);
 

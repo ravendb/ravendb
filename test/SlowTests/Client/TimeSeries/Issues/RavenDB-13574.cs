@@ -155,7 +155,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     var tsNames = session.Advanced.GetTimeSeriesFor(user);
 
-                    Assert.Null(tsNames);
+                    Assert.Empty(tsNames);
                 }
             }
         }
