@@ -717,24 +717,16 @@ namespace Raven.Server.Documents.Handlers
                     {
                         using (var slicer = new TimeSeriesSliceHolder(context, docId, item.Name).WithBaseline(item.Baseline))
                         {
-                            // on import we remove all @time-series from the document, so we need to re-add them
-                            var newSeries = tss.Stats.GetStats(context, slicer) == default;
-
-                            if (tss.TryAppendEntireSegment(context, slicer.TimeSeriesKeySlice, collectionName, item))
+                            if (tss.TryAppendEntireSegmentFromSmuggler(context, slicer.TimeSeriesKeySlice, collectionName, item))
                             {
-                                var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, item.ChangeVector);
-                                
-                                if (newSeries)
-                                    tss.AddTimeSeriesNameToMetadata(context, item.DocId, item.Name);
-                                
+                                // on import we remove all @time-series from the document, so we need to re-add them
+                                tss.AddTimeSeriesNameToMetadata(context, item.DocId, item.Name);
                                 continue;
                             }
                         }
 
                         var values = item.Segment.YieldAllValues(context, context.Allocator, item.Baseline);
-                        var changeVector = tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, item.ChangeVector, verifyName: false);
-                        context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, item.ChangeVector);
+                        tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, verifyName: false);
                     }
 
                     changes += items.Count;

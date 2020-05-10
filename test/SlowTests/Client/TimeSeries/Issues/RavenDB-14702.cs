@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Documents.Replication;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -68,10 +69,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
-                    Assert.Equal(1, stats.CountOfDocuments);
-                    Assert.Equal(16, stats.CountOfTimeSeriesSegments);
-
                     using (var session = store2.OpenSession())
                     {
                         var doc = session.Load<User>("zzz/1");
@@ -80,6 +77,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                         var ts = session.TimeSeriesFor(doc, "small").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                         Assert.Equal(4000, ts.Count);
                     }
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfDocuments);
+                    Assert.Equal(16, stats.CountOfTimeSeriesSegments);
+                    Assert.Equal(1, stats.DatabaseChangeVector.ToChangeVector().Length);
                 }
             }
             finally
