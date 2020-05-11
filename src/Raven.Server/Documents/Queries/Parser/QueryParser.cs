@@ -2095,10 +2095,6 @@ namespace Raven.Server.Documents.Queries.Parser
                 maxExpression = val;
             }
 
-            if (minExpression.Type != maxExpression.Type)
-                ThrowQueryException(
-                    $"Invalid Between expression, values must have the same type but got {minExpression.Type} and {maxExpression.Type}");
-
             return new TimeSeriesBetweenExpression(field, minExpression, maxExpression);
         }
 
