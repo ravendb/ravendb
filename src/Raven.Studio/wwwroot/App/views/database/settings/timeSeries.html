@@ -248,7 +248,7 @@
             <div class="aggregation-flow">
                 <div class="item">
                     <div class="item-content">
-                        <div class="small-label item-name">Raw Data</div>
+                        <div class="small-label item-name"><strong>Raw Data</strong></div>
                         <div class="aggregation"><i class="icon-circle"></i> &hyphen;</div>
                         <div class="retention">
                             <span class="flex-grow"><i class="icon-clock"></i> Retention:</span>
@@ -256,7 +256,7 @@
                             <strong data-bind="visible: !rawPolicy().hasRetention()">Keep forever</strong>
                         </div>
                     </div>
-                    <i class="icon-arrow-filled-right arrow" data-bind="visible: policies().length"></i>
+                    <div class="arrow" data-bind="visible: policies().length"></div>
                 </div>
                 
                 <!-- ko foreach: policies -->
@@ -273,7 +273,7 @@
                             <strong data-bind="visible: !hasRetention()">Keep forever</strong>
                         </div>
                     </div>
-                    <i class="icon-arrow-filled-right arrow" data-bind="visible: $index() < $parent.policies().length - 1"></i>
+                    <div class="arrow" data-bind="visible: $index() < $parent.policies().length - 1"></div>
                 </div>
                 
                 <!-- /ko -->
