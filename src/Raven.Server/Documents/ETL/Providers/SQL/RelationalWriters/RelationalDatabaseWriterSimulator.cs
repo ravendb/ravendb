@@ -17,10 +17,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         private readonly DbCommandBuilder _commandBuilder;
 
         public RelationalDatabaseWriterSimulator(SqlEtlConfiguration configuration) 
-            : base(configuration.GetFactoryName())
+            : base(configuration.Connection.FactoryName)
         {
             _configuration = configuration;
-            _providerFactory = DbProviderFactories.GetFactory(configuration.GetFactoryName());
+            _providerFactory = DbProviderFactories.GetFactory(configuration.Connection.FactoryName);
             _commandBuilder = _providerFactory.InitializeCommandBuilder();
         }
 
