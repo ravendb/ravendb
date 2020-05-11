@@ -1353,8 +1353,6 @@ namespace Raven.Server.Documents.Queries.Parser
 
             tsf.Source = source;
 
-
-
             if (Scanner.TryScan("BETWEEN"))
             {
                 ReadTimeSeriesBetweenExpression(source);
@@ -1362,19 +1360,20 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScan("LAST"))
             {
-
                 if (Value(out var lsatTimeSpan) == false)
                     ThrowParseException($"Could not parse LAST argument for {name}");
 
                 if (lsatTimeSpan.Value == ValueTokenType.Long)
                 {
                     // we need to check 1h, 1d
-                    if (Scanner.Identifier(skipWhitespace: false))
+                    if (Scanner.Identifier())
                     {
+                        var whitespaceLength = Scanner.Token.Offset - (lsatTimeSpan.Token.Offset + lsatTimeSpan.Token.Length);
+
                         lsatTimeSpan.Token = new StringSegment(
                             lsatTimeSpan.Token.Buffer,
                             lsatTimeSpan.Token.Offset,
-                            lsatTimeSpan.Token.Length + Scanner.Token.Length);
+                            lsatTimeSpan.Token.Length + Scanner.Token.Length + whitespaceLength);
                         lsatTimeSpan.Value = ValueTokenType.String;
                     }
                 }
@@ -1428,12 +1427,14 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (groupByExpr.Value == ValueTokenType.Long)
                 {
                     // we need to check 1h, 1d
-                    if (Scanner.Identifier(skipWhitespace: false))
+                    if (Scanner.Identifier())
                     {
+                        var whitespaceLength = Scanner.Token.Offset - (groupByExpr.Token.Offset + groupByExpr.Token.Length);
+
                         groupByExpr.Token = new StringSegment(
                             groupByExpr.Token.Buffer,
                             groupByExpr.Token.Offset,
-                            groupByExpr.Token.Length + Scanner.Token.Length);
+                            groupByExpr.Token.Length + Scanner.Token.Length + whitespaceLength);
                         groupByExpr.Value = ValueTokenType.String;
                     }
                 }
@@ -1632,7 +1633,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (query?.TryAddTimeSeriesFunction(func) == false)
                 ThrowParseException($"time series function '{func.Name}' was declared multiple times");
 
-            var compound = ((FieldExpression)func.TimeSeries.Between.Source).Compound;
+            var compound = func.TimeSeries.Source.Compound;
             var args = new List<QueryExpression>();
 
             if (compound.Count > 1)
