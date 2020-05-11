@@ -113,20 +113,27 @@ class editTimeSeries extends viewModelBase {
     private fetchSeries(skip: number, take: number): JQueryPromise<pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>> {
         const fetchTask = $.Deferred<pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
         const timeSeriesName = this.timeSeriesName();
+        const db = this.activeDatabase();
 
         if (timeSeriesName) {
-            new getTimeSeriesCommand(this.documentId(), timeSeriesName, this.activeDatabase(), skip, take)
+            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, skip, take, true)
                 .execute()
                 .done(result => {
-                    const seriesValues = result.Values[timeSeriesName];
-                    const items = seriesValues && seriesValues.length > 0 ? seriesValues[0].Entries : [];
-                    const totalResultCount = seriesValues && seriesValues.length > 0 ? seriesValues[0].TotalResults : 0;
+                    const items = result.Entries;
+                    const totalResultCount = result.TotalResults || 0;
 
                     fetchTask.resolve({
                         items,
                         totalResultCount
                     })
-                });    
+                })
+                .fail((response: JQueryXHR) => {
+                    if (response.status === 404) {
+                        // looks like all items were deleted - notify user and redirect to document view
+                        messagePublisher.reportWarning("Could not find time series: " + timeSeriesName);
+                        router.navigate(appUrl.forEditDoc(this.documentId(), db));
+                    }
+                })
         } else {
             fetchTask.resolve({
                 items: [],
