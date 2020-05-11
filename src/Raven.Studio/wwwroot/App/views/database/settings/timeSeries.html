@@ -171,7 +171,7 @@
                             </div>
 
                             <div class="hr-title">
-                                <hr><i class="icon-arrow-filled-down margin-left margin-right"></i><hr>
+                                <hr><i class="icon-arrow-filled-down margin-left margin-right" data-bind="visible: $index() < $parent.policies().length - 1"></i><hr>
                             </div>
                         </div>
                         <button class="btn btn-default" data-bind="click: addPolicy">
