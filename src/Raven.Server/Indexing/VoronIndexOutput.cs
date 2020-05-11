@@ -4,14 +4,11 @@ using Lucene.Net.Store;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
-using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Impl;
 using Voron;
-using Voron.Platform.Win32;
 
 namespace Raven.Server.Indexing
 {

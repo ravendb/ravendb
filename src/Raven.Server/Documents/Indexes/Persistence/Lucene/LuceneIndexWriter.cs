@@ -70,17 +70,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (SystemException e)
             {
-                if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
-                    ThrowOutOfMemoryException(e);
-
-                if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
-                    ThrowOutOfMemoryException(e);
-
-                if (e.InnerException is VoronUnrecoverableErrorException)
-                    ThrowVoronUnrecoverableErrorException(e);
-
-                if (e.IsOutOfDiskSpaceException())
-                    ThrowOutOfDiskSpaceException(_directory);
+                TryThrowingBetterException(e, _directory);
 
                 throw;
             }
@@ -90,24 +80,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void ThrowOutOfDiskSpaceException(LuceneVoronDirectory directory)
+        public static void TryThrowingBetterException(SystemException e, LuceneVoronDirectory directory)
         {
-            // this is written to the temp scratch buffers
-            var fullPath = directory.TempFullPath;
-            var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(fullPath);
-            var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
-            throw new DiskFullException($"There isn't enough space to commit the index to {fullPath}. " +
-                                        $"Currently available space: {freeSpace}");
-        }
+            if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
+                ThrowOutOfMemoryException();
 
-        public static void ThrowOutOfMemoryException(Exception e)
-        {
-            throw new OutOfMemoryException("Index writer hit OOM during commit", e);
-        }
+            if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
+                ThrowOutOfMemoryException();
 
-        public static void ThrowVoronUnrecoverableErrorException(Exception e)
-        {
-            VoronUnrecoverableErrorException.Raise("Index data is corrupted", e);
+            if (e.InnerException is VoronUnrecoverableErrorException)
+                VoronUnrecoverableErrorException.Raise("Index data is corrupted", e);
+
+            if (e.IsOutOfDiskSpaceException())
+            {
+                // this commit stage is written to the temp scratch buffers
+                var fullPath = directory.TempFullPath;
+                var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(fullPath);
+                var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
+                throw new DiskFullException($"There isn't enough space to commit the index to {fullPath}. " +
+                                            $"Currently available space: {freeSpace}", e);
+            }
+
+            void ThrowOutOfMemoryException()
+            {
+                throw new OutOfMemoryException("Index writer hit OOM during commit", e);
+            }
         }
 
         public long RamSizeInBytes()
