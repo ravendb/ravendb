@@ -4844,6 +4844,55 @@ select out(doc, e)
         }
 
         [Fact]
+        public void CanQueryTimeSeries_BetweenWithFieldAndValue()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    var id = $"people/1";
+
+                    session.Store(new Event
+                    {
+                        Start = baseline.EnsureUtc(),
+                        End = baseline.AddMonths(3).EnsureUtc()
+                    }, $"events/1");
+
+                    session.Store(new Person
+                    {
+                        Name = "dardasaba", 
+                        Age = 120,
+                        Event = $"events/1"
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x, e) 
+{
+    from x.HeartRate between e.Start and '9999'
+    select min(), max(), avg()
+}
+from People as doc
+where doc.Age > 49
+load doc.Event as e
+select out(doc, e)
+");
+
+                    var result = query.ToList();
+                }
+            }
+        }
+
+        [Fact]
         public void CanQueryTimeSeriesAggregation_WithNestedFieldExpressionInBetweenClause()
         {
             using (var store = GetDocumentStore())
