@@ -10,9 +10,13 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Server.Exceptions;
+using Raven.Server.Indexing;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Exceptions;
+using Sparrow.Server.Utils;
 using Voron.Exceptions;
+using Directory = Lucene.Net.Store.Directory;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -22,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private IndexWriter _indexWriter;
 
-        private readonly Directory _directory;
+        private readonly LuceneVoronDirectory _directory;
 
         private readonly Analyzer _analyzer;
 
@@ -36,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public Analyzer Analyzer => _indexWriter?.Analyzer;
 
-        public LuceneIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy,
+        public LuceneIndexWriter(LuceneVoronDirectory d, Analyzer a, IndexDeletionPolicy deletionPolicy,
             IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, DocumentDatabase documentDatabase, IState state)
         {
             _directory = d;
@@ -75,12 +79,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (e.InnerException is VoronUnrecoverableErrorException)
                     ThrowVoronUnrecoverableErrorException(e);
 
+                if (e.IsOutOfDiskSpaceException())
+                    ThrowOutOfDiskSpaceException(_directory);
+
                 throw;
             }
             finally
             {
                 RecreateIndexWriter(state);
             }
+        }
+
+        public void ThrowOutOfDiskSpaceException(LuceneVoronDirectory directory)
+        {
+            // this is written to the temp scratch buffers
+            var fullPath = directory.TempFullPath;
+            var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(fullPath);
+            var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
+            throw new DiskFullException($"There isn't enough space to commit the index to {fullPath}. " +
+                                        $"Currently available space: {freeSpace}");
         }
 
         public static void ThrowOutOfMemoryException(Exception e)

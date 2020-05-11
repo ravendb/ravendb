@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.IO;
 using Sparrow.Utils;
 
@@ -29,6 +30,11 @@ namespace Sparrow.Server.Exceptions
         }
 
         public DiskFullException(string message) : base (message)
+        {
+            
+        }
+
+        public DiskFullException(string message, Exception exception) : base(message, exception)
         {
 
         }

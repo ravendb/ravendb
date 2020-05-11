@@ -18,6 +18,8 @@ namespace Raven.Server.Indexing
 
         public long FilesAllocations => _indexOutputFilesSummary.TotalWritten;
 
+        public string TempFullPath => _environment.Options.TempPath.FullPath;
+
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this(tx, environment, "Files")
         { }
 
