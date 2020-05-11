@@ -51,7 +51,7 @@ namespace Voron
 
         public bool GenerateNewDatabaseId { get; set; }
 
-        public Lazy<DriveInfoByPath> DriveInfoByPath { get; private set; }
+        public LazyWithExceptionRetry<DriveInfoByPath> DriveInfoByPath { get; private set; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabilitySupportEventArgs> OnNonDurableFileSystemError;
@@ -361,10 +361,10 @@ namespace Voron
         {
             private readonly VoronPathSetting _basePath;
 
-            private readonly Lazy<AbstractPager> _dataPager;
+            private readonly LazyWithExceptionRetry<AbstractPager> _dataPager;
 
-            private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
-                new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
+            private readonly ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>> _journals =
+                new ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
             public DirectoryStorageEnvironmentOptions(VoronPathSetting basePath, VoronPathSetting tempPath, VoronPathSetting journalPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
@@ -385,7 +385,7 @@ namespace Voron
                 if (Equals(JournalPath, TempPath) == false && Directory.Exists(JournalPath.FullPath) == false)
                     Directory.CreateDirectory(JournalPath.FullPath);
 
-                _dataPager = new Lazy<AbstractPager>(() =>
+                _dataPager = new LazyWithExceptionRetry<AbstractPager>(() =>
                 {
                     FilePath = _basePath.Combine(Constants.DatabaseFilename);
 
@@ -402,7 +402,7 @@ namespace Voron
 
             private void InitializePathsInfo()
             {
-                DriveInfoByPath = new Lazy<DriveInfoByPath>(() =>
+                DriveInfoByPath = new LazyWithExceptionRetry<DriveInfoByPath>(() =>
                 {
                     var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
                     return new DriveInfoByPath
@@ -482,23 +482,11 @@ namespace Voron
                     AttemptToReuseJournal(path, journalSize);
 
                 var result = _journals.GetOrAdd(name, _ =>
-                    new Lazy<IJournalWriter>(() => new JournalWriter(this, path, journalSize)));
+                    new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize)));
 
-                bool createJournal;
-                try
+                if (result.Value.Disposed)
                 {
-                    createJournal = result.Value.Disposed;
-                }
-                catch
-                {
-                    Lazy<IJournalWriter> _;
-                    _journals.TryRemove(name, out _);
-                    throw;
-                }
-
-                if (createJournal)
-                {
-                    var newWriter = new Lazy<IJournalWriter>(() => new JournalWriter(this, path, journalSize));
+                    var newWriter = new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize));
                     if (_journals.TryUpdate(name, newWriter, result) == false)
                         throw new InvalidOperationException("Could not update journal pager");
                     result = newWriter;
@@ -665,8 +653,7 @@ namespace Voron
             {
                 var name = JournalName(number);
 
-                Lazy<IJournalWriter> lazy;
-                if (_journals.TryRemove(name, out lazy) && lazy.IsValueCreated)
+                if (_journals.TryRemove(name, out var lazy) && lazy.IsValueCreated)
                     lazy.Value.Dispose();
 
                 var file = JournalPath.Combine(name);
@@ -877,7 +864,7 @@ namespace Voron
             private readonly string _name;
             private static int _counter;
 
-            private readonly Lazy<AbstractPager> _dataPager;
+            private readonly LazyWithExceptionRetry<AbstractPager> _dataPager;
 
             private readonly Dictionary<string, IJournalWriter> _logs =
                 new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
@@ -902,8 +889,8 @@ namespace Voron
                     if (Directory.Exists(tempPath.FullPath) == false)
                         Directory.CreateDirectory(tempPath.FullPath);
 
-                    _dataPager = new Lazy<AbstractPager>(() => GetTempMemoryMapPager(this, TempPath.Combine(filename), InitialFileSize,
-                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary), true);
+                    _dataPager = new LazyWithExceptionRetry<AbstractPager>(() => GetTempMemoryMapPager(this, TempPath.Combine(filename), InitialFileSize,
+                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
                 }
             }
 
