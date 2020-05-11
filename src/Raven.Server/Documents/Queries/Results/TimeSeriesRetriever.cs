@@ -651,16 +651,16 @@ namespace Raven.Server.Documents.Queries.Results
                 if (compound.Count == 1)
                 {
                     var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
-                    if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) //not found
-                        return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValue;
+                    if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) 
+                        return timeSeriesFunction.Source.FieldValue; //not found
                     if (!(args[paramIndex] is string s))
-                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
                                                         $"Expected argument '{compound[0]}' to be a string, but got '{args[paramIndex].GetType()}'");
                     return s;
                 }
 
                 if (args == null)
-                    throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                    throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
                                                         $"'{compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
 
                 if (args.Length < declaredFunction.Parameters.Count)
@@ -676,11 +676,11 @@ namespace Raven.Server.Documents.Queries.Results
                 else
                 {
                     if (index == -1 || index == declaredFunction.Parameters.Count) // not found
-                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
                                                             $"'{compound[0]}' is unknown, and no matching argument was provided to time series function '{declaredFunction.Name}'.");
 
                     if (!(args[index] is Document document))
-                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
                                                             $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[index].GetType()}'");
 
                     documentId = document.Id;
