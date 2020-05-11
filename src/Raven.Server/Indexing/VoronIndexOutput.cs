@@ -53,7 +53,7 @@ namespace Raven.Server.Indexing
 
                 return SafeFileStream.Create(_fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose);
             }
-            catch (IOException ioe) when (IsOutOfDiskSpaceException(ioe))
+            catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
                 ThrowDiskFullException();
 
@@ -69,7 +69,7 @@ namespace Raven.Server.Indexing
                 _file.Write(b, offset, len);
                 _indexOutputFilesSummary.Increment(len);
             }
-            catch (IOException ioe) when (IsOutOfDiskSpaceException(ioe))
+            catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
                 ThrowDiskFullException();
             }
@@ -83,7 +83,7 @@ namespace Raven.Server.Indexing
                 base.Seek(pos);
                 _file.Seek(pos, SeekOrigin.Begin);
             }
-            catch (IOException ioe) when (IsOutOfDiskSpaceException(ioe))
+            catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
                 ThrowDiskFullException();
             }
@@ -97,7 +97,7 @@ namespace Raven.Server.Indexing
             {
                 _file.SetLength(length);
             }
-            catch (IOException ioe) when (IsOutOfDiskSpaceException(ioe))
+            catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
                 ThrowDiskFullException();
             }
@@ -142,7 +142,7 @@ namespace Raven.Server.Indexing
 
                 _indexOutputFilesSummary.SetWriteError();
 
-                if (e is IOException ioe && IsOutOfDiskSpaceException(ioe))
+                if (e is IOException ioe && e.IsOutOfDiskSpaceException())
                 {
                     // can happen when trying to copy from the file stream
                     ThrowDiskFullException();
@@ -172,18 +172,11 @@ namespace Raven.Server.Indexing
 
         private void ThrowDiskFullException()
         {
-            var directory = Path.GetDirectoryName(_fileTempPath);
-            var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(directory);
+            var folderPath = Path.GetDirectoryName(_fileTempPath);
+            var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(folderPath);
             var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
             throw new DiskFullException($"There isn't enough space to flush the buffer of the file: {_fileTempPath}. " +
                                         $"Currently available space: {freeSpace}");
-        }
-
-        private static bool IsOutOfDiskSpaceException(IOException ioe)
-        {
-            var expectedDiskFullError = PlatformDetails.RunningOnPosix ? (int)Errno.ENOSPC : (int)Win32NativeFileErrors.ERROR_DISK_FULL;
-            var errorCode = PlatformDetails.RunningOnPosix ? ioe.HResult : ioe.HResult & 0xFFFF;
-            return errorCode == expectedDiskFullError;
         }
     }
 }
