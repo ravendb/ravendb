@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Buffers;
+using System.Buffers.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -2084,13 +2086,11 @@ namespace Raven.Server.Documents.TimeSeries
 
             static LazyStringValue ToLuceneKey(DocumentsOperationContext context, LazyStringValue documentId, LazyStringValue name, DateTime baseline)
             {
-                var ticksSpan = Encoding.UTF8.GetBytes(baseline.Ticks.ToString()).AsSpan();
-
                 var size = documentId.Size
                            + 1 // separator
                            + name.Size
                            + 1 // separator
-                           + ticksSpan.Length; // baseline.Ticks
+                           + FormatD18.Precision; // baseline.Ticks
 
                 using (context.Allocator.Allocate(size, out var buffer))
                 {
@@ -2101,12 +2101,16 @@ namespace Raven.Server.Documents.TimeSeries
                     name.AsSpan().CopyTo(bufferSpan.Slice(offset));
                     offset += name.Size;
                     bufferSpan[offset++] = (byte)'|';
-                    ticksSpan.CopyTo(bufferSpan.Slice(offset));
+
+                    if (Utf8Formatter.TryFormat(baseline.Ticks, bufferSpan.Slice(offset), out var bytesWritten, FormatD18) == false || bytesWritten != FormatD18.Precision)
+                        throw new InvalidOperationException($"Could not write '{baseline.Ticks}' ticks. Bytes written {bytesWritten}, but expected {FormatD18.Precision}.");
 
                     return context.GetLazyString(buffer.Ptr, size);
                 }
             }
         }
+
+        private static readonly StandardFormat FormatD18 = new StandardFormat('D', 18);
 
         internal Reader.SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)
         {
