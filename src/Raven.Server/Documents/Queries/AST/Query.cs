@@ -383,16 +383,9 @@ namespace Raven.Server.Documents.Queries.AST
             TimeValue result;
             var offset = 0;
 
-            double duration = ParseNumber(source, ref offset);
+            var duration = ParseNumber(source, ref offset);
             if (offset >= source.Length)
                 throw new ArgumentException("Unable to find range specification in: " + source);
-
-            var pos = offset;
-            if (char.ToLower(source[pos]) == '.')
-            {
-                var remainder = ParseNumber(source, ref offset);
-                duration += (remainder / 10 * (offset - pos));
-            }
 
             while (char.IsWhiteSpace(source[offset]) && offset < source.Length)
             {
@@ -425,7 +418,6 @@ namespace Raven.Server.Documents.Queries.AST
                     {
                         result = TimeSpan.FromMilliseconds(duration);
                         break;
-
                     }
 
                     if (TryConsumeMatch(source, ref offset, "months") ||
@@ -453,7 +445,7 @@ namespace Raven.Server.Documents.Queries.AST
                     if (TryConsumeMatch(source, ref offset, "quarters") == false)
                         TryConsumeMatch(source, ref offset, "quarter");
                     
-                    duration = (int)duration * 3;
+                    duration *= 3;
                     AssertValidDurationInMonths(duration);
                     result = TimeValue.FromMonths((int)duration);
                     break;
@@ -480,7 +472,7 @@ namespace Raven.Server.Documents.Queries.AST
             return result;
         }
 
-        private static void AssertValidDurationInMonths(double duration)
+        private static void AssertValidDurationInMonths(long duration)
         {
             if (duration > 120_000)
                 throw new ArgumentException("The specified range results in invalid range, cannot have: " + duration + " months");
