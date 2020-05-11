@@ -5942,5 +5942,508 @@ select out(p)")
                 }
             }
         }
+
+        [Fact]
+        public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i <= totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate 
+    last 100 ms
+}
+from People as doc
+where id(doc) = $id
+select out(doc)
+")
+                        .AddParameter("id", id)
+                        .First();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal(baseline.AddMinutes(totalMinutes), result.Results[0].Timestamp);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingLast_Seconds()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i <= totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate 
+    last 90 second
+    group by 10 seconds
+    select avg()
+}
+from People as doc
+where id(doc) = $id
+select out(doc)
+")
+                        .AddParameter("id", id)
+                        .First();
+
+                    Assert.Equal(2, result.Count);
+                    Assert.Equal(2, result.Results.Length);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingLast_Minutes()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i <= totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate 
+    last 30 minutes
+    group by 10 minutes
+    select min(), max(), avg()
+}
+from People as doc
+where id(doc) = $id
+select out(doc)
+")
+                        .AddParameter("id", id)
+                        .First();
+
+                    Assert.Equal(31, result.Count);
+                    Assert.Equal(4, result.Results.Length);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesRaw_UsingLast_Hour()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i <= totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate last 12h
+}
+from People as doc
+where id(doc) = $id
+select out(doc)
+")
+                        .AddParameter("id", id)
+                        .First();
+
+                    var expectedInitialTimestamp = baseline.AddDays(3).AddHours(-12);
+                    var expectedInitialValueValue = totalMinutes - TimeSpan.FromHours(12).TotalMinutes;
+                    var expectedCount = totalMinutes - expectedInitialValueValue + 1;
+
+                    Assert.Equal(expectedCount, result.Count);
+
+                    for (int i = 0; i < expectedCount; i++)
+                    {
+                        Assert.Equal(expectedInitialValueValue + i, result.Results[i].Value);
+                        Assert.Equal(expectedInitialTimestamp.AddMinutes(i), result.Results[i].Timestamp);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingLast_Hour()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i <= totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate last 12h
+    group by 1h
+    select min(), max(), avg()
+}
+from People as doc
+where id(doc) = $id
+select out(doc)
+")
+                        .AddParameter("id", id)
+                        .First();
+
+                    var expectedInitialTimestamp = baseline.AddDays(3).AddHours(-12);
+                    var expectedInitialValueValue = totalMinutes - TimeSpan.FromHours(12).TotalMinutes;
+                    var expectedCount = totalMinutes - expectedInitialValueValue + 1;
+                    var expectedBucketsCount = 13;
+
+                    Assert.Equal(expectedCount, result.Count);
+                    Assert.Equal(expectedBucketsCount, result.Results.Length);
+
+                    for (int i = 0; i < expectedBucketsCount - 1; i++)
+                    {
+                        var expectedMin = expectedInitialValueValue + (60 * i);
+                        var expectedMax = expectedMin + 59;
+                        var expectedAvg = (expectedMin + expectedMax) / 2;
+                        var expectedFrom = expectedInitialTimestamp.AddMinutes(i * 60);
+                        var expectedTo = expectedFrom.AddHours(1);
+
+                        Assert.Equal(expectedMin, result.Results[i].Min[0]);
+                        Assert.Equal(expectedMax, result.Results[i].Max[0]);
+                        Assert.Equal(expectedAvg, result.Results[i].Average[0]);
+                        Assert.Equal(60, result.Results[i].Count[0]);
+                        Assert.Equal(expectedFrom, result.Results[i].From);
+                        Assert.Equal(expectedTo, result.Results[i].To);
+                    }
+
+                    var expected = expectedInitialValueValue + (60 * 12);
+                    Assert.Equal(expected, result.Results[^1].Min[0]);
+                    Assert.Equal(expected, result.Results[^1].Max[0]);
+                    Assert.Equal(expected, result.Results[^1].Average[0]);
+                    Assert.Equal(1, result.Results[^1].Count[0]);
+                    Assert.Equal(expectedInitialTimestamp.AddHours(12), result.Results[^1].From);
+                    Assert.Equal(expectedInitialTimestamp.AddHours(13), result.Results[^1].To);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingLast_Day()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i <= totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate 
+    last 1 day
+    group by 1 hour
+    select min(), max(), avg()
+}
+from People as doc
+where id(doc) = $id
+select out(doc)
+")
+                        .AddParameter("id", id)
+                        .First();
+
+
+                    Assert.Equal(TimeSpan.FromDays(1).TotalMinutes + 1, result.Count);
+                    Assert.Equal(TimeSpan.FromDays(1).TotalHours + 1, result.Results.Length);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingLast_SelectSyntax()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i <= totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+from People as doc
+where id(doc) = $id
+select timeseries(
+    from doc.HeartRate 
+    last 12h
+    group by 1h
+    select min(), max(), avg()
+)")
+                        .AddParameter("id", id)
+                        .First();
+
+                    var expectedInitialTimestamp = baseline.AddDays(3).AddHours(-12);
+                    var expectedInitialValueValue = totalMinutes - TimeSpan.FromHours(12).TotalMinutes;
+                    var expectedCount = totalMinutes - expectedInitialValueValue + 1;
+                    var expectedBucketsCount = 13;
+
+                    Assert.Equal(expectedCount, result.Count);
+                    Assert.Equal(expectedBucketsCount, result.Results.Length);
+
+                    for (int i = 0; i < expectedBucketsCount - 1; i++)
+                    {
+                        var expectedMin = expectedInitialValueValue + (60 * i);
+                        var expectedMax = expectedMin + 59;
+                        var expectedAvg = (expectedMin + expectedMax) / 2;
+                        var expectedFrom = expectedInitialTimestamp.AddMinutes(i * 60);
+                        var expectedTo = expectedFrom.AddHours(1);
+
+                        Assert.Equal(expectedMin, result.Results[i].Min[0]);
+                        Assert.Equal(expectedMax, result.Results[i].Max[0]);
+                        Assert.Equal(expectedAvg, result.Results[i].Average[0]);
+                        Assert.Equal(60, result.Results[i].Count[0]);
+                        Assert.Equal(expectedFrom, result.Results[i].From);
+                        Assert.Equal(expectedTo, result.Results[i].To);
+                    }
+
+                    var expected = expectedInitialValueValue + (60 * 12);
+                    Assert.Equal(expected, result.Results[^1].Min[0]);
+                    Assert.Equal(expected, result.Results[^1].Max[0]);
+                    Assert.Equal(expected, result.Results[^1].Average[0]);
+                    Assert.Equal(1, result.Results[^1].Count[0]);
+                    Assert.Equal(expectedInitialTimestamp.AddHours(12), result.Results[^1].From);
+                    Assert.Equal(expectedInitialTimestamp.AddHours(13), result.Results[^1].To);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingLast_WithFilter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i <= totalMinutes; i++)
+                    {
+                        var tag = i % 2 == 0 ? "watches/fitbit" : "watches/apple";
+                        tsf.Append(baseline.AddMinutes(i), i, tag);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate last 12h
+    where tag = $tag
+    group by 1h
+    select min(), max(), avg()
+}
+from People as doc
+where id(doc) = $id
+select out(doc)
+")
+                        .AddParameter("id", id)
+                        .AddParameter("tag", "watches/apple")
+                        .First();
+
+                    Assert.Equal(360, result.Count);
+                    Assert.Equal(12, result.Results.Length);
+                }
+            }
+        }
+
+
+        [Fact]
+        public void ShouldThrowOnUsingLastAndBetweenInTheSameTimeSeriesQuery()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    session.TimeSeriesFor(id, "HeartRate").Append(baseline, 60, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate
+    between $stat and $end
+    last 6 hours
+    group by 1 hour
+    select avg()
+}
+from People as doc
+where id(doc) = $id
+select out(doc)
+")
+                        .AddParameter("id", id)
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddDays(1));
+
+
+                    var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
+                    Assert.Contains("Cannot have both 'Last' and 'Between' in the same Time Series query function", ex.Message);
+                }
+            }
+        }
     }
 }
