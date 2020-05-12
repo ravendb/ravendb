@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Raven.Client.Documents.Session.TimeSeries;
+
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
@@ -13,12 +15,22 @@ namespace Raven.Client.Documents.Session
     {
         public IAsyncSessionDocumentTimeSeries TimeSeriesFor(string documentId, string name)
         {
-            return new AsyncSessionDocumentTimeSeries(this, documentId, name);
+            return new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(this, documentId, name);
         }
 
         public IAsyncSessionDocumentTimeSeries TimeSeriesFor(object entity, string name)
         {
-            return new AsyncSessionDocumentTimeSeries(this, entity, name);
+            return new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(this, entity, name);
+        }
+
+        public IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name) where TValues : TimeSeriesEntry
+        {
+            return new AsyncSessionDocumentTimeSeries<TValues>(this, documentId, name);
+        }
+
+        public IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity, string name) where TValues : TimeSeriesEntry
+        {
+            return new AsyncSessionDocumentTimeSeries<TValues>(this, entity, name);
         }
     }
 }

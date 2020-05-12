@@ -12,6 +12,7 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session

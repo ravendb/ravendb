@@ -16,6 +16,10 @@ namespace Raven.Client.Documents.Session.TimeSeries
 
         public double[] Values { get; set; }
 
-        public double Value => Values[0];
+        public double Value
+        {
+            get => Values[0]; 
+        //    set => Values[0] = value;
+        }
     }
 }

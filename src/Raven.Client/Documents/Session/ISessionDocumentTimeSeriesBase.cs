@@ -6,13 +6,14 @@
 
 using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
     ///     Time series advanced in memory session operations
     /// </summary>
-    public interface ISessionDocumentTimeSeriesBase
+    public interface ISessionDocumentAppendTimeSeriesBase
     {
         /// <summary>
         /// Append the the values (and optional tag) to the times series at the provided time stamp
@@ -23,7 +24,15 @@ namespace Raven.Client.Documents.Session
         /// Append a single value (and optional tag) to the times series at the provided time stamp
         /// </summary>
         void Append(DateTime timestamp, double value, string tag = null);
+    }
 
+    public interface ISessionDocumentTypedAppendTimeSeriesBase<in TValues> where TValues : TimeSeriesEntry
+    {
+        void Append(TValues entry);
+    }
+
+    public interface ISessionDocumentRemoveTimeSeriesBase
+    {
         /// <summary>
         /// Remove all the values in the time series in the range of from .. to.
         /// </summary>

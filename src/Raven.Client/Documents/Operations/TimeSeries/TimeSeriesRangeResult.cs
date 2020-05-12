@@ -10,4 +10,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public long? TotalResults;
         internal string Hash;
     }
+
+    public class TimeSeriesRangeResult<TValues> : TimeSeriesRangeResult where TValues : TimeSeriesEntry
+    {
+        public new TValues[] Entries;
+    }
 }
