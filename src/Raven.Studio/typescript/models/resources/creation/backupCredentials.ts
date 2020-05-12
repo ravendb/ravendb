@@ -11,7 +11,7 @@ export abstract class restoreSettings {
     mandatoryFieldsText: string;
 
     folderContent: KnockoutComputed<string>;
-    fetchRestorePointsCommand: KnockoutComputed<commandBase>;    
+    fetchRestorePointsCommand: () => commandBase;    
 
     abstract getFolderPathOptions(): JQueryPromise<string[]>;
     
@@ -31,7 +31,6 @@ export abstract class restoreSettings {
     }
 }
 
-// *** Local ***
 export class localServerCredentials extends restoreSettings {  
     backupStorageType: restoreSource = 'local'; 
     backupStorageTypeText: string ='Local Server Directory';
@@ -40,9 +39,7 @@ export class localServerCredentials extends restoreSettings {
     backupDirectory = ko.observable<string>();
     folderContent = ko.pureComputed(() => this.backupDirectory());
 
-    fetchRestorePointsCommand = ko.pureComputed(() => {
-        return getRestorePointsCommand.forServerLocal(this.backupDirectory(), true);
-    });
+    fetchRestorePointsCommand = () => getRestorePointsCommand.forServerLocal(this.backupDirectory(), true);
 
     getFolderPathOptions() {
         return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forServerLocal(this.backupDirectory(), true))
@@ -69,7 +66,6 @@ export class localServerCredentials extends restoreSettings {
     }
 }
 
-// *** Amazon ***
 export class amazonS3Credentials extends restoreSettings {
     backupStorageType: restoreSource = 'amazonS3';
     backupStorageTypeText: string ='Amazon S3';
@@ -78,13 +74,14 @@ export class amazonS3Credentials extends restoreSettings {
     remoteFolder = ko.observable<string>();
     folderContent = ko.pureComputed(() => this.remoteFolder());
     
+    sessionToken = ko.observable<string>("");
+    
     accessKey = ko.observable<string>();
     secretKey = ko.observable<string>();
     regionName = ko.observable<string>();
     bucketName = ko.observable<string>();
     
-    toDto(): Raven.Client.Documents.Operations.Backups.S3Settings
-    {
+    toDto(): Raven.Client.Documents.Operations.Backups.S3Settings {
         let selectedRegion = _.trim(this.regionName()).toLowerCase();
         const foundRegion = amazonSettings.availableAwsRegionEndpointsStatic.find(x => amazonSettings.getDisplayRegionName(x).toLowerCase() === selectedRegion);        
         if (foundRegion) {
@@ -96,7 +93,7 @@ export class amazonS3Credentials extends restoreSettings {
             AwsSecretKey: _.trim(this.secretKey()),
             AwsRegionName: selectedRegion,
             BucketName: _.trim(this.bucketName()),
-            AwsSessionToken: "",
+            AwsSessionToken: this.sessionToken(),
             RemoteFolderName: _.trim(this.remoteFolder()),
             Disabled: false,
             GetBackupConfigurationScript: null,
@@ -123,9 +120,7 @@ export class amazonS3Credentials extends restoreSettings {
         });
     }
 
-    fetchRestorePointsCommand = ko.pureComputed(() => {
-        return getRestorePointsCommand.forS3Backup(this.toDto(), true);
-    });
+    fetchRestorePointsCommand = () => getRestorePointsCommand.forS3Backup(this.toDto(), true);
 
     getFolderPathOptions() {
         return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "S3"))
@@ -152,12 +147,20 @@ export class amazonS3Credentials extends restoreSettings {
         this.remoteFolder.throttle(300).subscribe(onChange);
     }
     
-    static empty(): amazonS3Credentials{
+    static empty(): amazonS3Credentials {
         return new amazonS3Credentials();
+    }
+    
+    update(credentialsDto: federatedCredentials) {
+        this.accessKey(credentialsDto.AwsAccessKey);
+        this.regionName(credentialsDto.AwsRegionName);
+        this.secretKey(credentialsDto.AwsSecretKey);
+        this.bucketName(credentialsDto.BucketName);
+        this.remoteFolder(credentialsDto.RemoteFolderName);
+        this.sessionToken(credentialsDto.AwsSessionToken);
     }
 }
 
-// *** Azure ***
 export class azureCredentials extends restoreSettings {
     backupStorageType: restoreSource = "azure";
     backupStorageTypeText = "Azure";
@@ -171,8 +174,7 @@ export class azureCredentials extends restoreSettings {
     sasToken = ko.observable<string>();
     container = ko.observable<string>();  
     
-    toDto(): Raven.Client.Documents.Operations.Backups.AzureSettings
-    {
+    toDto(): Raven.Client.Documents.Operations.Backups.AzureSettings {
         return {
             AccountKey: _.trim(this.accountKey()),
             SasToken: _.trim(this.sasToken()),
@@ -184,9 +186,7 @@ export class azureCredentials extends restoreSettings {
         }
     };
 
-    fetchRestorePointsCommand = ko.pureComputed(() => {
-        return getRestorePointsCommand.forAzureBackup(this.toDto(), true);
-    });
+    fetchRestorePointsCommand = () => getRestorePointsCommand.forAzureBackup(this.toDto(), true);
 
     getFolderPathOptions() {
         return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "Azure"))
@@ -216,9 +216,15 @@ export class azureCredentials extends restoreSettings {
     static empty(): azureCredentials {
         return new azureCredentials();
     }
+    
+    update(dto: AzureSasCredentials) {
+        this.accountName(dto.AccountName);
+        this.remoteFolder(dto.RemoteFolderName);
+        this.sasToken(dto.SasToken);
+        this.container(dto.StorageContainer);
+    }
 }
 
-// *** Google Cloud ***
 export class googleCloudCredentials extends restoreSettings {
     backupStorageType: restoreSource = 'googleCloud';
     backupStorageTypeText: string ='Google Cloud Platform';
@@ -240,9 +246,7 @@ export class googleCloudCredentials extends restoreSettings {
         }
     };
 
-    fetchRestorePointsCommand = ko.pureComputed(() => {
-        return getRestorePointsCommand.forGoogleCloudBackup(this.toDto(), true);
-    });
+    fetchRestorePointsCommand = () => getRestorePointsCommand.forGoogleCloudBackup(this.toDto(), true);
 
     getFolderPathOptions() {
         return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "GoogleCloud"))
@@ -272,7 +276,6 @@ export class googleCloudCredentials extends restoreSettings {
     }
 }
 
-// *** RavenDB Cloud ***
 export class ravenCloudCredentials extends restoreSettings {
     backupStorageType: restoreSource = "cloud";
     backupStorageTypeText = "RavenDB Cloud";
@@ -282,61 +285,90 @@ export class ravenCloudCredentials extends restoreSettings {
     isBackupLinkValid = ko.observable<boolean>();
     folderContent = ko.pureComputed(() => this.backupLink());
     
-    sessionToken: string;
     timeLeft = ko.observable<moment.Moment>(null);
     timeLeftText: KnockoutComputed<string>;
-    
+
+    cloudBackupProvider = ko.observable<BackupStorageType>();
     amazonS3 = ko.observable<amazonS3Credentials>(amazonS3Credentials.empty());
-    //azure = ko.observable<azureCredentials>(null);             // todo: add when Raven Cloud supports this
+    azure = ko.observable<azureCredentials>(azureCredentials.empty());
     //googleCloud = ko.observable<googleCloudCredentials>(null); // todo: add when Raven Cloud supports this
 
-    constructor(dto: federatedCredentials) {
+    constructor() {
         super();
         
-        this.setAmazonS3Credentials(dto);
-        
         this.timeLeftText = ko.pureComputed(() => {
-            if (this.timeLeft()) {
-                const timeLeftFormatted = generalUtils.formatDurationByDate(this.timeLeft(), false);
-                return timeLeftFormatted === 'less than a minute' ? 'Link has expired' : timeLeftFormatted;
+            const timeLeft = this.timeLeft();
+            if (timeLeft) {
+                if (timeLeft.isBefore()) {
+                    return "Link has expired";
+                }
+                
+                return generalUtils.formatDurationByDate(this.timeLeft(), false);
             }
-            return 'unknown';
+            return "unknown";
         });
     }
     
-    setAmazonS3Credentials(credentialsDto: federatedCredentials) {
-        this.amazonS3().accessKey(credentialsDto.AwsAccessKey);
-        this.amazonS3().regionName(credentialsDto.AwsRegionName);
-        this.amazonS3().secretKey(credentialsDto.AwsSecretKey);
-        this.amazonS3().bucketName(credentialsDto.BucketName);
-        this.amazonS3().remoteFolder(credentialsDto.RemoteFolderName);
-        this.sessionToken = credentialsDto.AwsSessionToken;
+    setCredentials(credentialsDto: IBackupCredentials) {
+        switch (credentialsDto.BackupStorageType) {
+            case "S3":
+                this.amazonS3().update(credentialsDto as federatedCredentials);
+                break;
+            case "Azure":
+                this.azure().update(credentialsDto as AzureSasCredentials);
+                break;
+        }
+        
+        this.cloudBackupProvider(credentialsDto.BackupStorageType);
+        
         if (credentialsDto.Expires) {
-            // moment.format will keep time as local time :)
-            this.timeLeft(moment.utc(moment(credentialsDto.Expires).format()));
+            this.timeLeft(moment.utc(credentialsDto.Expires));
         }
     }
     
     toAmazonS3Dto(): Raven.Client.Documents.Operations.Backups.S3Settings {
+        const s3 = this.amazonS3();
+        
         return {
-            AwsSessionToken: this.sessionToken,
-            AwsSecretKey: _.trim(this.amazonS3().secretKey()),
-            AwsAccessKey: _.trim(this.amazonS3().accessKey()),
-            AwsRegionName: _.trim(this.amazonS3().regionName()),
-            BucketName: _.trim(this.amazonS3().bucketName()),
-            RemoteFolderName: _.trim(this.amazonS3().remoteFolder()),
+            AwsSessionToken: _.trim(s3.sessionToken()),
+            AwsSecretKey: _.trim(s3.secretKey()),
+            AwsAccessKey: _.trim(s3.accessKey()),
+            AwsRegionName: _.trim(s3.regionName()),
+            BucketName: _.trim(s3.bucketName()),
+            RemoteFolderName: _.trim(s3.remoteFolder()),
             Disabled: false,
             GetBackupConfigurationScript: null,
             //TODO RavenDB-14716
             CustomServerUrl: null,
         }
-    }     
-    // toAzureDto()       // todo: add when Raven Cloud supports this
+    }
+    
+    toAzureDto(): Raven.Client.Documents.Operations.Backups.AzureSettings {
+        const azure = this.azure();
+        
+        return {
+            StorageContainer: azure.container(),
+            AccountKey: azure.accountKey(),
+            AccountName: azure.accountName(),
+            Disabled: false,
+            GetBackupConfigurationScript: null,
+            RemoteFolderName: azure.remoteFolder(),
+            SasToken: azure.sasToken()
+        } 
+    }
+    
     // toGoogleCloudDto() // todo: add when Raven Cloud supports this
 
-    fetchRestorePointsCommand = ko.pureComputed(() => {
-        return getRestorePointsCommand.forS3Backup(this.toAmazonS3Dto(), true);
-    });
+    fetchRestorePointsCommand = () => {
+        switch (this.cloudBackupProvider()) {
+            case "S3":
+                return getRestorePointsCommand.forS3Backup(this.toAmazonS3Dto(), true);
+            case "Azure":
+                return getRestorePointsCommand.forAzureBackup(this.toAzureDto(), true)
+            default:
+                throw new Error("Unable to fetch restore points, unknown provider: " + this.cloudBackupProvider());
+        }
+    };
 
     getFolderPathOptions() {
         // Folder options are not relevant when source is the 'RavenDB Cloud Link'.. 
@@ -345,11 +377,23 @@ export class ravenCloudCredentials extends restoreSettings {
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                        backupLocation: string) {
-        const s3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
-        s3Configuration.Settings = this.toAmazonS3Dto();
-        s3Configuration.Settings.RemoteFolderName = backupLocation;
-        (s3Configuration as any as restoreTypeAware).Type = "S3";
-        return s3Configuration;
+
+        switch (this.cloudBackupProvider()) {
+            case "S3":
+                const s3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
+                s3Configuration.Settings = this.toAmazonS3Dto();
+                s3Configuration.Settings.RemoteFolderName = backupLocation;
+                (s3Configuration as any as restoreTypeAware).Type = "S3";
+                return s3Configuration;
+            case "Azure":
+                const azureConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromAzureConfiguration;
+                azureConfiguration.Settings = this.toAzureDto();
+                azureConfiguration.Settings.RemoteFolderName = backupLocation;
+                (azureConfiguration as any as restoreTypeAware).Type = "Azure";
+                return azureConfiguration;
+            default:
+                throw new Error("Unable to get restore configuration, unknown provider: " + this.cloudBackupProvider());
+        }
     }
     
     isValid(): boolean {
@@ -360,20 +404,8 @@ export class ravenCloudCredentials extends restoreSettings {
         this.backupLink.throttle(300).subscribe((backupLinkNewValue) => onChange(backupLinkNewValue));
     }
     
-    static empty(): ravenCloudCredentials {
-        return new ravenCloudCredentials ({
-            AwsAccessKey: null,
-            AwsRegionName: null,
-            AwsSecretKey: null,
-            AwsSessionToken: null,
-            RemoteFolderName: null,
-            BucketName: null,
-            Expires: null,
-            BackupStorageType: null,
-            Disabled: false,
-            GetBackupConfigurationScript: null,
-            //TODO RavenDB-14716
-            CustomServerUrl: null,
-        });
+    static empty() {
+        return new ravenCloudCredentials();
     }
+  
 }

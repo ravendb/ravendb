@@ -237,7 +237,7 @@ class databaseCreationModel {
         
         // Raven Cloud - Backup Link 
         this.restore.ravenCloudCredentials().onCredentialsChange((backupLinkNewValue) => {
-            if (!!_.trim(backupLinkNewValue)) {
+            if (_.trim(backupLinkNewValue)) {
                 this.downloadCloudCredentials(backupLinkNewValue)
             } else {
                 this.clearRestorePoints();
@@ -299,8 +299,7 @@ class databaseCreationModel {
                 this.clearRestorePoints();
             })
             .done((cloudCredentials) => {
-                // todo: decode the cloud credentials and set appropriate type accordingly - todo later when we support the other types
-                this.restore.ravenCloudCredentials().setAmazonS3Credentials(cloudCredentials);
+                this.restore.ravenCloudCredentials().setCredentials(cloudCredentials);
                 this.restore.ravenCloudCredentials().isBackupLinkValid(true);
                 this.fetchRestorePoints(true);
             })
