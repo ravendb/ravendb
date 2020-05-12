@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private readonly RavenQueryProviderProcessor<T> _providerProcessor;
         private TimeSeriesWhereClauseVisitor<T> _whereVisitor;
         private StringBuilder _selectFields;
-        private string _src, _between, _where, _groupBy, _loadTag, _offset;
+        private string _src, _between, _where, _groupBy, _last, _loadTag, _offset;
 
         public List<string> Parameters { get; internal set; }
 
@@ -210,7 +210,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 if (mce.Arguments[1] is ParameterExpression == false)
                     _src = $"{sourceAlias}.{_src}";
 
-                if (mce.Arguments.Count == 4)
+                if (mce.Arguments.Count == 3)
+                    Last(mce.Arguments[2]);
+                
+                else if (mce.Arguments.Count == 4)
                     Between(mce);
             }
 
@@ -220,6 +223,72 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             Parameters ??= new List<string>();
             Parameters.AddRange(_whereVisitor.Parameters);
 
+        }
+
+        private void Last(Expression expression)
+        {
+            string timeUnit, duration;
+
+            if (expression is MethodCallExpression methodCall)
+            {
+                if (methodCall.Method.DeclaringType != typeof(TimeValue) ||
+                    methodCall.Arguments.Count != 1)
+                    ThrowInvalidLastArgument(methodCall);
+
+                duration = methodCall.Arguments[0].ToString();
+
+                switch (methodCall.Method.Name)
+                {
+                    /* TODO RavenDB-14988 : add milliseconds support to TimeValue
+                    case nameof(TimeValue.FromMilliseconds):
+                        timeUnit = "ms";
+                        break;*/
+
+                    case nameof(TimeValue.FromSeconds):
+                        timeUnit = "seconds";
+                        break;
+                    case nameof(TimeValue.FromMinutes):
+                        timeUnit = "minutes";
+                        break;
+                    case nameof(TimeValue.FromHours):
+                        timeUnit = "hours";
+                        break;
+                    case nameof(TimeValue.FromDays):
+                        timeUnit = "days";
+                        break;
+                    case nameof(TimeValue.FromMonths):
+                        timeUnit = "months";
+                        break;
+                    case nameof(TimeValue.FromYears):
+                        timeUnit = "years";
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Invalid 'Last' argument, unsupported method : '{methodCall.Method.Name}'");
+                }
+            }
+
+            else if (expression is UnaryExpression && expression.NodeType == ExpressionType.Convert ||
+                     JavascriptConversionExtensions.IsWrappedConstantExpression(expression))
+            {
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var value);
+
+                if (!(value is TimeValue tv))
+                {
+                    ThrowInvalidLastArgument(expression);
+                    return;
+                }
+
+                duration = tv.Value.ToString();
+                timeUnit = tv.Unit.ToString();
+            }
+
+            else
+            {
+                ThrowInvalidLastArgument(expression);
+                return;
+            }
+
+            _last = $" last {duration} {timeUnit}";
         }
 
         private string GetNameFromArgument(Expression argument)
@@ -342,6 +411,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             if (_between != null)
                 queryBuilder.Append(_between);
+            else if (_last != null)
+                queryBuilder.Append(_last);
             if (_loadTag != null)
                 queryBuilder.Append(_loadTag);
             if (_where != null)
@@ -403,6 +474,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             if (_groupBy != null && _selectFields == null)
                 throw new InvalidOperationException("Missing Select call. Cannot have GroupBy without Select in Time Series functions ");
+        }
+
+        private static void ThrowInvalidLastArgument(Expression argument)
+        {
+            throw new InvalidOperationException("Invalid 'Last' argument " + argument);
         }
     }
 
