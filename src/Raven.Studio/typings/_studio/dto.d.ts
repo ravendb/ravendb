@@ -195,9 +195,21 @@ interface restoreTypeAware {
 }
 
 // Matching interface from Cloud Project 
-interface federatedCredentials extends Raven.Client.Documents.Operations.Backups.S3Settings {
-    BackupStorageType: string,
-    Expires: string
+interface federatedCredentials extends Raven.Client.Documents.Operations.Backups.S3Settings, IBackupCredentials {
+}
+
+interface AzureSasCredentials extends IBackupCredentials {
+    StorageContainer: string;
+    RemoteFolderName: string;
+    AccountName: string;
+    SasToken: string;
+}
+
+type BackupStorageType = "S3" | "Azure";
+
+interface IBackupCredentials {
+    BackupStorageType: BackupStorageType;
+    Expires: string;
 }
 
 interface availableConfigurationSection {

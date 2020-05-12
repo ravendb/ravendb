@@ -327,8 +327,6 @@
                 </div>
             </div>
 
-            <!-- todo : Only Amazon is now supported from the RavenDB Cloud Link. Add support to other cloud backup types when relevant.... -->
-            
             <div data-bind="if: !$root.databaseModel.spinners.backupCredentialsLoading() && ravenCloudCredentials().isValid()">
                 <div data-bind="with: ravenCloudCredentials">
                     <div class="form-group row">
@@ -339,29 +337,75 @@
                             <label class="control-label text-info" data-bind="text: backupStorageTypeText"></label>
                         </div>
                     </div>
-                    <div data-bind="with: amazonS3">
-                        <div class="form-group row">
-                            <div class="col-md-4">
-                                <label class="control-label">Region Name</label>
+                    <div data-bind="if: cloudBackupProvider() === 'S3'">
+                        <div data-bind="with: amazonS3">
+                            <div class="form-group row">
+                                <div class="col-md-4">
+                                    <label class="control-label">Cloud Provider</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="control-label text-info text-left">AWS</label>
+                                </div>
                             </div>
-                            <div class="col-md-8">
-                                <label class="control-label text-info text-left" data-bind="text: regionName"></label> 
+                            <div class="form-group row">
+                                <div class="col-md-4">
+                                    <label class="control-label">Region Name</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="control-label text-info text-left" data-bind="text: regionName"></label> 
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-md-4">
+                                    <label class="control-label">Bucket Name</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="control-label text-info text-left" data-bind="text: bucketName"></label>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-md-4">
+                                    <label class="control-label">Remote Folder Name</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="control-label text-info text-left" data-bind="text: remoteFolder"></label>
+                                </div>
                             </div>
                         </div>
-                        <div class="form-group row">
-                            <div class="col-md-4">
-                                <label class="control-label">Bucket Name</label>
+                    </div>
+                    <div data-bind="if: cloudBackupProvider() === 'Azure'">
+                        <div data-bind="with: azure">
+                            <div class="form-group row">
+                                <div class="col-md-4">
+                                    <label class="control-label">Cloud Provider</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="control-label text-info text-left">Azure</label>
+                                </div>
                             </div>
-                            <div class="col-md-8">
-                                <label class="control-label text-info text-left" data-bind="text: bucketName"></label>
+                            <div class="form-group row">
+                                <div class="col-md-4">
+                                    <label class="control-label">Account Name</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="control-label text-info text-left" data-bind="text: accountName"></label>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group row">
-                            <div class="col-md-4">
-                                <label class="control-label">Remote Folder Name</label>
+                            <div class="form-group row">
+                                <div class="col-md-4">
+                                    <label class="control-label">Container Name</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="control-label text-info text-left" data-bind="text: container"></label>
+                                </div>
                             </div>
-                            <div class="col-md-8">
-                                <label class="control-label text-info text-left" data-bind="text: remoteFolder"></label>
+                            <div class="form-group row">
+                                <div class="col-md-4">
+                                    <label class="control-label">Remote Folder Name</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="control-label text-info text-left" data-bind="text: remoteFolder"></label>
+                                </div>
                             </div>
                         </div>
                     </div>
