@@ -57,6 +57,7 @@ namespace Sparrow.Json
         private readonly Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
         private int _numberOfAllocatedStringsValues;
+        private int _allocatedStringValuesCount = 0;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
 
         private DateTime _lastAllocatedStringValuesClean = DateTime.UtcNow;
@@ -102,7 +103,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe LazyStringValue AllocateStringValue(string str, byte* ptr, int size)
         {
-            if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
+            if (_numberOfAllocatedStringsValues < _allocatedStringValuesCount)
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
                 lazyStringValue.Renew(str, ptr, size);
@@ -114,7 +115,9 @@ namespace Sparrow.Json
             {
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;
+                _allocatedStringValuesCount++;
             }
+
             return allocateStringValue;
         }
 
@@ -1022,14 +1025,16 @@ namespace Sparrow.Json
             for (var i = 0; i < _numberOfAllocatedStringsValues; i++)
                 _allocateStringValues[i].Reset();
 
-            if (releaseAllocatedStringValues && _allocateStringValues.Count >= _maxNumberOfAllocatedStringValues / 2)
+            _numberOfAllocatedStringsValues = 0;
+
+            if (releaseAllocatedStringValues && _allocatedStringValuesCount >= _maxNumberOfAllocatedStringValues / 2)
             {
                 var now = DateTime.UtcNow;
                 if (now - _lastAllocatedStringValuesClean >= _allocatedStringValuesCleanInterval)
                 {
                     _lastAllocatedStringValuesClean = now;
 
-                    var index = _allocateStringValues.Count;
+                    var index = _allocatedStringValuesCount;
                     for (var i = 0; i < 4; i++)
                     {
                         index /= 2;
@@ -1038,7 +1043,7 @@ namespace Sparrow.Json
                             break;
                     }
 
-                    for (var i = index; i < _allocateStringValues.Count; i++)
+                    for (var i = index; i < _allocatedStringValuesCount; i++)
                     {
                         var item = _allocateStringValues[i];
                         if (item == null)
@@ -1046,10 +1051,10 @@ namespace Sparrow.Json
 
                         _allocateStringValues[i] = null;
                     }
+
+                    _allocatedStringValuesCount = index;
                 }
             }
-
-            _numberOfAllocatedStringsValues = 0;
 
             _objectJsonParser.Reset(null);
             _arenaAllocator.ResetArena();
