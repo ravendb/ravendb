@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
+using Sparrow;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -64,6 +64,11 @@ namespace Raven.Client.Documents.Queries
         }
 
         public static ITimeSeriesQueryable TimeSeries(object documentInstance, string name, DateTime from, DateTime to)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        public static ITimeSeriesQueryable TimeSeries(object documentInstance, string name, TimeValue timePeriod)
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
