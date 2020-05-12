@@ -61,7 +61,7 @@ class editTimeSeries extends viewModelBase {
         
         const formatTimeSeriesDate = (input: string) => {
             const dateToFormat = moment.utc(input);
-            return dateToFormat.local().format(editTimeSeries.timeSeriesFormat);
+            return dateToFormat.format(editTimeSeries.timeSeriesFormat) + "Z";
         };
         
         const grid = this.gridController();
@@ -93,7 +93,7 @@ class editTimeSeries extends viewModelBase {
                 if (column.header === "Edit") {
                     return null;
                 } else if (column.header === "Date") {
-                    onValue(moment.utc(item.Timestamp), item.Timestamp);
+                    onValue(moment.utc(item.Timestamp).local(), item.Timestamp);
                 } else if (!_.isUndefined(value)) {
                     onValue(generalUtils.escapeHtml(value), value);
                 }

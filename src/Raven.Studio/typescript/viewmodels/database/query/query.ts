@@ -80,6 +80,8 @@ class perCollectionIncludes {
 
 class query extends viewModelBase {
 
+    static readonly timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+
     static readonly recentQueryLimit = 6;
     static readonly recentKeyword = 'Recent Query';
 
@@ -604,7 +606,7 @@ class query extends viewModelBase {
                 const dateHeaders = ["From", "To", "Timestamp"];
 
                 if (_.includes(dateHeaders, header)) {
-                    onValue(moment.utc(rawValue), rawValue);
+                    onValue(moment.utc(rawValue).local(), rawValue);
                 } else {
                     showPreview(rawValue);
                 }
@@ -637,6 +639,11 @@ class query extends viewModelBase {
             = valuesCount === 1
             ? (columnName => dto => (dto as any)[columnName][0])
             : (columnName => dto => "[" + (dto as any)[columnName].join(", ") + "]");
+
+        const formatTimeSeriesDate = (input: string) => {
+            const dateToFormat = moment.utc(input);
+            return dateToFormat.format(query.timeSeriesFormat) + "Z";
+        };
         
         switch (timeSeriesQueryResult.detectResultType(tab.value)) {
             case "grouped":
@@ -648,14 +655,14 @@ class query extends viewModelBase {
                 });
                 
                 return [
-                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.From), "From", "20%"),
-                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.To), "To", "20%"),
+                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => formatTimeSeriesDate(x.From), "From", "20%"),
+                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => formatTimeSeriesDate(x.To), "To", "20%"),
                     new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, maybeArrayPresenter("Count"), "Count", "10%"),
                     ...aggregationColumns
                 ];
             case "raw":
                 return [
-                    new textColumn<timeSeriesRawItemResultDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Timestamp), "Timestamp", "30%"),
+                    new textColumn<timeSeriesRawItemResultDto>(grid, x => formatTimeSeriesDate(x.Timestamp), "Timestamp", "30%"),
                     new textColumn<timeSeriesRawItemResultDto>(grid, x => x.Tag, "Tag", "30%"),
                     new textColumn<timeSeriesRawItemResultDto>(grid, maybeArrayPresenter("Values"), "Values", "30%"),
                 ];

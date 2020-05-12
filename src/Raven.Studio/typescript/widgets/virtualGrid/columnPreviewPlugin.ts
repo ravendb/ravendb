@@ -13,6 +13,8 @@ class columnPreviewPlugin<T> {
     private $tooltip: JQuery;
     private currentValue: any;
 
+    static localDateFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+
     private static readonly delay = 500;
     private static readonly enterTooltipDelay = 100;
     private static readonly maxPreviewWindowSize = {
@@ -28,12 +30,14 @@ class columnPreviewPlugin<T> {
             const dateAsMoment = value as moment.Moment;
             const diff = moment.utc().diff(dateAsMoment);
             const duration = generalUtils.formatDuration(moment.duration(diff), true, 2);
+            const isUtc = dateAsMoment.isUtc();
+            const dateFormatted = isUtc ? dateAsMoment.format() : dateAsMoment.format(columnPreviewPlugin.localDateFormat);
             
             const fullDuration = diff < 0 ? "in " + duration : duration + "ago";
             return `<div class="dateContainer">
                         <div>
-                            <div class="dateLabel">UTC: </div>
-                            <div class="dateValue">${dateAsMoment.format()}</div>
+                            <div class="dateLabel">${isUtc ? "UTC" : "Local"}: </div>
+                            <div class="dateValue">${dateFormatted}</div>
                         </div>
                         <div>
                             <div class="dateLabel">Relative: </div>
