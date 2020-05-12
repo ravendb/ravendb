@@ -577,7 +577,6 @@ type sortMode = "asc" | "desc";
 
 interface textColumnOpts<T> {
     extraClass?: (item: T) => string;
-    extraClassForLink?: (item: T) => string;
     useRawValue?: (item: T) => boolean;
     title?: (item:T) => string;
     sortable?: "number" | "string" | valueProvider<T>;
@@ -587,6 +586,7 @@ interface textColumnOpts<T> {
 
 interface hypertextColumnOpts<T> extends textColumnOpts<T> {
     handler?: (item: T, event: JQueryEventObject) => void;
+    extraClassForLink?: (item: T) => string;
 }
 
 type timeSeriesColumnEventType = "plot" | "preview";
@@ -706,5 +706,5 @@ interface timeSeriesRawItemResultDto {
 
 type timeUnit = "year" | "month" | "day" | "hour" | "minute" | "second";
 
-type SettingsTemplateType = Raven.Server.Config.ConfigurationEntryType | 'StringArray' | 'EnumArray' | 'ServeWide';
+type settingsTemplateType = Raven.Server.Config.ConfigurationEntryType | 'StringArray' | 'EnumArray' | 'ServeWide';
 type setttingsItem = { key: string, value: string | null };

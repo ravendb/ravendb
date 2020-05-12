@@ -1,8 +1,9 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import jsonUtil = require("common/jsonUtil");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
+import genUtils = require("common/generalUtils");
 
-type configurationOrigin = "Default" | "Server" | "Database"
+type configurationOrigin = "Default" | "Server" | "Database";
 
 export abstract class settingsEntry {
 
@@ -20,18 +21,18 @@ export abstract class settingsEntry {
 
     descriptionHtml: KnockoutComputed<string>;
 
-    constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
+    protected constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
         this.data = data;
 
         this.keyName(this.data.Metadata.Keys[this.data.Metadata.Keys.length - 1]);
 
-        this.serverOrDefaultValue = ko.pureComputed(() => !_.isEmpty(this.data.ServerValues) ? this.data.ServerValues[this.keyName()].Value : this.data.Metadata.DefaultValue);
+        this.serverOrDefaultValue = ko.pureComputed(() => _.isEmpty(this.data.ServerValues) ? this.data.Metadata.DefaultValue : this.data.ServerValues[this.keyName()].Value);
         this.hasServerValue = ko.pureComputed(() => !_.isEmpty(this.data.ServerValues));
 
-        this.descriptionHtml = ko.pureComputed(() => `<div><span>${data.Metadata.Description || 'No description was provided by the server, please report..'}</span></div>`);
+        this.descriptionHtml = ko.pureComputed(() => `<div><span>${genUtils.escapeHtml(data.Metadata.Description) || 'No description was provided by the server, please report..'}</span></div>`);
     }
 
-    abstract getTemplateType(): SettingsTemplateType;
+    abstract getTemplateType(): settingsTemplateType;
 }
 
 export class serverWideOnlyEntry extends settingsEntry {
@@ -45,16 +46,52 @@ export class serverWideOnlyEntry extends settingsEntry {
     }
 
     getTemplateType() {
-        return "ServerWide" as SettingsTemplateType;
+        return "ServerWide" as settingsTemplateType;
     }
 }
 
-export abstract class databaseEntry extends settingsEntry {
-
+export abstract class databaseEntry<T> extends settingsEntry {
+    customizedDatabaseValue = ko.observable<T>();
     override = ko.observable<boolean>();
 
     entryDirtyFlag: () => DirtyFlag;
     validationGroup: KnockoutValidationGroup;
+
+    static getEntry(rawEntry: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
+        let entry: databaseEntry<string | number>;
+        
+        switch (rawEntry.Metadata.Type) {
+            case "String":
+                entry = new stringEntry(rawEntry);
+                break;
+            case "Path":
+                entry = new pathEntry(rawEntry);
+                break;
+            case "Integer":
+                entry = new integerEntry(rawEntry);
+                break;
+            case "Double":
+                entry = new doubleEntry(rawEntry);
+                break;
+            case "Boolean":
+                entry = new booleanEntry(rawEntry);
+                break;
+            case "Enum":
+                entry = new enumEntry(rawEntry);
+                break;
+            case "Time":
+                entry = new timeEntry(rawEntry);
+                break;
+            case "Size":
+                entry = new sizeEntry(rawEntry);
+                break;
+            default:
+                throw new Error("Unknown entry type.");
+        }
+        
+        entry.init();
+        return entry;
+    }
 
     init() {
         this.isServerWideOnlyEntry(false);
@@ -70,7 +107,7 @@ export abstract class databaseEntry extends settingsEntry {
 
         this.effectiveValue = ko.pureComputed(() => {
             if (this.override()) {
-                return this.getCustomizedDatabaseValueAsString();
+                return this.getCustomizedValueAsString();
             }
 
             return this.serverOrDefaultValue();
@@ -98,23 +135,22 @@ export abstract class databaseEntry extends settingsEntry {
         this.initCustomizedValue(this.data.Metadata.DefaultValue);
     }
 
-    abstract getCustomizedDatabaseValueAsString(): string;
+    abstract getCustomizedValueAsString(): string;
     abstract initCustomizedValue(value: string): void;
     abstract initValidation(): void;
 }
 
-export class stringEntry extends databaseEntry {
-    customizedDatabaseValue = ko.observable<string>();
+export class stringEntry extends databaseEntry<string> {
 
     initCustomizedValue(value: string) {
         this.customizedDatabaseValue(value);
     }
 
-    getCustomizedDatabaseValueAsString(): string {
+    getCustomizedValueAsString(): string {
         return this.customizedDatabaseValue();
     }
 
-    getTemplateType(): SettingsTemplateType {
+    getTemplateType(): settingsTemplateType {
         return "String";
     }
 
@@ -125,8 +161,7 @@ export class stringEntry extends databaseEntry {
     }
 }
 
-export class pathEntry extends databaseEntry {
-    customizedDatabaseValue = ko.observable<string>();
+export class pathEntry extends databaseEntry<string> {
     folderPathOptions = ko.observableArray<string>([]);
 
     constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
@@ -142,11 +177,11 @@ export class pathEntry extends databaseEntry {
         this.customizedDatabaseValue(value);
     }
 
-    getCustomizedDatabaseValueAsString(): string {
+    getCustomizedValueAsString(): string {
         return this.customizedDatabaseValue();
     }
 
-    getTemplateType(): SettingsTemplateType {
+    getTemplateType(): settingsTemplateType {
         return "Path";
     }
 
@@ -175,12 +210,11 @@ export class pathEntry extends databaseEntry {
     }
 }
 
-export abstract class numberEntry extends databaseEntry {
-    customizedDatabaseValue = ko.observable<number | null>();
+export abstract class numberEntry extends databaseEntry<number | null> {
     isNullable = ko.observable<boolean>(this.data.Metadata.IsNullable);
     minValue = ko.observable<number>(this.data.Metadata.MinValue);
 
-    getCustomizedDatabaseValueAsString(): string {
+    getCustomizedValueAsString(): string {
         if (this.isNullable() && !this.customizedDatabaseValue() && this.customizedDatabaseValue() !== 0) {
             return null;
         } // i.e. for Indexing.MapBatchSize to indicate 'no limit'
@@ -220,11 +254,7 @@ export class integerEntry extends numberEntry {
         this.customizedDatabaseValue(integerValue);
     }
 
-    getCustomizedDatabaseValueAsString(): string {
-        return super.getCustomizedDatabaseValueAsString();
-    }
-
-    getTemplateType(): SettingsTemplateType {
+    getTemplateType(): settingsTemplateType {
         return "Integer";
     }
 
@@ -244,16 +274,8 @@ export class doubleEntry extends numberEntry {
         this.customizedDatabaseValue(doubleValue);
     }
 
-    getCustomizedDatabaseValueAsString(): string {
-        return super.getCustomizedDatabaseValueAsString();
-    }
-
-    getTemplateType(): SettingsTemplateType {
+    getTemplateType(): settingsTemplateType {
         return "Double";
-    }
-
-    initValidation() {
-        super.initValidation();
     }
 }
 
@@ -265,11 +287,7 @@ export class sizeEntry extends numberEntry {
         this.customizedDatabaseValue(sizeValue);
     }
 
-    getCustomizedDatabaseValueAsString(): string {
-        return super.getCustomizedDatabaseValueAsString();
-    }
-
-    getTemplateType(): SettingsTemplateType {
+    getTemplateType(): settingsTemplateType {
         return "Size";
     }
 
@@ -284,21 +302,17 @@ export class sizeEntry extends numberEntry {
 
 export class timeEntry extends numberEntry {
     timeUnit = ko.observable<string>();
-    spacialTimeEntry = "Indexing.MapTimeoutInSec"; // Not nullable and default value is -1
+    specialTimeEntry = "Indexing.MapTimeoutInSec"; // Not nullable and default value is -1
 
     initCustomizedValue(value?: string) {
         const timeValue = value ? parseInt(value) : null;
         this.customizedDatabaseValue(timeValue);
 
         this.timeUnit(this.data.Metadata.TimeUnit);
-        this.minValue(this.keyName() === this.spacialTimeEntry ? -1 : this.data.Metadata.MinValue || 0 );
+        this.minValue(this.keyName() === this.specialTimeEntry ? -1 : this.data.Metadata.MinValue || 0 );
     }
 
-    getCustomizedDatabaseValueAsString(): string {
-        return super.getCustomizedDatabaseValueAsString();
-    }
-
-    getTemplateType(): SettingsTemplateType {
+    getTemplateType(): settingsTemplateType {
         return "Time";
     }
 
@@ -307,15 +321,14 @@ export class timeEntry extends numberEntry {
 
         this.customizedDatabaseValue.extend({
             digit: {
-                onlyIf: () => this.keyName() !== this.spacialTimeEntry ||
+                onlyIf: () => this.keyName() !== this.specialTimeEntry ||
                     this.customizedDatabaseValue() !== -1
             }
         });
     }
 }
 
-export class enumEntry extends databaseEntry {
-    customizedDatabaseValue = ko.observable<string>();
+export class enumEntry extends databaseEntry<string> {
     availableValues = ko.observableArray<string>(this.data.Metadata.AvailableValues);
 
     constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
@@ -327,11 +340,11 @@ export class enumEntry extends databaseEntry {
         this.customizedDatabaseValue(value);
     }
 
-    getCustomizedDatabaseValueAsString(): string {
+    getCustomizedValueAsString(): string {
         return this.customizedDatabaseValue();
     }
 
-    getTemplateType(): SettingsTemplateType {
+    getTemplateType(): settingsTemplateType {
         return "Enum";
     }
 
@@ -349,57 +362,9 @@ export class enumEntry extends databaseEntry {
 }
 
 export class booleanEntry extends enumEntry {
-    customizedDatabaseValue = ko.observable<string>();
 
     constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
         super(data);
         this.availableValues(["True", "False"]);
     }
-
-    initCustomizedValue(value: string) {
-        return super.initCustomizedValue(value);
-    }
-
-    getCustomizedDatabaseValueAsString(): string {
-        return super.getCustomizedDatabaseValueAsString();
-    }
-
-    initValidation() {
-        super.initValidation();
-    }
 }
-
-// Currently there are no URI entries in the database scope
-// If added in the future, then need to also handle nullable uri
-
-// export class uriEntry extends stringEntry {
-//
-//     initCustomizedValue(value: string) {
-//         super.initCustomizedValue(value);
-//     }
-//
-//     getCustomizedDatabaseValueAsString(): string {
-//         return super.getCustomizedDatabaseValueAsString();
-//     }
-//
-//     getTemplateType(): SettingsTemplateType {
-//         return "Uri";
-//     }
-//
-//     initValidation() {
-//         super.initValidation();
-//        
-//         this.customizedDatabaseValue.extend({
-//             required: {
-//                 onlyIf: (value: string) => this.override()
-//             },
-//             validation: [
-//                 {
-//                     validator: (value: string) => generalUtils.isValidUri(value),
-//                     message: "Invalid URI",
-//                 }
-//             ]
-//         });
-//     }
-// }
-

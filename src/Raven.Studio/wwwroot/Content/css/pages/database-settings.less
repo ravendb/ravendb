@@ -1,11 +1,16 @@
 #database-settings-view {
     
     @source-item-color: @database-settings-source-item;
-    @source-item-color-basic: @database-settings-source-item-basic; 
+    @source-item-color-basic: @database-settings-source-item-basic;
     
     .all-entries {
         overflow-x: hidden;
         top: 50px;
+    }
+    
+    .description-text {
+        width: 500px;
+        word-break: break-word;
     }
     
     .entries-grid {
@@ -20,29 +25,35 @@
         min-width: 230px;
     }
     
-    .add-vertical-split::before {
-        content: "";
-        background: @gray-dark;
-        position: absolute;
-        bottom: 15%;
-        left: 0;
-        height: 70%;
-        width: 1px;
+    .add-vertical-split {
+        &::before {
+            content: "";
+            background: @gray-dark;
+            position: absolute;
+            bottom: 15%;
+            left: 0;
+            height: 70%;
+            width: 1px;
+        }
     }
     
-    .customized-item::after {
-        content: '*';
-        color: @database-settings-customized-item;
-        margin-left: 4px;
-        font-size: large;
+    .customized-item {
+        &::after {
+            content: '*';
+            color: @database-settings-customized-item;
+            margin-left: 4px;
+            font-size: large;
+        }
     }
     
-    .customized-item-with-error::after {
-        content: "\e93f"; 
-        color: @database-settings-customized-item-error;
-        margin-left: 4px;
-        font-size: small;
-        font-family: 'icomoon' !important;
+    .customized-item-with-error {
+        &::after {
+            content: "\e93f";
+            color: @database-settings-customized-item-error;
+            margin-left: 4px;
+            font-size: small;
+            font-family: 'icomoon' !important;
+        }
     }
     
     .categories-list-container {
@@ -84,19 +95,19 @@
         
         .source-item-default {
             &::before {
-                content: "\e9d9";
+                //content: "\e9d9"; // Waiting for icon from RavenDB-14970
             }
         }
 
         .source-item-server {
             &::before {
-                content:"\e93d";
+                //content:"\e93d";  // Waiting for icon from RavenDB-14970
             }
         }
 
         .source-item-database {
             &::before {
-                content: "\e9ce";
+                //content: "\e9ce";  // Waiting for icon from RavenDB-14970
             }
         }
     }
@@ -140,7 +151,7 @@
 
             &:hover
             {
-                color: @gray-lighter; 
+                color: @gray-lighter;
             }
         }
     }

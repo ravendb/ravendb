@@ -7,15 +7,15 @@
         </div>
         <div class="btn-group">
             <button class="btn btn-default dropdown-toggle filter-entries" data-toggle="dropdown">
-                <span data-bind="visible: groupToShow() === 'allEntries'"><span>All Entries</span></span>
-                <span data-bind="visible: groupToShow() === 'databaseEntries'"><span>Database Entries</span></span>
-                <span data-bind="visible: groupToShow() === 'customizedDatabaseEntries'"><span>Customized Database Entries</span></span>
+                <span data-bind="visible: groupToShow() === 'allEntries'">All Entries</span>
+                <span data-bind="visible: groupToShow() === 'databaseEntries'">Database Entries</span>
+                <span data-bind="visible: groupToShow() === 'customizedDatabaseEntries'">Customized Database Entries</span>
                 <span class="caret"></span>
             </button>
             <ul class="dropdown-menu">
-                <li title="Show all entries per database & server-wide"><a href="#" data-bind="click: _.partial(setGroupToShow, 'allEntries')"><span>All Entries</span></a></li>
-                <li title="Show only entries per this database"><a href="#" data-bind="click: _.partial(setGroupToShow, 'databaseEntries')"><span>Database Entries</span></a></li>
-                <li title="Show entries that are customized per this database"><a href="#" data-bind="click: _.partial(setGroupToShow, 'customizedDatabaseEntries')"><span>Customized Database Entries</span></a></li>
+                <li title="Show all entries per database & server-wide"><a href="#" data-bind="click: _.partial(setGroupToShow, 'allEntries')">All Entries</a></li>
+                <li title="Show only entries per this database"><a href="#" data-bind="click: _.partial(setGroupToShow, 'databaseEntries')">Database Entries</a></li>
+                <li title="Show entries that are customized per this database"><a href="#" data-bind="click: _.partial(setGroupToShow, 'customizedDatabaseEntries')">Customized Database Entries</a></li>
             </ul>
         </div>
         <div class="filter-entries">
@@ -43,7 +43,7 @@
     <div class="flex-horizontal flex-stretch-items absolute-fill content-margin entries-grid" data-bind="visible: viewMode() === 'editMode'">
         <div class="flex-vertical">
             <div class="categories-list-container flex-vertical flex-grow" style="position:relative;">
-                <virtual-grid class="resizable virtual-grid" params="controller: categoriesGridController, emptyTemplate: 'db-settings-no-entries-loaded-template'"></virtual-grid>
+                <virtual-grid class="resizable virtual-grid" params="controller: categoriesGridController"></virtual-grid>
             </div>
         </div>
         <div class="flex-grow slidein-style">
@@ -64,15 +64,11 @@
     <div class="flex-horizontal flex-stretch-items absolute-fill content-margin entries-grid" data-bind="visible: viewMode() === 'summaryMode'">
         <div class="flex-grow flex-vertical slidein-style">
             <div class="summary-list-container flex-vertical flex-grow" style="position:relative;">
-                <virtual-grid class="resizable virtual-grid" params="controller: summaryGridController, emptyTemplate: 'db-settings-no-entries-loaded-template'"></virtual-grid>
+                <virtual-grid class="resizable virtual-grid" params="controller: summaryGridController"></virtual-grid>
             </div>
         </div>
     </div>
 </div>
-
-<script type="text/html" id="db-settings-no-entries-loaded-template">
-    No entries loaded.
-</script>
 
 <script type="text/html" id="db-settings-no-matching-entries-template">
     <div class="panel">
@@ -88,7 +84,7 @@
                     <div class="form-group">
                         <div class="margin-top margin-top-sm">
                             <small><span data-bind="text: keyName" class="margin-right margin-right-sm"></span></small>
-                            <span data-placement="bottom" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="tooltipText: descriptionHtml">
+                            <span class="description" data-bind="attr: { 'id': keyName }">
                                 <small class="text-info"><i class="icon-info"></i></small>
                             </span>
                         </div>
@@ -99,10 +95,11 @@
                         <div class="margin-top margin-top-sm">
                             <small data-placement="left" data-toggle="tooltip" data-animation="true"
                                    data-bind="attr: { title: hasServerValue() ? 'This is a server-wide configuration' : 'This is the default configuration' }">
-                                <i class="source-icon" data-bind="css: { 'icon-star-filled': hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i>
-                                <i class="source-icon" data-bind="css: { 'icon-json': !hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i>
+                            <!-- Waiting for icons from RavenDB-14970 -->
+                            <!-- <i class="source-icon" data-bind="css: { 'icon-xxx': hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i> -->
+                            <!-- <i class="source-icon" data-bind="css: { 'icon-yyy': !hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i> -->
+                                <span data-bind="text: serverOrDefaultValue() || 'null'" id="value"></span>
                             </small>
-                            <small data-bind="text: serverOrDefaultValue() || 'null'" id="value"></small>
                             <small data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="visible: isServerWideOnlyEntry"
                                    title="This is a server-wide entry.<br>It can be edited only from the <strong>settings.json</strong> file located in your RavenDB executable folder.">
                                 <small class="margin-left margin-left-sm"><i class="icon-lock"></i></small>
@@ -226,26 +223,6 @@
     </div>
     <span class="help-block" data-bind="validationMessage: customizedDatabaseValue"></span>
 </script>
-
-
-<!-- Uri - Scope is only ServerWideOnly -->
-<!--<script type="text/html" id="db-settings-Uri-template">-->
-<!--    <div class="flex-horizontal">-->
-<!--        <div data-bind="validationOptions: { insertMessages: false }" class="flex-grow">-->
-<!--            <input type="text" class="form-control" placeholder="Enter URI" data-bind="textInput: customizedDatabaseValue" />-->
-<!--        </div>-->
-<!--        <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>-->
-<!--    </div>-->
-<!--    <span class="help-block" data-bind="validationMessage: customizedDatabaseValue"></span>-->
-<!--</script>-->
-
-<!-- StringArray - Scope is only ServerWideOnly -->
-<!--<script type="text/html" id="db-settings-StringArray-template">-->
-<!--</script>-->
-
-<!-- EnumArray - Scope is only ServerWideOnly -->
-<!--<script type="text/html" id="db-settings-EnumArray-template">-->
-<!--</script>-->
 
 <script type="text/html" id="db-settings-default-button-template">
     <div class="set-default margin-left margin-left-sm" title="Use the default value">

@@ -11,6 +11,7 @@ class hyperlinkColumn<T> extends textColumn<T> {
 
     private readonly hrefAccessor: (obj: T) => string;
     private readonly customHandler: (obj: T, event: JQueryEventObject) => void;
+    private readonly extraClassForLink: (obj: T) => string;
 
     linkActionUniqueId = _.uniqueId("link-action-");
 
@@ -19,6 +20,7 @@ class hyperlinkColumn<T> extends textColumn<T> {
 
         this.hrefAccessor = hrefAccessor;
         this.customHandler = opts.handler;
+        this.extraClassForLink = opts.extraClassForLink;
     }
 
     canHandle(actionId: string) {
@@ -38,15 +40,16 @@ class hyperlinkColumn<T> extends textColumn<T> {
             const extraHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
             
             let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
-            let extraCssClassesForLink = this.opts.extraClassForLink ? this.opts.extraClassForLink(item) : '';
             
             if (isSorted) {
                 extraCssClasses += ' sorted';
             }
 
             const customAction = this.customHandler ? `data-action="${this.linkActionUniqueId}"` : "";
+            const extraCssClassesForLink = this.extraClassForLink ? `class="${this.extraClassForLink(item)}"` : "";
+
+            return `<div ${extraHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}"><a ${extraCssClassesForLink} href="${hyperlinkValue}" ${customAction}>${preparedValue.rawText}</a></div>`;
             
-            return `<div ${extraHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}"><a class="${extraCssClassesForLink}" href="${hyperlinkValue}" ${customAction}>${preparedValue.rawText}</a></div>`;
         } else {
             // fallback to plain text column
             return super.renderCell(item, isSelected, isSorted);

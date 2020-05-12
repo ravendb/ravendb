@@ -34,11 +34,11 @@ class genUtils {
     static readonly urlRegex = /^(https?:\/\/)([^\s]+)$/; // allow any char, exclude white space
     static readonly invalidUrlMessage = "Url format expected: 'http(s)://hostName'";
     
-    static isValidUri(uri: string) {
+    static isValidUrl(url: string) {
         let valid = true;
         
         try {
-            new URL(uri);
+            new URL(url);
         } catch (e) {
             valid = false;
         }
