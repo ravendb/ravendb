@@ -28,13 +28,13 @@ namespace Raven.Server.ServerWide.Context
             {
                 initialSize = 4096;
                 longLivedSize = 4 * 1024;
-                maxNumberOfAllocatedStringValues = 8 * 1024;
+                maxNumberOfAllocatedStringValues = 2 * 1024;
             }
             else
             {
                 initialSize = 32 * 1024;
                 longLivedSize = 16 * 1024;
-                maxNumberOfAllocatedStringValues = 32 * 1024;
+                maxNumberOfAllocatedStringValues = 8 * 1024;
             }
 
             return new TransactionOperationContext(_storageEnvironment, initialSize, longLivedSize, maxNumberOfAllocatedStringValues, LowMemoryFlag);

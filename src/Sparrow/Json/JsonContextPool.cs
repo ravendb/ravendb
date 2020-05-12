@@ -11,7 +11,7 @@ namespace Sparrow.Json
         }
 
         public JsonContextPool(Size? maxContextSizeToKeep)
-            : this(maxContextSizeToKeep, null, PlatformDetails.Is32Bits == false ? 32 * 1024 : 8 * 1024)
+            : this(maxContextSizeToKeep, null, PlatformDetails.Is32Bits == false ? 8 * 1024 : 2 * 1024)
         {
         }
 
@@ -23,7 +23,7 @@ namespace Sparrow.Json
 
         protected override JsonOperationContext CreateContext()
         {
-            if (Platform.PlatformDetails.Is32Bits)
+            if (PlatformDetails.Is32Bits)
                 return new JsonOperationContext(4096, 16 * 1024, _maxNumberOfAllocatedStringValuesPerContext, LowMemoryFlag);
 
             return new JsonOperationContext(32 * 1024, 16 * 1024, _maxNumberOfAllocatedStringValuesPerContext, LowMemoryFlag);

@@ -13,7 +13,8 @@ namespace Raven.Server.ServerWide.Context
     {
         private DocumentDatabase _database;
 
-        public DocumentsContextPool(DocumentDatabase database) : base(database.Configuration.Memory.MaxContextSizeToKeep)
+        public DocumentsContextPool(DocumentDatabase database)
+            : base(database.Configuration.Memory.MaxContextSizeToKeep)
         {
             _database = database;
         }
@@ -21,8 +22,8 @@ namespace Raven.Server.ServerWide.Context
         protected override DocumentsOperationContext CreateContext()
         {
             return _database.Is32Bits ?
-                new DocumentsOperationContext(_database, 32 * 1024, 4 * 1024, 8 * 1024, LowMemoryFlag) :
-                new DocumentsOperationContext(_database, 64 * 1024, 16 * 1024, 32 * 1024, LowMemoryFlag);
+                new DocumentsOperationContext(_database, 32 * 1024, 4 * 1024, 2 * 1024, LowMemoryFlag) :
+                new DocumentsOperationContext(_database, 64 * 1024, 16 * 1024, 8 * 1024, LowMemoryFlag);
         }
 
         public override void Dispose()

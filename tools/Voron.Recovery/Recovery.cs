@@ -202,7 +202,7 @@ namespace Voron.Recovery
                 using (var gZipStreamRevisions = new GZipStream(destinationStreamRevisions, CompressionMode.Compress, true))
                 using (var gZipStreamConflicts = new GZipStream(destinationStreamConflicts, CompressionMode.Compress, true))
                 using (var gZipStreamCounters = new GZipStream(destinationStreamCounters, CompressionMode.Compress, true))
-                using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, 32 * 1024, SharedMultipleUseFlag.None))
+                using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, 8 * 1024, SharedMultipleUseFlag.None))
                 using (var documentsWriter = new BlittableJsonTextWriter(context, gZipStreamDocuments))
                 using (var revisionsWriter = new BlittableJsonTextWriter(context, gZipStreamRevisions))
                 using (var conflictsWriter = new BlittableJsonTextWriter(context, gZipStreamConflicts))
