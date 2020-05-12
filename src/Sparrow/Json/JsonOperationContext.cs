@@ -57,10 +57,10 @@ namespace Sparrow.Json
         private readonly Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
         private int _numberOfAllocatedStringsValues;
-        private int _allocatedStringValuesCount = 0;
+        private int _allocatedStringValuesCount;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
 
-        private DateTime _lastAllocatedStringValuesClean = DateTime.UtcNow;
+        private DateTime _lastAllocatedStringValueTime;
         private static readonly TimeSpan _allocatedStringValuesCleanInterval = TimeSpan.FromMinutes(5);
 
         /// <summary>
@@ -116,6 +116,7 @@ namespace Sparrow.Json
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;
                 _allocatedStringValuesCount++;
+                _lastAllocatedStringValueTime = DateTime.UtcNow;
             }
 
             return allocateStringValue;
@@ -1030,9 +1031,9 @@ namespace Sparrow.Json
             if (releaseAllocatedStringValues && _allocatedStringValuesCount >= _maxNumberOfAllocatedStringValues / 2)
             {
                 var now = DateTime.UtcNow;
-                if (now - _lastAllocatedStringValuesClean >= _allocatedStringValuesCleanInterval)
+                if (now - _lastAllocatedStringValueTime >= _allocatedStringValuesCleanInterval)
                 {
-                    _lastAllocatedStringValuesClean = now;
+                    _lastAllocatedStringValueTime = now;
 
                     var index = _allocatedStringValuesCount;
                     for (var i = 0; i < 4; i++)
