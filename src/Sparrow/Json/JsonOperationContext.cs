@@ -59,8 +59,9 @@ namespace Sparrow.Json
         private int _numberOfAllocatedStringsValues;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
 
+        private int _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval;
         private DateTime _lastAllocatedStringValueTime;
-        private static readonly TimeSpan _allocatedStringValuesCleanInterval = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan _allocatedStringValuesCheckInterval = TimeSpan.FromMinutes(1);
 
         /// <summary>
         /// This flag means that this should be disposed, usually because we exceeded the maximum
@@ -105,6 +106,8 @@ namespace Sparrow.Json
             if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
+                _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval = Math.Max(_highestNumberOfReusedAllocatedStringsValuesInCurrentInterval, _numberOfAllocatedStringsValues);
+
                 lazyStringValue.Renew(str, ptr, size);
                 return lazyStringValue;
             }
@@ -114,6 +117,7 @@ namespace Sparrow.Json
             {
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;
+
                 _lastAllocatedStringValueTime = DateTime.UtcNow;
             }
 
@@ -1026,13 +1030,17 @@ namespace Sparrow.Json
 
             _numberOfAllocatedStringsValues = 0;
 
-            if (releaseAllocatedStringValues && _allocateStringValues.Count >= _maxNumberOfAllocatedStringValues / 2)
+            if (releaseAllocatedStringValues)
             {
                 var now = DateTime.UtcNow;
-                if (now - _lastAllocatedStringValueTime >= _allocatedStringValuesCleanInterval)
+                if (now - _lastAllocatedStringValueTime >= _allocatedStringValuesCheckInterval)
                 {
                     _lastAllocatedStringValueTime = now;
-                    _allocateStringValues.Trim(_allocateStringValues.Count / 2);
+                    var halfOfAllocatedStringValues = _allocateStringValues.Count / 2;
+                    if (_highestNumberOfReusedAllocatedStringsValuesInCurrentInterval <= halfOfAllocatedStringValues)
+                        _allocateStringValues.Trim(halfOfAllocatedStringValues);
+
+                    _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval = 0;
                 }
             }
 
