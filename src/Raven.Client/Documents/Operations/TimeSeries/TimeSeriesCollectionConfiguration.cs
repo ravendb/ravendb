@@ -15,15 +15,20 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// Specify roll up and retention policy.
         /// Each policy will create a new time-series aggregated from the previous one
         /// </summary>
-        public List<TimeSeriesPolicy> Policies { get; set; } = new List<TimeSeriesPolicy>();
+        public List<TimeSeriesPolicy> Policies { get; set; }
 
         /// <summary>
         /// Specify a policy for the original time-series
         /// </summary>
-        public RawTimeSeriesPolicy RawPolicy { get; set; } = RawTimeSeriesPolicy.Default;
+        public RawTimeSeriesPolicy RawPolicy { get; set; }
 
         internal void ValidateAndInitialize()
         {
+            RawPolicy ??= RawTimeSeriesPolicy.Default;
+
+            if (Policies == null)
+                return;
+
             if (Policies.Count == 0)
                 return;
 
@@ -134,12 +139,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            var config = new DynamicJsonValue
             {
-                [nameof(Policies)] = new DynamicJsonArray(Policies.Select(p=>p.ToJson())),
-                [nameof(RawPolicy)] = RawPolicy.ToJson(),
+                [nameof(RawPolicy)] = RawPolicy?.ToJson(),
                 [nameof(Disabled)] = Disabled
             };
+
+            if (Policies != null)
+                config[nameof(Policies)] = new DynamicJsonArray(Policies.Select(p => p.ToJson()));
+
+            return config;
         }
     }
 
