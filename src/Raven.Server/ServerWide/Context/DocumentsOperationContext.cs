@@ -24,9 +24,9 @@ namespace Raven.Server.ServerWide.Context
             }
         }
 
-        protected internal override void Reset(bool forceResetLongLivedAllocator = false)
+        protected internal override void Reset(bool forceResetLongLivedAllocator = false, bool releaseAllocatedStringValues = false)
         {
-            base.Reset(forceResetLongLivedAllocator);
+            base.Reset(forceResetLongLivedAllocator, releaseAllocatedStringValues);
 
             // make sure that we don't remember an old value here from a previous
             // tx. This can be an issue if we resort to context stealing from
@@ -39,7 +39,7 @@ namespace Raven.Server.ServerWide.Context
 
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
         {
-            var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024, 32 * 1024, SharedMultipleUseFlag.None);
+            var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024, 8 * 1024, SharedMultipleUseFlag.None);
             return shortTermSingleUse;
         }
 

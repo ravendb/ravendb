@@ -59,6 +59,9 @@ namespace Sparrow.Json
         private int _numberOfAllocatedStringsValues;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
 
+        private DateTime _lastAllocatedStringValuesClean = DateTime.UtcNow;
+        private static readonly TimeSpan _allocatedStringValuesCleanInterval = TimeSpan.FromMinutes(5);
+
         /// <summary>
         /// This flag means that this should be disposed, usually because we exceeded the maximum
         /// amount of memory budget we have and need to return it to the system
@@ -305,7 +308,7 @@ namespace Sparrow.Json
 
         public static JsonOperationContext ShortTermSingleUse()
         {
-            return new JsonOperationContext(4096, 1024, 32 * 1024, SharedMultipleUseFlag.None);
+            return new JsonOperationContext(4096, 1024, 8 * 1024, SharedMultipleUseFlag.None);
         }
 
         public JsonOperationContext(int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
@@ -981,7 +984,7 @@ namespace Sparrow.Json
             }
         }
 
-        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
+        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false, bool releaseAllocatedStringValues = false)
         {
             if (_tempBuffer != null && _tempBuffer.Address != null)
             {
@@ -1018,6 +1021,33 @@ namespace Sparrow.Json
 
             for (var i = 0; i < _numberOfAllocatedStringsValues; i++)
                 _allocateStringValues[i].Reset();
+
+            if (releaseAllocatedStringValues && _allocateStringValues.Count >= _maxNumberOfAllocatedStringValues / 2)
+            {
+                var now = DateTime.UtcNow;
+                if (now - _lastAllocatedStringValuesClean >= _allocatedStringValuesCleanInterval)
+                {
+                    _lastAllocatedStringValuesClean = now;
+
+                    var index = _allocateStringValues.Count;
+                    for (var i = 0; i < 4; i++)
+                    {
+                        index /= 2;
+                        var item = _allocateStringValues[index];
+                        if (item != null)
+                            break;
+                    }
+
+                    for (var i = index; i < _allocateStringValues.Count; i++)
+                    {
+                        var item = _allocateStringValues[i];
+                        if (item == null)
+                            break;
+
+                        _allocateStringValues[i] = null;
+                    }
+                }
+            }
 
             _numberOfAllocatedStringsValues = 0;
 
