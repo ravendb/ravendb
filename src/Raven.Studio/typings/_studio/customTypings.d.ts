@@ -16,6 +16,13 @@ declare module "jszip-utils" {
     export = JSZipUtils;
 }
 
+/// moment
+declare namespace moment {
+    interface Moment {
+        isUtc(): boolean;
+    }
+}
+
 
 /// forge 
 
