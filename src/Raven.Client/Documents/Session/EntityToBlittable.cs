@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
+using Raven.Client.Json.Converters;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -132,20 +133,47 @@ namespace Raven.Client.Documents.Session
             BlittableJsonWriter writer,
             bool removeIdentityProperty = true)
         {
-            serializer.Serialize(writer, entity);
+            EntityConverter entityConverter = null;
+            try
+            {
+                if (removeIdentityProperty)
+                {
+                    entityConverter = conventions.GetEntityConverter(entity, serializer);
+                    if (entityConverter != null)
+                    {
+                        EntityConverter.Used = false;
+
+                        serializer.Converters.Add(entityConverter);
+                    }
+                }
+
+                serializer.Serialize(writer, entity);
+            }
+            finally
+            {
+                if (removeIdentityProperty && entityConverter != null)
+                    serializer.Converters.RemoveAt(serializer.Converters.Count - 1);
+            }
+
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
-            var type = entity.GetType();
-            var isDynamicObject = entity is IDynamicMetaObjectProvider;
 
-            var changes = removeIdentityProperty && TryRemoveIdentityProperty(reader, type, conventions, isDynamicObject);
-            changes |= TrySimplifyJson(reader, type);
-
-            if (changes)
+            if (entityConverter == null || EntityConverter.Used == false)
             {
-                using (var old = reader)
+                //This is to handle the case when defined it's own converter so EntityConverter could not be used
+
+                var type = entity.GetType();
+                var isDynamicObject = entity is IDynamicMetaObjectProvider;
+
+                var changes = removeIdentityProperty && TryRemoveIdentityProperty(reader, type, conventions, isDynamicObject);
+                changes |= TrySimplifyJson(reader, type);
+
+                if (changes)
                 {
-                    reader = context.ReadObject(reader, "convert/entityToBlittable");
+                    using (var old = reader)
+                    {
+                        reader = context.ReadObject(reader, "convert/entityToBlittable");
+                    }
                 }
             }
 
