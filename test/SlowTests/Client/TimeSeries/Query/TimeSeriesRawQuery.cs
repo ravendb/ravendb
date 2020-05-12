@@ -6399,7 +6399,6 @@ select out(doc)
             }
         }
 
-
         [Fact]
         public void ShouldThrowOnUsingLastAndBetweenInTheSameTimeSeriesQuery()
         {

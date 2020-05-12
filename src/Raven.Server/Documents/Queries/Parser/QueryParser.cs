@@ -1363,28 +1363,26 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (tsf.Between != null)
                     ThrowInvalidQueryException($"Cannot have both 'Last' and 'Between' in the same Time Series query function '{name}'");
 
-                if (Value(out var lsatTimeSpan) == false)
+                if (Value(out var lastTimePeriod) == false)
                     ThrowParseException($"Could not parse LAST argument for '{name}'");
 
-                if (lsatTimeSpan.Value == ValueTokenType.Long)
+                if (lastTimePeriod.Value == ValueTokenType.Long)
                 {
                     // we need to check 1h, 1d
                     if (Scanner.Identifier())
                     {
-                        var whitespaceLength = Scanner.Token.Offset - (lsatTimeSpan.Token.Offset + lsatTimeSpan.Token.Length);
-
-                        lsatTimeSpan.Token = new StringSegment(
-                            lsatTimeSpan.Token.Buffer,
-                            lsatTimeSpan.Token.Offset,
-                            lsatTimeSpan.Token.Length + Scanner.Token.Length + whitespaceLength);
-                        lsatTimeSpan.Value = ValueTokenType.String;
+                        lastTimePeriod.Token = new StringSegment(
+                            lastTimePeriod.Token.Buffer,
+                            lastTimePeriod.Token.Offset,
+                            Scanner.Token.Offset + Scanner.Token.Length - lastTimePeriod.Token.Offset);
+                        lastTimePeriod.Value = ValueTokenType.String;
                     }
                 }
 
                 if (Scanner.TryScan("BETWEEN"))
                     ThrowInvalidQueryException($"Cannot have both 'Last' and 'Between' in the same Time Series query function '{name}'");
                 
-                tsf.Last = lsatTimeSpan;
+                tsf.Last = lastTimePeriod;
             }
 
             if (Scanner.TryScan("LOAD"))
@@ -1431,12 +1429,10 @@ namespace Raven.Server.Documents.Queries.Parser
                     // we need to check 1h, 1d
                     if (Scanner.Identifier())
                     {
-                        var whitespaceLength = Scanner.Token.Offset - (groupByExpr.Token.Offset + groupByExpr.Token.Length);
-
                         groupByExpr.Token = new StringSegment(
                             groupByExpr.Token.Buffer,
                             groupByExpr.Token.Offset,
-                            groupByExpr.Token.Length + Scanner.Token.Length + whitespaceLength);
+                            Scanner.Token.Offset + Scanner.Token.Length - groupByExpr.Token.Offset);
                         groupByExpr.Value = ValueTokenType.String;
                     }
                 }

@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Queries
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
 
-        public static ITimeSeriesQueryable TimeSeries(object documentInstance, string name, TimeValue timePeriod)
+        public static ITimeSeriesQueryable TimeSeries(object documentInstance, string name, TimeValue timeFromLast)
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
