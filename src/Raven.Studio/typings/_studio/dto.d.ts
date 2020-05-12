@@ -706,5 +706,5 @@ interface timeSeriesRawItemResultDto {
 
 type timeUnit = "year" | "month" | "day" | "hour" | "minute" | "second";
 
-type settingsTemplateType = Raven.Server.Config.ConfigurationEntryType | 'StringArray' | 'EnumArray' | 'ServeWide';
+type settingsTemplateType = Raven.Server.Config.ConfigurationEntryType | "StringArray" | "EnumArray" | "ServeWide";
 type setttingsItem = { key: string, value: string | null };

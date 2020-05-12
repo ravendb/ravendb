@@ -55,16 +55,20 @@
                 </div>
             </div>
             <div class="scroll-stretch all-entries">
-                <!-- ko foreach: allEntries -->
-                <div data-bind="template: { name: 'db-settings-basic-template' }, visible: showEntry"></div>
-                <!-- /ko -->
+                <form class="flex-form" autocomplete="off">
+                    <!-- ko foreach: allEntries -->
+                        <div data-bind="template: { name: 'db-settings-basic-template' }, visible: showEntry"></div>
+                    <!-- /ko -->
+                </form>
             </div>
         </div>
     </div>
     <div class="flex-horizontal flex-stretch-items absolute-fill content-margin entries-grid" data-bind="visible: viewMode() === 'summaryMode'">
         <div class="flex-grow flex-vertical slidein-style">
             <div class="summary-list-container flex-vertical flex-grow" style="position:relative;">
-                <virtual-grid class="resizable virtual-grid" params="controller: summaryGridController"></virtual-grid>
+                <virtual-grid class="resizable virtual-grid" 
+                              params="controller: summaryGridController, emptyTemplate: 'db-settings-no-matching-entries-template'">
+                </virtual-grid>
             </div>
         </div>
     </div>
@@ -77,16 +81,14 @@
 </script>
 
 <script type="text/html" id="db-settings-basic-template">
-    <form class="flex-form entry-basic-template" autocomplete="off">
+    <div class="entry-basic-template">
         <div class="panel margin-bottom margin-bottom-xs entry-content">
             <div class="panel-body row">
                 <div class="col-md-5 add-border">
                     <div class="form-group">
                         <div class="margin-top margin-top-sm">
                             <small><span data-bind="text: keyName" class="margin-right margin-right-sm"></span></small>
-                            <span class="description" data-bind="attr: { 'id': keyName }">
-                                <small class="text-info"><i class="icon-info"></i></small>
-                            </span>
+                            <small class="description text-info"><i class="icon-info"></i></small>
                         </div>
                     </div>
                 </div>
@@ -95,10 +97,10 @@
                         <div class="margin-top margin-top-sm">
                             <small data-placement="left" data-toggle="tooltip" data-animation="true"
                                    data-bind="attr: { title: hasServerValue() ? 'This is a server-wide configuration' : 'This is the default configuration' }">
-                            <!-- Waiting for icons from RavenDB-14970 -->
+                            <!-- //TODO -- Waiting for icons from RavenDB-14970 -->
                             <!-- <i class="source-icon" data-bind="css: { 'icon-xxx': hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i> -->
                             <!-- <i class="source-icon" data-bind="css: { 'icon-yyy': !hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i> -->
-                                <span data-bind="text: serverOrDefaultValue() || 'null'" id="value"></span>
+                                <span data-bind="text: serverOrDefaultValue() || 'null'"></span>
                             </small>
                             <small data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="visible: isServerWideOnlyEntry"
                                    title="This is a server-wide entry.<br>It can be edited only from the <strong>settings.json</strong> file located in your RavenDB executable folder.">
@@ -110,7 +112,7 @@
                 </div>
             </div>
         </div>
-    </form>
+    </div>
 </script>
 
 <script type="text/html" id="db-settings-serverWide-template">
@@ -118,33 +120,31 @@
 </script>
 
 <script type="text/html" id="db-settings-override-template">
-    <div class="form-group no-margin margin-left margin-bottom margin-bottom-sm padding padding-xs no-padding-right">
+    <div class="form-group no-margin margin-left margin-bottom margin-bottom-sm padding padding-xs no-padding-right flex-vertical">
         <div class="toggle">
             <input type="checkbox" data-bind="checked: override, attr: {'id': 'overrideToggle_' + keyName() }" />
             <label title="Customize the database value" data-bind="attr: { 'for': 'overrideToggle_' + keyName() }">
                 <span>Override</span>
             </label>
         </div>
-        <div data-bind="collapse: override" class="margin-top margin-top-lg override-options flex-grow">
-            <div class="margin-top margin-top-sm"  data-bind="collapse: override, validationElement: customizedDatabaseValue">
-                <div data-bind="template: { name: 'db-settings-' + getTemplateType() + '-template' }"></div>
+        <div data-bind="collapse: override" class="margin-left margin-left-lg override-options flex-horizontal">
+            <div class="margin-left margin-left-sm margin-right margin-right-lg flex-grow" data-bind="validationElement: customizedDatabaseValue">
+                <div data-bind="visible: override, template: { name: 'db-settings-' + getTemplateType() + '-template' }"></div>
             </div>
         </div>
     </div>
 </script>
 
-<!-- String -->
 <script type="text/html" id="db-settings-String-template">
     <div class="flex-horizontal">
         <div class="flex-grow" data-bind="attr: { 'title': customizedDatabaseValue }">
-            <input type="text" class="form-control" placeholder="Enter string. Null used if no value is entered." 
+            <input type="text" class="form-control" placeholder="Enter string (default: null)" 
                    data-bind="textInput: customizedDatabaseValue" />
         </div>
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>
     </div>
 </script>
 
-<!-- Enum & boolean -->
 <script type="text/html" id="db-settings-Enum-template">
     <div class="flex-horizontal">
         <div class="dropdown btn-block">
@@ -160,27 +160,24 @@
     </div>
 </script>
 
-<!-- Integer & nullable integer -->
 <script type="text/html" id="db-settings-Integer-template">
     <div class="flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
         <input type="number" min="0" class="form-control" data-bind="numericInput: customizedDatabaseValue,
-               attr: { placeholder: isNullable() ? 'Enter number. Null used if no value is entered.' : 'Enter a new number'}" />
+               attr: { placeholder: isNullable() ? 'Enter number (default: null)' : 'Enter a new number'}" />
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>
     </div>
     <span class="help-block" data-bind="validationMessage: customizedDatabaseValue"></span>
 </script>
 
-<!-- Double & nullable double -->
 <script type="text/html" id="db-settings-Double-template">
     <div class="flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
         <input type="number" min="0" class="form-control" data-bind="numericInput: customizedDatabaseValue,
-               attr: { placeholder: isNullable() ? 'Enter number. Null used if no value is entered.' : 'Enter a new number'}" />
+               attr: { placeholder: isNullable() ? 'Enter number (default: null)' : 'Enter a new number'}" />
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>
     </div>
     <span class="help-block" data-bind="validationMessage: customizedDatabaseValue"></span>
 </script>
 
-<!-- Path -->
 <script type="text/html" id="db-settings-Path-template">
     <div class="flex-horizontal">
         <div class="dropdown btn-block" data-bind="validationOptions: { insertMessages: false }, validationElement: customizedDatabaseValue">
@@ -198,12 +195,11 @@
     <span class="help-block" data-bind="validationMessage: customizedDatabaseValue"></span>
 </script>
 
-<!-- Time & nullable time -->
 <script type="text/html" id="db-settings-Time-template">
     <div class="flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
         <div class="input-group flex-grow">
             <input type="number" class="form-control" data-bind="numericInput: customizedDatabaseValue,
-                   attr: { placeholder: isNullable() ? 'Enter time. Null used if no value is entered.' : 'Enter a new time', min: minValue }" />
+                   attr: { placeholder: isNullable() ? 'Enter time (default: null)' : 'Enter a new time', min: minValue }" />
             <div class="input-group-addon"><span data-bind="text: timeUnit"></span></div>
         </div>
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>
@@ -211,12 +207,11 @@
     <span class="help-block" data-bind="validationMessage: customizedDatabaseValue"></span>
 </script>
 
-<!-- Size & nullable size -->
 <script type="text/html" id="db-settings-Size-template">
     <div class="flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
         <div class="input-group flex-grow">
             <input type="number" min="0" class="form-control" data-bind="numericInput: customizedDatabaseValue,
-                   attr: { placeholder: isNullable() ? 'Enter size. Null used if no value is entered.' : 'Enter a new size' }" />
+                   attr: { placeholder: isNullable() ? 'Enter size (default: null)' : 'Enter a new size' }" />
             <div class="input-group-addon"><span data-bind="text: sizeUnit"></span></div>
         </div>
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>
