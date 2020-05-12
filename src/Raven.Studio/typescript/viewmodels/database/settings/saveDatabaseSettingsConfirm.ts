@@ -1,4 +1,5 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
+import genUtils = require("common/generalUtils");
 
 class saveDatabaseSettingsConfirm extends confirmViewModelBase<confirmDialogResult> {
 
@@ -8,20 +9,15 @@ class saveDatabaseSettingsConfirm extends confirmViewModelBase<confirmDialogResu
         super();
         
         if (this.databaseSettingsToSave.length === 0 ) {
-            this.settingsToSaveText = "<div class='bg-info text-info padding padding-sm'>" +
-                                          "<span >No configuration keys have been overriden.<br>" +
-                                          "Upon save, values for the database configuration keys will taken from either the <strong>default configuration</strong>,<br>" +
-                                          "Or from the <strong>server configuration</strong>, if defined.</span>" +
-                                      "</div>";
-            
+            this.settingsToSaveText = "<pre>{ }</pre>";
         } else {
-            this.settingsToSaveText = "<pre>";
+            this.settingsToSaveText = "<pre>{<br>";
 
             databaseSettingsToSave.forEach(x => {
-                this.settingsToSaveText += `<span>{ ${x.key} : ${x.value} }</span><br>`;
+                this.settingsToSaveText += `   <span>{ ${genUtils.escapeHtml(x.key)} : ${genUtils.escapeHtml(x.value)} }</span><br>`;
             });
 
-            this.settingsToSaveText +=  "</pre>";
+            this.settingsToSaveText +=  "}</pre>";
         }
     }
 

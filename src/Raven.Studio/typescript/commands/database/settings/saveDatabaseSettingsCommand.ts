@@ -10,11 +10,10 @@ class saveDatabaseSettingsCommand extends commandBase {
     
     execute(): JQueryPromise<void> {
 
-        const settingsObject = Object.assign({}, ...(this.settingsToSave.map(item => {
-            if (item) {
-                return { [item.key]: item.value };
-            }
-        })));
+        const settingsObject = this.settingsToSave.reduce((acc, item) => {
+            acc[item.key] = item.value;
+            return acc;
+        }, {} as Record<string, string>);
         
         const url = endpoints.global.adminConfiguration.adminConfigurationSettings;
         
