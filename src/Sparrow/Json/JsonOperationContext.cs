@@ -1032,17 +1032,7 @@ namespace Sparrow.Json
                 if (now - _lastAllocatedStringValueTime >= _allocatedStringValuesCleanInterval)
                 {
                     _lastAllocatedStringValueTime = now;
-
-                    var index = _allocateStringValues.Count;
-                    for (var i = 0; i < 4; i++)
-                    {
-                        index /= 2;
-                        var item = _allocateStringValues[index];
-                        if (item != null)
-                            break;
-                    }
-
-                    _allocateStringValues.Trim(index);
+                    _allocateStringValues.Trim(_allocateStringValues.Count / 2);
                 }
             }
 
