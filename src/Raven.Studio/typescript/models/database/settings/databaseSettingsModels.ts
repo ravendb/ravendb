@@ -28,8 +28,21 @@ export abstract class settingsEntry {
 
         this.serverOrDefaultValue = ko.pureComputed(() => _.isEmpty(this.data.ServerValues) ? this.data.Metadata.DefaultValue : this.data.ServerValues[this.keyName()].Value);
         this.hasServerValue = ko.pureComputed(() => !_.isEmpty(this.data.ServerValues));
+        
+        this.descriptionHtml = ko.pureComputed(() => {
+            const rawDescription = data.Metadata.Description;
+            return rawDescription ? 
+                `<div><span>${genUtils.escapeHtml(rawDescription)}</span></div>` :
+                `<div><span class="text-muted">No description is available</span></div>`;
+        });
+    }
 
-        this.descriptionHtml = ko.pureComputed(() => `<div><span>${genUtils.escapeHtml(data.Metadata.Description) || 'No description was provided by the server, please report..'}</span></div>`);
+    static getEntry(rawEntry: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
+        if (rawEntry.Metadata.Scope === "ServerWideOnly") {
+            return new serverWideOnlyEntry(rawEntry);
+        }
+        
+        return databaseEntry.getEntry(rawEntry);
     }
 
     abstract getTemplateType(): settingsTemplateType;
@@ -37,7 +50,7 @@ export abstract class settingsEntry {
 
 export class serverWideOnlyEntry extends settingsEntry {
 
-    constructor(data:Raven.Server.Config.ConfigurationEntryDatabaseValue ) {
+    constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
         super(data);
         this.isServerWideOnlyEntry(true);
 
@@ -86,7 +99,7 @@ export abstract class databaseEntry<T> extends settingsEntry {
                 entry = new sizeEntry(rawEntry);
                 break;
             default:
-                throw new Error("Unknown entry type.");
+                throw new Error("Unknown entry type: " + rawEntry.Metadata.Type);
         }
         
         entry.init();
@@ -309,7 +322,7 @@ export class timeEntry extends numberEntry {
         this.customizedDatabaseValue(timeValue);
 
         this.timeUnit(this.data.Metadata.TimeUnit);
-        this.minValue(this.keyName() === this.specialTimeEntry ? -1 : this.data.Metadata.MinValue || 0 );
+        this.minValue(this.keyName() === this.specialTimeEntry ? -1 : this.data.Metadata.MinValue || 0);
     }
 
     getTemplateType(): settingsTemplateType {
@@ -321,8 +334,7 @@ export class timeEntry extends numberEntry {
 
         this.customizedDatabaseValue.extend({
             digit: {
-                onlyIf: () => this.keyName() !== this.specialTimeEntry ||
-                    this.customizedDatabaseValue() !== -1
+                onlyIf: () => this.keyName() !== this.specialTimeEntry || this.customizedDatabaseValue() !== -1
             }
         });
     }

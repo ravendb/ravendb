@@ -8,7 +8,7 @@ class saveDatabaseSettingsConfirm extends confirmViewModelBase<confirmDialogResu
     constructor(private databaseSettingsToSave: Array<setttingsItem>) {
         super();
         
-        if (this.databaseSettingsToSave.length === 0 ) {
+        if (this.databaseSettingsToSave.length === 0) {
             this.settingsToSaveText = "<pre>{ }</pre>";
         } else {
             this.settingsToSaveText = "<pre>{<br>";

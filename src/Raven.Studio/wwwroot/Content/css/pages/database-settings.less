@@ -85,28 +85,27 @@
             }
             
             &.null-value::before {
-                font-family: @font-family-icon;
-                font-size: small;
-                margin-left: 5px;
-                padding-left: 10px;
                 color: @source-item-color-basic;
             }
         }
         
         .source-item-default {
             &::before {
+                //TODO
                 //content: "\e9d9"; // Waiting for icon from RavenDB-14970
             }
         }
 
         .source-item-server {
             &::before {
+                //TODO
                 //content:"\e93d";  // Waiting for icon from RavenDB-14970
             }
         }
 
         .source-item-database {
             &::before {
+                //TODO
                 //content: "\e9ce";  // Waiting for icon from RavenDB-14970
             }
         }
@@ -114,8 +113,8 @@
     
     .entry-basic-template {
         .panel-body {
-            padding-top: 0px;
-            padding-bottom: 0px;
+            padding-top: 0;
+            padding-bottom: 0;
         }
     }
     
@@ -131,8 +130,8 @@
     }
     
     .override-options {
-        position: relative;
-        left: -65px;
+        width: 100%;
+        padding-right: 30px;
     }
 
     .source-icon {

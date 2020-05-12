@@ -13,6 +13,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import saveDatabaseSettingsConfirm = require("viewModels/database/settings/saveDatabaseSettingsConfirm");
 import models = require("models/database/settings/databaseSettingsModels");
 import popoverUtils = require("common/popoverUtils");
+import genUtils = require("common/generalUtils");
 
 type viewModeType = "summaryMode" | "editMode";
 type entriesGroupType = "allEntries" | "databaseEntries" | "customizedDatabaseEntries";
@@ -82,7 +83,7 @@ class databaseSettings extends viewModelBase {
         const categoryCondition =  (this.viewMode() === "editMode" && this.selectedCategory() === entry.data.Metadata.Category) ||
                                     this.viewMode() === "summaryMode";
 
-        const filterCondition = this.entryContainsFilterText(entry);
+        const filterCondition = !this.filterKeys() || this.entryContainsFilterText(entry);
 
         const dropDownCondition = this.groupToShow() === "allEntries" ||
                                  (this.groupToShow() === "databaseEntries" && !entry.isServerWideOnlyEntry()) ||
@@ -120,33 +121,8 @@ class databaseSettings extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        
         this.initSummaryGrid();
-        
         this.processAfterFetch();
-        
-        $('#database-settings-view [data-toggle="tooltip"]').tooltip();
-        
-        $('.description').on("mouseenter", event => {
-           const target = $(event.currentTarget);
-           const targetId = event.currentTarget.id;
-
-           if (!target.data('bs.popover')) {
-               popoverUtils.longWithHover(target, {
-                   content: `<div class="description-text"><strong>${targetId}</strong><small>${this.getDescriptionFor(targetId)}</small></div>`,
-                   placement: "bottom",
-                   html: true,
-                   container: "#database-settings-view"
-               })
-           }
-            
-           target.popover('show'); 
-        });
-    }
-    
-    private getDescriptionFor(keyName: string) {
-        const matchedEntry = this.allEntries().find(entry => entry.keyName() === keyName);
-        return matchedEntry.descriptionHtml();
     }
     
     private initCategoryGrid() {
@@ -154,7 +130,7 @@ class databaseSettings extends viewModelBase {
         categoriesGrid.headerVisible(true);
         categoriesGrid.init(() => this.fetchCategoriesData(), () =>
             [
-                new hyperlinkColumn<string>(categoriesGrid, x => x, x => appUrl.forDatabaseSettings(this.activeDatabase()), "Category", "70%",
+                new hyperlinkColumn<string>(categoriesGrid, x => x, x => appUrl.forDatabaseSettings(this.activeDatabase()), "Category", "90%",
                     {
                         sortable: "string",
                         handler: (categoryToShow, event) => this.selectActionHandler(categoryToShow, event),
@@ -181,7 +157,7 @@ class databaseSettings extends viewModelBase {
         this.selectedCategory(category);
         
         if (this.categoriesGridController()) {
-            this.categoriesGridController().setSelectedItems([this.selectedCategory()]);
+            this.categoriesGridController().setSelectedItems([category]);
         }
     }
 
@@ -269,12 +245,7 @@ class databaseSettings extends viewModelBase {
                 
                 const settingsEntries = result.Settings.map(x => {
                     const rawEntry = x as Raven.Server.Config.ConfigurationEntryDatabaseValue;
-                    
-                    if (rawEntry.Metadata.Scope === "ServerWideOnly") {
-                        return new models.serverWideOnlyEntry(rawEntry);
-                    }
-
-                    return models.databaseEntry.getEntry(rawEntry);
+                    return models.settingsEntry.getEntry(rawEntry);
                 });
 
                 this.allEntries(_.sortBy(settingsEntries, x => x.keyName()));
@@ -299,8 +270,23 @@ class databaseSettings extends viewModelBase {
         return valid;
     }
     
+    private findFirstCategoryWithError() {
+        let categoryWithError: string;
+        
+        this.allEntries().some(entry => {
+            if (this.getEntryStateClass(entry) === "customized-item-with-error") {
+                return categoryWithError = entry.data.Metadata.Category;
+            }
+        });
+        
+        return categoryWithError;
+    }
+    
     save() {
-        if (!this.isEntriesValid()) {
+        const categoryWithErrors = this.findFirstCategoryWithError();
+        if (categoryWithErrors) {
+            this.setCategory(categoryWithErrors);
+            
             if (this.viewMode() === "summaryMode") {
                 this.switchToEditMode();
             }
@@ -336,40 +322,66 @@ class databaseSettings extends viewModelBase {
     }
 
     refresh() {
-        this.confirmRefresh()
-            .then(result => {
-                if (result.can) {
-                    this.spinners.refresh(true);
-
-                    this.fetchDatabaseSettings(this.activeDatabase(), true)
-                        .done(() => {
-                            this.processAfterFetch();
-                            this.dirtyFlag().reset();
-                        })
-                        .always(() => this.spinners.refresh(false));
-                }
-            });
-    }
-
-    private processAfterFetch() {
-        if (this.viewMode() === "editMode") {
-            this.setupEditMode();
-        } else {
-            this.computeEntriesToShow();
-        }
-    }
-    
-    confirmRefresh() {
-        let text = `<div>Clicking Refresh will reload all database settings from the server.</div>`;
         if (this.dirtyFlag().isDirty()) {
-            text = "<div><span class='bg-warning text-warning'><i class='icon-warning margin-right margin-right-sm'></i>You have unsaved changes !</span></div>" + text;
+            this.confirmRefresh()
+                .then(result => {
+                      if (result.can) {
+                          this.executeRefresh();
+                      } 
+                });
+        } else {
+            this.executeRefresh();
         }
+    }
+
+    confirmRefresh() {
+        const text = `<div><span class='bg-warning text-warning padding padding-xs'><i class='icon-warning margin-right margin-right-sm'></i>You have unsaved changes !</span></div>
+                      <div>Clicking Refresh will reload all database settings from the server.</div>`;
 
         return this.confirmationMessage("Are you sure?", text,
             {
                 html: true,
                 buttons: ["Cancel", "Refresh"]
             });
+    }
+    
+    executeRefresh() {
+        this.spinners.refresh(true);
+
+        this.fetchDatabaseSettings(this.activeDatabase(), true)
+            .done(() => {
+                this.processAfterFetch();
+                this.dirtyFlag().reset();
+            })
+            .always(() => this.spinners.refresh(false));
+    }
+
+    private processAfterFetch() {
+        $('#database-settings-view [data-toggle="tooltip"]').tooltip();
+        
+        $('.description').on("mouseenter", event => {
+            const target = $(event.currentTarget);
+            const targetEntry = ko.dataFor(target[0]) as models.settingsEntry;
+
+            if (!target.data('bs.popover')) {
+                popoverUtils.longWithHover(target, {
+                    content: `<div class="description-text">
+                                <strong>${genUtils.escapeHtml(targetEntry.keyName())}</strong>
+                                <small>${targetEntry.descriptionHtml()}</small>
+                             </div>`,
+                    placement: "bottom",
+                    container: "#database-settings-view"
+                })
+            }
+
+            target.popover('show');
+        });
+        
+        if (this.viewMode() === "editMode") {
+            this.setupEditMode();
+        } else {
+            this.computeEntriesToShow();
+        }
     }
     
     setGroupToShow(groupType: entriesGroupType) {
@@ -402,7 +414,7 @@ class databaseSettings extends viewModelBase {
             this.categoriesGridController().reset(false);
         }
         
-        this.setCategory(this.selectedCategory() || this.allEntries()[0].data.Metadata.Category);
+        this.setCategory(this.selectedCategory() || this.allCategoryNames()[0]);
         this.computeEntriesToShow();
        
         this.allEntries().forEach(entry => {
@@ -415,7 +427,7 @@ class databaseSettings extends viewModelBase {
                 });
                 
                 entry.customizedDatabaseValue.throttle(300).subscribe(() => {
-                        this.categoriesGridController().reset(false);
+                    this.categoriesGridController().reset(false);
                 });
             }
         });
