@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private readonly Field _reduceValueField = new Field(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
-        protected readonly ConversionScope Scope = new ConversionScope();
+        protected readonly ConversionScope Scope;
 
         private readonly Dictionary<int, CachedFieldItem<Field>> _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>(NumericEqualityComparer.BoxedInstanceInt32);
 
@@ -93,6 +93,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
             _reduceOutput = reduceOutput;
+
+            Scope = new ConversionScope(this);
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -760,6 +762,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             private readonly LinkedList<BlittableJsonReaderObject> _jsons = new LinkedList<BlittableJsonReaderObject>();
             private readonly LinkedList<BlittableObjectReader> _readers = new LinkedList<BlittableObjectReader>();
+            private readonly LuceneDocumentConverterBase _parent;
+
+            private static readonly byte[] EmptyBuffer = Array.Empty<byte>();
+
+            public ConversionScope(LuceneDocumentConverterBase parent)
+            {
+                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            }
 
             public BlittableJsonReaderObject CreateJson(DynamicJsonValue djv, JsonOperationContext context)
             {
@@ -772,6 +782,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             public void Dispose()
             {
+                if (_parent._reduceOutput)
+                    _parent._reduceValueField.SetValue(EmptyBuffer);
+
                 if (_jsons.Count > 0)
                 {
                     foreach (var json in _jsons)
