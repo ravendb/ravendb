@@ -42,7 +42,6 @@ namespace Raven.Server.Documents.Queries
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select, DocumentDatabase database = null)
             : this(ParseQuery(query, queryType, database), parameters, cacheKey)
         {
-
         }
 
         private static Query ParseQuery(string q, QueryType queryType, DocumentDatabase database = null)
@@ -674,7 +673,6 @@ namespace Raven.Server.Documents.Queries
                     {
                         sourcePath = value.PropertyPath;
                     }
-
                     else if (fe.FieldValue != null)
                     {
                         if (Query.From.Alias?.Value == null)
@@ -718,7 +716,6 @@ namespace Raven.Server.Documents.Queries
                 var value = QueryBuilder.GetValue(Query, this, parameters, vt);
 
                 AddCounterToInclude(counterIncludes, parameters, value, sourcePath);
-
             }
         }
 
@@ -1081,7 +1078,6 @@ namespace Raven.Server.Documents.Queries
                     if (!(me.Arguments[0] is FieldExpression sumFieldToken))
                         throw new InvalidQueryException("Invalid ORDER BY sum call, expected field value, go " + me.Arguments[0], QueryText, parameters);
 
-
                     if (orderingType == OrderByFieldType.Implicit)
                     {
                         orderingType = OrderByFieldType.Double;
@@ -1142,10 +1138,10 @@ namespace Raven.Server.Documents.Queries
 
                     if (selectField.Alias != null)
                     {
-
                         if (selectField.IsGroupByKey == false)
                         {
-                            _aliasToName[selectField.Alias] = selectField.Name;
+                            if (selectField.Name != null)
+                                _aliasToName[selectField.Alias] = selectField.Name;
                         }
                         else
                         {
@@ -1173,7 +1169,6 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
         {
-
             if (expression is ValueExpression ve)
             {
                 if (HasFacet)
@@ -1714,7 +1709,6 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"Unknown aggregation method in SELECT clause of the group by query: '{methodName}'", queryText, parameters);
         }
 
-
         private static void ThrowMissingFieldNameArgumentOfSumMethod(string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Missing argument of sum() method. You need to specify the name of a field e.g. sum(Age)", queryText, parameters);
@@ -1820,7 +1814,6 @@ namespace Raven.Server.Documents.Queries
         {
             throw new InvalidQueryException("Cannot use GROUP BY in a suggestion query", QueryText, parameters);
         }
-
 
         private void ThrowSuggestMethodArgumentMustBeValue(int index, QueryExpression argument, BlittableJsonReaderObject parameters)
         {
@@ -1968,7 +1961,6 @@ namespace Raven.Server.Documents.Queries
 
                 if (QueryBuilder.AreValueTokenTypesValid(valueType1, valueType2) == false)
                     ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
-
             }
 
             public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
@@ -2294,7 +2286,6 @@ namespace Raven.Server.Documents.Queries
                 _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, spatial: fieldOptions);
             }
 
-
             private void HandleSum(List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
                 if (arguments.Count != 1)
@@ -2345,7 +2336,7 @@ namespace Raven.Server.Documents.Queries
 
             var updateBody = Query.UpdateBody;
 
-            if (Query.From.Alias == null) // will have to use this 
+            if (Query.From.Alias == null) // will have to use this
             {
                 if (Query.Load != null)
                     throw new InvalidQueryException("When using LOAD, a from alias is required", QueryText, parameters);

@@ -79,8 +79,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly string _keyFieldName;
         protected readonly bool _storeValue;
 
-        private byte[] _storeValueBuffer;
-
         public void Clean()
         {
             if (_fieldsCache.Count > 256)
@@ -129,17 +127,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _keyFieldName = keyFieldName ?? (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
             _storeValue = storeValue;
             _storeValueField = new Field(storeValueFieldName, new byte[0], 0, 0, Field.Store.YES);
-
-            if (storeValue)
-                _storeValueBuffer = new byte[0];
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
-        public IDisposable SetDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, out bool shouldSkip)
+        public IDisposable SetDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer, out bool shouldSkip)
         {
             Document.GetFields().Clear();
 
-            int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, sourceDocumentId, document, indexContext);
+            int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, sourceDocumentId, document, indexContext, writeBuffer);
             if (_fields.Count > 0)
             {
                 shouldSkip = _indexEmptyEntries == false && numberOfFields <= _numberOfBaseFields; // there is always a key field, but we want to filter-out empty documents, some indexes (e.g. TS indexes contain more than 1 field by default)
@@ -151,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return Scope;
         }
 
-        protected abstract int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext) where T : ILuceneDocumentWrapper;
+        protected abstract int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer) where T : ILuceneDocumentWrapper;
 
         /// <summary>
         /// This method generate the fields for indexing documents in lucene from the values.
@@ -692,27 +687,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return true;
         }
 
-        protected AbstractField GetStoredValueField(BlittableJsonReaderObject value)
+        protected AbstractField GetStoredValueField(BlittableJsonReaderObject value, IWriteOperationBuffer writeBuffer)
         {
-            _storeValueField.SetValue(GetStoredValue(value), 0, value.Size);
+            _storeValueField.SetValue(GetStoredValue(value, writeBuffer), 0, value.Size);
 
             return _storeValueField;
         }
 
-        private byte[] GetStoredValue(BlittableJsonReaderObject value)
+        private byte[] GetStoredValue(BlittableJsonReaderObject value, IWriteOperationBuffer writeBuffer)
         {
             var necessarySize = Bits.PowerOf2(value.Size);
 
-            if (_storeValueBuffer.Length < necessarySize)
-                _storeValueBuffer = new byte[necessarySize];
+            var storeValueBuffer = writeBuffer.GetBuffer(necessarySize);
 
             unsafe
             {
-                fixed (byte* v = _storeValueBuffer)
+                fixed (byte* v = storeValueBuffer)
                     value.CopyTo(v);
             }
 
-            return _storeValueBuffer;
+            return storeValueBuffer;
         }
 
         public void Dispose()

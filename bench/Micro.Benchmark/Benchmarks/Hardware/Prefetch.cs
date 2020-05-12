@@ -23,7 +23,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         {
             public Config()
             {
-                Add(new Job(RunMode.Default)
+                AddJob(new Job(RunMode.Default)
                 {
                     Environment =
                     {
@@ -34,16 +34,16 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 });
 
                 // Exporters for data
-                Add(GetExporters().ToArray());
+                AddExporter(GetExporters().ToArray());
                 // Generate plots using R if %R_HOME% is correctly set
-                Add(RPlotExporter.Default);
+                AddExporter(RPlotExporter.Default);
 
-                Add(StatisticColumn.AllStatistics);
+                AddColumn(StatisticColumn.AllStatistics);
 
-                Add(BaselineValidator.FailOnError);
-                Add(JitOptimizationsValidator.FailOnError);
+                AddValidator(BaselineValidator.FailOnError);
+                AddValidator(JitOptimizationsValidator.FailOnError);
 
-                Add(EnvironmentAnalyser.Default);
+                AddAnalyser(EnvironmentAnalyser.Default);
             }
         }
 

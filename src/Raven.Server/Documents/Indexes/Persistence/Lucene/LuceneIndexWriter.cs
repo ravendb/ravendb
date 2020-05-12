@@ -10,9 +10,13 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Server.Exceptions;
+using Raven.Server.Indexing;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Exceptions;
+using Sparrow.Server.Utils;
 using Voron.Exceptions;
+using Directory = Lucene.Net.Store.Directory;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -22,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private IndexWriter _indexWriter;
 
-        private readonly Directory _directory;
+        private readonly LuceneVoronDirectory _directory;
 
         private readonly Analyzer _analyzer;
 
@@ -36,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public Analyzer Analyzer => _indexWriter?.Analyzer;
 
-        public LuceneIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy,
+        public LuceneIndexWriter(LuceneVoronDirectory d, Analyzer a, IndexDeletionPolicy deletionPolicy,
             IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, DocumentDatabase documentDatabase, IState state)
         {
             _directory = d;
@@ -66,14 +70,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (SystemException e)
             {
-                if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
-                    ThrowOutOfMemoryException(e);
-
-                if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
-                    ThrowOutOfMemoryException(e);
-
-                if (e.InnerException is VoronUnrecoverableErrorException)
-                    ThrowVoronUnrecoverableErrorException(e);
+                TryThrowingBetterException(e, _directory);
 
                 throw;
             }
@@ -83,14 +80,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public static void ThrowOutOfMemoryException(Exception e)
+        public static void TryThrowingBetterException(SystemException e, LuceneVoronDirectory directory)
         {
-            throw new OutOfMemoryException("Index writer hit OOM during commit", e);
-        }
+            if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
+                ThrowOutOfMemoryException();
 
-        public static void ThrowVoronUnrecoverableErrorException(Exception e)
-        {
-            VoronUnrecoverableErrorException.Raise("Index data is corrupted", e);
+            if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
+                ThrowOutOfMemoryException();
+
+            if (e.InnerException is VoronUnrecoverableErrorException)
+                VoronUnrecoverableErrorException.Raise("Index data is corrupted", e);
+
+            if (e.IsOutOfDiskSpaceException())
+            {
+                // this commit stage is written to the temp scratch buffers
+                var fullPath = directory.TempFullPath;
+                var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(fullPath);
+                var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
+                throw new DiskFullException($"There isn't enough space to commit the index to {fullPath}. " +
+                                            $"Currently available space: {freeSpace}", e);
+            }
+
+            void ThrowOutOfMemoryException()
+            {
+                throw new OutOfMemoryException("Index writer hit OOM during commit", e);
+            }
         }
 
         public long RamSizeInBytes()

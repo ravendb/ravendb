@@ -76,7 +76,7 @@ namespace SlowTests.Tests.Indexes
                     using (var lazyStringValue = context.GetLazyString("docs/1"))
                     {
                         bool shouldSkip;
-                        converter.SetDocument(lazyStringValue, null, result, context, out shouldSkip);
+                        converter.SetDocument(lazyStringValue, null, result, context, FastTests.Server.Documents.Indexing.Lucene.LuceneDocumentConverterTests.FakeWriteOperationBuffer.Create(), out shouldSkip);
                         Assert.Equal("docs/1", converter.Document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, null));
                     }
                 }
@@ -113,7 +113,6 @@ namespace SlowTests.Tests.Indexes
         {
             public string[] Roles { get; set; }
         }
-
 
         [Fact]
         public void Convert_simple_query()
@@ -336,7 +335,6 @@ users => from user in users
 })".Replace("\r\n", Environment.NewLine));
         }
 
-
         private enum Gender
         {
             Male,
@@ -357,12 +355,12 @@ users => from user in users
         {
             public string Name { get; set; }
         }
+
         private class LocationCount
         {
             public string Location { get; set; }
             public int Count { get; set; }
         }
-
 
         private class LocationAge
         {
