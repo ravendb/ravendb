@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
-        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext)
+        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
         {
             int newFields = 0;
 
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (_storeValue)
             {
-                instance.Add(GetStoredValueField(document.Data));
+                instance.Add(GetStoredValueField(document.Data, writeBuffer));
                 newFields++;
             }
 

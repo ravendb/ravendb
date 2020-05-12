@@ -19,7 +19,7 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
         {
             public Config()
             {
-                Add(new Job
+                AddJob(new Job
                 {
                     Environment =
                     {
@@ -38,16 +38,16 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
                 });
 
                 // Exporters for data
-                Add(GetExporters().ToArray());
+                AddExporter(GetExporters().ToArray());
                 // Generate plots using R if %R_HOME% is correctly set
-                Add(RPlotExporter.Default);
+                AddExporter(RPlotExporter.Default);
 
                 //Add(StatisticColumn.AllStatistics);
 
-                Add(BaselineValidator.FailOnError);
-                Add(JitOptimizationsValidator.FailOnError);
+                AddValidator(BaselineValidator.FailOnError);
+                AddValidator(JitOptimizationsValidator.FailOnError);
 
-                Add(EnvironmentAnalyser.Default);
+                AddAnalyser(EnvironmentAnalyser.Default);
             }
         }
 

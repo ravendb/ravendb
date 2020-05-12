@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -17,7 +17,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class IndexWriteOperation : IndexOperationBase
+    public class IndexWriteOperation : IndexOperationBase, IWriteOperationBuffer
     {
         private readonly Term _documentId = new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, "Dummy");
         private readonly Term _reduceKeyHash = new Term(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, "Dummy");
@@ -38,6 +38,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IState _state;
         private readonly LuceneVoronDirectory _directory;
+
+        private byte[] _buffer;
 
         public IndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
             : base(index, LoggingSource.Instance.GetLogger<IndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
@@ -95,6 +97,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 _locker?.Release();
                 _analyzer?.Dispose();
+
+                if (_buffer != null)
+                {
+                    ArrayPool<byte>.Shared.Return(_buffer);
+                    _buffer = null;
+                }
             }
         }
 
@@ -122,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             bool shouldSkip;
             IDisposable setDocument;
             using (Stats.ConvertStats.Start())
-                setDocument = _converter.SetDocument(key, sourceDocumentId, document, indexContext, out shouldSkip);
+                setDocument = _converter.SetDocument(key, sourceDocumentId, document, indexContext, this, out shouldSkip);
 
             using (setDocument)
             {
@@ -216,5 +224,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public IndexingStatsScope AddStats;
             public IndexingStatsScope SuggestionStats;
         }
+
+        public byte[] GetBuffer(int necessarySize)
+        {
+            if (_buffer == null)
+                return _buffer = ArrayPool<byte>.Shared.Rent(necessarySize);
+
+            if (_buffer.Length < necessarySize)
+            {
+                ArrayPool<byte>.Shared.Return(_buffer);
+                return _buffer = ArrayPool<byte>.Shared.Rent(necessarySize);
+            }
+
+            return _buffer;
+        }
+    }
+
+    public interface IWriteOperationBuffer
+    {
+        byte[] GetBuffer(int necessarySize);
     }
 }
