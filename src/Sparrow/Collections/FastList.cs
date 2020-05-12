@@ -189,6 +189,22 @@ namespace Sparrow.Collections
             }
         }
 
+        public void Trim(int size)
+        {
+            var oldSize = (int)_size;
+
+            if (size < 0 || size > oldSize)
+                throw new ArgumentOutOfRangeException(nameof(size));
+
+            if (size == oldSize)
+                return; // no-op
+
+            _size = (uint)size;
+            _version++;
+
+            Array.Clear(_items, size, oldSize - size);
+        }
+
         /// <summary>
         /// This method is like Clear but will not release the references contained in it; therefore
         /// the garbage collector will not collect those objects even if they are not being used.
