@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 
 
+using Raven.Client.Documents.Session.TimeSeries;
+
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
@@ -12,10 +14,9 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial interface IAsyncDocumentSession
     {
-
         IAsyncSessionDocumentTimeSeries TimeSeriesFor(string documentId, string name);
-
         IAsyncSessionDocumentTimeSeries TimeSeriesFor(object entity, string name);
-
+        IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name) where TValues : TimeSeriesEntry;
+        IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity, string name) where TValues : TimeSeriesEntry;
     }
 }

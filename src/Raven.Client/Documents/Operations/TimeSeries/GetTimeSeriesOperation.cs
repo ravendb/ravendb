@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow;
@@ -10,7 +11,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class GetTimeSeriesOperation : IOperation<TimeSeriesRangeResult>
+    public class GetTimeSeriesOperation : GetTimeSeriesOperation<TimeSeriesEntry>
+    {
+        public GetTimeSeriesOperation(string docId, string timeseries, DateTime? @from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue) : base(docId, timeseries, @from, to, start, pageSize)
+        {
+        }
+    }
+
+    public class GetTimeSeriesOperation<TValues> : IOperation<TimeSeriesRangeResult<TValues>> where TValues : TimeSeriesEntry
     {
         private readonly string _docId, _name;
         private readonly int _start, _pageSize;
@@ -32,12 +40,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             _to = to;
         }
 
-        public RavenCommand<TimeSeriesRangeResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<TimeSeriesRangeResult<TValues>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context,
+            HttpCache cache)
         {
             return new GetTimeSeriesCommand(_docId, _name, _from, _to, _start, _pageSize);
         }
 
-        internal class GetTimeSeriesCommand : RavenCommand<TimeSeriesRangeResult>
+        internal class GetTimeSeriesCommand : RavenCommand<TimeSeriesRangeResult<TValues>>
         {
             private readonly string _docId, _name;
             private readonly int _start, _pageSize;
@@ -82,17 +91,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     pathBuilder.Append("&from=")
                         .Append(_from.Value.EnsureUtc().GetDefaultRavenFormat());
                 }
-                
+
                 if (_to.HasValue)
                 {
                     pathBuilder.Append("&to=")
                         .Append(_to.Value.EnsureUtc().GetDefaultRavenFormat());
                 }
 
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
+                var request = new HttpRequestMessage {Method = HttpMethod.Get};
 
                 url = pathBuilder.ToString();
 
@@ -104,9 +110,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (response == null)
                     return;
 
-                Result = JsonDeserializationClient.TimeSeriesRangeResult(response);
+                Result = JsonDeserializationBase.GenerateJsonDeserializationRoutine<TimeSeriesRangeResult<TValues>>()(response);
 
-                if (response.TryGet(nameof(TimeSeriesRangeResult.Entries), out BlittableJsonReaderArray entries) && 
+                if (response.TryGet(nameof(TimeSeriesRangeResult.Entries), out BlittableJsonReaderArray entries) &&
                     entries == null)
                 {
                     Result.Entries = null;

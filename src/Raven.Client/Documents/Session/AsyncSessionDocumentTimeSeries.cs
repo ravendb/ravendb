@@ -17,7 +17,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    public class AsyncSessionDocumentTimeSeries : SessionTimeSeriesBase, IAsyncSessionDocumentTimeSeries
+    public class AsyncSessionDocumentTimeSeries<TValues> : SessionTimeSeriesBase, IAsyncSessionDocumentTimeSeries, IAsyncSessionDocumentTypedTimeSeries<TValues> where TValues : TimeSeriesEntry
     {
         public AsyncSessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, string documentId, string name) : base(session, documentId, name)
         {
@@ -27,9 +27,14 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public async Task<IEnumerable<TimeSeriesEntry>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
+        public Task<IEnumerable<TimeSeriesEntry>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
-            TimeSeriesRangeResult rangeResult;
+            return GetAsyncInternal<TimeSeriesEntry>(from, to, start, pageSize, token);
+        }
+
+        public async Task<IEnumerable<TTValues>> GetAsyncInternal<TTValues>(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) where TTValues : TimeSeriesEntry
+        {
+            TimeSeriesRangeResult<TTValues> rangeResult;
             from = from?.EnsureUtc();
             to = to?.EnsureUtc();
 
@@ -50,7 +55,7 @@ namespace Raven.Client.Documents.Session
                     Session.IncrementRequestCount();
 
                     rangeResult = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
+                            new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
                         .ConfigureAwait(false);
 
                     if (rangeResult == null)
@@ -71,10 +76,10 @@ namespace Raven.Client.Documents.Session
 
                 if (servedFromCache == false && Session.NoTracking == false)
                 {
-                    AddToCache(Name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
+                    InMemoryDocumentSessionOperations.AddToCache(Name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
                 }
 
-                return resultToUser;
+                return resultToUser?.Cast<TTValues>();
             }
 
             if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
@@ -82,13 +87,13 @@ namespace Raven.Client.Documents.Session
                 metadataTimeSeries.BinarySearch(Name) < 0)
             {
                 // the document is loaded in the session, but the metadata says that there is no such timeseries
-                return Array.Empty<TimeSeriesEntry>();
+                return Array.Empty<TTValues>();
             }
 
             Session.IncrementRequestCount();
 
             rangeResult = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
+                    new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
                 .ConfigureAwait(false);
 
             if (rangeResult == null)
@@ -328,208 +333,7 @@ namespace Raven.Client.Documents.Session
 
             return mergedValues.ToArray();
         }
-
-        internal static void AddToCache(
-            string timeseries, 
-            DateTime from, 
-            DateTime to, 
-            int fromRangeIndex, 
-            int toRangeIndex, 
-            List<TimeSeriesRangeResult> ranges, 
-            Dictionary<string, List<TimeSeriesRangeResult>> cache, 
-            TimeSeriesEntry[] values)
-        {
-            if (fromRangeIndex == -1)
-            {
-                // didn't find a 'fromRange' => all ranges in cache start after 'from'
-
-                if (toRangeIndex == ranges.Count)
-                {
-                    // the requested range [from, to] contains all the ranges that are in cache 
-
-                    // e.g. if cache is : [[2,3], [4,5], [7, 10]]
-                    // and the requested range is : [1, 15]
-                    // after this action cache will be : [[1, 15]]
-
-                    cache[timeseries] = new List<TimeSeriesRangeResult>
-                    {
-                        new TimeSeriesRangeResult
-                        {
-                            From = from,
-                            To = to,
-                            Entries = values
-                        }
-                    };
-
-                    return;
-                }
-
-                if (ranges[toRangeIndex].From > to)
-                {
-                    // requested range ends before 'toRange' starts
-                    // remove all ranges that come before 'toRange' from cache
-                    // add the new range at the beginning of the list
-
-                    // e.g. if cache is : [[2,3], [4,5], [7,10]]
-                    // and the requested range is : [1,6]
-                    // after this action cache will be : [[1,6], [7,10]]
-
-                    ranges.RemoveRange(0, toRangeIndex);
-                    ranges.Insert(0, new TimeSeriesRangeResult
-                    {
-                        From = from,
-                        To = to,
-                        Entries = values
-                    });
-
-                    return;
-                }
-
-                // the requested range ends inside 'toRange'
-                // merge the result from server into 'toRange'
-                // remove all ranges that come before 'toRange' from cache
-
-                // e.g. if cache is : [[2,3], [4,5], [7,10]]
-                // and the requested range is : [1,8]
-                // after this action cache will be : [[1,10]]
-
-                ranges[toRangeIndex].From = from;
-                ranges[toRangeIndex].Entries = values;
-                ranges.RemoveRange(0, toRangeIndex);
-
-                return;
-            }
-
-            // found a 'fromRange'
-
-            if (toRangeIndex == ranges.Count)
-            {
-                // didn't find a 'toRange' => all the ranges in cache end before 'to'
-
-                if (ranges[fromRangeIndex].To < from)
-                {
-                    // requested range starts after 'fromRange' ends,
-                    // so it needs to be placed right after it
-                    // remove all the ranges that come after 'fromRange' from cache 
-                    // add the merged values as a new range at the end of the list
-
-                    // e.g. if cache is : [[2,3], [5,6], [7,10]]
-                    // and the requested range is : [4,12]
-                    // then 'fromRange' is : [2,3]
-                    // after this action cache will be : [[2,3], [4,12]]
-
-                    ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
-                    ranges.Add(new TimeSeriesRangeResult
-                    {
-                        From = from,
-                        To = to,
-                        Entries = values
-                    });
-
-                    return;
-                }
-
-                // the requested range starts inside 'fromRange'
-                // merge result into 'fromRange'
-                // remove all the ranges from cache that come after 'fromRange' 
-
-                // e.g. if cache is : [[2,3], [4,6], [7,10]]
-                // and the requested range is : [5,12]
-                // then 'fromRange' is [4,6]
-                // after this action cache will be : [[2,3], [4,12]]
-
-                ranges[fromRangeIndex].To = to;
-                ranges[fromRangeIndex].Entries = values;
-                ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
-
-                return;
-            }
-
-            // found both 'fromRange' and 'toRange'
-            // the requested range is inside cache bounds 
-
-            if (ranges[fromRangeIndex].To < from)
-            {
-                // requested range starts after 'fromRange' ends
-
-                if (ranges[toRangeIndex].From > to)
-                {
-                    // requested range ends before 'toRange' starts
-
-                    // remove all ranges in between 'fromRange' and 'toRange'
-                    // place new range in between 'fromRange' and 'toRange'
-
-                    // e.g. if cache is : [[2,3], [5,6], [7,8], [10,12]]
-                    // and the requested range is : [4,9]
-                    // then 'fromRange' is [2,3] and 'toRange' is [10,12]
-                    // after this action cache will be : [[2,3], [4,9], [10,12]]
-
-                    ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
-                    ranges.Insert(fromRangeIndex + 1, new TimeSeriesRangeResult
-                    {
-                        From = from,
-                        To = to,
-                        Entries = values
-                    });
-
-                    return;
-                }
-
-                // requested range ends inside 'toRange' 
-
-                // merge the new range into 'toRange'
-                // remove all ranges in between 'fromRange' and 'toRange'
-
-                // e.g. if cache is : [[2,3], [5,6], [7,10]]
-                // and the requested range is : [4,9]
-                // then 'fromRange' is [2,3] and 'toRange' is [7,10]
-                // after this action cache will be : [[2,3], [4,10]]
-
-                ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
-                ranges[toRangeIndex].From = from;
-                ranges[toRangeIndex].Entries = values;
-
-                return;
-            }
-
-            // the requested range starts inside 'fromRange'
-
-            if (ranges[toRangeIndex].From > to)
-            {
-                // requested range ends before 'toRange' starts
-
-                // remove all ranges in between 'fromRange' and 'toRange'
-                // merge new range into 'fromRange'
-
-                // e.g. if cache is : [[2,4], [5,6], [8,10]]
-                // and the requested range is : [3,7]
-                // then 'fromRange' is [2,4] and 'toRange' is [8,10]
-                // after this action cache will be : [[2,7], [8,10]]
-
-                ranges[fromRangeIndex].To = to;
-                ranges[fromRangeIndex].Entries = values;
-                ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
-
-                return;
-            }
-
-            // the requested range starts inside 'fromRange'
-            // and ends inside 'toRange'
-
-            // merge all ranges in between 'fromRange' and 'toRange'
-            // into a single range [fromRange.From, toRange.To]
-
-            // e.g. if cache is : [[2,4], [5,6], [8,10]]
-            // and the requested range is : [3,9]
-            // then 'fromRange' is [2,4] and 'toRange' is [8,10]
-            // after this action cache will be : [[2,10]]
-
-            ranges[fromRangeIndex].To = ranges[toRangeIndex].To;
-            ranges[fromRangeIndex].Entries = values;
-
-            ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex);
-        }
-
+        
         private static IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to)
         {
             if (range.Entries == null)
@@ -546,5 +350,17 @@ namespace Raven.Client.Documents.Session
                 yield return value;
             }
         }
+
+        Task<IEnumerable<TValues>> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? @from, DateTime? to, int start, int pageSize, CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Append(TValues entry)
+        {
+            throw new NotImplementedException();
+        }
+
+       
     }
 }
