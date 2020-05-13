@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 scope.CreateFieldConverter = new LuceneDocumentConverter(new IndexField[] { });
 
             var result = new List<AbstractField>();
-            scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext);
+            scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, out _);
             return result;
         }
 

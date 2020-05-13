@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         ///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
         ///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
         /// </summary>
-        public int GetRegularFields<T>(T instance, IndexField field, object value, JsonOperationContext indexContext, bool nestedArray = false) where T : ILuceneDocumentWrapper
+        public int GetRegularFields<T>(T instance, IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, bool nestedArray = false) where T : ILuceneDocumentWrapper
         {
             var path = field.Name;
 
@@ -164,7 +164,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var storage = field.Storage.GetLuceneValue();
             var termVector = field.TermVector.GetLuceneValue();
 
+            shouldSkip = false;
             int newFields = 0;
+
+            if (_reduceOutput && indexing == Field.Index.NO && storage == Field.Store.NO)
+                return newFields;
 
             if (valueType == ValueType.Null)
             {
@@ -183,6 +187,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     newFields++;
                 }
 
+                shouldSkip = newFields == 0;
                 return newFields;
             }
 
@@ -272,7 +277,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var boostedValue = (BoostedValue)value;
 
-                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext);
+                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext, out _);
                 newFields += boostedFields;
 
                 var fields = instance.GetFields();
@@ -303,7 +308,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     _multipleItemsSameFieldCount.Add(count++);
 
-                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, nestedArray: true);
+                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, out _, nestedArray: true);
 
                     _multipleItemsSameFieldCount.RemoveAt(_multipleItemsSameFieldCount.Count - 1);
                 }
@@ -357,7 +362,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (!(val is DynamicJsonValue json))
                 {
-                    return GetRegularFields(instance, field, val, indexContext, nestedArray);
+                    return GetRegularFields(instance, field, val, indexContext, out _, nestedArray);
                 }
 
                 foreach (var jsonField in GetComplexObjectFields(path, Scope.CreateJson(json, indexContext), storage, indexing, termVector))
