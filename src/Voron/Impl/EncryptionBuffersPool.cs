@@ -21,17 +21,14 @@ namespace Voron.Impl
 
         private readonly long _maxBufferSizeToKeepInBytes = new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
+        private readonly ConcurrentStack<NativeAllocation>[] _items;
+        private readonly Timer _cleanupTimer;
+        private readonly TimeSpan _allocationsRebuildInterval = TimeSpan.FromMinutes(15);
+        private DateTime _lastAllocationsRebuild = DateTime.UtcNow;
         private long _generation;
+        private bool _hasDisposedAllocations;
 
         public long Generation => _generation;
-
-        private class NativeAllocation
-        {
-            public byte* Ptr;
-            public long Size;
-        }
-
-        private readonly ConcurrentStack<NativeAllocation>[] _items;
 
         public EncryptionBuffersPool()
         {
@@ -44,6 +41,8 @@ namespace Voron.Impl
             }
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+
+            _cleanupTimer = new Timer(CleanupTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
         public byte* Get(int size, out NativeMemory.ThreadStats thread)
@@ -53,13 +52,15 @@ namespace Voron.Impl
             if (size > Constants.Size.Megabyte * 16)
             {
                 // We don't want to pool large buffers
-                
                 return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
             }
 
             var index = Bits.MostSignificantBit(size);
-            if (_items[index].TryPop(out var allocation))
+            while (_items[index].TryPop(out var allocation))
             {
+                if (allocation.InUse.Raise() == false)
+                    continue;
+
                 thread = NativeMemory.ThreadAllocations.Value;
                 thread.Allocations += size;
                 return allocation.Ptr;
@@ -92,7 +93,8 @@ namespace Voron.Impl
             _items[index].Push(new NativeAllocation
             {
                 Ptr = ptr,
-                Size = size
+                Size = size,
+                InPoolSince = DateTime.UtcNow
             });
         }
 
@@ -110,7 +112,10 @@ namespace Voron.Impl
             {
                 while (stack.TryPop(out var allocation))
                 {
-                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory(allocation.Ptr, allocation.Size, null);
+                    if (allocation.InUse.Raise() == false)
+                        continue;
+
+                    allocation.Dispose();
                 }
             }
         }
@@ -150,6 +155,79 @@ namespace Voron.Impl
             }
 
             return stats;
+        }
+
+        private void CleanupTimer(object _)
+        {
+            if (Monitor.TryEnter(this) == false)
+                return;
+
+            try
+            {
+                var currentTime = DateTime.UtcNow;
+                var idleTime = TimeSpan.FromMinutes(10);
+
+                foreach (var stack in _items)
+                {
+                    var currentStack = stack;
+                    using (var currentStackEnumerator = currentStack.GetEnumerator())
+                    {
+                        while (currentStackEnumerator.MoveNext())
+                        {
+                            var nativeAllocation = currentStackEnumerator.Current;
+
+                            var timeInPool = currentTime - nativeAllocation.InPoolSince;
+                            if (timeInPool <= idleTime)
+                                continue;
+
+                            if (nativeAllocation.InUse.Raise() == false)
+                                continue;
+
+                            nativeAllocation.Dispose();
+                            _hasDisposedAllocations = true;
+                        }
+                    }
+                }
+
+                var allocationsRebuildNeeded = currentTime - _lastAllocationsRebuild >= _allocationsRebuildInterval;
+                if (allocationsRebuildNeeded && _hasDisposedAllocations)
+                {
+                    _lastAllocationsRebuild = currentTime;
+                    _hasDisposedAllocations = false;
+
+                    foreach (var stack in _items)
+                    {
+                        var localStack = new ConcurrentStack<NativeAllocation>();
+
+                        while (stack.TryPop(out var allocation))
+                        {
+                            if (allocation.InUse.Raise() == false)
+                                continue;
+
+                            allocation.InUse.Lower();
+                            localStack.Push(allocation);
+                        }
+
+                        while (localStack.TryPop(out var allocation))
+                            stack.Push(allocation);
+                    }
+                }
+            }
+            finally
+            {
+                Monitor.Exit(this);
+            }
+        }
+
+        private class NativeAllocation : PooledItem
+        {
+            public byte* Ptr;
+            public long Size;
+
+            public override void Dispose()
+            {
+                PlatformSpecific.NativeMemory.Free4KbAlignedMemory(Ptr, Size, null);
+            }
         }
     }
 
