@@ -50,7 +50,7 @@ namespace Voron.Benchmark
         {
             public Config()
             {
-                Add(new Job
+                AddJob(new Job
                 {
                     Environment =
                     {
@@ -70,16 +70,16 @@ namespace Voron.Benchmark
                 });
 
                 // Exporters for data
-                Add(GetExporters().ToArray());
+                AddExporter(GetExporters().ToArray());
                 // Generate plots using R if %R_HOME% is correctly set
-                Add(RPlotExporter.Default);
+                AddExporter(RPlotExporter.Default);
 
-                Add(StatisticColumn.AllStatistics);
+                AddColumn(StatisticColumn.AllStatistics);
 
-                Add(BaselineValidator.FailOnError);
-                Add(JitOptimizationsValidator.FailOnError);
+                AddValidator(BaselineValidator.FailOnError);
+                AddValidator(JitOptimizationsValidator.FailOnError);
 
-                Add(EnvironmentAnalyser.Default);
+                AddAnalyser(EnvironmentAnalyser.Default);
             }
         }
 

@@ -16,6 +16,8 @@ namespace Raven.Server.Config.Categories
                 new Size(2, SizeUnit.Gigabytes),
                 MemoryInformation.TotalPhysicalMemory / 10);
 
+            MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 16 : 4, SizeUnit.Megabytes);
+
             UseTotalDirtyMemInsteadOfMemUsage = PlatformDetails.RunningOnDocker;
 
             EnableHighTemporaryDirtyMemoryUse = false; //MemoryInformation.TotalPhysicalMemory.GetValue(SizeUnit.Gigabytes) >= 2;
@@ -34,7 +36,7 @@ namespace Raven.Server.Config.Categories
         public Size LowMemoryCommitLimit { get; set; }
 
         [Description("The maximum size of context to keep in the pool after dispose")]
-        [DefaultValue(32)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Memory.MaxContextSizeToKeepInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MaxContextSizeToKeep { get; set; }

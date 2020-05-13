@@ -163,14 +163,18 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             return _client.ListBuckets(_projectId);
         }
 
-        public Task<List<Object>> ListObjectsAsync(string prefix = null, string delimiter = null)
+        public async Task<List<Object>> ListObjectsAsync(string prefix = null, string delimiter = null)
         {
             var option = new ListObjectsOptions
             {
                 Delimiter = delimiter
             };
 
-            return _client.ListObjectsAsync(_bucketName, prefix, options: delimiter == null ? null : option).ToList(CancellationToken);
+            var results = new List<Object>();
+            await foreach (var result in _client.ListObjectsAsync(_bucketName, prefix, options: delimiter == null ? null : option).WithCancellation(CancellationToken))
+                results.Add(result);
+
+            return results;
         }
 
         public async Task TestConnection()
