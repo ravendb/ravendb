@@ -67,7 +67,6 @@ class timeSeriesModel {
         return new timeSeriesModel(name, {
             Timestamp: null,
             Tag: null,
-            Value: undefined,
             Values: []
         });
     }
