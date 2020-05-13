@@ -168,10 +168,5 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-        private static unsafe long ReadDateTicks2(Slice ticksSlice)
-        {
-            var index = *(long*)ticksSlice.Content.Ptr;
-            return index;
-        }
     }
 }
