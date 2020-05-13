@@ -57,18 +57,11 @@ namespace Sparrow.Server.Platform
             {
                 Debug.Assert(ptr != null);
 
-                var currentThreadValue = Sparrow.Utils.NativeMemory.ThreadAllocations.Value;
-                if (currentThreadValue == stats)
-                {
-                    currentThreadValue.Allocations -= size;
-                    Sparrow.Utils.NativeMemory.FixupReleasesFromOtherThreads(currentThreadValue);
-                }
-                else
-                {
-                    Interlocked.Add(ref stats.ReleasesFromOtherThreads, size);
-                }
+                if (stats != null)
+                    Sparrow.Utils.NativeMemory.UpdateMemoryStatsForThread(stats, size);
 
                 Interlocked.Add(ref Sparrow.Utils.NativeMemory._totalAllocatedMemory, -size);
+
                 var p = new IntPtr(ptr);
                 if (PlatformDetails.RunningOnPosix)
                 {
