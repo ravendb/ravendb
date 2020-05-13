@@ -66,9 +66,7 @@ namespace Raven.Client.Documents.Session
             {
                 Timestamp = timestamp.EnsureUtc(),
                 Tag = tag,
-                Values = values is double[] arr
-                    ? arr
-                    : values.ToArray()
+                Values = values.ToArray()
             };
 
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
