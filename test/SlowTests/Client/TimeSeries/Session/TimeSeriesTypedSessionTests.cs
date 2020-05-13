@@ -4,7 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using FastTests;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
@@ -24,28 +27,28 @@ namespace SlowTests.Client.TimeSeries.Session
         {
         }
 
-        public class HeartRateMeasure : TimeSeriesEntry
-        {
-            public HeartRateMeasure()
-            {
-                Values = new double[1];
-            }
-
-            public double HeartRate { get => Values[0]; set => Values[0] = value; }
-        }
-
         public class StockPrice : TimeSeriesEntry
         {
+            public double Close { get => Values[0]; set => Values[0] = value; }
+            public double High { get => Values[1]; set => Values[1] = value; }
+            public double Low { get => Values[2]; set => Values[2] = value; }
+            public double Open { get => Values[3]; set => Values[3] = value; }
+            public double Volume { get => Values[4]; set => Values[4] = value; }
+
             public StockPrice()
             {
                 Values = new double[5];
             }
+        }
 
-            public double Open { get => Values[0]; set => Values[0] = value; }
-            public double Close { get => Values[1]; set => Values[1] = value; }
-            public double High { get => Values[2]; set => Values[2] = value; }
-            public double Low { get => Values[3]; set => Values[3] = value; }
-            public double Volume { get => Values[4]; set => Values[4] = value; }
+        public class HeartRateMeasure : TimeSeriesEntry
+        {
+            public double HeartRate { get => Values[0]; set => Values[0] = value; }
+
+            public HeartRateMeasure()
+            {
+                Values = new double[1];
+            }
         }
 
         [Fact]
@@ -199,6 +202,7 @@ namespace SlowTests.Client.TimeSeries.Session
         }
 
         
+
         [Fact]
         public unsafe void CanQueryTimeSeriesAggregation_DeclareSyntax_AllDocsQuery()
         {
@@ -232,7 +236,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult<HeartRateMeasure>>(@"
     declare timeseries out(u) 
     {
         from u.Heartrate between $start and $end
@@ -247,7 +251,6 @@ namespace SlowTests.Client.TimeSeries.Session
                         .AddParameter("end", baseline.AddDays(1).EnsureUtc());
 
                     var agg = query.First();
-
                     if (agg.Count != 3)
                     {
                         var db = GetDocumentDatabaseInstanceFor(store).Result;
@@ -283,11 +286,11 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     var val = agg.Results[0];
 
-                    Assert.Equal(59, val.First[0]);
-                    Assert.Equal(59, val.Min[0]);
+                    Assert.Equal(59, val.First.HeartRate);
+                    Assert.Equal(59, val.Min.HeartRate);
 
-                    Assert.Equal(69, val.Last[0]);
-                    Assert.Equal(79, val.Max[0]);
+                    Assert.Equal(69, val.Last.HeartRate);
+                    Assert.Equal(79, val.Max.HeartRate);
 
                     Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
@@ -295,7 +298,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-           [Fact]
+        [Fact]
         public void CanQueryTimeSeriesAggregation_NoSelectOrGroupBy()
         {
             using (var store = GetDocumentStore())
