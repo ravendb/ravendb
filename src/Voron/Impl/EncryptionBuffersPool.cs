@@ -4,14 +4,15 @@ using Sparrow.Binary;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Platform;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
 {
-    public unsafe class EncryptionBuffersPool : IDisposable, ILowMemoryHandler
+    public unsafe class EncryptionBuffersPool : ILowMemoryHandler
     {
+        public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
+
         private class NativeAllocation
         {
             public IntPtr Ptr;
@@ -20,7 +21,6 @@ namespace Voron.Impl
         }
 
         private readonly ConcurrentStack<NativeAllocation>[] _items;
-        private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
 
         public EncryptionBuffersPool()
         {
@@ -31,12 +31,6 @@ namespace Voron.Impl
             }
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
-
-            _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
-            {
-                ReleaseUnmanagedResources();
-                GC.SuppressFinalize(this);
-            });
         }
 
         public byte* Get(int size, out NativeMemory.ThreadStats thread)
@@ -76,7 +70,7 @@ namespace Voron.Impl
             }
 
             var index = Bits.MostSignificantBit(size);
-            _items[index].Push(new NativeAllocation()
+            _items[index].Push(new NativeAllocation
             {
                 Ptr = (IntPtr)ptr,
                 AllocatingThread = allocatingThread,
@@ -95,26 +89,11 @@ namespace Voron.Impl
             }
         }
 
-        public void Dispose()
-        {
-            _disposeOnceRunner.Dispose();
-        }
-
-        ~EncryptionBuffersPool()
-        {
-            try
-            {
-                Dispose();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-        }
-
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
             if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
                 return;
+
             ReleaseUnmanagedResources();
         }
 
