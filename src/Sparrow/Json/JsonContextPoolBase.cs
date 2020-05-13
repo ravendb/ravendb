@@ -345,12 +345,10 @@ namespace Sparrow.Json
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            var alreadyInLowMem = !LowMemoryFlag.Raise();
-
             if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
                 return;
 
-            if (alreadyInLowMem)
+            if (LowMemoryFlag.Raise() == false)
                 return;
 
             Interlocked.Increment(ref _generation);
