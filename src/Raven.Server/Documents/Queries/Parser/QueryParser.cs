@@ -1351,7 +1351,6 @@ namespace Raven.Server.Documents.Queries.Parser
                 source.Compound.RemoveAt(0);
             }
 
-
             tsf.Between = Scanner.TryScan("BETWEEN")
                 ? ReadTimeSeriesBetweenExpression(source)
                 : new TimeSeriesBetweenExpression(source, null, null);
@@ -1422,11 +1421,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScan("OFFSET"))
             {
-                if (Scanner.String(out var str) == false)
-                    ThrowInvalidQueryException($"Failed to parse string value after OFFSET in time series function '{name}'");
-
-                if (TimeSpan.TryParse(str, out var offset) == false)
-                    ThrowInvalidQueryException($"Failed to parse string '{str}' as TimeSpan, in OFFSET clause of time series function '{name}'");
+                if (Value(out var offset) == false)
+                    ThrowInvalidQueryException($"Failed to parse a value expression after OFFSET in time series function '{name}'");
 
                 tsf.Offset = offset;
             }

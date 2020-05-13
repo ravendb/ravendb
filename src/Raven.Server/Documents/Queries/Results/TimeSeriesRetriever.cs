@@ -50,14 +50,17 @@ namespace Raven.Server.Documents.Queries.Results
             _min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
             _max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
 
-            if (timeSeriesFunction.Offset.HasValue)
+            TimeSpan? offset = null;
+            if (timeSeriesFunction.Offset != null)
             {
-                _min = _min.Add(timeSeriesFunction.Offset.Value);
-                _max = _max.Add(timeSeriesFunction.Offset.Value);
+                offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
+
+                _min = _min.Add(offset.Value);
+                _max = _max.Add(offset.Value);
             }
 
             var collection = GetCollection(documentId);
-            var reader = new MultiReader(_context, documentId, source, collection, _min, _max, timeSeriesFunction.Offset);
+            var reader = new MultiReader(_context, documentId, source, collection, _min, _max, offset);
 
             long count = 0;
             var array = new DynamicJsonArray();
@@ -698,6 +701,22 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
             }
+        }
+
+        private TimeSpan GetOffset(ValueExpression offsetExpression, string name)
+        {
+            var val = offsetExpression.Value == ValueTokenType.String
+                ? offsetExpression.Token.Value
+                : offsetExpression.GetValue(_queryParameters);
+
+            if (val == null)
+                throw new InvalidOperationException("Unable to parse time series offset. Got null instead of a value");
+
+            if (!(val is LazyStringValue) && !(val is string) ||
+                TimeSpan.TryParse(val.ToString(), out var timeSpan) == false)
+                throw new InvalidOperationException($"Failed to parse object '{val}' as TimeSpan, in OFFSET clause of time series function '{name}'");
+
+            return timeSpan;
         }
 
         private string GetCollection(string documentId)
