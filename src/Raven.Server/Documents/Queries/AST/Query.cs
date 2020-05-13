@@ -401,14 +401,14 @@ namespace Raven.Server.Documents.Queries.AST
                     if (TryConsumeMatch(source, ref offset, "seconds") == false)
                         TryConsumeMatch(source, ref offset, "second");
 
-                    result = TimeSpan.FromSeconds(duration);
+                    result = TimeValue.FromSeconds((int)duration);
                     break;
                 case 'm':
                     if (TryConsumeMatch(source, ref offset, "minutes") ||
                         TryConsumeMatch(source, ref offset, "minute") ||
                         TryConsumeMatch(source, ref offset, "min"))
                     {
-                        result = TimeSpan.FromMinutes(duration);
+                        result = TimeValue.FromMinutes((int)duration);
                         break;
                     }
 
@@ -416,6 +416,7 @@ namespace Raven.Server.Documents.Queries.AST
                         TryConsumeMatch(source, ref offset, "milli") ||
                         TryConsumeMatch(source, ref offset, "milliseconds"))
                     {
+                        // TODO change to TimeValue.FromMilliseconds when RavenDB-14988 is fixed
                         result = TimeSpan.FromMilliseconds(duration);
                         break;
                     }
@@ -432,13 +433,13 @@ namespace Raven.Server.Documents.Queries.AST
                     if (TryConsumeMatch(source, ref offset, "hours") == false)
                         TryConsumeMatch(source, ref offset, "hour");
 
-                    result = TimeSpan.FromHours(duration);
+                    result = TimeValue.FromHours((int)duration);
                     break;
 
                 case 'd':
                     if (TryConsumeMatch(source, ref offset, "days") == false)
                         TryConsumeMatch(source, ref offset, "day");
-                    result = TimeSpan.FromDays(duration);
+                    result = TimeValue.FromDays((int)duration);
                     break;
 
                 case 'q':

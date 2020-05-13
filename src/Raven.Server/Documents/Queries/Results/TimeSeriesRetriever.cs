@@ -723,22 +723,22 @@ namespace Raven.Server.Documents.Queries.Results
                                                     $"was unable to read 'Last' expression '{timeSeriesFunction.Last}'");
                 }
 
-                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
-                max = stats.End == default
-                    ? DateTime.MaxValue
-                    : stats.End;
-
+                max = DateTime.MaxValue;
                 var timeFromLast = RangeGroup.ParseLastFromString(last);
-                min = max.Add(-timeFromLast);
+                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
+                min = stats.End.Add(-timeFromLast);
             }
 
             TimeSpan? offset = null;
             if (timeSeriesFunction.Offset != null)
             {
-                offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
+                var minWithOffset = min.Ticks + timeSeriesFunction.Offset.Value.Ticks;
+                var maxWithOffset = max.Ticks + timeSeriesFunction.Offset.Value.Ticks;
 
-                min = min.Add(offset.Value);
-                max = max.Add(offset.Value);
+                if (minWithOffset >= 0 && minWithOffset <= DateTime.MaxValue.Ticks)
+                    min = min.Add(timeSeriesFunction.Offset.Value);
+                if (maxWithOffset >= 0 && maxWithOffset <= DateTime.MaxValue.Ticks)
+                    max = max.Add(timeSeriesFunction.Offset.Value);
             }
 
 
