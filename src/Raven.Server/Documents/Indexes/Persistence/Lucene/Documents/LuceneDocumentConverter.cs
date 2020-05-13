@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         continue;
                 }
 
-                newFields += GetRegularFields(instance, indexField, value, indexContext);
+                newFields += GetRegularFields(instance, indexField, value, indexContext, out _);
             }
 
             return newFields;

@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
                 }
 
-                var numberOfCreatedFields = GetRegularFields(instance, field, value, indexContext);
+                var numberOfCreatedFields = GetRegularFields(instance, field, value, indexContext, out var shouldSkip);
 
                 newFields += numberOfCreatedFields;
 
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     }
                 }
 
-                if (reduceResult != null && numberOfCreatedFields > 0)
+                if (reduceResult != null && shouldSkip == false)
                 {
                     reduceResult[property.Key] = TypeConverter.ToBlittableSupportedType(value, flattenArrays: true);
                 }
