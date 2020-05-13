@@ -13,6 +13,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         public TimeSeriesEntry[] Results { get; set; }
     }
 
+    public class TimeSeriesRawResult<TValues> : TimeSeriesRawResult where TValues : TimeSeriesEntry
+    {
+        public new TValues[] Results { get; set; }
+    }
+
     public class TimeSeriesAggregationResult : TimeSeriesQueryResult
     {
         public TimeSeriesRangeAggregation[] Results { get; set; }
