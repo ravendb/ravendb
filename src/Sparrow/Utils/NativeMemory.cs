@@ -101,19 +101,9 @@ namespace Sparrow.Utils
         {
             Debug.Assert(ptr != null);
 
-            var currentThreadValue = ThreadAllocations.Value;
-
-            if (currentThreadValue == stats)
-            {
-                currentThreadValue.Allocations -= size;
-
-                FixupReleasesFromOtherThreads(currentThreadValue);
-            }
-            else
-            {
-                Interlocked.Add(ref stats.ReleasesFromOtherThreads, size);
-            }
+            UpdateMemoryStatsForThread(stats, size);
             Interlocked.Add(ref _totalAllocatedMemory, -size);
+
             Marshal.FreeHGlobal((IntPtr)ptr);
         }
 
@@ -170,13 +160,24 @@ namespace Sparrow.Utils
                                            $"Un-managed memory: {new Size(unmanagedMemory, SizeUnit.Bytes)}", e);
         }
 
-        internal static void FixupReleasesFromOtherThreads(ThreadStats thread)
+        internal static void UpdateMemoryStatsForThread(ThreadStats stats, long size)
         {
-            var released = thread.ReleasesFromOtherThreads;
-            if (released > 0)
+            var currentThreadValue = ThreadAllocations.Value;
+            if (currentThreadValue == stats)
             {
-                thread.Allocations -= released;
-                Interlocked.Add(ref thread.ReleasesFromOtherThreads, -released);
+                currentThreadValue.Allocations -= size;
+
+                // fix allocations with releases from other threads
+                var released = currentThreadValue.ReleasesFromOtherThreads;
+                if (released > 0)
+                {
+                    currentThreadValue.Allocations -= released;
+                    Interlocked.Add(ref currentThreadValue.ReleasesFromOtherThreads, -released);
+                }
+            }
+            else
+            {
+                Interlocked.Add(ref stats.ReleasesFromOtherThreads, size);
             }
         }
 

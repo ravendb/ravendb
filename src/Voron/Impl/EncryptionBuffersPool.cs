@@ -23,7 +23,6 @@ namespace Voron.Impl
         {
             public IntPtr Ptr;
             public long Size;
-            public NativeMemory.ThreadStats AllocatingThread;
         }
 
         private readonly ConcurrentStack<NativeAllocation>[] _items;
@@ -55,7 +54,8 @@ namespace Voron.Impl
 
             if (_items[index].TryPop(out var allocation))
             {
-                thread = allocation.AllocatingThread;
+                thread = NativeMemory.ThreadAllocations.Value;
+                thread.Allocations += size;
                 return (byte*)allocation.Ptr;
             }
 
@@ -72,16 +72,18 @@ namespace Voron.Impl
 
             if (size > _maxBufferSizeToKeepInBytes || LowMemoryNotification.Instance.LowMemoryState)
             {
-                // We don't want to pool large buffers / clear them up on low memory
+                // we don't want to pool large buffers / clear them up on low memory
                 PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
                 return;
             }
+
+            // updating the thread allocations since we released the memory back to the pool
+            NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
 
             var index = Bits.MostSignificantBit(size);
             _items[index].Push(new NativeAllocation
             {
                 Ptr = (IntPtr)ptr,
-                AllocatingThread = allocatingThread,
                 Size = size
             });
         }
@@ -92,7 +94,7 @@ namespace Voron.Impl
             {
                 while (stack.TryPop(out var allocation))
                 {
-                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory((byte*)allocation.Ptr, allocation.Size, allocation.AllocatingThread);
+                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory((byte*)allocation.Ptr, allocation.Size, null);
                 }
             }
         }
