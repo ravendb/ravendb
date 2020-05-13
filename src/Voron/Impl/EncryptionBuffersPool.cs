@@ -2,12 +2,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Platform;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
 
@@ -18,10 +20,14 @@ namespace Voron.Impl
         public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
 
         private readonly long _maxBufferSizeToKeepInBytes = new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+        private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
+        private long _generation;
+
+        public long Generation => _generation;
 
         private class NativeAllocation
         {
-            public IntPtr Ptr;
+            public byte* Ptr;
             public long Size;
         }
 
@@ -47,22 +53,22 @@ namespace Voron.Impl
             if (size > Constants.Size.Megabyte * 16)
             {
                 // We don't want to pool large buffers
+                
                 return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
             }
 
             var index = Bits.MostSignificantBit(size);
-
             if (_items[index].TryPop(out var allocation))
             {
                 thread = NativeMemory.ThreadAllocations.Value;
                 thread.Allocations += size;
-                return (byte*)allocation.Ptr;
+                return allocation.Ptr;
             }
 
             return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
         }
 
-        public void Return(byte* ptr, long size, NativeMemory.ThreadStats allocatingThread)
+        public void Return(byte* ptr, long size, NativeMemory.ThreadStats allocatingThread, long generation)
         {
             if (ptr == null)
                 return;
@@ -70,9 +76,11 @@ namespace Voron.Impl
             size = Bits.PowerOf2(size);
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
-            if (size > _maxBufferSizeToKeepInBytes || LowMemoryNotification.Instance.LowMemoryState)
+            if (size > _maxBufferSizeToKeepInBytes || 
+                _lowMemoryFlag.IsRaised() && generation < Generation)
             {
-                // we don't want to pool large buffers / clear them up on low memory
+                // - don't want to pool large buffers
+                // - release all the buffers that were created before we got the low memory event
                 PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
                 return;
             }
@@ -83,20 +91,9 @@ namespace Voron.Impl
             var index = Bits.MostSignificantBit(size);
             _items[index].Push(new NativeAllocation
             {
-                Ptr = (IntPtr)ptr,
+                Ptr = ptr,
                 Size = size
             });
-        }
-
-        public void ReleaseUnmanagedResources()
-        {
-            foreach (var stack in _items)
-            {
-                while (stack.TryPop(out var allocation))
-                {
-                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory((byte*)allocation.Ptr, allocation.Size, null);
-                }
-            }
         }
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
@@ -104,11 +101,23 @@ namespace Voron.Impl
             if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
                 return;
 
-            ReleaseUnmanagedResources();
+            if (_lowMemoryFlag.Raise() == false)
+                return;
+
+            Interlocked.Increment(ref _generation);
+
+            foreach (var stack in _items)
+            {
+                while (stack.TryPop(out var allocation))
+                {
+                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory(allocation.Ptr, allocation.Size, null);
+                }
+            }
         }
 
         public void LowMemoryOver()
         {
+            _lowMemoryFlag.Lower();
         }
 
         public EncryptionBufferStats GetStats()
