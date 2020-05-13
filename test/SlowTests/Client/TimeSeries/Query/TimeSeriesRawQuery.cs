@@ -5639,5 +5639,308 @@ select out(p)
                 }
             }
         }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WithOffset_AsQueryParameter_String()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    var person = new Person
+                    {
+                        Name = "Oren"
+                    };
+
+                    session.Store(person);
+
+                    var tsf = session.TimeSeriesFor(person, "HeartRate");
+
+                    tsf.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(2), new[] { 79d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(3), new[] { 69d }, "watches/sony");
+
+                    tsf.Append(baseline.AddHours(1).AddMinutes(1), new[] { 159d }, "watches/fitbit");
+                    tsf.Append(baseline.AddHours(1).AddMinutes(2), new[] { 179d }, "watches/apple");
+                    tsf.Append(baseline.AddHours(1).AddMinutes(3), new[] { 169d }, "watches/sony");
+
+                    tsf.Append(baseline.AddHours(2).AddMinutes(1), new[] { 259d }, "watches/fitbit");
+                    tsf.Append(baseline.AddHours(2).AddMinutes(2), new[] { 279d }, "watches/apple");
+                    tsf.Append(baseline.AddHours(2).AddMinutes(3), new[] { 269d }, "watches/sony");
+
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(1), new[] { 359d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(2), new[] { 379d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(3), new[] { 369d }, "watches/fitbit");
+
+                    tsf.Append(baseline.AddMonths(6).AddHours(1).AddMinutes(1), new[] { 459d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(6).AddHours(1).AddMinutes(2), new[] { 479d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(6).AddHours(1).AddMinutes(3), new[] { 469d }, "watches/fitbit");
+
+                    tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(1), new[] { 559d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(2), new[] { 579d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(3), new[] { 569d }, "watches/fitbit");
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+    group by '1h' 
+    select min(), max()
+    offset $offset
+}
+from People as p
+select out(p)
+")
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(6).EnsureUtc())
+                        .AddParameter("offset", "03:00");
+
+                    var agg = query.First();
+
+                    Assert.Equal(12, agg.Count);
+
+                    Assert.Equal(4, agg.Results.Length);
+
+                    var rangeAggregation = agg.Results[0];
+
+                    Assert.Equal(59, rangeAggregation.Min[0]);
+                    Assert.Equal(79, rangeAggregation.Max[0]);
+
+                    var offset = TimeSpan.FromHours(3);
+
+                    var expectedFrom = baseline.Add(offset);
+                    var expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+
+                    rangeAggregation = agg.Results[1];
+
+                    Assert.Equal(159, rangeAggregation.Min[0]);
+                    Assert.Equal(179, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddHours(1).Add(offset);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+
+                    rangeAggregation = agg.Results[2];
+
+                    Assert.Equal(259, rangeAggregation.Min[0]);
+                    Assert.Equal(279, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddHours(2).Add(offset);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+
+                    rangeAggregation = agg.Results[3];
+
+                    Assert.Equal(359, rangeAggregation.Min[0]);
+                    Assert.Equal(379, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddMonths(1).Add(offset);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WithOffset_AsQueryParameter_TimeSpan()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    var person = new Person
+                    {
+                        Name = "Oren"
+                    };
+
+                    session.Store(person);
+
+                    var tsf = session.TimeSeriesFor(person, "HeartRate");
+
+                    tsf.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(2), new[] { 79d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(3), new[] { 69d }, "watches/sony");
+
+                    tsf.Append(baseline.AddHours(1).AddMinutes(1), new[] { 159d }, "watches/fitbit");
+                    tsf.Append(baseline.AddHours(1).AddMinutes(2), new[] { 179d }, "watches/apple");
+                    tsf.Append(baseline.AddHours(1).AddMinutes(3), new[] { 169d }, "watches/sony");
+
+                    tsf.Append(baseline.AddHours(2).AddMinutes(1), new[] { 259d }, "watches/fitbit");
+                    tsf.Append(baseline.AddHours(2).AddMinutes(2), new[] { 279d }, "watches/apple");
+                    tsf.Append(baseline.AddHours(2).AddMinutes(3), new[] { 269d }, "watches/sony");
+
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(1), new[] { 359d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(2), new[] { 379d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(3), new[] { 369d }, "watches/fitbit");
+
+                    tsf.Append(baseline.AddMonths(6).AddHours(1).AddMinutes(1), new[] { 459d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(6).AddHours(1).AddMinutes(2), new[] { 479d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(6).AddHours(1).AddMinutes(3), new[] { 469d }, "watches/fitbit");
+
+                    tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(1), new[] { 559d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(2), new[] { 579d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(3), new[] { 569d }, "watches/fitbit");
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var offset = TimeZoneInfo.Local.BaseUtcOffset;
+
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+    group by '1h' 
+    select min(), max()
+    offset $offset
+}
+from People as p
+select out(p)
+")
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(6).EnsureUtc())
+                        .AddParameter("offset", offset);
+
+                    var agg = query.First();
+
+                    Assert.Equal(12, agg.Count);
+
+                    Assert.Equal(4, agg.Results.Length);
+
+                    var rangeAggregation = agg.Results[0];
+
+                    Assert.Equal(59, rangeAggregation.Min[0]);
+                    Assert.Equal(79, rangeAggregation.Max[0]);
+
+                    var expectedFrom = baseline.Add(offset);
+                    var expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+
+                    rangeAggregation = agg.Results[1];
+
+                    Assert.Equal(159, rangeAggregation.Min[0]);
+                    Assert.Equal(179, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddHours(1).Add(offset);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+
+                    rangeAggregation = agg.Results[2];
+
+                    Assert.Equal(259, rangeAggregation.Min[0]);
+                    Assert.Equal(279, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddHours(2).Add(offset);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+
+                    rangeAggregation = agg.Results[3];
+
+                    Assert.Equal(359, rangeAggregation.Min[0]);
+                    Assert.Equal(379, rangeAggregation.Max[0]);
+
+                    expectedFrom = baseline.AddMonths(1).Add(offset);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, rangeAggregation.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(expectedTo, rangeAggregation.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.From.Kind);
+                    Assert.Equal(DateTimeKind.Unspecified, rangeAggregation.To.Kind);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowOnBadOffset()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    var person = new Person
+                    {
+                        Name = "Oren"
+                    };
+
+                    session.Store(person);
+
+                    var tsf = session.TimeSeriesFor(person, "HeartRate");
+
+                    tsf.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(2), new[] { 79d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(3), new[] { 69d }, "watches/sony");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var offset = 2;
+
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate 
+    between $start and $end
+    group by '1h' 
+    select min(), max()
+    offset $offset
+}
+from People as p
+select out(p)")
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(6).EnsureUtc())
+                        .AddParameter("offset", offset);
+
+                    var ex = Assert.Throws<RavenException>(() => query.ToList());
+
+                    Assert.Contains($"Failed to parse object '{offset}' as TimeSpan", ex.Message);
+                }
+            }
+        }
     }
 }
