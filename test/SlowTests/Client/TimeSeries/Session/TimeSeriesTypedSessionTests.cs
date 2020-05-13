@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Esprima.Ast;
 using FastTests;
 using Newtonsoft.Json;
@@ -77,6 +78,39 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     var val = session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate")
                         .Get().Single();
+
+                    Assert.Equal(59d , val.HeartRate);
+                    Assert.Equal("watches/fitbit", val.Tag);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanCreateSimpleTimeSeriesAsync()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new { Name = "Oren" }, "users/ayende");
+                    var measure = new HeartRateMeasure
+                    {
+                        Timestamp = baseline.AddMinutes(1),
+                        HeartRate = 59d,
+                        Tag = "watches/fitbit"
+                    };
+                    session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate").Append(measure);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var result = await session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate").GetAsync();
+                    var val = result.Single();
 
                     Assert.Equal(59d , val.HeartRate);
                     Assert.Equal("watches/fitbit", val.Tag);
