@@ -140,7 +140,7 @@ namespace EmbeddedTests
             Assert.Equal(typeof(TimeoutException), e.InnerException.GetType());
         }
 
-        private static DynamicJsonValue CreateDummyDump(int count)
+        internal static DynamicJsonValue CreateDummyDump(int count)
         {
             var docsList = new List<DynamicJsonValue>();
 

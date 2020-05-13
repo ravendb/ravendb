@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using EmbeddedTests;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
@@ -11,6 +14,8 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -434,6 +439,51 @@ namespace SlowTests.Client
                 }, 0);
 
                 Assert.Equal(0, val);
+            }
+        }
+
+        [Fact]
+        public async Task CanImportCompareExchangeWithoutMetadata()
+        {
+            var dummyDump = SmugglerTests.CreateDummyDump(1);
+            var key = "EGR";
+            var value = 322;
+            var compareExchangeList = new List<DynamicJsonValue>();
+            compareExchangeList.Add(new DynamicJsonValue()
+            {
+                ["Key"] = key,
+                ["Value"] = "{\"Object\":" + value + "}"
+            });
+            dummyDump["CompareExchange"] = new DynamicJsonArray(compareExchangeList);
+            using (var store = GetDocumentStore())
+            {
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                using (var bjro = ctx.ReadObject(dummyDump, "dump"))
+                using (var ms = new MemoryStream())
+                using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
+                {
+                    bjro.WriteJsonTo(zipStream);
+                    zipStream.Flush();
+                    ms.Position = 0;
+
+                    var operation = await store.Smuggler.ForDatabase(store.Database).ImportAsync(new DatabaseSmugglerImportOptions
+                    {
+                        OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Identities | DatabaseItemType.CompareExchange
+                    }, ms);
+
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                }
+
+                var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                Assert.Equal(1, stats.CountOfCompareExchange);
+
+                using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    var res = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(key);
+                    Assert.NotNull(res.Metadata);
+                    Assert.Empty(res.Metadata);
+                    Assert.Equal(value, res.Value);
+                }
             }
         }
     }
