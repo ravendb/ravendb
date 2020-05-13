@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
@@ -360,6 +362,79 @@ namespace SlowTests.Client
             var finalStats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
             var realNumOfCmpXchg = finalStats.CountOfCompareExchange;
             Assert.Equal(0, realNumOfCmpXchg);
+        }
+
+        [Fact]
+        public async Task CanAddMetadataToSimpleCompareExchange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var str = "Test";
+                var num = 123.456;
+                var key = "egr/test/cmp/x/change/simple";
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, 322);
+                    result.Metadata["TestString"] = str;
+                    result.Metadata["TestNumber"] = num;
+                    await session.SaveChangesAsync();
+                }
+
+                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<int>(key));
+                Assert.NotNull(res.Metadata);
+                Assert.Equal(322, res.Value);
+                Assert.Equal(str, res.Metadata["TestString"]);
+                Assert.Equal(num, res.Metadata["TestNumber"]);
+
+                var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                Assert.Equal(1, stats.CountOfCompareExchange);
+            }
+        }
+
+        [Fact]
+        public async Task CanAddMetadataToCompareExchangeAndWaitForExpiration()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var user = new User
+                {
+                    Name = "EGOR"
+                };
+
+                var dateTime = DateTime.Now.AddSeconds(2);
+                var str = "Test";
+                var num = 123.456;
+                var key = "egr/test/cmp/x/change";
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
+                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+                    result.Metadata["TestString"] = str;
+                    result.Metadata["TestNumber"] = num;
+                    await session.SaveChangesAsync();
+                }
+
+                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>(key));
+                Assert.Equal(user.Name, res.Value.Name);
+                Assert.NotNull(res.Metadata);
+                Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
+                Assert.Equal(str, res.Metadata["TestString"]);
+                Assert.Equal(num, res.Metadata["TestNumber"]);
+
+                var val = await WaitForValueAsync(async () =>
+                {
+                    var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                    return stats.CountOfCompareExchange;
+                }, 0);
+
+                Assert.Equal(0, val);
+            }
         }
     }
 }

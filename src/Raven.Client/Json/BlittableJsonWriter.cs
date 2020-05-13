@@ -87,15 +87,7 @@ namespace Raven.Client.Json
             else if (_documentInfo.MetadataInstance != null)
             {
                 _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
-                _manualBlittableJsonDocumentBuilder.StartWriteObject();
-
-                foreach (var kvp in _documentInfo.MetadataInstance)
-                {
-                    _manualBlittableJsonDocumentBuilder.WritePropertyName(kvp.Key);
-
-                    WritePropertyValue(kvp.Key, kvp.Value);
-                }
-                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
+                WriteMetadataInternal(_documentInfo.MetadataInstance);
             }
             else if (_documentInfo.Collection != null)
             {
@@ -113,6 +105,20 @@ namespace Raven.Client.Json
 
                 _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
             }
+        }
+
+        internal void WriteMetadataInternal(IMetadataDictionary metadata)
+        {
+            _manualBlittableJsonDocumentBuilder.StartWriteObject();
+
+            foreach (var kvp in metadata)
+            {
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(kvp.Key);
+
+                WritePropertyValue(kvp.Key, kvp.Value);
+            }
+
+            _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
         }
 
         private void WritePropertyValue(BlittableJsonReaderObject.PropertyDetails prop)

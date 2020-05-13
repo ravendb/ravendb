@@ -9,6 +9,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -49,7 +50,7 @@ namespace Raven.Client.Documents.Session
             return TryGetCompareExchangeValueFromSession(key, out _);
         }
 
-        public void CreateCompareExchangeValue<T>(string key, T item)
+        public CompareExchangeValue<T> CreateCompareExchangeValue<T>(string key, T item)
         {
             if (key is null)
                 throw new ArgumentNullException(nameof(key));
@@ -57,7 +58,7 @@ namespace Raven.Client.Documents.Session
             if (TryGetCompareExchangeValueFromSession(key, out var sessionValue) == false)
                 _state[key] = sessionValue = new CompareExchangeSessionValue(key, 0, CompareExchangeSessionValue.CompareExchangeValueState.None);
 
-            sessionValue.Create(item);
+            return sessionValue.Create(item);
         }
 
         public void DeleteCompareExchangeValue<T>(CompareExchangeValue<T> item)
@@ -308,7 +309,7 @@ namespace Raven.Client.Documents.Session
                 }
             }
 
-            internal void Create<T>(T item)
+            internal CompareExchangeValue<T> Create<T>(T item)
             {
                 AssertState();
 
@@ -316,8 +317,10 @@ namespace Raven.Client.Documents.Session
                     throw new InvalidOperationException($"The compare exchange value with key '{_key}' is already tracked.");
 
                 _index = 0;
-                _value = new CompareExchangeValue<T>(_key, _index, item);
+                var value = new CompareExchangeValue<T>(_key, _index, item);
+                _value = value;
                 _state = CompareExchangeValueState.Created;
+                return value;
             }
 
             internal void Delete(long index)
@@ -353,9 +356,11 @@ namespace Raven.Client.Documents.Session
 
                         var entity = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value.Value, conventions, context, jsonSerializer, documentInfo: null, removeIdentityProperty: false);
                         var entityJson = entity as BlittableJsonReaderObject;
+                        var metadata = PrepareMetadata(_key, _value.Metadata, context);
                         BlittableJsonReaderObject entityToInsert = null;
+
                         if (entityJson == null)
-                            entityJson = entityToInsert = ConvertEntity(_key, entity);
+                            entityJson = entityToInsert = ConvertEntity(_key, entity, metadata);
 
                         var newValue = new CompareExchangeValue<BlittableJsonReaderObject>(_key, _index, entityJson);
 
@@ -366,7 +371,7 @@ namespace Raven.Client.Documents.Session
                             return null;
 
                         if (entityToInsert == null)
-                            entityToInsert = ConvertEntity(_key, entity);
+                            entityToInsert = ConvertEntity(_key, entity, metadata);
 
                         return new PutCompareExchangeCommandData(newValue.Key, entityToInsert, newValue.Index);
                     case CompareExchangeValueState.Deleted:
@@ -377,12 +382,13 @@ namespace Raven.Client.Documents.Session
                         throw new NotSupportedException($"Not supprted state: '{_state}'");
                 }
 
-                BlittableJsonReaderObject ConvertEntity(string key, object entity)
+                BlittableJsonReaderObject ConvertEntity(string key, object entity, BlittableJsonReaderObject metadata)
                 {
                     var djv = new DynamicJsonValue
                     {
                         [Constants.CompareExchange.ObjectFieldName] = entity
                     };
+                    djv[Constants.Documents.Metadata.Key] = metadata;
                     return context.ReadObject(djv, key);
                 }
             }
@@ -439,6 +445,30 @@ namespace Raven.Client.Documents.Session
                         EntityToBlittable.PopulateEntity(_value.Value, value.Value, jsonSerializer);
                 }
             }
+
+            internal static BlittableJsonReaderObject PrepareMetadata(string key, IMetadataDictionary metadataDictionary, JsonOperationContext context)
+            {
+                if (metadataDictionary.ContainsKey(Constants.Documents.Metadata.Expires))
+                {
+                    if (metadataDictionary.TryGetValue(Constants.Documents.Metadata.Expires, out object obj) == false)
+                        ThrowInvalidExpiresMetadata($"The {Constants.Documents.Metadata.Expires} key of metadata for compare exchange '{key}' should have value.");
+                    if (obj == null)
+                        ThrowInvalidExpiresMetadata($"The value of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{key}' is null.");
+                    if (obj is DateTime == false && obj is string == false)
+                        ThrowInvalidExpiresMetadata($"The type of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{key}' is not valid. Use the following type: {nameof(DateTime)} or {nameof(String)}");
+                }
+
+                using var writer = new BlittableJsonWriter(context);
+                writer.WriteMetadataInternal(metadataDictionary);
+                writer.FinalizeDocument();
+                var reader = writer.CreateReader();
+                return reader;
+            }
+
+            private static void ThrowInvalidExpiresMetadata(string message)
+            {
+                throw new ArgumentException(message);
+            }
         }
     }
 
@@ -448,7 +478,7 @@ namespace Raven.Client.Documents.Session
 
         void DeleteCompareExchangeValue<T>(CompareExchangeValue<T> item);
 
-        void CreateCompareExchangeValue<T>(string key, T value);
+        CompareExchangeValue<T> CreateCompareExchangeValue<T>(string key, T value);
     }
 
     public interface IClusterTransactionOperations : IClusterTransactionOperationsBase

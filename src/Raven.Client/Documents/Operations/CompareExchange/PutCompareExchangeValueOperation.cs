@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
-using System.Web;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -17,17 +16,19 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         private readonly string _key;
         private readonly T _value;
         private readonly long _index;
+        private readonly IMetadataDictionary _metadata;
 
-        public PutCompareExchangeValueOperation(string key, T value, long index)
+        public PutCompareExchangeValueOperation(string key, T value, long index, IMetadataDictionary metadata = null)
         {
             _key = key;
             _value = value;
             _index = index;
+            _metadata = metadata;
         }
 
         public RavenCommand<CompareExchangeResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PutCompareExchangeValueCommand(_key, _value, _index, conventions);
+            return new PutCompareExchangeValueCommand(_key, _value, _index, _metadata, conventions);
         }
 
         private class PutCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>, IRaftCommand
@@ -36,8 +37,9 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             private readonly T _value;
             private readonly long _index;
             private readonly DocumentConventions _conventions;
+            private readonly IMetadataDictionary _metadata;
 
-            public PutCompareExchangeValueCommand(string key, T value, long index, DocumentConventions conventions = null)
+            public PutCompareExchangeValueCommand(string key, T value, long index, IMetadataDictionary metadata = null, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -47,6 +49,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 _key = key;
                 _value = value;
                 _index = index;
+                _metadata = metadata ?? new MetadataAsDictionary();
                 _conventions = conventions ?? DocumentConventions.Default;
             }
 
@@ -59,7 +62,10 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 {
                     [Constants.CompareExchange.ObjectFieldName] = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value, _conventions, ctx, _conventions.CreateSerializer(), documentInfo: null, removeIdentityProperty: false)
                 };
-               var blittable = ctx.ReadObject(djv,_key);
+
+                var metadata = ClusterTransactionOperationsBase.CompareExchangeSessionValue.PrepareMetadata(_key, _metadata, ctx);
+                djv[Constants.Documents.Metadata.Key] = metadata;
+                var blittable = ctx.ReadObject(djv, _key);
 
                 var request = new HttpRequestMessage
                 {

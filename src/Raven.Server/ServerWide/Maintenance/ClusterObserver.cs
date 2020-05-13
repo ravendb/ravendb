@@ -14,7 +14,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
@@ -97,6 +96,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly long _rotateGraceTime;
         private long _lastIndexCleanupTimeInTicks;
         private long _lastTombstonesCleanupTimeInTicks;
+        private long _lastExpiredCompareExchangeCleanupTimeInTicks;
         private bool _hasMoreTombstones = false;
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
@@ -184,6 +184,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     var now = SystemTime.UtcNow;
                     var cleanupIndexes = now.Ticks - _lastIndexCleanupTimeInTicks >= _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks;
                     var cleanupTombstones = now.Ticks - _lastTombstonesCleanupTimeInTicks >= _server.Configuration.Cluster.CompareExchangeTombstonesCleanupInterval.AsTimeSpan.Ticks;
+                    var cleanupExpiredCompareExchange = now.Ticks - _lastExpiredCompareExchangeCleanupTimeInTicks >= _server.Configuration.Cluster.ExpiredCompareExchangeCleanupInterval.AsTimeSpan.Ticks;
 
                     var clusterTopology = _server.GetClusterTopology(context);
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
@@ -278,6 +279,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
                     if (cleanupTombstones && _hasMoreTombstones == false)
                         _lastTombstonesCleanupTimeInTicks = now.Ticks;
+
+                    if (cleanupExpiredCompareExchange)
+                    {
+                        if (await RemoveExpiredCompareExchange(context, now.Ticks) == false)
+                            _lastExpiredCompareExchangeCleanupTimeInTicks = now.Ticks;
+                    }
                 }
 
                 foreach (var command in updateCommands)
@@ -529,6 +536,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
 
             return CompareExchangeTombstonesCleanupState.HasMoreTombstones;
+        }
+
+        private async Task<bool> RemoveExpiredCompareExchange(TransactionOperationContext context, long nowTicks)
+        {
+            const int batchSize = 1024;
+            if (CompareExchangeExpirationStorage.HasExpired(context, nowTicks) == false)
+                return false;
+
+            var result = await _server.SendToLeaderAsync(new DeleteExpiredCompareExchangeCommand(nowTicks, batchSize, RaftIdGenerator.DontCareId));
+            await _server.Cluster.WaitForIndexNotification(result.Index);
+            return (bool)result.Result;
         }
 
         private long? CleanUpDatabaseValues(DatabaseObservationState state)

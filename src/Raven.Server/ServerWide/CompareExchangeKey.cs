@@ -18,6 +18,7 @@ namespace Raven.Server.ServerWide
         }
 
         private string _key;
+        private const char _separator = '/';
 
         private readonly int _prefixLength;
 
@@ -44,7 +45,13 @@ namespace Raven.Server.ServerWide
 
         public static string GetStorageKey(string database, string key)
         {
-            return (database + "/" + key).ToLowerInvariant();
+            return $"{database}{_separator}{key}".ToLowerInvariant();
+        }
+
+        public static (string Database, string Key) SplitStorageKey(string storageKey)
+        {
+            var strArray = storageKey.Split(_separator, 2);
+            return (strArray[0], strArray[1]);
         }
     }
 }
