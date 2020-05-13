@@ -23,7 +23,6 @@ namespace Voron.Impl
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private readonly ConcurrentStack<NativeAllocation>[] _items;
         private readonly Timer _cleanupTimer;
-        private readonly TimeSpan _allocationsRebuildInterval = TimeSpan.FromMinutes(15);
         private DateTime _lastAllocationsRebuild = DateTime.UtcNow;
         private long _generation;
         private bool _hasDisposedAllocations;
@@ -136,6 +135,12 @@ namespace Voron.Impl
 
                 foreach (var allocation in nativeAllocations)
                 {
+                    if (allocation.InUse.IsRaised())
+                    {
+                        // not in the pool or disposed
+                        continue;
+                    }
+
                     totalStackSize += allocation.Size;
                     numberOfItems++;
                 }
@@ -166,6 +171,7 @@ namespace Voron.Impl
             {
                 var currentTime = DateTime.UtcNow;
                 var idleTime = TimeSpan.FromMinutes(10);
+                var allocationsRebuildInterval = TimeSpan.FromMinutes(15);
 
                 foreach (var stack in _items)
                 {
@@ -189,7 +195,7 @@ namespace Voron.Impl
                     }
                 }
 
-                var allocationsRebuildNeeded = currentTime - _lastAllocationsRebuild >= _allocationsRebuildInterval;
+                var allocationsRebuildNeeded = currentTime - _lastAllocationsRebuild >= allocationsRebuildInterval;
                 if (allocationsRebuildNeeded && _hasDisposedAllocations)
                 {
                     _lastAllocationsRebuild = currentTime;
