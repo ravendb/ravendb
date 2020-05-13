@@ -351,16 +351,14 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        Task<IEnumerable<TValues>> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? @from, DateTime? to, int start, int pageSize, CancellationToken token)
+        Task<IEnumerable<TValues>> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
-            throw new NotImplementedException();
+            return GetAsyncInternal<TValues>(from, to, start, pageSize, token);
         }
 
         public void Append(TValues entry)
         {
-            throw new NotImplementedException();
+            Append(entry.Timestamp, entry.Values, entry.Tag);
         }
-
-       
     }
 }
