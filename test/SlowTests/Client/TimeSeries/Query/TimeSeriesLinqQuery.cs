@@ -2596,6 +2596,89 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
+        [Fact]
+        public void CanQueryTimeSeriesRaw_WithOffset_BetweenDateTimeMinAndDateTimeMax()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = new DateTime(2019, 1, 1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 30,
+                    }, "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1", "HeartRate");
+
+                    tsf.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(2), new[] { 79d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(3), new[] { 69d }, "watches/sony");
+
+                    tsf.Append(baseline.AddHours(1).AddMinutes(1), new[] { 159d }, "watches/fitbit");
+                    tsf.Append(baseline.AddHours(1).AddMinutes(2), new[] { 179d }, "watches/apple");
+                    tsf.Append(baseline.AddHours(1).AddMinutes(3), new[] { 169d }, "watches/sony");
+
+                    tsf.Append(baseline.AddDays(2).AddMinutes(1), new[] { 259d }, "watches/fitbit");
+                    tsf.Append(baseline.AddDays(2).AddMinutes(2), new[] { 279d }, "watches/apple");
+                    tsf.Append(baseline.AddDays(2).AddMinutes(3), new[] { 269d }, "watches/sony");
+
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(1), new[] { 559d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(2), new[] { 579d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(6).AddMinutes(3), new[] { 569d }, "watches/fitbit");
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var offset = TimeZoneInfo.Local.BaseUtcOffset;
+                    
+                    var query = session.Query<Person>()
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
+                            .Offset(offset)
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(12, result.Count);
+
+                    var baselineWithOffset = baseline.Add(offset);
+
+                    Assert.Equal(baselineWithOffset.AddMinutes(1), result.Results[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[0].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddMinutes(2), result.Results[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[1].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddMinutes(3), result.Results[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[2].Timestamp.Kind);
+
+                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(1), result.Results[3].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[3].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(2), result.Results[4].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[4].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddHours(1).AddMinutes(3), result.Results[5].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[5].Timestamp.Kind);
+
+                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(1), result.Results[6].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[6].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(2), result.Results[7].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[7].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddDays(2).AddMinutes(3), result.Results[8].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[8].Timestamp.Kind);
+
+                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(1), result.Results[9].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[9].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(2), result.Results[10].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[10].Timestamp.Kind);
+                    Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(3), result.Results[11].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTimeKind.Unspecified, result.Results[11].Timestamp.Kind);
+                }
+            }
+        }
+
         [Fact (Skip = "RavenDB-14988")]
         public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
         {
@@ -3186,6 +3269,60 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(expected, result.Count);
                     Assert.Equal(3, result.Results.Length);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesRaw_UsingLast_WithOffset()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i <= totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+
+                using (var session = store.OpenSession())
+                {
+                    var offset = TimeZoneInfo.Local.BaseUtcOffset;
+
+                    var result = session.Query<Person>()
+                        .Where(p => p.Id == id)
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", TimeValue.FromHours(12))
+                            .Offset(offset)
+                            .ToList())
+                        .First();
+
+
+                    var expectedInitialTimestamp = baseline.Add(offset).AddDays(3).AddHours(-12);
+                    var expectedInitialValueValue = totalMinutes - TimeSpan.FromHours(12).TotalMinutes;
+                    var expectedCount = totalMinutes - expectedInitialValueValue + 1;
+
+                    Assert.Equal(expectedCount, result.Count);
+
+                    for (int i = 0; i < expectedCount; i++)
+                    {
+                        Assert.Equal(expectedInitialValueValue + i, result.Results[i].Value);
+                        Assert.Equal(expectedInitialTimestamp.AddMinutes(i), result.Results[i].Timestamp);
+                    }
                 }
             }
         }
