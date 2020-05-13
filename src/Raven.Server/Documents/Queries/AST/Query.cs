@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Queries.AST
         public ValueExpression GroupBy;
         public List<(QueryExpression, StringSegment?)> Select;
         public StringSegment? LoadTagAs;
-        public TimeSpan? Offset;
+        public ValueExpression Offset;
     }
 
     public unsafe struct RangeGroup
