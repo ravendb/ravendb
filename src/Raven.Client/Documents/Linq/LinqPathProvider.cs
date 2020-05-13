@@ -498,8 +498,8 @@ namespace Raven.Client.Documents.Linq
                 mce.Method.DeclaringType == typeof(ITimeSeriesAggregationQueryable) ||
                 mce.Method.ReturnType == typeof(ITimeSeriesQueryable)) // not a valid TimeSeries call expression
             {
-                if (mce.Method.ReturnType != typeof(TimeSeriesRawResult) && 
-                    mce.Method.ReturnType != typeof(TimeSeriesAggregationResult))
+                if (mce.Method.ReturnType.IsSubclassOf(typeof(TimeSeriesRawResult)) == false && 
+                    mce.Method.ReturnType.IsSubclassOf(typeof(TimeSeriesAggregationResult)) == false)
                     ThrowInvalidTimeSeriesReturnType(mce.Method.ReturnType);
 
                 return true;
