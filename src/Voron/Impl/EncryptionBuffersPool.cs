@@ -17,6 +17,8 @@ namespace Voron.Impl
     {
         public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
 
+        private readonly long _maxBufferSizeToKeepInBytes = new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+
         private class NativeAllocation
         {
             public IntPtr Ptr;
@@ -28,7 +30,9 @@ namespace Voron.Impl
 
         public EncryptionBuffersPool()
         {
-            _items = new ConcurrentStack<NativeAllocation>[32];
+            var numberOfSlots = Bits.MostSignificantBit(_maxBufferSizeToKeepInBytes) + 1;
+            _items = new ConcurrentStack<NativeAllocation>[numberOfSlots];
+
             for (int i = 0; i < _items.Length; i++)
             {
                 _items[i] = new ConcurrentStack<NativeAllocation>();
@@ -66,7 +70,7 @@ namespace Voron.Impl
             size = Bits.PowerOf2(size);
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
-            if (size > Constants.Size.Megabyte * 16 || LowMemoryNotification.Instance.LowMemoryState)
+            if (size > _maxBufferSizeToKeepInBytes || LowMemoryNotification.Instance.LowMemoryState)
             {
                 // We don't want to pool large buffers / clear them up on low memory
                 PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
