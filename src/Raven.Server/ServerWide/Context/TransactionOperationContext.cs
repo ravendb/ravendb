@@ -140,11 +140,11 @@ namespace Raven.Server.ServerWide.Context
             Allocator.Dispose();
         }
 
-        protected internal override void Reset(bool forceResetLongLivedAllocator = false)
+        protected internal override void Reset(bool forceResetLongLivedAllocator = false, bool releaseAllocatedStringValues = false)
         {
             CloseTransaction();
 
-            base.Reset(forceResetLongLivedAllocator);
+            base.Reset(forceResetLongLivedAllocator, releaseAllocatedStringValues);
 
             Allocator.Reset();
         }

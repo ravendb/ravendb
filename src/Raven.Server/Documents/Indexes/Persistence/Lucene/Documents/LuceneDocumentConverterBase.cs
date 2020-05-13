@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private readonly Field _storeValueField;
 
-        protected readonly ConversionScope Scope = new ConversionScope();
+        protected readonly ConversionScope Scope;
 
         private readonly Dictionary<int, CachedFieldItem<Field>> _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>(NumericEqualityComparer.BoxedInstanceInt32);
 
@@ -127,6 +127,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _keyFieldName = keyFieldName ?? (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
             _storeValue = storeValue;
             _storeValueField = new Field(storeValueFieldName, new byte[0], 0, 0, Field.Store.YES);
+
+            Scope = new ConversionScope(this);
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -159,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         ///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
         ///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
         /// </summary>
-        public int GetRegularFields<T>(T instance, IndexField field, object value, JsonOperationContext indexContext, bool nestedArray = false) where T : ILuceneDocumentWrapper
+        public int GetRegularFields<T>(T instance, IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, bool nestedArray = false) where T : ILuceneDocumentWrapper
         {
             var path = field.Name;
 
@@ -196,7 +198,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var storage = field.Storage.GetLuceneValue();
             var termVector = field.TermVector.GetLuceneValue();
 
+            shouldSkip = false;
             int newFields = 0;
+
+            if (_storeValue && indexing == Field.Index.NO && storage == Field.Store.NO)
+                return newFields;
 
             if (valueType == ValueType.Null)
             {
@@ -215,6 +221,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     newFields++;
                 }
 
+                shouldSkip = newFields == 0;
                 return newFields;
             }
 
@@ -318,7 +325,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var boostedValue = (BoostedValue)value;
 
-                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext);
+                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext, out _);
                 newFields += boostedFields;
 
                 var fields = instance.GetFields();
@@ -349,7 +356,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     _multipleItemsSameFieldCount.Add(count++);
 
-                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, nestedArray: true);
+                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, out _, nestedArray: true);
 
                     _multipleItemsSameFieldCount.RemoveAt(_multipleItemsSameFieldCount.Count - 1);
                 }
@@ -403,7 +410,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (!(val is DynamicJsonValue json))
                 {
-                    return GetRegularFields(instance, field, val, indexContext, nestedArray);
+                    return GetRegularFields(instance, field, val, indexContext, out _, nestedArray);
                 }
 
                 foreach (var jsonField in GetComplexObjectFields(path, Scope.CreateJson(json, indexContext), storage, indexing, termVector))
@@ -815,6 +822,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             private readonly LinkedList<BlittableJsonReaderObject> _jsons = new LinkedList<BlittableJsonReaderObject>();
             private readonly LinkedList<BlittableObjectReader> _readers = new LinkedList<BlittableObjectReader>();
+            private readonly LuceneDocumentConverterBase _parent;
+
+            private static readonly byte[] EmptyBuffer = Array.Empty<byte>();
+
+            public ConversionScope(LuceneDocumentConverterBase parent)
+            {
+                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            }
 
             public BlittableJsonReaderObject CreateJson(DynamicJsonValue djv, JsonOperationContext context)
             {
@@ -827,6 +842,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             public void Dispose()
             {
+                if (_parent._storeValue)
+                    _parent._storeValueField.SetValue(EmptyBuffer);
+
                 if (_jsons.Count > 0)
                 {
                     foreach (var json in _jsons)

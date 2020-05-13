@@ -58,6 +58,10 @@ namespace Sparrow.Json
         private int _numberOfAllocatedStringsValues;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
 
+        private int _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval;
+        private DateTime _lastAllocatedStringValueTime;
+        private static readonly TimeSpan _allocatedStringValuesCheckInterval = TimeSpan.FromMinutes(1);
+
         /// <summary>
         /// This flag means that this should be disposed, usually because we exceeded the maximum
         /// amount of memory budget we have and need to return it to the system
@@ -104,6 +108,8 @@ namespace Sparrow.Json
             if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
+                _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval = Math.Max(_highestNumberOfReusedAllocatedStringsValuesInCurrentInterval, _numberOfAllocatedStringsValues);
+
                 lazyStringValue.Renew(str, ptr, size);
                 return lazyStringValue;
             }
@@ -113,7 +119,10 @@ namespace Sparrow.Json
             {
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;
+
+                _lastAllocatedStringValueTime = DateTime.UtcNow;
             }
+
             return allocateStringValue;
         }
 
@@ -131,7 +140,7 @@ namespace Sparrow.Json
 
         public static JsonOperationContext ShortTermSingleUse()
         {
-            return new JsonOperationContext(4096, 1024, 32 * 1024, SharedMultipleUseFlag.None);
+            return new JsonOperationContext(4096, 1024, 8 * 1024, SharedMultipleUseFlag.None);
         }
 
         public JsonOperationContext(int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
@@ -959,7 +968,7 @@ namespace Sparrow.Json
             }
         }
 
-        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
+        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false, bool releaseAllocatedStringValues = false)
         {
             if (_tempBuffer != null && _tempBuffer.Address != null)
             {
@@ -998,6 +1007,20 @@ namespace Sparrow.Json
                 _allocateStringValues[i].Reset();
 
             _numberOfAllocatedStringsValues = 0;
+
+            if (releaseAllocatedStringValues)
+            {
+                var now = DateTime.UtcNow;
+                if (now - _lastAllocatedStringValueTime >= _allocatedStringValuesCheckInterval)
+                {
+                    _lastAllocatedStringValueTime = now;
+                    var halfOfAllocatedStringValues = _allocateStringValues.Count / 2;
+                    if (_highestNumberOfReusedAllocatedStringsValuesInCurrentInterval <= halfOfAllocatedStringValues)
+                        _allocateStringValues.Trim(halfOfAllocatedStringValues);
+
+                    _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval = 0;
+                }
+            }
 
             _objectJsonParser.Reset(null);
             _arenaAllocator.ResetArena();

@@ -24,12 +24,12 @@ namespace Raven.Server.ServerWide.Context
             if (_storageEnvironment.Options.RunningOn32Bits)
             {
                 initialSize = 4096;
-                maxNumberOfAllocatedStringValues = 8 * 1024;
+                maxNumberOfAllocatedStringValues = 2 * 1024;
             }
             else
             {
                 initialSize = 32 * 1024;
-                maxNumberOfAllocatedStringValues = 32 * 1024;
+                maxNumberOfAllocatedStringValues = 8 * 1024;
             }
 
             return new ClusterOperationContext(_changes, _storageEnvironment, initialSize, 16 * 1024, maxNumberOfAllocatedStringValues, LowMemoryFlag);
