@@ -469,10 +469,5 @@ namespace Voron.Impl.Paging
         {
             return Inner.AcquireRawPagePointer(tx, pageNumber, pagerState);
         }
-
-        public void CleanupEncryptionBuffersCache()
-        {
-            EncryptionBuffersPool.Instance.ReleaseUnmanagedResources();
-        }
     }
 }
