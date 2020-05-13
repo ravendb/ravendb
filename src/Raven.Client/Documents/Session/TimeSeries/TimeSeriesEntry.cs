@@ -5,10 +5,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.TimeSeries
 {
-    public class TimeSeriesEntry
+    public class TimeSeriesEntry : ITimeSeriesValues
     {
         public DateTime Timestamp { get; set; }
 
@@ -16,10 +17,16 @@ namespace Raven.Client.Documents.Session.TimeSeries
 
         public double[] Values { get; set; }
 
+        [JsonDeserializationIgnore]
         public double Value
         {
             get => Values[0]; 
-        //    set => Values[0] = value;
+            set => Values[0] = value;
         }
+    }
+    
+    public interface ITimeSeriesValues
+    {
+        public double[] Values { get; set; }
     }
 }
