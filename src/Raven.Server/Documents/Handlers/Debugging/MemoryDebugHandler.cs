@@ -17,6 +17,7 @@ using Sparrow.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
 using Size = Raven.Client.Util.Size;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -192,6 +193,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     context.Write(write, djv);
                 }
+                return Task.CompletedTask;
+            }
+        }
+
+        [RavenAction("/admin/debug/memory/encryption-buffer-pool", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public Task EncryptionBufferPoolStats()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(write, EncryptionBuffersPool.Instance.GetStats().ToJson());
+                }
+
                 return Task.CompletedTask;
             }
         }

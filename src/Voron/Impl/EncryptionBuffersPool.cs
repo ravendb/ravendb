@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Platform;
@@ -99,6 +103,90 @@ namespace Voron.Impl
 
         public void LowMemoryOver()
         {
+        }
+
+        public EncryptionBufferStats GetStats()
+        {
+            var stats = new EncryptionBufferStats();
+
+            foreach (var nativeAllocations in _items)
+            {
+                var totalStackSize = 0L;
+                var numberOfItems = 0;
+
+                foreach (var allocation in nativeAllocations)
+                {
+                    totalStackSize += allocation.Size;
+                    numberOfItems++;
+                }
+
+                if (numberOfItems == 0)
+                    continue;
+
+                stats.TotalSize += totalStackSize;
+                stats.TotalNumberOfItems += numberOfItems;
+
+                stats.Details.Add(new EncryptionBufferStats.AllocationInfo
+                {
+                    TotalSize = totalStackSize,
+                    NumberOfItems = numberOfItems,
+                    AllocationSize = totalStackSize / numberOfItems
+                });
+            }
+
+            return stats;
+        }
+    }
+
+    public class EncryptionBufferStats : IDynamicJson
+    {
+        public EncryptionBufferStats()
+        {
+            Details = new List<AllocationInfo>();
+        }
+
+        public List<AllocationInfo> Details { get; private set; }
+
+        public long TotalSize { get; set; }
+
+        public Size TotalSizeHumane => new Size(TotalSize, SizeUnit.Bytes);
+
+        public long TotalNumberOfItems { get; set; }
+
+        public class AllocationInfo : IDynamicJson
+        {
+            public long TotalSize { get; set; }
+
+            public Size TotalSizeHumane => new Size(TotalSize, SizeUnit.Bytes);
+
+            public int NumberOfItems { get; set; }
+
+            public long AllocationSize { get; set; }
+
+            public Size AllocationSizeHumane => new Size(AllocationSize, SizeUnit.Bytes);
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(NumberOfItems)] = NumberOfItems,
+                    [nameof(TotalSize)] = TotalSize,
+                    [nameof(TotalSizeHumane)] = TotalSizeHumane.ToString(),
+                    [nameof(AllocationSize)] = AllocationSize,
+                    [nameof(AllocationSizeHumane)] = AllocationSizeHumane.ToString()
+                };
+            }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(TotalSize)] = TotalSize,
+                [nameof(TotalSizeHumane)] = TotalSizeHumane.ToString(),
+                [nameof(TotalNumberOfItems)] = TotalNumberOfItems,
+                [nameof(Details)] = Details.OrderByDescending(x => x.TotalSize).Select(x => x.ToJson())
+            };
         }
     }
 }
