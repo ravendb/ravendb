@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Json;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
@@ -56,37 +57,47 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             var type = typeof(T);
 
+            if (raw == null)
+                return new CompareExchangeValue<T>(key, index, default);
+
+            MetadataAsDictionary metadata;
+            if (raw.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject bjro) == false || bjro == null)
+                metadata = new MetadataAsDictionary();
+            else
+                metadata = new MetadataAsDictionary(bjro);
+
             if (type.GetTypeInfo().IsPrimitive || type == typeof(string))
             {
                 // simple
-                T value = default;
-                raw?.TryGet(Constants.CompareExchange.ObjectFieldName, out value);
-                return new CompareExchangeValue<T>(key, index, value);
+                raw.TryGet(Constants.CompareExchange.ObjectFieldName, out T value);
+                return new CompareExchangeValue<T>(key, index, value, metadata);
             }
-            else if (type == typeof(BlittableJsonReaderObject))
-            {
-                if (raw == null || raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out object rawValue) == false)
-                    return new CompareExchangeValue<T>(key, index, default);
 
-                if (rawValue is null)
-                    return new CompareExchangeValue<T>(key, index, default);
-                else if (rawValue is BlittableJsonReaderObject)
-                    return new CompareExchangeValue<T>(key, index, (T)rawValue);
-                else
-                    return new CompareExchangeValue<T>(key, index, (T)(object)raw);
-            }
-            else
+            if (type == typeof(BlittableJsonReaderObject))
             {
-                if (raw == null || raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out _) == false)
+                if (raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out object rawValue) == false)
                 {
-                    return new CompareExchangeValue<T>(key, index, default);
+                    return new CompareExchangeValue<T>(key, index, default, metadata);
                 }
-                else
+
+                switch (rawValue)
                 {
-                    var converted = (ResultHolder)EntityToBlittable.ConvertToEntity(typeof(ResultHolder), null, raw, conventions);
-                    return new CompareExchangeValue<T>(key, index, converted.Object);
+                    case null:
+                        return new CompareExchangeValue<T>(key, index, default, metadata);
+                    case BlittableJsonReaderObject _:
+                        return new CompareExchangeValue<T>(key, index, (T)rawValue, metadata);
+                    default:
+                        return new CompareExchangeValue<T>(key, index, (T)(object)raw, metadata);
                 }
             }
+
+            if (raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out _) == false)
+            {
+                return new CompareExchangeValue<T>(key, index, default, metadata);
+            }
+
+            var converted = (ResultHolder)EntityToBlittable.ConvertToEntity(typeof(ResultHolder), null, raw, conventions);
+            return new CompareExchangeValue<T>(key, index, converted.Object, metadata);
         }
 
         private class ResultHolder

@@ -277,6 +277,11 @@ namespace Raven.Server.ServerWide
                         result = hasMore;
                         leader?.SetStateOf(index, hasMore);
                         break;
+                    case nameof(DeleteExpiredCompareExchangeCommand):
+                        DeleteExpiredCompareExchange(context, type, cmd, index, out var hasMoreExpired);
+                        result = hasMoreExpired;
+                        leader?.SetStateOf(index, hasMoreExpired);
+                        break;
                     case nameof(IncrementClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
                             throw new RachisApplyException(errorMessage);
@@ -1952,6 +1957,7 @@ namespace Raven.Server.ServerWide
             CertificatesSchema.Create(context.Transaction.InnerTransaction, CertificatesSlice, 32);
             context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
+            context.Transaction.InnerTransaction.CreateTree(CompareExchangeExpirationStorage.CompareExchangeByExpiration);
 
             _parent.SwitchToSingleLeaderAction = SwitchToSingleLeader;
         }
@@ -2396,6 +2402,26 @@ namespace Raven.Server.ServerWide
             }
 
             return false;
+        }
+
+        private void DeleteExpiredCompareExchange(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out bool result)
+        {
+            try
+            {
+                if (cmd.TryGet(nameof(DeleteExpiredCompareExchangeCommand.Ticks), out long ticks) == false)
+                    throw new RachisApplyException($"{nameof(DeleteExpiredCompareExchangeCommand)} must contain a {nameof(DeleteExpiredCompareExchangeCommand.Ticks)} property");
+
+                if (cmd.TryGet(nameof(CleanCompareExchangeTombstonesCommand.Take), out long take) == false)
+                    throw new RachisApplyException($"{nameof(DeleteExpiredCompareExchangeCommand)} must contain a {nameof(DeleteExpiredCompareExchangeCommand.Take)} property");
+
+                var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+
+                result = CompareExchangeExpirationStorage.DeleteExpiredCompareExchange(context, items, ticks, take);
+            }
+            finally
+            {
+                NotifyValueChanged(context, type, index);
+            }
         }
 
         private void ClearCompareExchangeTombstones(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out bool result)

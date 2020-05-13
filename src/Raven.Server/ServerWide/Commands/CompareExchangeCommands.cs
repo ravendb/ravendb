@@ -3,7 +3,6 @@ using System.IO;
 using System.Text;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -289,6 +288,7 @@ namespace Raven.Server.ServerWide.Commands
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
         internal const int MaxNumberOfCompareExchangeKeyBytes = 512;
+        public long? Ticks;
 
         public BlittableJsonReaderObject Value;
 
@@ -299,6 +299,8 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);
+            if (CompareExchangeExpirationStorage.HasExpiredMetadata(ActualKey, value, out long ticks))
+                Ticks = ticks;
 
             Value = value;
         }
@@ -327,6 +329,9 @@ namespace Raven.Server.ServerWide.Commands
                     var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
                     if (Index == itemIndex || (FromBackup && Index == 0))
                     {
+                        if (Ticks != null)
+                            CompareExchangeExpirationStorage.Put(context, keySlice, Ticks.Value);
+
                         items.Update(reader.Id, tvb);
                     }
                     else
@@ -341,6 +346,9 @@ namespace Raven.Server.ServerWide.Commands
                 }
                 else
                 {
+                    if (Ticks != null)
+                        CompareExchangeExpirationStorage.Put(context, keySlice, Ticks.Value);
+
                     items.Set(tvb);
                 }
             }
@@ -355,6 +363,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var json = base.ToJson(context);
             json[nameof(Value)] = Value;
+            json[nameof(Ticks)] = Ticks;
             return json;
         }
 
