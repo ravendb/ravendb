@@ -20,6 +20,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         TimeSeriesRawResult ToList();
 
+        TimeSeriesRawResult<T> ToList<T>() where T : TimeSeriesEntry;
     }
 
     public interface ITimeSeriesLoadQueryable<T> : ITimeSeriesQueryable
@@ -35,6 +36,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         TimeSeriesAggregationResult ToList();
 
+        TimeSeriesAggregationResult<T> ToList<T>() where T : ITimeSeriesValues, new();
     }
 
     public interface ITimeSeriesGrouping
