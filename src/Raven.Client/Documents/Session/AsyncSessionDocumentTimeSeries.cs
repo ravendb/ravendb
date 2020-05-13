@@ -356,7 +356,7 @@ namespace Raven.Client.Documents.Session
             return GetAsyncInternal<TValues>(from, to, start, pageSize, token);
         }
 
-        public void Append(TValues entry)
+        void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(TValues entry)
         {
             Append(entry.Timestamp, entry.Values, entry.Tag);
         }
