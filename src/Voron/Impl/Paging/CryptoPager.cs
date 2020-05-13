@@ -64,6 +64,11 @@ namespace Voron.Impl.Paging
 
     public unsafe class EncryptionBuffer
     {
+        public EncryptionBuffer()
+        {
+            Generation = EncryptionBuffersPool.Instance.Generation;
+        }
+
         public static readonly UIntPtr HashSize = Sodium.crypto_generichash_bytes();
         public static readonly int HashSizeInt = (int)Sodium.crypto_generichash_bytes();
         public byte* Pointer;
@@ -71,6 +76,7 @@ namespace Voron.Impl.Paging
         public long? OriginalSize;
         public byte* Hash;
         public NativeMemory.ThreadStats AllocatingThread;
+        public long Generation;
         public bool SkipOnTxCommit;
     }
 
@@ -227,10 +233,9 @@ namespace Voron.Impl.Paging
                     Pointer = encBuffer.Pointer + i * Constants.Storage.PageSize,
                     Size = Constants.Storage.PageSize,
                     OriginalSize = 0,
+                    Hash = EncryptionBuffersPool.Instance.Get(EncryptionBuffer.HashSizeInt, out var thread),
+                    AllocatingThread = thread
                 };
-
-                buffer.Hash = EncryptionBuffersPool.Instance.Get(EncryptionBuffer.HashSizeInt, out var thread);
-                buffer.AllocatingThread = thread;
 
                 // here we _intentionally_ copy the old hash from the large page, so when we commit
                 // the tx, the pager will realize that we need to write this page
@@ -259,6 +264,7 @@ namespace Voron.Impl.Paging
                 Hash = hash,
                 AllocatingThread = thread
             };
+
             state[pageNumber] = buffer;
             return buffer;
         }
@@ -352,7 +358,7 @@ namespace Voron.Impl.Paging
                     // Pages that are marked with OriginalSize = 0 were separated from a larger allocation, we cannot free them directly.
                     // The first page of the section will be returned and when it will be freed, all the other parts will be freed as well.
                     // We still need to return the buffer allocated for the hash
-                    EncryptionBuffersPool.Instance.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread);
+                    EncryptionBuffersPool.Instance.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread, buffer.Value.Generation);
 
                     continue;
                 }
@@ -366,14 +372,14 @@ namespace Voron.Impl.Paging
             if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
             {
                 // First page of a separated section, returned with its original size.
-                EncryptionBuffersPool.Instance.Return(buffer.Pointer, (int)buffer.OriginalSize, buffer.AllocatingThread);
-                EncryptionBuffersPool.Instance.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread);
+                EncryptionBuffersPool.Instance.Return(buffer.Pointer, (int)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
+                EncryptionBuffersPool.Instance.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread, buffer.Generation);
             }
             else
             {
                 // Normal buffers
-                EncryptionBuffersPool.Instance.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
-                EncryptionBuffersPool.Instance.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread);
+                EncryptionBuffersPool.Instance.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
+                EncryptionBuffersPool.Instance.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread, buffer.Generation);
             }
         }
 
