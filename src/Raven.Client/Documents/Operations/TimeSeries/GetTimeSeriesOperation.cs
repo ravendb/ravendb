@@ -110,7 +110,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (response == null)
                     return;
 
-                Result = JsonDeserializationBase.GenerateJsonDeserializationRoutine<TimeSeriesRangeResult<TValues>>()(response);
+                if (JsonDeserializationClient.CacheForTimeSeriesRangeResult.TryGetValue(typeof(TValues), out var func) == false)
+                {
+                    func = JsonDeserializationBase.GenerateJsonDeserializationRoutine<TimeSeriesRangeResult<TValues>>();
+                    JsonDeserializationClient.CacheForTimeSeriesRangeResult.TryAdd(typeof(TValues), func);
+                }
+
+                Result = (TimeSeriesRangeResult<TValues>)func(response);
 
                 if (response.TryGet(nameof(TimeSeriesRangeResult.Entries), out BlittableJsonReaderArray entries) &&
                     entries == null)

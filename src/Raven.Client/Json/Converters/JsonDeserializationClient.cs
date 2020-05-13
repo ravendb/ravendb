@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Identity;
@@ -223,5 +224,8 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
 
         internal static readonly Func<BlittableJsonReaderObject, TimeSeriesIndexDefinition> TimeSeriesIndexDefinition = GenerateJsonDeserializationRoutine<TimeSeriesIndexDefinition>();
+
+        internal static readonly ConcurrentDictionary<Type, Func<BlittableJsonReaderObject, TimeSeriesRangeResult>> CacheForTimeSeriesRangeResult =
+            new ConcurrentDictionary<Type, Func<BlittableJsonReaderObject, TimeSeriesRangeResult>>();
     }
 }
