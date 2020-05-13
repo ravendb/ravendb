@@ -1303,7 +1303,6 @@ namespace Voron
         public void Cleanup(bool tryCleanupRecycledJournals = false)
         {
             CleanupMappedMemory();
-            CleanupNativeMemory();
 
             if (tryCleanupRecycledJournals)
                 Options.TryCleanupRecycledJournals();
@@ -1314,17 +1313,6 @@ namespace Voron
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
             DecompressionBuffers.Cleanup();
-        }
-
-        public void CleanupNativeMemory()
-        {
-            if (Options.EncryptionEnabled)
-            {
-                foreach (var cryptoPager in Options.GetActiveCryptoPagers())
-                {
-                    cryptoPager.CleanupEncryptionBuffersCache();
-                }
-            }
         }
 
         public override string ToString()
