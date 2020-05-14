@@ -394,7 +394,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public override string GetHost()
         {
-            return $"glacier.{AwsRegion}.amazonaws.com";
+            return $"glacier.{AwsRegion}.{Domain}";
         }
     }
 }

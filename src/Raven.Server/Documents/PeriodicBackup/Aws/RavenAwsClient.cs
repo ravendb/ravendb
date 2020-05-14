@@ -23,12 +23,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
     public abstract class RavenAwsClient : RavenStorageClient
     {
         protected const string DefaultRegion = "us-east-1";
+        protected readonly string Domain;
         protected bool IsRegionInvariantRequest;
-        public abstract string ServiceName { get; }
 
         private readonly string _awsAccessKey;
         private readonly byte[] _awsSecretKey;
         private readonly string _sessionToken;
+
+        public abstract string ServiceName { get; }
 
         protected string AwsRegion { get; set; }
 
@@ -48,6 +50,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _sessionToken = amazonSettings.AwsSessionToken;
             
             RemoteFolderName = amazonSettings.RemoteFolderName;
+
+            var chinaRegions = new HashSet<string>
+            {
+                "cn-north-1", "cn-northwest-1"
+            };
+
+            Domain = "amazonaws.com";
+            if (amazonSettings.AwsRegionName != null && chinaRegions.Contains(amazonSettings.AwsRegionName))
+                Domain += ".cn";
         }
 
         public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
