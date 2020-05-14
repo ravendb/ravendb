@@ -144,8 +144,7 @@ namespace Raven.Client.Documents.Commands
         public static void PrepareRequestWithMultipleIds(StringBuilder pathBuilder, HttpRequestMessage request, string[] ids, JsonOperationContext context)
         {
             var uniqueIds = new HashSet<string>(ids);
-            if (uniqueIds.Contains(null))
-                uniqueIds.Remove(null);
+            uniqueIds.Remove(null);
 
             // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
             // we are fine with that, requests to load > 1024 items are going to be rare
