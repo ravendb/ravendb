@@ -3128,8 +3128,8 @@ namespace SlowTests.Client.TimeSeries.Query
         {
             using (var store = GetDocumentStore())
             {
-                var utcToday = DateTime.Today.EnsureUtc();
-                var baseline = utcToday.AddDays(-7);
+                var today = DateTime.Today;
+                var baseline = today.AddDays(-7);
                 var id = "people/1";
                 var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
 
@@ -3212,7 +3212,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var timePeriod = utcToday - baseline.AddDays(5); // 2 days
+                    var timePeriod = today - baseline.AddDays(5); // 2 days
 
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
@@ -3229,7 +3229,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var timePeriod = DateTime.Today.AddDays(1).AddHours(10).AddMinutes(20).AddSeconds(30) - DateTime.Today; // 1 day, 10 hours, 20 minutes, 30 seconds
+                    var timePeriod = today.AddDays(1).AddHours(10).AddMinutes(20).AddSeconds(30) - today; // 1 day, 10 hours, 20 minutes, 30 seconds
 
                     var query = session.Query<Person>()
                         .Where(p => p.Id == id)
