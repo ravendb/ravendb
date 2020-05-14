@@ -21,15 +21,18 @@ namespace Raven.Server.Config.Categories
 
         public class SettingValue
         {
-            public SettingValue(string current, string server)
+            public SettingValue(string current, bool keyExistsInDatabaseRecord, string server,  bool keyExistsInServerSettings)
             {
                 CurrentValue = current;
                 ServerValue = server;
+                KeyExistsInDatabaseRecord = keyExistsInDatabaseRecord;
+                KeyExistsInServerSettings = keyExistsInServerSettings;
             }
 
             public readonly string ServerValue;
-
             public readonly string CurrentValue;
+            public bool KeyExistsInDatabaseRecord;
+            public bool KeyExistsInServerSettings;
         }
 
         protected internal bool Initialized { get; set; }
@@ -39,9 +42,6 @@ namespace Raven.Server.Config.Categories
             string GetValue(IConfiguration cfg, string name)
             {
                 var section = cfg.GetSection(name);
-                if (section == null)
-                    return null;
-
                 if (section.Value != null)
                     return section.Value;
 
@@ -52,18 +52,27 @@ namespace Raven.Server.Config.Categories
                     : null;
             }
 
-            string GetConfiguration(IConfiguration cfg, string name)
+            string GetConfigurationValue(IConfiguration cfg, string keyName, out bool keyExistsInConfiguration)
             {
-                if (cfg == null || name == null)
+                keyExistsInConfiguration = false;
+
+                if (cfg == null || keyName == null)
                     return null;
 
-                var val = GetValue(cfg, name);
+                // This check is needed because cfg.GetSection(keyName) returns null even if key does Not exist in configuration!
+                var keyNames = cfg.AsEnumerable().ToDictionary(x => x.Key, x => x.Value);
+                if (keyNames.ContainsKey(keyName))
+                {
+                    keyExistsInConfiguration = true;
+                }
+
+                var val = GetValue(cfg, keyName);
                 if (val != null)
                     return val;
 
-                var sb = new StringBuilder(name);
+                var sb = new StringBuilder(keyName);
 
-                var lastPeriod = name.LastIndexOf('.');
+                var lastPeriod = keyName.LastIndexOf('.');
                 while (lastPeriod != -1)
                 {
                     sb[lastPeriod] = ':';
@@ -71,15 +80,18 @@ namespace Raven.Server.Config.Categories
                     val = GetValue(cfg, tmpName);
                     if (val != null)
                         return val;
-                    lastPeriod = name.LastIndexOf('.', lastPeriod - 1);
+                    lastPeriod = keyName.LastIndexOf('.', lastPeriod - 1);
                 }
 
                 return null;
             }
 
-            Initialize(key => new SettingValue(GetConfiguration(settings, key), GetConfiguration(serverWideSettings, key)),
-                serverWideSettings?[RavenConfiguration.GetKey(x => x.Core.DataDirectory)], type, resourceName,
-                throwIfThereIsNoSetMethod: true);
+            bool keyExistsInDatabaseRecord, keyExistsInServerSettings;
+            
+            Initialize(
+                key => new SettingValue(GetConfigurationValue(settings, key, out keyExistsInDatabaseRecord), keyExistsInDatabaseRecord,
+                        GetConfigurationValue(serverWideSettings, key, out keyExistsInServerSettings), keyExistsInServerSettings),
+                serverWideSettings?[RavenConfiguration.GetKey(x => x.Core.DataDirectory)], type, resourceName, throwIfThereIsNoSetMethod: true);
         }
 
         public void Initialize(Func<string, SettingValue> getSetting, string serverDataDir, ResourceType type, string resourceName, bool throwIfThereIsNoSetMethod)
@@ -113,7 +125,7 @@ namespace Raven.Server.Config.Categories
                 }
 
                 var configuredValueSet = false;
-                var setDefaultValueOfNeeded = true;
+                var setDefaultValueIfNeeded = true;
 
                 ConfigurationEntryAttribute previousAttribute = null;
 
@@ -125,12 +137,24 @@ namespace Raven.Server.Config.Categories
                     }
 
                     previousAttribute = entry;
+                    
                     var settingValue = getSetting(entry.Key);
+                    
                     if (type != ResourceType.Server && entry.Scope == ConfigurationEntryScope.ServerWideOnly && settingValue.CurrentValue != null)
                         throw new InvalidOperationException($"Configuration '{entry.Key}' can only be set at server level.");
 
-                    var value = settingValue.CurrentValue ?? settingValue.ServerValue;
-                    setDefaultValueOfNeeded &= entry.SetDefaultValueIfNeeded;
+                    string value = null;
+
+                    if (settingValue.KeyExistsInDatabaseRecord)
+                    {
+                        value = settingValue.CurrentValue;
+                    }
+                    else if (settingValue.KeyExistsInServerSettings)
+                    {
+                        value = settingValue.ServerValue;
+                    }
+
+                    setDefaultValueIfNeeded &= entry.SetDefaultValueIfNeeded;
 
                     if (value == null)
                         continue;
@@ -261,7 +285,7 @@ namespace Raven.Server.Config.Categories
                     break;
                 }
 
-                if (configuredValueSet || setDefaultValueOfNeeded == false)
+                if (configuredValueSet || setDefaultValueIfNeeded == false)
                     continue;
 
                 var defaultValueAttribute = property.GetCustomAttribute<DefaultValueAttribute>();

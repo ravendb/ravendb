@@ -17,7 +17,7 @@ class saveDatabaseSettingsCommand extends commandBase {
         
         const url = endpoints.global.adminConfiguration.adminConfigurationSettings;
         
-        return this.put<void>(url, JSON.stringify(settingsObject), this.db)
+        return this.put<void>(url, JSON.stringify(settingsObject), this.db, { dataType: undefined })
             .done(() => this.reportSuccess("Database Settings were saved successfully"))
             .fail((response: JQueryXHR) => this.reportError("Failed to save Database Settings", response.responseText, response.statusText));
     }

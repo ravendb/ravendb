@@ -500,5 +500,18 @@ namespace Raven.Server.Config
                 }
             }
         }
+
+        public bool DoesKeyExistInSettings(string keyName, bool serverWide = false)
+        {
+            IConfiguration cfg = serverWide ? ServerWideSettings : Settings;
+            
+            if (cfg == null || keyName == null)
+                return false;
+
+            var existingKeyNames = cfg.AsEnumerable().ToDictionary(x => x.Key, x => x.Value);
+            
+            return existingKeyNames.ContainsKey(keyName);
+        }
+
     }
 }
