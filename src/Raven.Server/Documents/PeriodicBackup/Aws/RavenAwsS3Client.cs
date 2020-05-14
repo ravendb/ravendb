@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 _customS3ServerUrl = new Uri(s3Settings.CustomServerUrl);
             }
             
-            AwsRegion = s3Settings.AwsRegionName == null? string.Empty : s3Settings.AwsRegionName.ToLower();
+            AwsRegion = s3Settings.AwsRegionName == null ? string.Empty : s3Settings.AwsRegionName.ToLower();
             _bucketName = s3Settings.BucketName;
             _logger = logger;
         }
@@ -955,7 +955,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (AwsRegion == DefaultRegion || IsRegionInvariantRequest)
                 return "s3.amazonaws.com";
 
-            return $"s3.{AwsRegion}.amazonaws.com";
+            return $"s3.{AwsRegion}.{Domain}";
         }
 
         public IDisposable UseRegionInvariantRequest()
