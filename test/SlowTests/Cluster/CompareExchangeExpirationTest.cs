@@ -30,44 +30,82 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task CanAddCompareExchangeWithExpiration()
         {
-            var utcFormats = new Dictionary<string, DateTimeKind>
+            try
             {
-                {DefaultFormat.DateTimeFormatsToRead[0], DateTimeKind.Utc},
-                {DefaultFormat.DateTimeFormatsToRead[1], DateTimeKind.Unspecified},
-                {DefaultFormat.DateTimeFormatsToRead[2], DateTimeKind.Local},
-                {DefaultFormat.DateTimeFormatsToRead[3], DateTimeKind.Utc},
-                {DefaultFormat.DateTimeFormatsToRead[4], DateTimeKind.Unspecified},
-                {DefaultFormat.DateTimeFormatsToRead[5], DateTimeKind.Utc},
-                {DefaultFormat.DateTimeFormatsToRead[6], DateTimeKind.Utc},
-            };
-            Assert.Equal(utcFormats.Count, DefaultFormat.DateTimeFormatsToRead.Length);
+                var utcFormats = new Dictionary<string, DateTimeKind>
+                {
+                    {DefaultFormat.DateTimeFormatsToRead[0], DateTimeKind.Utc},
+                    {DefaultFormat.DateTimeFormatsToRead[1], DateTimeKind.Unspecified},
+                    {DefaultFormat.DateTimeFormatsToRead[2], DateTimeKind.Local},
+                    {DefaultFormat.DateTimeFormatsToRead[3], DateTimeKind.Utc},
+                    {DefaultFormat.DateTimeFormatsToRead[4], DateTimeKind.Unspecified},
+                    {DefaultFormat.DateTimeFormatsToRead[5], DateTimeKind.Utc},
+                    {DefaultFormat.DateTimeFormatsToRead[6], DateTimeKind.Utc},
+                };
+                Assert.Equal(utcFormats.Count, DefaultFormat.DateTimeFormatsToRead.Length);
 
-            foreach (var dateTimeFormat in utcFormats)
+                foreach (var dateTimeFormat in utcFormats)
+                {
+                    using (var store = GetDocumentStore())
+                    {
+                        var rnd = new Random(DateTime.Now.Millisecond);
+                        var user = new User { Name = new string(Enumerable.Repeat(_chars, 10).Select(s => s[rnd.Next(s.Length)]).ToArray()) };
+                        var expiry = DateTime.Now.AddSeconds(60);
+
+                        if (dateTimeFormat.Value == DateTimeKind.Utc)
+                            expiry = expiry.ToUniversalTime();
+
+                        var key = new string(Enumerable.Repeat(_chars, 10).Select(s => s[rnd.Next(s.Length)]).ToArray());
+                        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                        {
+                            var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
+                            result.Metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(dateTimeFormat.Key);
+                            await session.SaveChangesAsync();
+                        }
+
+                        var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>(key));
+                        Assert.NotNull(res);
+                        Assert.Equal(user.Name, res.Value.Name);
+                        var expirationDate = res.Metadata.GetString(Constants.Documents.Metadata.Expires);
+                        Assert.NotNull(expirationDate);
+                        var dateTime = DateTime.ParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                        Assert.Equal(dateTimeFormat.Value, dateTime.Kind);
+                        Assert.Equal(expiry.ToString(dateTimeFormat.Key), expirationDate);
+
+                        Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(61);
+
+                        var val = await WaitForValueAsync(async () =>
+                        {
+                            var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                            return stats.CountOfCompareExchange;
+                        }, 0);
+
+                        Assert.Equal(0, val);
+                    }
+                }
+            }
+            finally
+            {
+                Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
+                Server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = 0;
+            }
+        }
+
+        [Theory]
+        [InlineData(10)]
+        [InlineData(100)]
+        public async Task CanAddManyCompareExchangeWithExpiration(int count)
+        {
+            try
             {
                 using (var store = GetDocumentStore())
                 {
-                    var rnd = new Random(DateTime.Now.Millisecond);
-                    var user = new User { Name = new string(Enumerable.Repeat(_chars, 10).Select(s => s[rnd.Next(s.Length)]).ToArray()) };
-                    var expiry = DateTime.Now.AddSeconds(2);
-                    if (dateTimeFormat.Value == DateTimeKind.Utc)
-                        expiry = expiry.ToUniversalTime();
+                    var expiry = DateTime.Now.AddSeconds(60);
+                    var compareExchanges = new Dictionary<string, User>();
+                    await AddCompareExchangesWithExpire(count, compareExchanges, store, expiry);
+                    await AssertCompareExchanges(compareExchanges, store, expiry);
 
-                    var key = new string(Enumerable.Repeat(_chars, 10).Select(s => s[rnd.Next(s.Length)]).ToArray());
-                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-                    {
-                        var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
-                        result.Metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(dateTimeFormat.Key);
-                        await session.SaveChangesAsync();
-                    }
-
-                    var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>(key));
-                    Assert.NotNull(res);
-                    Assert.Equal(user.Name, res.Value.Name);
-                    var expirationDate = res.Metadata.GetString(Constants.Documents.Metadata.Expires);
-                    Assert.NotNull(expirationDate);
-                    var dateTime = DateTime.ParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                    Assert.Equal(dateTimeFormat.Value, dateTime.Kind);
-                    Assert.Equal(expiry.ToString(dateTimeFormat.Key), expirationDate);
+                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(61);
 
                     var val = await WaitForValueAsync(async () =>
                     {
@@ -78,27 +116,10 @@ namespace SlowTests.Cluster
                     Assert.Equal(0, val);
                 }
             }
-        }
-
-        [Theory]
-        [InlineData(10)]
-        [InlineData(100)]
-        public async Task CanAddManyCompareExchangeWithExpiration(int count)
-        {
-            using (var store = GetDocumentStore())
+            finally
             {
-                var expiry = count == 10 ? DateTime.Now.AddSeconds(2) : DateTime.Now.AddSeconds(5);
-                var compareExchanges = new Dictionary<string, User>();
-                await AddCompareExchangesWithExpire(count, compareExchanges, store, expiry);
-                await AssertCompareExchanges(compareExchanges, store, expiry);
-
-                var val = await WaitForValueAsync(async () =>
-                {
-                    var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                    return stats.CountOfCompareExchange;
-                }, 0);
-
-                Assert.Equal(0, val);
+                Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
+                Server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = 0;
             }
         }
 
@@ -107,124 +128,150 @@ namespace SlowTests.Cluster
         [InlineData(150)]
         public async Task CanAddManyCompareExchangeWithAndWithoutExpiration(int count)
         {
-            using (var store = GetDocumentStore())
+            try
             {
-                var expiry = count == 15 ? DateTime.Now.AddSeconds(4) : DateTime.Now.AddSeconds(7);
-                var longExpiry = count == 15 ? DateTime.Now.AddSeconds(6) : DateTime.Now.AddSeconds(10);
-                var compareExchangesWithShortExpiration = new Dictionary<string, User>();
-                var compareExchangesWithLongExpiration = new Dictionary<string, User>();
-                var compareExchanges = new Dictionary<string, User>();
-                var amountToAdd = count / 3;
-                await AddCompareExchangesWithExpire(amountToAdd, compareExchanges, store, expiry: null);
-                await AddCompareExchangesWithExpire(amountToAdd, compareExchangesWithShortExpiration, store, expiry);
-                await AddCompareExchangesWithExpire(amountToAdd, compareExchangesWithLongExpiration, store, longExpiry);
-
-                await AssertCompareExchanges(compareExchangesWithShortExpiration, store, expiry);
-                await AssertCompareExchanges(compareExchangesWithLongExpiration, store, longExpiry);
-                await AssertCompareExchanges(compareExchanges, store, expiry: null);
-
-                var val = await WaitForValueAsync(async () =>
+                using (var store = GetDocumentStore())
                 {
+                    var expiry = DateTime.Now.AddSeconds(60);
+                    var longExpiry = DateTime.Now.AddSeconds(120);
+                    var compareExchangesWithShortExpiration = new Dictionary<string, User>();
+                    var compareExchangesWithLongExpiration = new Dictionary<string, User>();
+                    var compareExchanges = new Dictionary<string, User>();
+                    var amountToAdd = count / 3;
+                    await AddCompareExchangesWithExpire(amountToAdd, compareExchanges, store, expiry: null);
+                    await AddCompareExchangesWithExpire(amountToAdd, compareExchangesWithShortExpiration, store, expiry);
+                    await AddCompareExchangesWithExpire(amountToAdd, compareExchangesWithLongExpiration, store, longExpiry);
+
+                    await AssertCompareExchanges(compareExchangesWithShortExpiration, store, expiry);
+                    await AssertCompareExchanges(compareExchangesWithLongExpiration, store, longExpiry);
+                    await AssertCompareExchanges(compareExchanges, store, expiry: null);
                     var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                    return stats.CountOfCompareExchange;
-                }, count - amountToAdd);
-                Assert.Equal(count - amountToAdd, val);
-                var nextVal = await WaitForValueAsync(async () =>
-                {
-                    var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                    return stats.CountOfCompareExchange;
-                }, amountToAdd);
-                Assert.Equal(amountToAdd, nextVal);
+                    Assert.Equal(count, stats.CountOfCompareExchange);
+
+                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(61);
+                    var val = await WaitForValueAsync(async () =>
+                    {
+                        var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                        return stats.CountOfCompareExchange;
+                    }, count - amountToAdd, 15000);
+                    Assert.Equal(count - amountToAdd, val);
+
+                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(121);
+
+                    var nextVal = await WaitForValueAsync(async () =>
+                    {
+                        var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                        return stats.CountOfCompareExchange;
+                    }, amountToAdd, 15000);
+                    Assert.Equal(amountToAdd, nextVal);
+                }
+            }
+            finally
+            {
+                Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
+                Server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = 0;
             }
         }
 
         [Fact]
         public async Task CanExportImportCompareExchangeWithExpiration()
         {
-            int count = 15;
-            var expiry = DateTime.Now.AddSeconds(7);
-            var longExpiry = DateTime.Now.AddSeconds(10);
-            var compareExchangesWithShortExpiration = new Dictionary<string, User>();
-            var compareExchangesWithLongExpiration = new Dictionary<string, User>();
-            var compareExchanges = new Dictionary<string, User>();
-            var amountToAdd = count / 3;
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var databaseName = GetDatabaseName() + "restore";
-
-            using (var store = GetDocumentStore())
+            try
             {
-                await AddCompareExchangesWithExpire(amountToAdd, compareExchanges, store, expiry: null);
-                await AddCompareExchangesWithExpire(amountToAdd, compareExchangesWithShortExpiration, store, expiry);
-                await AddCompareExchangesWithExpire(amountToAdd, compareExchangesWithLongExpiration, store, longExpiry);
+                int count = 15;
+                var expiry = DateTime.Now.AddSeconds(60);
+                var longExpiry = DateTime.Now.AddSeconds(120);
+                var compareExchangesWithShortExpiration = new Dictionary<string, User>();
+                var compareExchangesWithLongExpiration = new Dictionary<string, User>();
+                var compareExchanges = new Dictionary<string, User>();
+                var amountToAdd = count / 3;
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+                var databaseName = GetDatabaseName() + "restore";
 
-                await AssertCompareExchanges(compareExchangesWithShortExpiration, store, expiry);
-                await AssertCompareExchanges(compareExchangesWithLongExpiration, store, longExpiry);
-                await AssertCompareExchanges(compareExchanges, store, expiry: null);
-
-
-                var config = new PeriodicBackupConfiguration
+                using (var store = GetDocumentStore())
                 {
-                    LocalSettings = new LocalSettings
+                    await AddCompareExchangesWithExpire(amountToAdd, compareExchanges, store, expiry: null);
+                    await AddCompareExchangesWithExpire(amountToAdd, compareExchangesWithShortExpiration, store, expiry);
+                    await AddCompareExchangesWithExpire(amountToAdd, compareExchangesWithLongExpiration, store, longExpiry);
+
+                    await AssertCompareExchanges(compareExchangesWithShortExpiration, store, expiry);
+                    await AssertCompareExchanges(compareExchangesWithLongExpiration, store, longExpiry);
+                    await AssertCompareExchanges(compareExchanges, store, expiry: null);
+
+
+                    var config = new PeriodicBackupConfiguration
                     {
-                        FolderPath = backupPath
-                    },
-                    Name = "full",
-                    FullBackupFrequency = "0 0 1 1 *",
-                    BackupType = BackupType.Backup
-                };
+                        LocalSettings = new LocalSettings
+                        {
+                            FolderPath = backupPath
+                        },
+                        Name = "full",
+                        FullBackupFrequency = "0 0 1 1 *",
+                        BackupType = BackupType.Backup
+                    };
 
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                var op = periodicBackupRunner.StartBackupTask(result.TaskId, isFullBackup: true);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
-                    return status;
-                }, OperationStatus.Completed);
-
-                Assert.Equal(OperationStatus.Completed, value);
-
-                var backupDirectory = Directory.GetDirectories(backupPath).First();
-                var restoreConfig = new RestoreBackupConfiguration()
-                {
-                    BackupLocation = backupDirectory,
-                    DatabaseName = databaseName
-                };
-
-                var restoreOperation = new RestoreBackupOperation(restoreConfig);
-                var o = await store.Maintenance.Server.SendAsync(restoreOperation);
-                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
-
-                using (var store2 = GetDocumentStore(new Options
-                {
-                    CreateDatabase = false,
-                    ModifyDatabaseName = s => databaseName
-                }))
-                {
-                    var stats1 = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                    Assert.Equal(count, stats1.CountOfCompareExchange);
-                    var stats = await store2.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                    Assert.Equal(count, stats.CountOfCompareExchange);
-
-                    var val = await WaitForValueAsync(async () =>
-                {
-                    var stats = await store2.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                    return stats.CountOfCompareExchange;
-                }, count - amountToAdd);
-                    Assert.Equal(count - amountToAdd, val);
-                    var nextVal = await WaitForValueAsync(async () =>
+                    var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                    var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
+                    var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
+                    var op = periodicBackupRunner.StartBackupTask(result.TaskId, isFullBackup: true);
+                    var value = WaitForValue(() =>
                     {
+                        var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
+                        return status;
+                    }, OperationStatus.Completed);
+
+                    Assert.Equal(OperationStatus.Completed, value);
+
+                    var backupDirectory = Directory.GetDirectories(backupPath).First();
+                    var restoreConfig = new RestoreBackupConfiguration()
+                    {
+                        BackupLocation = backupDirectory,
+                        DatabaseName = databaseName
+                    };
+
+                    var restoreOperation = new RestoreBackupOperation(restoreConfig);
+                    var o = await store.Maintenance.Server.SendAsync(restoreOperation);
+                    await o.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+
+                    using (var store2 = GetDocumentStore(new Options
+                    {
+                        CreateDatabase = false,
+                        ModifyDatabaseName = s => databaseName
+                    }))
+                    {
+                        var stats1 = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                        Assert.Equal(count, stats1.CountOfCompareExchange);
                         var stats = await store2.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                        return stats.CountOfCompareExchange;
-                    }, amountToAdd);
-                    Assert.Equal(amountToAdd, nextVal);
+                        Assert.Equal(count, stats.CountOfCompareExchange);
+                        Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(61);
 
-                    stats1 = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                    Assert.Equal(amountToAdd, stats1.CountOfCompareExchange);
-                    stats = await store2.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                    Assert.Equal(amountToAdd, stats.CountOfCompareExchange);
+                        var val = await WaitForValueAsync(async () =>
+                        {
+                            var stats = await store2.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                            return stats.CountOfCompareExchange;
+                        }, count - amountToAdd);
+                        Assert.Equal(count - amountToAdd, val);
+
+                        Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(121);
+
+                        var nextVal = await WaitForValueAsync(async () =>
+                        {
+                            var stats = await store2.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                            return stats.CountOfCompareExchange;
+                        }, amountToAdd);
+                        Assert.Equal(amountToAdd, nextVal);
+
+                        stats1 = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                        Assert.Equal(amountToAdd, stats1.CountOfCompareExchange);
+                        stats = await store2.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                        Assert.Equal(amountToAdd, stats.CountOfCompareExchange);
+                    }
                 }
+            }
+            finally
+            {
+                Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
+                Server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = 0;
             }
         }
 

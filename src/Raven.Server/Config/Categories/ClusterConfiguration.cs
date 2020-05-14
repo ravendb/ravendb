@@ -107,10 +107,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Cluster.LogHistoryMaxEntries", ConfigurationEntryScope.ServerWideOnly)]
         public int LogHistoryMaxEntries { get; set; }
 
-        [Description("Time (in milliseconds) between expired compare exchange cleanup")]
-        [DefaultValue(500)]
-        [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Cluster.ExpiredCompareExchangeCleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
+        [Description("Time (in seconds) between expired compare exchange cleanup")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Cluster.ExpiredCompareExchangeCleanupIntervalInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting ExpiredCompareExchangeCleanupInterval { get; set; }
     }
 }
