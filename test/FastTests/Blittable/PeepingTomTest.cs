@@ -29,7 +29,7 @@ namespace FastTests.Blittable
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
             using (var context = JsonOperationContext.ShortTermSingleUse())
-                PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, context, cts.Token);
+                PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, seed: null, context, cts.Token);
         }
 
         [Theory]
@@ -46,14 +46,14 @@ namespace FastTests.Blittable
                 for (int i = 0; i < 10; i++)
                 {
                     var originalSize = random.Next(0, 128 * 1024);
-                    var chunkSizeToRead = random.Next(0, originalSize);
+                    var chunkSizeToRead = random.Next(1, originalSize);
                     var offset = chunkSizeToRead / 4;
-                    PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, context, cts.Token);
+                    PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, seed, context, cts.Token);
                 }
             }
         }
 
-        private static void PeepingTomStreamTest(int originalSize, int chunkSizeToRead, int offset, JsonOperationContext context, CancellationToken token)
+        private static void PeepingTomStreamTest(int originalSize, int chunkSizeToRead, int offset, int? seed, JsonOperationContext context, CancellationToken token)
         {
             try
             {
@@ -64,64 +64,70 @@ namespace FastTests.Blittable
                 }
 
                 using (var stream = new MemoryStream())
-                using (var peeping = new PeepingTomStream(stream, context))
+                using (context.GetManagedBuffer(out var memoryBuffer))
                 {
-                    stream.Write(bytes, 0, originalSize);
-                    stream.Flush();
-                    stream.Position = 0;
+                    // fill the buffer with garbage
+                    var random = seed == null ? new Random() : new Random(seed.Value);
+                    random.NextBytes(memoryBuffer.Buffer);
 
-                    var totalRead = 0;
-                    do
+                    using (var peeping = new PeepingTomStream(stream, memoryBuffer))
                     {
-                        token.ThrowIfCancellationRequested();
+                        stream.Write(bytes, 0, originalSize);
+                        stream.Flush();
+                        stream.Position = 0;
 
-                        int read = -1;
+                        var totalRead = 0;
                         do
                         {
                             token.ThrowIfCancellationRequested();
 
-                            var buffer = new byte[originalSize + offset];
-                            read = peeping.Read(buffer, offset, chunkSizeToRead);
-                            totalRead += read;
-                            Assert.True(read <= chunkSizeToRead);
-                        } while (read != 0);
-
-                    } while (totalRead < originalSize);
-
-                    Assert.Equal(originalSize, totalRead);
-
-                    var peepWindow = peeping.PeepInReadStream();
-
-                    var length = peepWindow.Length;
-
-                    Assert.True(length <= PeepingTomStream.BufferWindowSize);
-                    Assert.True(length >= 0);
-
-                    var expectedLength = originalSize < PeepingTomStream.BufferWindowSize ? originalSize : PeepingTomStream.BufferWindowSize;
-
-                    if (expectedLength != length)
-                    {
-                        var expected = System.Text.Encoding.UTF8.GetString(bytes, bytes.Length - expectedLength, expectedLength);
-                        var actual = System.Text.Encoding.UTF8.GetString(peepWindow);
-                        Assert.Equal(expected, actual);
-                    }
-                    Assert.Equal(expectedLength, length);
-
-                    for (var i = 0; i < peepWindow.Length; i++)
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        try
-                        {
-                            var expectedByte = (byte)(((originalSize - peepWindow.Length + i) % 26) + 'a');
-                            if (expectedByte != peepWindow[i])
+                            int read = -1;
+                            do
                             {
-                                Assert.Equal(expectedByte, peepWindow[i]);
-                            }
-                        }
-                        catch (Exception e)
+                                token.ThrowIfCancellationRequested();
+
+                                var buffer = new byte[originalSize + offset];
+                                read = peeping.Read(buffer, offset, chunkSizeToRead);
+                                totalRead += read;
+                                Assert.True(read <= chunkSizeToRead);
+                            } while (read != 0);
+                        } while (totalRead < originalSize);
+
+                        Assert.Equal(originalSize, totalRead);
+
+                        var peepWindow = peeping.PeepInReadStream();
+
+                        var length = peepWindow.Length;
+
+                        Assert.True(length <= PeepingTomStream.BufferWindowSize);
+                        Assert.True(length >= 0);
+
+                        var expectedLength = originalSize < PeepingTomStream.BufferWindowSize ? originalSize : PeepingTomStream.BufferWindowSize;
+
+                        if (expectedLength != length)
                         {
-                            throw new InvalidOperationException("Failure at index: " + i, e);
+                            var expected = System.Text.Encoding.UTF8.GetString(bytes, bytes.Length - expectedLength, expectedLength);
+                            var actual = System.Text.Encoding.UTF8.GetString(peepWindow);
+                            Assert.Equal(expected, actual);
+                        }
+                        Assert.Equal(expectedLength, length);
+
+                        for (var i = 0; i < peepWindow.Length; i++)
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            try
+                            {
+                                var expectedByte = (byte)(((originalSize - peepWindow.Length + i) % 26) + 'a');
+                                if (expectedByte != peepWindow[i])
+                                {
+                                    Assert.Equal(expectedByte, peepWindow[i]);
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                throw new InvalidOperationException("Failure at index: " + i, e);
+                            }
                         }
                     }
                 }
