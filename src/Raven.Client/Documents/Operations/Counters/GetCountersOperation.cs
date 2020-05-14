@@ -104,8 +104,7 @@ namespace Raven.Client.Documents.Operations.Counters
             private void PrepareRequestWithMultipleCounters(StringBuilder pathBuilder, HttpRequestMessage request, JsonOperationContext ctx)
             {
                 var uniqueNames = new HashSet<string>(_counters);
-                if (uniqueNames.Contains(null))
-                    uniqueNames.Remove(null);
+                uniqueNames.Remove(null);
 
                 // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
                 // we are fine with that, requests to load more than 1024 counters are going to be rare
