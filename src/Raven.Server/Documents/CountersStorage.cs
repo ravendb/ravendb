@@ -1927,8 +1927,9 @@ namespace Raven.Server.Documents
 
                                 var counterName = propertyDetails.Name;
                                 var keyScope = ToKey(documentIdPrefix, counterName, out var key);
+                                var luceneKey = ToLuceneKey(docId, counterName);
 
-                                yield return new CounterGroupItemMetadata(key, keyScope, docId, counterName, etag, size);
+                                yield return new CounterGroupItemMetadata(key, keyScope, luceneKey, docId, counterName, etag, size);
                             }
                         }
 
@@ -1936,7 +1937,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                yield return new CounterGroupItemMetadata(null, null, null, null, etag, size);
+                yield return new CounterGroupItemMetadata(null, null, null, null, null, etag, size);
 
                 LazyStringValue ExtractDocId()
                 {
@@ -1969,6 +1970,27 @@ namespace Raven.Server.Documents
                         return scope;
                     }
                 }
+
+                LazyStringValue ToLuceneKey(LazyStringValue documentId, LazyStringValue counterName)
+                {
+                    using (DocumentIdWorker.GetLower(context.Allocator, counterName, out var counterNameSlice))
+                    {
+                        var size = documentId.Size
+                           + 1 // separator
+                           + counterNameSlice.Size;
+
+                        using (context.Allocator.Allocate(size, out var buffer))
+                        {
+                            var bufferSpan = new Span<byte>(buffer.Ptr, size);
+                            documentId.AsSpan().CopyTo(bufferSpan);
+                            var offset = documentId.Size;
+                            bufferSpan[offset++] = (byte)'|';
+                            counterNameSlice.AsSpan().CopyTo(bufferSpan.Slice(offset));
+
+                            return context.GetLazyString(buffer.Ptr, size);
+                        }
+                    }
+                }
             }
         }
     }
@@ -1979,15 +2001,17 @@ namespace Raven.Server.Documents
         private IDisposable _keyScope;
 
         public LazyStringValue Key;
+        public LazyStringValue LuceneKey;
         public LazyStringValue DocumentId;
         public LazyStringValue CounterName;
         public readonly long Etag;
         public readonly int Size;
 
-        public CounterGroupItemMetadata(LazyStringValue key, IDisposable keyScope, LazyStringValue documentId, LazyStringValue counterName, long etag, int size)
+        public CounterGroupItemMetadata(LazyStringValue key, IDisposable keyScope, LazyStringValue luceneKey, LazyStringValue documentId, LazyStringValue counterName, long etag, int size)
         {
             Key = key;
             _keyScope = keyScope;
+            LuceneKey = luceneKey;
             DocumentId = documentId;
             CounterName = counterName;
             Etag = etag;
@@ -2004,6 +2028,9 @@ namespace Raven.Server.Documents
 
             _keyScope.Dispose();
             _keyScope = null;
+
+            LuceneKey?.Dispose();
+            LuceneKey = null;
 
             DocumentId?.Dispose();
             DocumentId = null;

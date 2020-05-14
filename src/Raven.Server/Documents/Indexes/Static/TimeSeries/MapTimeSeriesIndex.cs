@@ -101,13 +101,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (_handleCompareExchangeReferences != null)
-                _handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
-
-            if (_handleReferences != null)
-                _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
-
-            writer.DeleteBySourceDocument(tombstone.LowerId, stats);
+            StaticIndexHelper.HandleDeleteBySourceDocument(_handleReferences, _handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
         }
 
         protected override IndexItem GetItemByEtag(QueryOperationContext queryContext, long etag)

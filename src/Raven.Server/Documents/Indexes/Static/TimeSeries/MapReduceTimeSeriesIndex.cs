@@ -51,6 +51,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return workers.ToArray();
         }
 
+        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            StaticIndexHelper.HandleDeleteBySourceDocumentId(this, _handleReferences, _handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
+        }
+
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, filter: null, _compiled.Maps[collection], collection, stats, type);
@@ -65,7 +70,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             wrapper.InitializeForEnumeration(mapResults, indexContext, stats);
 
-            return PutMapResults(indexItem.LowerSourceDocumentId, indexItem.SourceDocumentId, wrapper, indexContext, stats);
+            return PutMapResults(indexItem.LowerId, indexItem.SourceDocumentId, wrapper, indexContext, stats);
         }
 
         public override long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)

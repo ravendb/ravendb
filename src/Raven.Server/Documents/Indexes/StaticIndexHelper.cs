@@ -3,11 +3,17 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Server;
+using Sparrow.Server.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -343,6 +349,78 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
+        }
+
+        public static void HandleDeleteBySourceDocumentId(MapReduceIndex index, HandleReferences handleReferences, HandleCompareExchangeReferences handleCompareExchangeReferences, Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            HandleReferencesDelete(handleReferences, handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
+
+            using (ToPrefixKey(tombstone.LowerId, indexContext, out var prefixKey))
+            {
+                var toDelete = new List<Slice>();
+
+                using (var it = index.MapReduceWorkContext.MapPhaseTree.Iterate(prefetch: false))
+                {
+                    it.SetRequiredPrefix(prefixKey);
+
+                    if (it.Seek(prefixKey) == false)
+                        return;
+
+                    do
+                    {
+                        toDelete.Add(it.CurrentKey.Clone(indexContext.Allocator));
+                    } while (it.MoveNext());
+                }
+
+                foreach (var key in toDelete)
+                {
+                    index.MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(key, clone: false);
+
+                    if (index.MapReduceWorkContext.DocumentMapEntries.NumberOfEntries == 0)
+                        continue;
+
+                    foreach (var mapEntry in MapReduceIndex.GetMapEntries(index.MapReduceWorkContext.DocumentMapEntries))
+                    {
+                        var store = index.GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false);
+
+                        store.Delete(mapEntry.Id);
+                    }
+
+                    index.MapReduceWorkContext.MapPhaseTree.DeleteFixedTreeFor(key, sizeof(ulong));
+                }
+            }
+
+            static unsafe ByteStringContext.InternalScope ToPrefixKey(LazyStringValue key, TransactionOperationContext context, out Slice prefixKey)
+            {
+                var scope = context.Allocator.Allocate(key.Size + 1, out ByteString keyMem);
+
+                Memory.Copy(keyMem.Ptr, key.Buffer, key.Size);
+                keyMem.Ptr[key.Size] = (byte)'|';
+
+                prefixKey = new Slice(SliceOptions.Key, keyMem);
+                return scope;
+            }
+        }
+
+        public static void HandleDeleteBySourceDocument(HandleReferences handleReferences, HandleCompareExchangeReferences handleCompareExchangeReferences, Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            HandleReferencesDelete(handleReferences, handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
+
+            HandleDeleteBySourceDocument(tombstone, writer, stats);
+        }
+
+        public static void HandleReferencesDelete(HandleReferences handleReferences, HandleCompareExchangeReferences handleCompareExchangeReferences, Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            if (handleCompareExchangeReferences != null)
+                handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+
+            if (handleReferences != null)
+                handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+        }
+
+        private static void HandleDeleteBySourceDocument(Tombstone tombstone, IndexWriteOperation writer, IndexingStatsScope stats)
+        {
+            writer.DeleteBySourceDocument(tombstone.LowerId, stats);
         }
     }
 }

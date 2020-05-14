@@ -101,13 +101,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (_handleCompareExchangeReferences != null)
-                _handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
-
-            if (_handleReferences != null)
-                _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
-
-            writer.DeleteBySourceDocument(tombstone.LowerId, stats);
+            StaticIndexHelper.HandleDeleteBySourceDocument(_handleReferences, _handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
         }
 
         protected override IndexItem GetItemByEtag(QueryOperationContext queryContext, long etag)
@@ -116,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             if (counter == null)
                 return default;
 
-            return new CounterIndexItem(counter.Key, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
+            return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
         }
 
         protected override bool ShouldReplace()
