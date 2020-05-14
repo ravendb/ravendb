@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.TimeSeries
 {
-    public class TimeSeriesEntry : TimeSeriesValues
+    public class TimeSeriesEntry : TimeSeriesEntryValues
     {
         public DateTime Timestamp { get; set; }
 
@@ -23,12 +23,12 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
     }
 
-    public abstract class TimeSeriesAggregatedEntry : TimeSeriesValues
+    public abstract class TimeSeriesAggregatedEntry : TimeSeriesEntryValues
     {
 
     }
 
-    public abstract class TimeSeriesValues
+    public abstract class TimeSeriesEntryValues
     {
         public double[] Values { get; set; }
     }
