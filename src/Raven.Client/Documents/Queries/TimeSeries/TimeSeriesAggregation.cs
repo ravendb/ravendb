@@ -28,16 +28,16 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     public class TimeSeriesRangeAggregation
     {
         public long[] Count;
-        public double?[] Max, Min, Last, First, Average;
+        public double[] Max, Min, Last, First, Average;
         public DateTime To, From;
     }
 
-    public class TimeSeriesAggregationResult<T> : TimeSeriesAggregationResult where T : ITimeSeriesValues, new()
+    public class TimeSeriesAggregationResult<T> : TimeSeriesAggregationResult where T : TimeSeriesAggregatedEntry, new()
     {
         public new TimeSeriesRangeAggregation<T>[] Results { get; set; }
     }
 
-    public class TimeSeriesRangeAggregation<T> : TimeSeriesRangeAggregation where T : ITimeSeriesValues, new()
+    public class TimeSeriesRangeAggregation<T> : TimeSeriesRangeAggregation where T : TimeSeriesAggregatedEntry, new()
     {
         private T _max;
         private T _min;
@@ -51,10 +51,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                if (base.Max == null)
-                    return default;
+                _max ??= new T();
 
-                _max ??= new T {Values = Array.ConvertAll(base.Max, x => x ?? 0)};
+                if (_max.Values != null)
+                    return _max;
+
+                _max.Values = base.Max;
                 return _max;
             }
         }
@@ -64,10 +66,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                if (base.Min == null)
-                    return default;
+                _min ??= new T();
 
-                _min ??= new T {Values = Array.ConvertAll(base.Min, x => x ?? 0)};
+                if (_min.Values != null)
+                    return _min;
+
+                _min.Values = base.Min;
                 return _min;
             }
         }
@@ -77,10 +81,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                if (base.Last == null)
-                    return default;
+                _last ??= new T();
 
-                _last ??= new T {Values = Array.ConvertAll(base.Last, x => x ?? 0)};
+                if (_last.Values != null)
+                    return _last;
+
+                _last.Values = base.Last;
                 return _last;
             }
         }
@@ -90,10 +96,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                if (base.First == null)
-                    return default;
+                _first ??= new T();
 
-                _first ??= new T {Values = Array.ConvertAll(base.First, x => x ?? 0)};
+                if (_first.Values != null)
+                    return _first;
+
+                _first.Values = base.First;
                 return _first;
             }
         }
@@ -103,10 +111,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                if (base.Average == null)
-                    return default;
+                _average ??= new T();
 
-                _average ??= new T {Values = Array.ConvertAll(base.Average, x => x ?? 0)};
+                if (_average.Values != null)
+                    return _average;
+
+                _average.Values = base.Average;
                 return _average;
             }
         }
@@ -116,10 +126,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                if (base.Count == null)
-                    return default;
+                _count ??= new T();
 
-                _count ??= new T {Values = Array.ConvertAll<long, double>(base.Count, x => x)};
+                if (_count.Values != null)
+                    return _count;
+
+                _count.Values = Array.ConvertAll<long, double>(base.Count, x => x);
                 return _count;
             }
         }

@@ -29,6 +29,15 @@ namespace SlowTests.Client.TimeSeries.Session
         {
         }
 
+        public class StockPriceAggregated : TimeSeriesAggregatedEntry
+        {
+            public double Close { get => Values[0]; set => Values[0] = value; }
+            public double High { get => Values[1]; set => Values[1] = value; }
+            public double Low { get => Values[2]; set => Values[2] = value; }
+            public double Open { get => Values[3]; set => Values[3] = value; }
+            public double Volume { get => Values[4]; set => Values[4] = value; }
+        }
+
         public class StockPrice : TimeSeriesEntry
         {
             public double Close { get => Values[0]; set => Values[0] = value; }
@@ -41,6 +50,11 @@ namespace SlowTests.Client.TimeSeries.Session
             {
                 Values = new double[5];
             }
+        }
+
+        public class HeartRateMeasureAggregation : TimeSeriesAggregatedEntry
+        {
+            public double HeartRate { get => Values[0]; set => Values[0] = value; }
         }
 
         public class HeartRateMeasure : TimeSeriesEntry
@@ -271,7 +285,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult<HeartRateMeasure>>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult<HeartRateMeasureAggregation>>(@"
     declare timeseries out(u) 
     {
         from u.Heartrate between $start and $end
@@ -320,7 +334,6 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(1, agg.Results.Length);
 
                     var val = agg.Results[0];
-
                     Assert.Equal(59, val.First.HeartRate);
                     Assert.Equal(59, val.Min.HeartRate);
 
@@ -500,7 +513,7 @@ select out(doc)
                             {
                                 Avg = g.Average(),
                                 Max = g.Max()
-                            }).ToList<HeartRateMeasure>()
+                            }).ToList<HeartRateMeasureAggregation>()
                         );
 
                     var result = query.ToList();
@@ -509,9 +522,7 @@ select out(doc)
                     Assert.Equal(6, result[0].Count);
 
                     var agg = result[0].Results;
-
                     Assert.Equal(2, agg.Length);
-
                     Assert.Equal(79, agg[0].Max.HeartRate);
                     Assert.Equal(69, agg[0].Average.HeartRate);
 
@@ -522,7 +533,7 @@ select out(doc)
             }
         }
 
-         [Fact]
+        [Fact]
         public void CanQueryTimeSeriesRaw_WhereOnValue()
         {
             using (var store = GetDocumentStore())

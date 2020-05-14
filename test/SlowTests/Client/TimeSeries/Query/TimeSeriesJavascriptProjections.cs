@@ -1519,9 +1519,9 @@ select foo(heartrate(p))
                                 where person.Age > 18
                                 let customFunc = new Func<TimeSeriesRangeAggregation[], CustomJsFunctionResult2>(ranges => new CustomJsFunctionResult2
                                 {
-                                    TotalMax = ranges.Max(range => range.Max[0]) ?? double.NaN,
-                                    TotalMin = ranges.Min(range => range.Min[0]) ?? double.NaN,
-                                    AvgOfAvg = ranges.Average(range => range.Average[0]) ?? double.NaN,
+                                    TotalMax = ranges.Max(range => range.Max[0]),
+                                    TotalMin = ranges.Min(range => range.Min[0]),
+                                    AvgOfAvg = ranges.Average(range => range.Average[0]),
                                     MaxGroupSize = ranges.Max(r => r.Count[0])
                                 })
                                 let tsQuery = RavenQuery.TimeSeries(person, series, baseline, baseline.AddMonths(2))

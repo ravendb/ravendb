@@ -1234,9 +1234,9 @@ select out()
                                 let customFunc = new Func<TimeSeriesRangeAggregation[], TimeSeriesJavascriptProjections.CustomJsFunctionResult2>(
                                     ranges => new TimeSeriesJavascriptProjections.CustomJsFunctionResult2
                                 {
-                                    TotalMax = ranges.Max(range => range.Max[0]) ?? double.NaN,
-                                    TotalMin = ranges.Min(range => range.Min[0]) ?? double.NaN,
-                                    AvgOfAvg = ranges.Average(range => range.Average[0]) ?? double.NaN,
+                                    TotalMax = ranges.Max(range => range.Max[0]),
+                                    TotalMin = ranges.Min(range => range.Min[0]),
+                                    AvgOfAvg = ranges.Average(range => range.Average[0]),
                                     MaxGroupSize = ranges.Max(r => r.Count[0])
                                 })
                                 let tsQuery = RavenQuery.TimeSeries(user, series, baseline.AddDays(-1), now.AddDays(1))
@@ -1277,9 +1277,9 @@ select out()
                         Assert.Equal(rangeAggregation.Average[0], expectedAvg);
                     }
 
-                    var totalMax = aggregationResult.Series.Results.Max(range => range.Max[0]) ?? double.NaN;
-                    var totalMin = aggregationResult.Series.Results.Min(range => range.Min[0]) ?? double.NaN;
-                    var avgOfAvg = aggregationResult.Series.Results.Average(range => range.Average[0]) ?? double.NaN;
+                    var totalMax = aggregationResult.Series.Results.Max(range => range.Max[0]);
+                    var totalMin = aggregationResult.Series.Results.Min(range => range.Min[0]);
+                    var avgOfAvg = aggregationResult.Series.Results.Average(range => range.Average[0]);
                     var maxGroupSize = aggregationResult.Series.Results.Max(range => range.Count[0]);
 
                     Assert.Equal(totalMax, aggregationResult.Custom.TotalMax);

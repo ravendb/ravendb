@@ -9,13 +9,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.TimeSeries
 {
-    public class TimeSeriesEntry : ITimeSeriesValues
+    public class TimeSeriesEntry : TimeSeriesValues
     {
         public DateTime Timestamp { get; set; }
 
         public string Tag { get; set; }
-
-        public double[] Values { get; set; }
 
         [JsonDeserializationIgnore]
         public double Value
@@ -24,8 +22,13 @@ namespace Raven.Client.Documents.Session.TimeSeries
             set => Values[0] = value;
         }
     }
-    
-    public interface ITimeSeriesValues
+
+    public abstract class TimeSeriesAggregatedEntry : TimeSeriesValues
+    {
+
+    }
+
+    public abstract class TimeSeriesValues
     {
         public double[] Values { get; set; }
     }
