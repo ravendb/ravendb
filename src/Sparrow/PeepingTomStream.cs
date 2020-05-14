@@ -92,7 +92,7 @@ namespace Sparrow
             // representing single character, so 0x80 represent start of char in utf8)
             var originalStart = start;
 
-            for (var p = _buffer.Pointer; (*(p + start) & 0x80) != 0;)
+            for (var p = _buffer.Pointer; (*(p + start) & 0x80) != 0 && size > 0;)
             {
                 start++;
 
