@@ -1984,7 +1984,7 @@ namespace Raven.Server.Documents
                             var bufferSpan = new Span<byte>(buffer.Ptr, size);
                             documentId.AsSpan().CopyTo(bufferSpan);
                             var offset = documentId.Size;
-                            bufferSpan[offset++] = (byte)'|';
+                            bufferSpan[offset++] = SpecialChars.LuceneRecordSeparator;
                             counterNameSlice.AsSpan().CopyTo(bufferSpan.Slice(offset));
 
                             return context.GetLazyString(buffer.Ptr, size);

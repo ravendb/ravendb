@@ -2097,10 +2097,10 @@ namespace Raven.Server.Documents.TimeSeries
                     var bufferSpan = new Span<byte>(buffer.Ptr, size);
                     documentId.AsSpan().CopyTo(bufferSpan);
                     var offset = documentId.Size;
-                    bufferSpan[offset++] = (byte)'|';
+                    bufferSpan[offset++] = SpecialChars.LuceneRecordSeparator;
                     name.AsSpan().CopyTo(bufferSpan.Slice(offset));
                     offset += name.Size;
-                    bufferSpan[offset++] = (byte)'|';
+                    bufferSpan[offset++] = SpecialChars.LuceneRecordSeparator;
 
                     if (Utf8Formatter.TryFormat(baseline.Ticks, bufferSpan.Slice(offset), out var bytesWritten, FormatD18) == false || bytesWritten != FormatD18.Precision)
                         throw new InvalidOperationException($"Could not write '{baseline.Ticks}' ticks. Bytes written {bytesWritten}, but expected {FormatD18.Precision}.");
