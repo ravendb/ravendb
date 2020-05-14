@@ -46,6 +46,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly bool _hardDeleteOnReplacement;
 
         private readonly DateTime StartTime = DateTime.UtcNow;
+        public SystemTime Time = new SystemTime();
 
         private NotificationCenter.NotificationCenter NotificationCenter => _server.NotificationCenter;
 
@@ -96,7 +97,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly long _rotateGraceTime;
         private long _lastIndexCleanupTimeInTicks;
         private long _lastTombstonesCleanupTimeInTicks;
-        private long _lastExpiredCompareExchangeCleanupTimeInTicks;
+        internal long _lastExpiredCompareExchangeCleanupTimeInTicks;
         private bool _hasMoreTombstones = false;
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
@@ -181,7 +182,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 List<DeleteDatabaseCommand> deletions = null;
                 using (context.OpenReadTransaction())
                 {
-                    var now = SystemTime.UtcNow;
+                    var now = Time.GetUtcNow();
                     var cleanupIndexes = now.Ticks - _lastIndexCleanupTimeInTicks >= _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks;
                     var cleanupTombstones = now.Ticks - _lastTombstonesCleanupTimeInTicks >= _server.Configuration.Cluster.CompareExchangeTombstonesCleanupInterval.AsTimeSpan.Ticks;
                     var cleanupExpiredCompareExchange = now.Ticks - _lastExpiredCompareExchangeCleanupTimeInTicks >= _server.Configuration.Cluster.ExpiredCompareExchangeCleanupInterval.AsTimeSpan.Ticks;

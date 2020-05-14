@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Raven.Client;
-using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -16,7 +15,6 @@ namespace Raven.Server.ServerWide
     public class CompareExchangeExpirationStorage
     {
         public static string CompareExchangeByExpiration = "CompareExchangeByExpiration";
-        private static Dictionary<Slice, List<Slice>> _expired;
 
         public static unsafe void Put(ClusterOperationContext context, Slice keySlice, long ticks)
         {
@@ -44,26 +42,22 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        public static IEnumerable<(Slice keySlice, long expiredTicks)> GetExpiredValues(ClusterOperationContext context, long currentTicks)
+        private static IEnumerable<(Slice keySlice, long expiredTicks, Slice ticksSlice)> GetExpiredValues(ClusterOperationContext context, long currentTicks)
         {
             var expirationTree = context.Transaction.InnerTransaction.ReadTree(CompareExchangeByExpiration);
             using (var it = expirationTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
-                {
                     yield break;
-                }
+
                 do
                 {
                     var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
                     if (entryTicks > currentTicks)
-                    {
                         yield break;
-                    }
 
                     var ticksAsSlice = it.CurrentKey.Clone(context.Transaction.InnerTransaction.Allocator);
 
-                    var expiredDocs = new List<Slice>();
                     using (var multiIt = expirationTree.MultiRead(it.CurrentKey))
                     {
                         if (multiIt.Seek(Slices.BeforeAllKeys))
@@ -71,15 +65,11 @@ namespace Raven.Server.ServerWide
                             do
                             {
                                 Slice clonedId = multiIt.CurrentKey.Clone(context.Transaction.InnerTransaction.Allocator);
-                                expiredDocs.Add(clonedId);
 
-                                yield return (clonedId, entryTicks);
+                                yield return (clonedId, entryTicks, ticksAsSlice);
                             } while (multiIt.MoveNext());
                         }
                     }
-
-                    if (expiredDocs.Count > 0)
-                        _expired.Add(ticksAsSlice, expiredDocs);
 
                 } while (it.MoveNext());
             }
@@ -117,50 +107,53 @@ namespace Raven.Server.ServerWide
 
         public static unsafe bool DeleteExpiredCompareExchange(ClusterOperationContext context, Table items, long ticks, long take = long.MaxValue)
         {
-            using (ExpiredCleaner(context))
+            var expired = new Dictionary<Slice, List<Slice>>();
+
+            foreach ((Slice keySlice, long expiredTicks, Slice ticksSlice) in GetExpiredValues(context, ticks))
             {
-                foreach (var tuple in GetExpiredValues(context, ticks))
+                if (take-- <= 0)
                 {
-                    if (take-- <= 0)
-                        return true;
-
-                    if (items.ReadByKey(tuple.keySlice, out var reader) == false)
-                        continue;
-
-                    var storeValue = reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size);
-                    using var result = new BlittableJsonReaderObject(storeValue, size, context);
-
-                    if (HasExpiredMetadata(tuple.keySlice.ToString(), result, out long currentTicks) == false)
-                        continue;
-                    if (currentTicks > tuple.expiredTicks)
-                        continue;
-
-                    items.Delete(reader.Id);
+                    CleanExpired(context, expired);
+                    return true;
                 }
 
-                return false;
+                if (expired.TryGetValue(ticksSlice, out List<Slice> list) == false)
+                {
+                    list = new List<Slice> { keySlice };
+                }
+                else
+                {
+                    list.Add(keySlice);
+                }
+
+                expired[ticksSlice] = list;
+
+                if (items.ReadByKey(keySlice, out var reader) == false)
+                    continue;
+
+                var storeValue = reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size);
+                using var result = new BlittableJsonReaderObject(storeValue, size, context);
+
+                if (HasExpiredMetadata(keySlice.ToString(), result, out long currentTicks) == false)
+                    continue;
+
+                if (currentTicks > expiredTicks)
+                    continue;
+
+                items.Delete(reader.Id);
             }
+
+            CleanExpired(context, expired);
+            return false;
         }
 
-        public static IDisposable ExpiredCleaner(ClusterOperationContext context)
+        private static void CleanExpired(ClusterOperationContext context, Dictionary<Slice, List<Slice>> expired)
         {
-            _expired = new Dictionary<Slice, List<Slice>>();
-
-            return new DisposableAction(() =>
-            {
-
-                ClearExpired(context);
-                _expired = null;
-            });
-        }
-
-        private static void ClearExpired(ClusterOperationContext context)
-        {
-            if (_expired.Count == 0)
+            if (expired.Count == 0)
                 return;
 
             var expirationTree = context.Transaction.InnerTransaction.ReadTree(CompareExchangeByExpiration);
-            foreach (var pair in _expired)
+            foreach (var pair in expired)
             {
                 foreach (var ids in pair.Value)
                 {
