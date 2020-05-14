@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
             using (_countersStorage.Indexing.ExtractDocumentIdFromKey(databaseContext, key, out var documentId))
             {
                 foreach (var counter in _countersStorage.Indexing.GetCountersMetadata(databaseContext, documentId))
-                    yield return new CounterIndexItem(counter.Key, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
+                    yield return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
             }
         }
 

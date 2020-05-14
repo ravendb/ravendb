@@ -8,13 +8,13 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
-using Voron.Impl;
-using Sparrow;
 using Voron.Debugging;
+using Voron.Impl;
 using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
@@ -24,12 +24,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         internal const string MapPhaseTreeName = "MapPhaseTree";
         internal const string ReducePhaseTreeName = "ReducePhaseTree";
         internal const string ResultsStoreTypesTreeName = "ResultsStoreTypes";
-        
+
         internal readonly MapReduceIndexingContext MapReduceWorkContext = new MapReduceIndexingContext();
 
         private IndexingStatsScope _statsInstance;
         private readonly MapPhaseStats _stats = new MapPhaseStats();
-
 
         protected MapReduceIndexBase(IndexType type, IndexSourceType sourceType, T definition) : base(type, sourceType, definition)
         {
@@ -70,19 +69,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 MapReduceWorkContext.MapPhaseTree.DeleteFixedTreeFor(tombstone.LowerId, sizeof(ulong));
             }
-
-
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand)
         {
-            return new MapReduceQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage,documentsContext, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand);
+            return new MapReduceQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand);
         }
 
         private static Tree GetMapPhaseTree(Transaction tx)
         {
             // MapPhase tree has the following entries
-            // 1) { document key, fixed size tree } where each fixed size tree stores records like 
+            // 1) { document key, fixed size tree } where each fixed size tree stores records like
             //   |----> { identifier of a map result, hash of a reduce key for the map result }
             // 2) entry to keep track the next identifier of a next map result { #NextMapResultId, long_value }
 
@@ -93,13 +90,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             // ReducePhase tree has the following entries
             // 1) fixed size tree called which stores records like
-            //    |----> { reduce key hash, MapResultsStorageType enum } 
-            // 2) { #reduceValues- hash of a reduce key, nested values section } 
+            //    |----> { reduce key hash, MapResultsStorageType enum }
+            // 2) { #reduceValues- hash of a reduce key, nested values section }
 
             return tx.CreateTree(ReducePhaseTreeName);
         }
 
-        protected unsafe int PutMapResults(LazyStringValue lowerId, LazyStringValue id, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        protected unsafe int PutMapResults(LazyStringValue lowerId, LazyStringValue sourceDocumentId, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
@@ -170,7 +167,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                 }
 
-                HandleIndexOutputsPerDocument(id ?? lowerId, resultsCount, stats);
+                HandleIndexOutputsPerDocument(sourceDocumentId ?? lowerId, resultsCount, stats);
 
                 DocumentDatabase.Metrics.MapReduceIndexes.MappedPerSec.Mark(resultsCount);
 

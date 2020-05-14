@@ -353,11 +353,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (_handleCompareExchangeReferences != null)
-                _handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
-
-            if (_handleReferences != null)
-                _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+            StaticIndexHelper.HandleReferencesDelete(_handleReferences, _handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
 
             base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
