@@ -189,6 +189,9 @@ namespace Raven.Server.Documents.Operations
 
             _active.TryAdd(id, operation);
 
+            if (token == null)
+                return operation.Task;
+
             return operation.Task.ContinueWith(t =>
             {
                 token.Dispose();
