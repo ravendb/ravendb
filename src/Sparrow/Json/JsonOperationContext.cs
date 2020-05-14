@@ -60,7 +60,7 @@ namespace Sparrow.Json
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
 
         private int _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval;
-        private DateTime _lastAllocatedStringValueTime;
+        private DateTime _lastAllocatedStringValueTime = DateTime.UtcNow;
         private static readonly TimeSpan _allocatedStringValuesCheckInterval = TimeSpan.FromMinutes(1);
 
         /// <summary>
@@ -1030,7 +1030,7 @@ namespace Sparrow.Json
 
             _numberOfAllocatedStringsValues = 0;
 
-            if (releaseAllocatedStringValues)
+            if (releaseAllocatedStringValues && _allocateStringValues.Count > 0)
             {
                 var now = DateTime.UtcNow;
                 if (now - _lastAllocatedStringValueTime >= _allocatedStringValuesCheckInterval)
