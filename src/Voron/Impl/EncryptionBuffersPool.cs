@@ -11,7 +11,6 @@ using Sparrow.Server;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
 {
