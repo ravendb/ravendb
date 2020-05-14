@@ -48,7 +48,7 @@ namespace Voron.Impl
         {
             size = Bits.PowerOf2(size);
 
-            if (size > Constants.Size.Megabyte * 16)
+            if (size > _maxBufferSizeToKeepInBytes)
             {
                 // We don't want to pool large buffers
                 return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
