@@ -36,24 +36,24 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         TimeSeriesAggregationResult ToList();
 
-        TimeSeriesAggregationResult<T> ToList<T>() where T : ITimeSeriesValues, new();
+        TimeSeriesAggregationResult<T> ToList<T>() where T : TimeSeriesAggregatedEntry, new();
     }
 
     public interface ITimeSeriesGrouping
     {
-        double?[] Max();
+        double[] Max();
 
-        double?[] Min();
+        double[] Min();
 
-        double?[] Sum();
+        double[] Sum();
 
-        double?[] Average();
+        double[] Average();
 
-        double?[] First();
+        double[] First();
 
-        double?[] Last();
+        double[] Last();
 
-        long?[] Count();
+        long[] Count();
 
     }
 
