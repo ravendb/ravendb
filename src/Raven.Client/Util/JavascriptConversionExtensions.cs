@@ -774,14 +774,7 @@ namespace Raven.Client.Util
                     }
 
                     writer.Write($".reduce(function(a, b) {{ return {maxOrMin}(a, b);}}");
-
-                    var defaultVal = GetDefault(methodCallExpression.Type);
-                    if (defaultVal != null)
-                    {
-                        writer.Write($", {defaultVal}");
-                    }
                     writer.Write(")");
-
                 }
             }
 
