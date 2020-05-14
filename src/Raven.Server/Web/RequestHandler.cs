@@ -489,7 +489,7 @@ namespace Raven.Server.Web
 
         protected static void ThrowInvalidDateTime(string name, string dataAsString)
         {
-            throw new ArgumentException($"Could not parse query string '{name}' as date, val {dataAsString}");
+            throw new ArgumentException($"Could not parse query string '{name}' as date, val '{dataAsString}'");
         }
 
         protected TimeSpan? GetTimeSpanQueryString(string name, bool required = true)

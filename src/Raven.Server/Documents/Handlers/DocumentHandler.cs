@@ -222,42 +222,44 @@ namespace Raven.Server.Documents.Handlers
 
             using (includeCompareExchangeValues)
             {
-            foreach (var id in ids)
-            {
-                var document = Database.DocumentsStorage.Get(context, id);
-                if (document == null && ids.Count == 1)
+                foreach (var id in ids)
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
+                    var document = Database.DocumentsStorage.Get(context, id);
+                    if (document == null && ids.Count == 1)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return;
+                    }
+
+                    documents.Add(document);
+                    includeDocs.Gather(document);
+                    includeCounters?.Fill(document);
+                    includeTimeSeries?.Fill(document);
+                    includeCompareExchangeValues?.Gather(document);
                 }
 
-                documents.Add(document);
-                includeDocs.Gather(document);
-                includeCounters?.Fill(document);
-                includeTimeSeries?.Fill(document);
-                    includeCompareExchangeValues?.Gather(document);
-            }
-
-            includeDocs.Fill(includes);
+                includeDocs.Fill(includes);
                 includeCompareExchangeValues?.Materialize();
 
                 var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);
 
-            var etag = GetStringFromHeaders("If-None-Match");
-            if (etag == actualEtag)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
+                var etag = GetStringFromHeaders("If-None-Match");
+                if (etag == actualEtag)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return;
+                }
+
+                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
+
+                int numberOfResults = 0;
+
+                numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeTimeSeries?.Results,
+                    includeCompareExchangeValues?.Results, numberOfResults);
+
+                AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults,
+                    documents.Count, sw.ElapsedMilliseconds);
             }
-
-            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
-
-            int numberOfResults = 0;
-
-                numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeTimeSeries?.Results, includeCompareExchangeValues?.Results, numberOfResults);
-
-            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
-        }
         }
 
         private void GetCompareExchangeValueQueryString(DocumentDatabase database, out IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
@@ -310,8 +312,12 @@ namespace Raven.Server.Documents.Handlers
                 hs.Add(new TimeSeriesRange
                 {
                     Name = timeSeriesNames[i],
-                    From = TimeSeriesHandler.ParseDate(fromList[i], timeSeriesNames[i]),
-                    To = TimeSeriesHandler.ParseDate(toList[i], timeSeriesNames[i]),
+                    From = string.IsNullOrEmpty(fromList[i])
+                        ? DateTime.MinValue
+                        : TimeSeriesHandler.ParseDate(fromList[i], "from"),
+                    To = string.IsNullOrEmpty(toList[i])
+                        ? DateTime.MaxValue
+                        : TimeSeriesHandler.ParseDate(toList[i], "to")
                 });
             }
 
