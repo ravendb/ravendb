@@ -138,7 +138,7 @@
 <script type="text/html" id="db-settings-String-template">
     <div class="flex-horizontal">
         <div class="flex-grow" data-bind="attr: { 'title': customizedDatabaseValue }">
-            <input type="text" class="form-control" placeholder="Enter string (default: null)" 
+            <input type="text" class="form-control" placeholder="Null is sent if no value is entered" 
                    data-bind="textInput: customizedDatabaseValue" />
         </div>
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>
@@ -163,7 +163,7 @@
 <script type="text/html" id="db-settings-Integer-template">
     <div class="flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
         <input type="number" min="0" class="form-control" data-bind="numericInput: customizedDatabaseValue,
-               attr: { placeholder: isNullable() ? 'Enter number (default: null)' : 'Enter a new number'}" />
+               attr: { placeholder: isNullable() ? 'Null is sent if no value is entered' : 'Enter a new number'}" />
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>
     </div>
     <span class="help-block" data-bind="validationMessage: customizedDatabaseValue"></span>
@@ -172,7 +172,7 @@
 <script type="text/html" id="db-settings-Double-template">
     <div class="flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
         <input type="number" min="0" class="form-control" data-bind="numericInput: customizedDatabaseValue,
-               attr: { placeholder: isNullable() ? 'Enter number (default: null)' : 'Enter a new number'}" />
+               attr: { placeholder: isNullable() ? 'Null is sent if no value is entered' : 'Enter a new number'}" />
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>
     </div>
     <span class="help-block" data-bind="validationMessage: customizedDatabaseValue"></span>
@@ -199,7 +199,7 @@
     <div class="flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
         <div class="input-group flex-grow">
             <input type="number" class="form-control" data-bind="numericInput: customizedDatabaseValue,
-                   attr: { placeholder: isNullable() ? 'Enter time (default: null)' : 'Enter a new time', min: minValue }" />
+                   attr: { placeholder: isNullable() ? 'Null is sent if no value is entered' : 'Enter a new time', min: minValue }" />
             <div class="input-group-addon"><span data-bind="text: timeUnit"></span></div>
         </div>
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>
@@ -211,7 +211,7 @@
     <div class="flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
         <div class="input-group flex-grow">
             <input type="number" min="0" class="form-control" data-bind="numericInput: customizedDatabaseValue,
-                   attr: { placeholder: isNullable() ? 'Enter size (default: null)' : 'Enter a new size' }" />
+                   attr: { placeholder: isNullable() ? 'Null is sent if no value is entered' : 'Enter a new size' }" />
             <div class="input-group-addon"><span data-bind="text: sizeUnit"></span></div>
         </div>
         <div data-bind="template: { name: 'db-settings-default-button-template' }"></div>

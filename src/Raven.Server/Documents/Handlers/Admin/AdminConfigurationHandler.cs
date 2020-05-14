@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -61,7 +62,21 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-              // todo
+                var databaseSettingsJson = context.ReadForDisk(RequestBodyStream(), Constants.DatabaseSettings.StudioId);
+                
+                Dictionary<string,string> settings = new Dictionary<string, string>();
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+                
+                for (int i = 0; i < databaseSettingsJson.Count; i++)
+                {
+                    databaseSettingsJson.GetPropertyByIndex(i, ref prop);
+                    settings.Add(prop.Name, prop.Value?.ToString() ?? null);
+                }
+
+                await UpdateDatabaseRecord(context, record =>
+                {
+                    record.Settings = settings;
+                }, GetRaftRequestIdFromQuery());
             }
 
             NoContentStatus();

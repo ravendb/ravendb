@@ -120,6 +120,17 @@ namespace Raven.Client
             public const int MaxNumberOfCertsWithSameHash = 5;
         }
 
+        public class DatabaseSettings
+        {
+            private DatabaseSettings()
+            {
+            }
+
+            public const string ClientId = "DatabaseSettings/Client";
+
+            public const string StudioId = "DatabaseSettings/Studio";
+        }
+        
         public class Configuration
         {
             private Configuration()

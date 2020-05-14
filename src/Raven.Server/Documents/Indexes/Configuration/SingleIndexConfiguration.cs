@@ -17,8 +17,11 @@ namespace Raven.Server.Documents.Indexes.Configuration
 
             Initialize(
                 key =>
-                    new SettingValue(clientConfiguration.GetValue(key) ?? databaseConfiguration.GetSetting(key),
-                        databaseConfiguration.GetServerWideSetting(key)),
+                    new SettingValue(
+                        clientConfiguration.GetValue(key) ?? databaseConfiguration.GetSetting(key),
+                        clientConfiguration.GetValue(key) != null || databaseConfiguration.DoesKeyExistInSettings(key),
+                        databaseConfiguration.GetServerWideSetting(key),
+                        databaseConfiguration.DoesKeyExistInSettings(key, true)),
                 databaseConfiguration.GetServerWideSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory)),
                 databaseConfiguration.ResourceType, 
                 databaseConfiguration.ResourceName, 
