@@ -11,16 +11,25 @@ namespace Sparrow
     {
         public const int BufferWindowSize = 4096;
 
-        private readonly JsonOperationContext.MemoryBuffer _bufferWindow;
+        private readonly JsonOperationContext.MemoryBuffer _buffer;
         private int _pos;
         private readonly Stream _stream;
         private bool _firstWindow = true;
-        private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnedBuffer;
+        private IDisposable _returnBuffer;
 
         public PeepingTomStream(Stream stream, JsonOperationContext context)
         {
             _stream = stream;
-            _returnedBuffer = context.GetMemoryBuffer(out _bufferWindow);
+            _returnBuffer = context.GetMemoryBuffer(out _buffer);
+        }
+
+        /// <summary>
+        /// FOR TESTING PURPOSES ONLY
+        /// </summary>
+        internal PeepingTomStream(Stream stream, JsonOperationContext.MemoryBuffer buffer)
+        {
+            _stream = stream;
+            _buffer = buffer;
         }
 
         public int Read(Span<byte> buffer)
@@ -33,7 +42,7 @@ namespace Sparrow
         {
             var totalToRead = read < BufferWindowSize ? read : BufferWindowSize;
 
-            var pDest = _bufferWindow.Pointer;
+            var pDest = _buffer.Pointer;
             fixed (byte* pSrc = buffer)
             {
                 var pBufferWindowStart = pDest + _pos;
@@ -83,7 +92,7 @@ namespace Sparrow
             // representing single character, so 0x80 represent start of char in utf8)
             var originalStart = start;
 
-            for (var p = _bufferWindow.Pointer; (*(p + start) & 0x80) != 0;)
+            for (var p = _buffer.Pointer; (*(p + start) & 0x80) != 0;)
             {
                 start++;
 
@@ -106,7 +115,7 @@ namespace Sparrow
             var buf = new byte[size];
             if (size == 0)
                 return buf;
-            byte* pSrc = _bufferWindow.Pointer;
+            byte* pSrc = _buffer.Pointer;
             fixed (byte* pDest = buf)
             {
                 var firstSize = size - start;
@@ -127,7 +136,7 @@ namespace Sparrow
         public void Dispose()
         {
             // we do not dispose _stream
-            _returnedBuffer.Dispose();
+            _returnBuffer?.Dispose();
         }
     }
 }
