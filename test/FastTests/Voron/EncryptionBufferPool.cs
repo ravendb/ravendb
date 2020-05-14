@@ -85,12 +85,17 @@ namespace FastTests.Voron
             var pointer = EncryptionBuffersPool.Instance.Get(size, out _);
             EncryptionBuffersPool.Instance.Return(pointer, size, NativeMemory.ThreadAllocations.Value, EncryptionBuffersPool.Instance.Generation);
 
+            // will cache the buffer
             stats = EncryptionBuffersPool.Instance.GetStats();
             Assert.Equal(size, stats.TotalSize);
 
+            // will continue to cache the buffer
             EncryptionBuffersPool.Instance.LowMemory(LowMemorySeverity.ExtremelyLow);
             stats = EncryptionBuffersPool.Instance.GetStats();
             Assert.Equal(size, stats.TotalSize);
+
+            // return to the original state
+            EncryptionBuffersPool.Instance.LowMemoryOver();
         }
     }
 }
