@@ -955,7 +955,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (AwsRegion == DefaultRegion || IsRegionInvariantRequest)
                 return "s3.amazonaws.com";
 
-            return $"s3-{AwsRegion}.amazonaws.com";
+            return $"s3.{AwsRegion}.amazonaws.com";
         }
 
         public IDisposable UseRegionInvariantRequest()
