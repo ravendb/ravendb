@@ -395,7 +395,7 @@ namespace Raven.Server.Documents.Indexes
                 var scope = context.Allocator.Allocate(key.Size + 1, out ByteString keyMem);
 
                 Memory.Copy(keyMem.Ptr, key.Buffer, key.Size);
-                keyMem.Ptr[key.Size] = (byte)'|';
+                keyMem.Ptr[key.Size] = SpecialChars.LuceneRecordSeparator;
 
                 prefixKey = new Slice(SliceOptions.Key, keyMem);
                 return scope;
