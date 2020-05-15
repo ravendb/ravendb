@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -199,6 +198,8 @@ namespace Raven.Client.Documents.Conventions
             _maxContextSizeToKeep = PlatformDetails.Is32Bits == false
                 ? new Size(1, SizeUnit.Megabytes)
                 : new Size(256, SizeUnit.Kilobytes);
+
+            _jsonEnumerableConverter = new JsonEnumerableConverter(this);
         }
 
         private bool _frozen;
@@ -244,6 +245,7 @@ namespace Raven.Client.Documents.Conventions
         private Version _httpVersion;
         private bool _sendApplicationIdentifier;
         private Size _maxContextSizeToKeep;
+        private readonly JsonEnumerableConverter _jsonEnumerableConverter;
 
         public Size MaxContextSizeToKeep
         {
@@ -303,7 +305,7 @@ namespace Raven.Client.Documents.Conventions
         /// Set the timeout for the second broadcast attempt.
         /// Default: 30 Seconds.
         ///
-        /// Upon failure of the first attempt the request executor will resend the command to all nodes simultaneously. 
+        /// Upon failure of the first attempt the request executor will resend the command to all nodes simultaneously.
         /// </summary>
         public TimeSpan SecondBroadcastAttemptTimeout
         {
@@ -540,7 +542,7 @@ namespace Raven.Client.Documents.Conventions
                 _findCollectionNameForDynamic = value;
             }
         }
-        
+
         /// <summary>
         ///     Gets or sets the function to find the collection name for dynamic type.
         /// </summary>
@@ -776,7 +778,7 @@ namespace Raven.Client.Documents.Conventions
                 return null;
 
             // we want to reject queries and other operations on abstract types, because you usually
-            // want to use them for polymorphic queries, and that require the conventions to be 
+            // want to use them for polymorphic queries, and that require the conventions to be
             // applied properly, so we reject the behavior and hint to the user explicitly
             if (t.GetTypeInfo().IsInterface)
                 throw new InvalidOperationException("Cannot find collection name for interface " + t.FullName +
@@ -921,7 +923,7 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
             jsonSerializer.Converters.Add(SizeConverter.Instance);
-            jsonSerializer.Converters.Add(JsonEnumerableConverter.Instance);
+            jsonSerializer.Converters.Add(_jsonEnumerableConverter);
         }
 
         /// <summary>
@@ -974,10 +976,10 @@ namespace Raven.Client.Documents.Conventions
                     // isn't there
                 }
             }
-            
+
             return FindClrTypeName(entity.GetType());
         }
-        
+
         /// <summary>
         ///     Get the CLR type name to be stored in the entity metadata
         /// </summary>
