@@ -142,7 +142,7 @@ namespace Raven.Client.Documents.Session
             {
                 if (willUseDefaultContractResolver)
                 {
-                    DefaultRavenContractResolver.RemoveIdentityProperty = removeIdentityProperty && hasIdentityProperty;
+                    DefaultRavenContractResolver.RootEntity = removeIdentityProperty && hasIdentityProperty ? entity : null;
                     DefaultRavenContractResolver.RemovedIdentityProperty = false;
                 }
 
@@ -151,7 +151,7 @@ namespace Raven.Client.Documents.Session
             finally
             {
                 if (willUseDefaultContractResolver)
-                    DefaultRavenContractResolver.RemoveIdentityProperty = false;
+                    DefaultRavenContractResolver.RootEntity = null;
             }
 
             writer.FinalizeDocument();

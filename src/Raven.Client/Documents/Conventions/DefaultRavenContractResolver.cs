@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Conventions
         internal static bool RemovedIdentityProperty;
 
         [ThreadStatic]
-        internal static bool RemoveIdentityProperty;
+        internal static object RootEntity;
 
         public DefaultRavenContractResolver(DocumentConventions conventions)
         {
@@ -129,7 +129,14 @@ namespace Raven.Client.Documents.Conventions
 
         private static bool ShouldSerialize(object value)
         {
-            if (RemoveIdentityProperty == false)
+            if (value == null)
+                return true;
+
+            var rootEntity = RootEntity;
+            if (rootEntity == null)
+                return true;
+
+            if (ReferenceEquals(rootEntity, value) == false)
                 return true;
 
             if (RemovedIdentityProperty == false)

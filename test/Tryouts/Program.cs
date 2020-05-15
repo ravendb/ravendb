@@ -33,7 +33,9 @@ namespace Tryouts
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
                     using (var test = new BenchmarkTests.Storing.Session(testOutputHelper))
                     {
+                        var sw = Stopwatch.StartNew();
                         await test.Store_500k_Batch_Size_10();
+                        Console.WriteLine($"Took: {sw.Elapsed.TotalSeconds} seconds.");
                     }
                     return;
                 }
