@@ -1,19 +1,25 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using Raven.Client.Documents.Conventions;
+using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters
 {
     internal class JsonEnumerableConverter : RavenJsonConverter
     {
-        public static JsonEnumerableConverter Instance = new JsonEnumerableConverter();
-
         private readonly ConcurrentDictionary<Type, bool> _cache = new ConcurrentDictionary<Type, bool>();
 
+        private readonly DocumentConventions _conventions;
+
         public override bool CanRead => false;
+
+        public JsonEnumerableConverter(DocumentConventions conventions)
+        {
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+        }
 
         public override bool CanConvert(Type objectType)
         {
@@ -25,34 +31,13 @@ namespace Raven.Client.Json.Converters
 
         private bool CanConvertInternal(Type objectType)
         {
-            if (objectType.IsArray)
-            {
-                if (objectType.GetArrayRank() != 1)
-                    return false;
-
-                return CanConvertElementType(objectType.GetElementType());
-            }
-
-            if (objectType.IsGenericType == false)
-                return objectType == typeof(Enumerable);
-
-            if (typeof(IDictionary).IsAssignableFrom(objectType))
+            if (objectType == typeof(LazyStringValue))
                 return false;
 
-            var genericType = objectType.GetGenericTypeDefinition();
-            if (typeof(IDictionary<,>).IsAssignableFrom(genericType) || typeof(Dictionary<,>).IsAssignableFrom(genericType))
+            if (objectType == typeof(BlittableJsonReaderArray))
                 return false;
 
-            var isEnumerable = typeof(IEnumerable).IsAssignableFrom(genericType);
-            if (isEnumerable == false)
-                return false;
-
-            return CanConvertElementType(objectType.GetGenericArguments()[0]);
-
-            static bool CanConvertElementType(Type elementType)
-            {
-                return elementType != typeof(byte) && elementType != typeof(object) && elementType.IsInterface == false;
-            }
+            return _conventions.JsonContractResolver.ResolveContract(objectType) is JsonArrayContract;
         }
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
@@ -70,8 +55,10 @@ namespace Raven.Client.Json.Converters
 
             writer.WriteStartArray();
 
+            var contract = (JsonArrayContract)serializer.ContractResolver.ResolveContract(value.GetType());
+
             foreach (object val in (IEnumerable)value)
-                serializer.Serialize(writer, val);
+                serializer.Serialize(writer, val, contract.CollectionItemType);
 
             writer.WriteEndArray();
         }
