@@ -10,15 +10,22 @@ namespace Raven.Client.Json.Converters
     {
         public static JsonEnumerableConverter Instance = new JsonEnumerableConverter();
 
+        private Dictionary<Type, bool> _cache = new Dictionary<Type, bool>();
+
         public override bool CanRead => false;
 
         public override bool CanConvert(Type objectType)
         {
+            if (_cache.TryGetValue(objectType, out bool canConvert) == false)
+                _cache[objectType] = canConvert = CanConvertInternal(objectType);
+
+            return canConvert;
+        }
+
+        private bool CanConvertInternal(Type objectType)
+        {
             if (objectType.IsArray)
-            {
-                var elementType = objectType.GetElementType();
-                return elementType != typeof(byte);
-            }
+                return CanConvertElementType(objectType.GetElementType());
 
             if (objectType.IsGenericType == false)
                 return objectType == typeof(Enumerable);
@@ -27,7 +34,16 @@ namespace Raven.Client.Json.Converters
             if (typeof(Dictionary<,>).IsAssignableFrom(genericType))
                 return false;
 
-            return typeof(IEnumerable).IsAssignableFrom(objectType.GetGenericTypeDefinition());
+            var isEnumerable = typeof(IEnumerable).IsAssignableFrom(genericType);
+            if (isEnumerable == false)
+                return false;
+
+            return CanConvertElementType(objectType.GetGenericArguments()[0]);
+
+            static bool CanConvertElementType(Type elementType)
+            {
+                return elementType != typeof(byte) && elementType != typeof(object);
+            }
         }
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
