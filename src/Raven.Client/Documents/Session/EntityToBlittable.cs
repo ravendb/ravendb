@@ -134,12 +134,13 @@ namespace Raven.Client.Documents.Session
         {
             var usesDefaultContractResolver = serializer.ContractResolver.GetType() == typeof(DefaultRavenContractResolver);
             var type = entity.GetType();
-            var hasIdentityProperty = conventions.GetIdentityProperty(type) != null;
+            var isDynamicObject = entity is IDynamicMetaObjectProvider;
+            var maybeHasIdentityProperty = conventions.GetIdentityProperty(type) != null || isDynamicObject;
             try
             {
                 if (usesDefaultContractResolver)
                 {
-                    DefaultRavenContractResolver.RemoveIdentityProperty = removeIdentityProperty;
+                    DefaultRavenContractResolver.RemoveIdentityProperty = isDynamicObject == false && removeIdentityProperty;
                     DefaultRavenContractResolver.RemovedIdentityProperty = false;
                 }
 
@@ -154,11 +155,10 @@ namespace Raven.Client.Documents.Session
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
 
-            if (usesDefaultContractResolver == false || (hasIdentityProperty && DefaultRavenContractResolver.RemovedIdentityProperty == false))
+            if (usesDefaultContractResolver == false || (maybeHasIdentityProperty && DefaultRavenContractResolver.RemovedIdentityProperty == false))
             {
                 //This is to handle the case when user defined it's own contract resolver
-
-                var isDynamicObject = entity is IDynamicMetaObjectProvider;
+                //or we are serializing dynamic object
 
                 var changes = removeIdentityProperty && TryRemoveIdentityProperty(reader, type, conventions, isDynamicObject);
                 changes |= TrySimplifyJson(reader, type);
