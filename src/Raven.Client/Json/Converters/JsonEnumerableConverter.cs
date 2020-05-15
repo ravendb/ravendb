@@ -51,7 +51,7 @@ namespace Raven.Client.Json.Converters
 
             static bool CanConvertElementType(Type elementType)
             {
-                return elementType != typeof(byte) && elementType != typeof(object);
+                return elementType != typeof(byte) && elementType != typeof(object) && elementType.IsInterface == false;
             }
         }
 
