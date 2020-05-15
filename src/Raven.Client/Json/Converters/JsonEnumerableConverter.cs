@@ -26,7 +26,12 @@ namespace Raven.Client.Json.Converters
         private bool CanConvertInternal(Type objectType)
         {
             if (objectType.IsArray)
+            {
+                if (objectType.GetArrayRank() != 1)
+                    return false;
+
                 return CanConvertElementType(objectType.GetElementType());
+            }
 
             if (objectType.IsGenericType == false)
                 return objectType == typeof(Enumerable);
