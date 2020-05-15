@@ -15,7 +15,10 @@ namespace Raven.Client.Json.Converters
         public override bool CanConvert(Type objectType)
         {
             if (objectType.IsArray)
-                return true;
+            {
+                var elementType = objectType.GetElementType();
+                return elementType != typeof(byte);
+            }
 
             if (objectType.IsGenericType == false)
                 return objectType == typeof(Enumerable);

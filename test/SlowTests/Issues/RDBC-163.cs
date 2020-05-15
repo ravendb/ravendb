@@ -50,8 +50,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task AddUserTest()
         {
-            var user = new User("foo", new List<string>(), "foo@bar.com", new byte[] { }, false);
-            using(var store = GetDocumentStore())
+            var user = new User("foo", new List<string>(), "foo@bar.com", new byte[] { 1, 2, 3 }, false);
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -63,6 +63,7 @@ namespace SlowTests.Issues
                 {
                     var user2 = await session.LoadAsync<User>(user.Id, default);
                     Assert.NotNull(user2);
+                    Assert.Equal(new byte[] { 1, 2, 3 }, user.Password);
                 }
             }
         }
